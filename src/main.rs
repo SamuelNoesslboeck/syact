@@ -12,5 +12,5 @@ fn main()
     //     println!("{} Hz\t{}Nm", f, torque(&data, f));
     // }
 
-    dbg!(acc_curve(&data, 1.0 / 1000.0, 100));
+    dbg!(acc_curve(&data, 1.0 / 5000.0, 1000));
 }
