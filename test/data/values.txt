@@ -1,2 +1,3 @@
-Curve#1: mot_17he15_1504s; J=0.001; t_min=0.001; max_len=100;
-Curve#2: mot_17he15_1504s; J=0.001; t_min=0.0002; max_len=100;
+Curve#1: mot_17he15_1504s; U=12V; J=0.001; t_min=0.001; max_len=100;
+Curve#2: mot_17he15_1504s; U=12V; J=0.001; t_min=0.0002; max_len=1000;
+Curve#3: mot_17he15_1504s; U=36V; J=0.001; t_min=0.001; max_len=1000;
