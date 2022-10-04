@@ -1,0 +1,45 @@
+\documentclass{article}
+
+\usepackage[english]{babel}
+\usepackage[utf8]{inputenc}
+\usepackage{fancyhdr}
+
+\usepackage[a4paper, total={7in, 10in}]{geometry}
+\usepackage{graphicx}
+
+\graphicspath{ {./images/} }
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\leftmark}
+\fancyhead[R]{\thepage}
+
+% New commands
+    \newcommand{\vect}[1]{\left[\begin{array}{c}#1\end{array}\right]}
+    \newcommand{\ifcases}[1]{\left\{\begin{array}{cc}\end{array}\right.}
+% 
+
+\title{Stepper Motors: Acceleration and torque curves}
+\author{Samuel Nösslböck}
+\date{October 2022}
+
+\begin{document}
+
+\maketitle
+
+\section{Introduction}
+
+\section{Motor torque and "Coil pendulum"}
+
+Taking a stepper motor with two different coils A and B with the charging curve being defined as
+\begin{equation}
+    i_c(t) = I_{m} (1 - e^{\frac{t}{\tau}}) \quad \tau = \frac{I_{m}L}{U}
+\end{equation}
+with $I_M$ being the maximum current flowing though the coil, $L$ being the inductivity and $U$ being the volage applied to the coil.
+Considering the torque has a linear proportionality to the current flowing though the coil:
+\[
+    T(t) \leftrightarrow i(t)
+\]
+the following 
+
+\end{document}
