@@ -9,6 +9,8 @@ pub struct StepperData
 
     /// Step count [in (1)]
     pub n_s : u64,
+    /// Charge count [in (1)]
+    pub n_c : u64,
     /// Stall current [in Nm]
     pub t_s : f64,
     /// Inhertia moment [in kg*m^2]
@@ -26,6 +28,7 @@ impl StepperData
             i_max: 1.5, 
             l: 0.004, 
             n_s: 200, 
+            n_c: 100,
             t_s: 0.42, 
             j: 0.000_005_7 
         };

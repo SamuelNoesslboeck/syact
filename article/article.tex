@@ -7,6 +7,7 @@
 \usepackage[a4paper, total={7in, 10in}]{geometry}
 \usepackage{graphicx}
 
+\graphicspath{ {../test/} }
 \graphicspath{ {../test/data/} }
 
 \pagestyle{fancy}
@@ -28,6 +29,8 @@
 \maketitle
 
 \section{Introduction}
+
+    This article is all about the optimization for stepper motors, the perfect way to start/stop them, and the maximum loads at certain speeds.
 
 \section{Motor torque and "Coil pendulum"}
 
@@ -53,7 +56,7 @@
         T(t) = T_S \frac{1 - e^{-\frac{t}{\tau}}}{1 + e^{-\frac{t}{\tau}}}
     \end{equation}
 
-    Which then when using for the torque, results in 
+    Which, when used for calculating the torque, results in 
 
     \begin{equation}
         \lim_{\omega \rightarrow 0}
@@ -66,6 +69,10 @@
     $\omega$ the current rotational speed in radiants, $n_M$ the number of charging turns per turn (e.g. 200 step motor with 2 coils has 100 rechargings per turn)
     $I_M$ represents the maximum current for the coils, $L$ the inductivity of the coils and $U$ the voltage applied on the coils.
 
+    \begin{center}
+        \includegraphics[scale=0.5]{../test/Torque_Curve.png}
+    \end{center}
+    
 \section{Start and Stop speed}
 
     The starting point of an acceleration curve is the first step starting from standstill. If the motor cannot reach the first step before the controller recharges the coils, 

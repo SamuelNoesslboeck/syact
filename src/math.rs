@@ -2,16 +2,17 @@ use std::{f64::consts::{E, PI}, ops::Index};
 
 use super::data::StepperData;
 
-/// Returns the current torque of a motor (data) at the given polarization frequency (f)
-/// Unit: [Nm]
-pub fn torque(data : &StepperData, f : f64) -> f64
+/// Returns the current torque of a motor (data) at the given angluar speed (omega)
+/// Unit: [Nm]  
+pub fn torque(data : &StepperData, omega : f64) -> f64
 {
-    if f == 0.0 {
+    if omega == 0.0 {
         return data.t_s;
     }
 
+    let t = 2.0 * PI / (data.n_c as f64) / omega;
     let tau = data.tau();
-    let pow = E.powf( -1.0 / tau / f );
+    let pow = E.powf( -t / tau );
 
     return (1.0 - pow) / (1.0 + pow) * data.t_s;
 }
