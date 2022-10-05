@@ -1,1 +1,8 @@
 /target
+
+# Article
+article/article.aux
+article.fdb_latexmk
+article.fls
+article.log
+article.synctex.gz
