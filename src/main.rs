@@ -2,8 +2,7 @@ use std::vec;
 
 use stepper_lib::{data::StepperData, math::{torque, start_frequency, acc_curve}};
 
-fn main() 
-{
+fn main() {
     let mut data = StepperData::mot_17he15_1504s(12.0);
     data.j = 0.001;
 
