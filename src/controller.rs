@@ -3,8 +3,7 @@ use std::{thread, time, vec};
 use std::f64::consts::PI;
 use std::ops::Index;
 
-use gpio::GpioOut;
-use gpio::sysfs::{SysFsGpioInput, SysFsGpioOutput};
+use rust_gpiozero::OutputDevice;
 
 use crate::data::StepperData;
 use crate::math::{angluar_velocity, start_frequency};
@@ -64,14 +63,14 @@ pub struct PwmStepperCtrl
     /// Time span of holding the high signal when processing a step
     pub t_stephold_high : time::Duration,
 
-    sys_dir : SysFsGpioOutput,
+    sys_dir : OutputDevice,
     sys_step : SysFsGpioOutput,
     sys_mes : Option<SysFsGpioInput>
 }
 
 impl PwmStepperCtrl
 {   
-    pub fn new(data : StepperData, pin_dir : u16, pin_step : u16) -> Self {
+    pub fn new(data : StepperData, pin_dir : u8, pin_step : u8) -> Self {
         return PwmStepperCtrl { 
             data: data,
             sf: 1.0, 
@@ -82,7 +81,7 @@ impl PwmStepperCtrl
             pos: 0,
             t_stephold_high: time::Duration::from_millis(1),
 
-            sys_dir: SysFsGpioOutput::open(pin_dir).unwrap(),
+            sys_dir: OutputDevice::new(pin_dir),
             sys_step: SysFsGpioOutput::open(pin_step).unwrap(),
             sys_mes: None
         };
@@ -92,9 +91,9 @@ impl PwmStepperCtrl
 impl StepperCtrl for PwmStepperCtrl
 {
     fn step(&mut self) {
-        self.sys_dir.set_high().unwrap();
+        self.sys_dir.on();
         thread::sleep(self.t_stephold_high);
-        self.sys_dir.set_low().unwrap();
+        self.sys_dir.off();
 
         self.pos += if self.dir { 1 } else { -1 };
     }

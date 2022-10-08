@@ -3,6 +3,10 @@ use stepper_lib::{data::StepperData, controller::{PwmStepperCtrl, StepperCtrl}};
 fn main() {
     let args : Vec<String> = std::env::args().collect();
 
+    if args.len() == 1 {
+        println!("No test name given!");
+    }
+
     let mut ctrl = PwmStepperCtrl::new(
         StepperData::mot_17he15_1504s(12.0), 
         3, 37);
