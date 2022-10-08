@@ -1,20 +1,21 @@
-use std::vec;
-
-use stepper_lib::{data::StepperData, math::{torque, start_frequency, acc_curve}};
+use stepper_lib::{data::StepperData, controller::{PwmStepperCtrl, StepperCtrl}};
 
 fn main() {
-    let mut data = StepperData::mot_17he15_1504s(12.0);
-    data.j = 0.001;
+    let args : Vec<String> = std::env::args().collect();
 
-    println!("{}Hz start frequency", start_frequency(&data));
+    let mut ctrl = PwmStepperCtrl::new(
+        StepperData::mot_17he15_1504s(12.0), 
+        3, 37);
 
-    let mut curve = vec![];
+    match args[1].as_str() {
+        "step" => test_step(&mut ctrl),
+        _ => println!("No test with the given name found")
+    };
+}
 
-    for i in 0 .. 201 {
-        let omega : f64 = (i as f64) * 3.0;
-        curve.push(torque(&data, omega));
-    }
-
-    dbg!(curve);
-    // dbg!(acc_curve(&data, 1.0 / 1000.0, 1000));
+fn test_step(ctrl : &mut PwmStepperCtrl)
+{
+    println!("Starting test step ... ");
+    ctrl.step();
+    println!("Step done ... ");
 }

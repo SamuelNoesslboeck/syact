@@ -63,8 +63,6 @@ pub struct PwmStepperCtrl
 
     /// Time span of holding the high signal when processing a step
     pub t_stephold_high : time::Duration,
-    /// Min time of 
-    pub t_stephold_low : time::Duration,
 
     sys_dir : SysFsGpioOutput,
     sys_step : SysFsGpioOutput,
@@ -83,7 +81,6 @@ impl PwmStepperCtrl
             dir: true, 
             pos: 0,
             t_stephold_high: time::Duration::from_millis(1),
-            t_stephold_low: time::Duration::from_millis(1),
 
             sys_dir: SysFsGpioOutput::open(pin_dir).unwrap(),
             sys_step: SysFsGpioOutput::open(pin_step).unwrap(),
@@ -98,7 +95,6 @@ impl StepperCtrl for PwmStepperCtrl
         self.sys_dir.set_high().unwrap();
         thread::sleep(self.t_stephold_high);
         self.sys_dir.set_low().unwrap();
-        thread::sleep(self.t_stephold_low);
 
         self.pos += if self.dir { 1 } else { -1 };
     }
