@@ -79,7 +79,7 @@ impl PwmStepperCtrl
             dir: true, 
             pos: 0,
             t_stephold_high: time::Duration::from_micros(100),
-
+            
             sys_dir: SysFsGpioOutput::open(pin_dir).unwrap(),
             sys_step: SysFsGpioOutput::open(pin_step).unwrap(),
             sys_mes: None
@@ -99,7 +99,7 @@ impl StepperCtrl for PwmStepperCtrl
 
     fn steps(&mut self, stepcount : u64, omega : f64) {
         let mut curve : Vec<f64> = vec![
-            start_frequency(&self.data)
+            1.0 / start_frequency(&self.data)
         ];
 
         self.step();
