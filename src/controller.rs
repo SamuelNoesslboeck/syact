@@ -122,7 +122,7 @@ impl StepperCtrl for PwmStepperCtrl
         }
 
         for i in 1 .. stepcount / 2 + 1 {
-            thread::sleep(Duration::from_secs_f64(*curve.index((stepcount - i) as usize)));
+            thread::sleep(Duration::from_secs_f64(*curve.index((stepcount/2 - i) as usize)));
             self.step();
         }
 
