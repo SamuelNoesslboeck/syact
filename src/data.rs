@@ -1,3 +1,5 @@
+use std::f64::consts::PI;
+
 /// A collection of the most relevant variables in stepper calculation
 pub struct StepperData
 {
@@ -42,6 +44,10 @@ impl StepperData
     /// The inductivity constant [in s]
     pub fn tau(&self) -> f64 {
         return self.i_max * self.l / self.u;
+    }
+
+    pub fn t_s(&self, omega : f64) -> f64 {
+        return 2.0 * PI * omega / self.n_s as f64;
     }
 }
 

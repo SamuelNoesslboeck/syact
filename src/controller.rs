@@ -1,10 +1,13 @@
-use std::{thread, time};
+use std::time::Duration;
+use std::{thread, time, vec};
 use std::f64::consts::PI;
+use std::ops::Index;
 
 use gpio::GpioOut;
 use gpio::sysfs::{SysFsGpioInput, SysFsGpioOutput};
 
 use crate::data::StepperData;
+use crate::math::{angluar_velocity, start_frequency};
 
 const PIN_ERR : u16 = 0xFFFF;
 
@@ -14,7 +17,7 @@ pub trait StepperCtrl
     fn step(&mut self);
 
     /// Move a number of steps as fast as possible, the steps will be traveled without 
-    fn steps(&self, stepcount : u64);
+    fn steps(&mut self, stepcount : u64, omega : f64);
     // Stops the motor as fast as possible
     fn stop(&self);
 
@@ -92,16 +95,51 @@ impl PwmStepperCtrl
 impl StepperCtrl for PwmStepperCtrl
 {
     fn step(&mut self) {
-        self.sys_dir.set_high();
+        self.sys_dir.set_high().unwrap();
         thread::sleep(self.t_stephold_high);
-        self.sys_dir.set_low();
+        self.sys_dir.set_low().unwrap();
         thread::sleep(self.t_stephold_low);
 
         self.pos += if self.dir { 1 } else { -1 };
     }
 
-    fn steps(&self, stepcount : u64) {
-        // Integrate acceleration curves
+    fn steps(&mut self, stepcount : u64, omega : f64) {
+        let mut curve : Vec<f64> = vec![
+            start_frequency(&self.data)
+        ];
+
+        self.step();
+
+        let t_min = 2.0 * PI / self.data.n_s as f64 / omega;
+        let mut t_total = curve[0];
+        for i in 0 .. stepcount / 2 {
+            thread::sleep(Duration::from_secs_f64(*curve.index(i as usize)));
+            self.step();
+            curve.push(2.0 * PI / (self.data.n_s as f64) / angluar_velocity(&self.data, t_total));
+            t_total += *curve.index(i as usize + 1);
+
+            if *curve.index(i as usize) < t_min {
+                break;
+            }
+        }
+
+        if (stepcount % 2) == 1 {
+            thread::sleep(Duration::from_secs_f64(*curve.last().unwrap()));
+            self.step()
+        }
+
+        for i in 1 .. stepcount / 2 + 1 {
+            thread::sleep(Duration::from_secs_f64(*curve.index((stepcount - i) as usize)));
+            self.step();
+        }
+    }
+    
+    fn stop(&self) {
+        
+    }
+
+    fn set_speed(&self, omega : f64) {
+        
     }
 
     fn get_dir(&self) -> bool {
