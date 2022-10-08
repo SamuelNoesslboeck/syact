@@ -110,10 +110,9 @@ impl StepperCtrl for PwmStepperCtrl
             thread::sleep(Duration::from_secs_f64(*curve.index(i as usize)));
             self.step();
             curve.push(2.0 * PI / (self.data.n_s as f64) / angluar_velocity(&self.data, t_total));
-            t_total += *curve.index(i as usize + 1);
 
-            if *curve.index(i as usize) < t_min {
-                break;
+            if *curve.index(i as usize) > t_min {
+                t_total += *curve.index(i as usize + 1);
             }
         }
 
