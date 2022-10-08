@@ -5,6 +5,7 @@ fn main() {
 
     if args.len() == 1 {
         println!("No test name given!");
+        return;
     }
 
     let mut ctrl = PwmStepperCtrl::new(

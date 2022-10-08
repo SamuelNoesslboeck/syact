@@ -81,7 +81,7 @@ impl PwmStepperCtrl
             t_stephold_high: time::Duration::from_millis(1),
 
             sys_dir: OutputDevice::new(pin_dir),
-            sys_step:  OutputDevice::new(pin_step),
+            sys_step: OutputDevice::new(pin_step),
             sys_mes: None
         };
     }
@@ -90,9 +90,9 @@ impl PwmStepperCtrl
 impl StepperCtrl for PwmStepperCtrl
 {
     fn step(&mut self) {
-        self.sys_dir.on();
+        self.sys_step.on();
         thread::sleep(self.t_stephold_high);
-        self.sys_dir.off();
+        self.sys_step.off();
 
         self.pos += if self.dir { 1 } else { -1 };
     }
