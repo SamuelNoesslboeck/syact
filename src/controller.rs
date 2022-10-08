@@ -8,7 +8,7 @@ use rust_gpiozero::{OutputDevice, InputDevice};
 use crate::data::StepperData;
 use crate::math::{angluar_velocity, start_frequency};
 
-const PIN_ERR : u16 = 0xFFFF;
+const PIN_ERR : u8 = 0xFF;
 
 pub trait StepperCtrl
 {
