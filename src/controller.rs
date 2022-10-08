@@ -113,6 +113,8 @@ impl StepperCtrl for PwmStepperCtrl
 
             if *curve.index(i as usize) > t_min {
                 t_total += *curve.index(i as usize + 1);
+            } else {
+                *curve.last_mut().unwrap() = t_min;
             }
         }
 
