@@ -78,7 +78,7 @@ impl PwmStepperCtrl
             pin_mes: PIN_ERR, 
             dir: true, 
             pos: 0,
-            t_stephold_high: time::Duration::from_millis(1),
+            t_stephold_high: time::Duration::from_micros(100),
 
             sys_dir: OutputDevice::new(pin_dir),
             sys_step: OutputDevice::new(pin_step),
@@ -125,6 +125,8 @@ impl StepperCtrl for PwmStepperCtrl
             thread::sleep(Duration::from_secs_f64(*curve.index((stepcount - i) as usize)));
             self.step();
         }
+
+        dbg!(curve);
     }
     
     fn stop(&self) {
