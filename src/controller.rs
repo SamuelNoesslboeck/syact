@@ -3,12 +3,12 @@ use std::{thread, time, vec};
 use std::f64::consts::PI;
 use std::ops::Index;
 
-use rust_gpiozero::{OutputDevice, InputDevice};
+use gpio::{sysfs::*, GpioOut};
 
 use crate::data::StepperData;
 use crate::math::{angluar_velocity, start_frequency};
 
-const PIN_ERR : u8 = 0xFF;
+const PIN_ERR : u16 = 0xFF;
 
 pub trait StepperCtrl
 {
@@ -48,11 +48,11 @@ pub struct PwmStepperCtrl
     pub sf : f64,
 
     /// Pin for controlling direction
-    pub pin_dir : u8,
+    pub pin_dir : u16,
     /// Pin for controlling steps
-    pub pin_step : u8,
+    pub pin_step : u16,
     /// Pin for messuring distances
-    pub pin_mes : u8, 
+    pub pin_mes : u16, 
 
     /// The current direction (true for right, false for left)
     pub dir : bool,
@@ -62,14 +62,14 @@ pub struct PwmStepperCtrl
     /// Time span of holding the high signal when processing a step
     pub t_stephold_high : time::Duration,
 
-    sys_dir : OutputDevice,
-    sys_step : OutputDevice,
-    sys_mes : Option<InputDevice>
+    sys_dir : SysFsGpioOutput,
+    sys_step : SysFsGpioOutput,
+    sys_mes : Option<SysFsGpioInput>
 }
 
 impl PwmStepperCtrl
 {   
-    pub fn new(data : StepperData, pin_dir : u8, pin_step : u8) -> Self {
+    pub fn new(data : StepperData, pin_dir : u16, pin_step : u16) -> Self {
         return PwmStepperCtrl { 
             data: data,
             sf: 1.0, 
@@ -80,8 +80,8 @@ impl PwmStepperCtrl
             pos: 0,
             t_stephold_high: time::Duration::from_micros(100),
 
-            sys_dir: OutputDevice::new(pin_dir),
-            sys_step: OutputDevice::new(pin_step),
+            sys_dir: SysFsGpioOutput::open(pin_dir).unwrap(),
+            sys_step: SysFsGpioOutput::open(pin_step).unwrap(),
             sys_mes: None
         };
     }
@@ -90,9 +90,9 @@ impl PwmStepperCtrl
 impl StepperCtrl for PwmStepperCtrl
 {
     fn step(&mut self) {
-        self.sys_step.on();
+        self.sys_step.set_high().unwrap();
         thread::sleep(self.t_stephold_high);
-        self.sys_step.off();
+        self.sys_step.set_low().unwrap();
 
         self.pos += if self.dir { 1 } else { -1 };
     }

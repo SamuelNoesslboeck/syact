@@ -10,4 +10,4 @@ name = "stepper_lib"
 path = "src/lib.rs"
 
 [dependencies]
-rust_gpiozero = "0.2.1"
+gpio = "0.4.1"

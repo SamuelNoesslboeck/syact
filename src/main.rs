@@ -14,21 +14,21 @@ fn main() {
 
     match args[1].as_str() {
         "step" => test_step(&mut ctrl),
-        "steps" => test_step(&mut ctrl), 
+        "steps" => test_steps(&mut ctrl), 
         _ => println!("No test with the given name found")
     };
 }
 
 fn test_step(ctrl : &mut PwmStepperCtrl)
 {
-    println!("Starting test step ... ");
+    println!("Starting test 'step' ... ");
     ctrl.step();
     println!("Step done ... ");
 }
 
 fn test_steps(ctrl : &mut PwmStepperCtrl)
 {
-    println!("Starting test step ... ");
+    println!("Starting test 'steps' ... ");
     ctrl.steps(50, 5.0);
-    println!("Step done ... ");
+    println!("50 steps done");
 }
