@@ -29,6 +29,6 @@ fn test_step(ctrl : &mut PwmStepperCtrl)
 fn test_steps(ctrl : &mut PwmStepperCtrl)
 {
     println!("Starting test step ... ");
-    ctrl.steps(50, 5);
+    ctrl.steps(50, 5.0);
     println!("Step done ... ");
 }
