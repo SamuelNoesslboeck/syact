@@ -106,7 +106,7 @@ impl StepperCtrl for PwmStepperCtrl
 
         let t_min = 2.0 * PI / self.data.n_s as f64 / omega;
         let mut t_total = curve[0];
-        for i in 0 .. stepcount / 2 {
+        for i in 0 .. stepcount / 2 - 1 {
             thread::sleep(Duration::from_secs_f64(*curve.index(i as usize)));
             self.step();
             curve.push(2.0 * PI / (self.data.n_s as f64) / angluar_velocity(&self.data, t_total));
