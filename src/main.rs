@@ -10,7 +10,7 @@ fn main() {
 
     let mut ctrl = PwmStepperCtrl::new(
         StepperData::mot_17he15_1504s(12.0), 
-        3, 37);
+        3, 26);
 
     match args[1].as_str() {
         "step" => test_step(&mut ctrl),
