@@ -12,6 +12,8 @@ fn main() {
         StepperData::mot_17he15_1504s(12.0), 
         3, 26);
 
+    ctrl.sf = 2.0;
+
     match args[1].as_str() {
         "step" => test_step(&mut ctrl),
         "steps" => test_steps(&mut ctrl), 
