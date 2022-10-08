@@ -14,6 +14,7 @@ fn main() {
 
     match args[1].as_str() {
         "step" => test_step(&mut ctrl),
+        "steps" => test_step(&mut ctrl), 
         _ => println!("No test with the given name found")
     };
 }
@@ -25,7 +26,7 @@ fn test_step(ctrl : &mut PwmStepperCtrl)
     println!("Step done ... ");
 }
 
-fn test_step(ctrl : &mut PwmStepperCtrl)
+fn test_steps(ctrl : &mut PwmStepperCtrl)
 {
     println!("Starting test step ... ");
     ctrl.steps(50, 5);
