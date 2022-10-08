@@ -3,7 +3,7 @@ use std::{thread, time, vec};
 use std::f64::consts::PI;
 use std::ops::Index;
 
-use rust_gpiozero::OutputDevice;
+use rust_gpiozero::{OutputDevice, InputDevice};
 
 use crate::data::StepperData;
 use crate::math::{angluar_velocity, start_frequency};
@@ -19,7 +19,6 @@ pub trait StepperCtrl
     fn steps(&mut self, stepcount : u64, omega : f64);
     // Stops the motor as fast as possible
     fn stop(&self);
-
     /// Let's the motor accelerate to the given speed as fast as possible
     fn set_speed(&self, omega : f64);
 
@@ -49,11 +48,11 @@ pub struct PwmStepperCtrl
     pub sf : f64,
 
     /// Pin for controlling direction
-    pub pin_dir : u16,
+    pub pin_dir : u8,
     /// Pin for controlling steps
-    pub pin_step : u16,
+    pub pin_step : u8,
     /// Pin for messuring distances
-    pub pin_mes : u16, 
+    pub pin_mes : u8, 
 
     /// The current direction (true for right, false for left)
     pub dir : bool,
@@ -64,8 +63,8 @@ pub struct PwmStepperCtrl
     pub t_stephold_high : time::Duration,
 
     sys_dir : OutputDevice,
-    sys_step : SysFsGpioOutput,
-    sys_mes : Option<SysFsGpioInput>
+    sys_step : OutputDevice,
+    sys_mes : Option<InputDevice>
 }
 
 impl PwmStepperCtrl
@@ -82,7 +81,7 @@ impl PwmStepperCtrl
             t_stephold_high: time::Duration::from_millis(1),
 
             sys_dir: OutputDevice::new(pin_dir),
-            sys_step: SysFsGpioOutput::open(pin_step).unwrap(),
+            sys_step:  OutputDevice::new(pin_step),
             sys_mes: None
         };
     }
