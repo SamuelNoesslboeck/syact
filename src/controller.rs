@@ -17,6 +17,7 @@ pub trait StepperCtrl
 
     /// Move a number of steps as fast as possible, the steps will be traveled without 
     fn steps(&mut self, stepcount : u64, omega : f64);
+    fn steps_save(&mut self, stepcount : u64, omega : f64);
     // Stops the motor as fast as possible
     fn stop(&self);
     /// Let's the motor accelerate to the given speed as fast as possible
