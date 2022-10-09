@@ -17,22 +17,41 @@ fn main() {
     ctrl.data.j = 0.001;
 
     match args[1].as_str() {
-        "step" => test_step(&mut ctrl),
-        "steps" => test_steps(&mut ctrl), 
+        "step" => test_step(&args, &mut ctrl),
+        "steps" => test_steps(&args, &mut ctrl), 
         _ => println!("No test with the given name found")
     };
 }
 
-fn test_step(ctrl : &mut PwmStepperCtrl)
+fn test_step(_args : &Vec<String>, ctrl : &mut PwmStepperCtrl)
 {
     println!("Starting test 'step' ... ");
     ctrl.step();
     println!("Step done ... ");
 }
 
-fn test_steps(ctrl : &mut PwmStepperCtrl)
+fn test_steps(args : &Vec<String>, ctrl : &mut PwmStepperCtrl)
 {
+    let mut steps = 200;
+    let mut omega = 10.0;
+
+    if args.len() > 2 {
+        let arg2 = args[2].parse::<u64>();
+
+        if arg2.is_ok() {
+            steps = arg2.unwrap();
+        }
+    } 
+
+    if args.len() > 3 {
+        let arg3 = args[3].parse::<f64>();
+
+        if arg3.is_ok() {
+            omega = arg3.unwrap();
+        }
+    }
+
     println!("Starting test 'steps' ... ");
-    ctrl.steps(200, 3.0);
-    println!("50 steps done");
+    ctrl.steps(steps, omega);
+    println!("{} with max speed {}rad/s done", steps, omega);
 }
