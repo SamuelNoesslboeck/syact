@@ -8,6 +8,9 @@ use gpio::{sysfs::*, GpioOut};
 use crate::data::StepperData;
 use crate::math::{angluar_velocity, start_frequency};
 
+type UpdateLoadFunc = fn (&StepperData);
+type UpdatePosFunc = fn (&dyn StepperCtrl);
+
 const PIN_ERR : u16 = 0xFF;
 
 pub trait StepperCtrl
@@ -17,7 +20,9 @@ pub trait StepperCtrl
 
     /// Move a number of steps as fast as possible, the steps will be traveled without 
     fn steps(&mut self, stepcount : u64, omega : f64);
-    fn steps_save(&mut self, stepcount : u64, omega : f64);
+    /// Move a number of steps safefy (with loads included)
+    fn steps_save(&mut self, stepcount : u64, omega : f64, up_load : UpdateLoadFunc);
+    fn steps_update(&mut self, stepcount : u64, omega : f64, up_load : UpdateLoadFunc, up_pos : UpdatePosFunc);
     // Stops the motor as fast as possible
     fn stop(&self);
     /// Let's the motor accelerate to the given speed as fast as possible
@@ -128,6 +133,10 @@ impl StepperCtrl for PwmStepperCtrl
             thread::sleep(Duration::from_secs_f64(*curve.index((stepcount/2 - i) as usize)));
             self.step();
         }
+    }
+
+    fn steps_save(&mut self, stepcount : u64, omega : f64, up_load : UpdateLoadFunc) {
+        
     }
     
     fn stop(&self) {
