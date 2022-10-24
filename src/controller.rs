@@ -136,6 +136,38 @@ impl StepperCtrl for PwmStepperCtrl
     }
 
     fn steps_save(&mut self, stepcount : u64, omega : f64, up_load : UpdateLoadFunc) {
+        let mut curve : Vec<f64> = vec![
+            1.0 / start_frequency(&self.data)
+        ];
+
+        self.step();
+
+        let t_min = 2.0 * PI / self.data.n_s as f64 / omega;
+        let mut t_total = curve[0];
+        for i in 0 .. stepcount / 2 - 1 {
+            thread::sleep(Duration::from_secs_f64(*curve.index(i as usize)));
+            self.step();
+            curve.push(2.0 * PI / (self.data.n_s as f64) / angluar_velocity(&self.data, t_total));
+
+            if *curve.index(i as usize) > t_min {
+                t_total += *curve.index(i as usize + 1);
+            } else {
+                *curve.last_mut().unwrap() = t_min;
+            }
+        }
+
+        if (stepcount % 2) == 1 {
+            thread::sleep(Duration::from_secs_f64(*curve.last().unwrap()));
+            self.step()
+        }
+
+        for i in 1 .. stepcount / 2 + 1 {
+            thread::sleep(Duration::from_secs_f64(*curve.index((stepcount/2 - i) as usize)));
+            self.step();
+        }
+    }
+
+    fn steps_update(&mut self, stepcount : u64, omega : f64, up_load : UpdateLoadFunc, up_pos : UpdatePosFunc) {
         
     }
     

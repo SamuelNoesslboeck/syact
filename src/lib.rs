@@ -6,4 +6,5 @@
 // Modules
 pub mod controller;
 pub mod data;
+pub mod gcode;
 pub mod math;

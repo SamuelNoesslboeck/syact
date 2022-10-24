@@ -46,12 +46,23 @@ impl StepperData
         return self.i_max * self.l / self.u;
     }
 
+    /// Time per step for the given omega
     pub fn t_s(&self, omega : f64) -> f64 {
         return 2.0 * PI * omega / self.n_s as f64;
     }
 }
 
-// pub struct Cylinder
-// {
+pub struct Cylinder
+{
+    pub data : StepperData,
+
+    pub pos : f64,
     
-// }
+    pub pos_min : f64,
+    pub pos_max : f64
+}
+
+impl Cylinder
+{
+    
+}

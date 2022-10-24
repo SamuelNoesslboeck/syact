@@ -27,7 +27,7 @@ pub fn angluar_velocity(data : &StepperData, t : f64) -> f64 {
     return data.alpha_max() * (t + data.tau()*E.powf(-t/data.tau()));
 }
 
-/// 
+/// Creates the acceleration curve for the given Stepperdata _data_, the curve can be modified by modifying the stepper data or defining a minium steptime _t min_ or a maximum length of _max len_
 pub fn acc_curve(data : &StepperData, t_min : f64, max_len : u64) -> Vec<f64> {
     let mut list : Vec<f64> = vec![
         1.0 / start_frequency(data)
