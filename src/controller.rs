@@ -105,7 +105,7 @@ impl StepperCtrl for PwmStepperCtrl
 
     fn steps(&mut self, stepcount : u64, omega : f64) {
         let mut curve : Vec<f64> = vec![
-            1.0 / start_frequency(&self.data)
+            self.sf / start_frequency(&self.data)
         ];
 
         self.step();
@@ -115,7 +115,7 @@ impl StepperCtrl for PwmStepperCtrl
         for i in 0 .. stepcount / 2 - 1 {
             thread::sleep(Duration::from_secs_f64(*curve.index(i as usize)));
             self.step();
-            curve.push(2.0 * PI / (self.data.n_s as f64) / angluar_velocity(&self.data, t_total));
+            curve.push(2.0 * PI / (self.data.n_s as f64) / angluar_velocity(&self.data, t_total) * self.sf);
 
             if *curve.index(i as usize) > t_min {
                 t_total += *curve.index(i as usize + 1);
