@@ -1,3 +1,4 @@
+use std::{time, thread};
 use stepper_lib::{data::StepperData, controller::{PwmStepperCtrl, StepperCtrl}};
 
 fn main() {
@@ -19,6 +20,7 @@ fn main() {
     match args[1].as_str() {
         "step" => test_step(&args, &mut ctrl),
         "steps" => test_steps(&args, &mut ctrl), 
+        "lin_steps" => test_lin_steps(&args, &mut ctrl), 
         _ => println!("No test with the given name found")
     };
 }
@@ -53,6 +55,39 @@ fn test_steps(args : &Vec<String>, ctrl : &mut PwmStepperCtrl)
 
     println!("Starting test 'steps' ... ");
     ctrl.steps(steps, omega);
+    println!("{} with max speed {}rad/s done", steps, omega);
+}
+
+fn test_lin_steps(args : &Vec<String>, ctrl : &mut PwmStepperCtrl)
+{
+    let mut steps = 200;
+    let mut omega = 10.0;
+
+    if args.len() > 2 {
+        let arg2 = args[2].parse::<u64>();
+
+        if arg2.is_ok() {
+            steps = arg2.unwrap();
+        }
+    } 
+
+    if args.len() > 3 {
+        let arg3 = args[3].parse::<f64>();
+
+        if arg3.is_ok() {
+            omega = arg3.unwrap();
+        }
+    }
+
+    println!("Starting test 'steps' ... ");
+
+    let t = ctrl.data.t_s(omega);
+
+    for _ in 0 .. steps {
+        ctrl.step();
+        thread::sleep(time::Duration::from_millis(100));
+    }
+
     println!("{} with max speed {}rad/s done", steps, omega);
 }
 
