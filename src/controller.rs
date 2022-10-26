@@ -52,6 +52,8 @@ pub struct PwmStepperCtrl
     pub data : StepperData,
     /// Safety factor for load and speed calculations
     pub sf : f64,
+    /// Curve factor for slower acceleration
+    pub cf : f64, 
 
     /// Pin for controlling direction
     pub pin_dir : u16,
@@ -78,7 +80,8 @@ impl PwmStepperCtrl
     pub fn new(data : StepperData, pin_dir : u16, pin_step : u16) -> Self {
         return PwmStepperCtrl { 
             data: data,
-            sf: 1.0, 
+            sf: 2.0, 
+            cf: 0.9,
             pin_dir: pin_dir, 
             pin_step: pin_step, 
             pin_mes: PIN_ERR, 
@@ -115,7 +118,7 @@ impl StepperCtrl for PwmStepperCtrl
         for i in 0 .. stepcount / 2 - 1 {
             thread::sleep(Duration::from_secs_f64(*curve.index(i as usize)));
             self.step();
-            curve.push(2.0 * PI / (self.data.n_s as f64) / angluar_velocity(&self.data, t_total) * self.sf);
+            curve.push((2.0 * PI / (self.data.n_s as f64) / angluar_velocity(&self.data, t_total) * self.sf).powf(self.cf));
 
             if *curve.index(i as usize) > t_min {
                 t_total += *curve.index(i as usize + 1);
