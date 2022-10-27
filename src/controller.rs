@@ -156,7 +156,7 @@ impl StepperCtrl for PwmStepperCtrl
         let time_step = self.data.time_step(omega);
         let last = curve.last().unwrap_or(&time_step);
 
-        // println!("{} {} {}", curve.len(), last, time_step);
+        println!("{} / {} / {}", curve.len(), last, time_step);
 
         for i in curve.len() .. (stepcount / 2) as usize {
             self.step(time_step);
