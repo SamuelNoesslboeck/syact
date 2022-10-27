@@ -45,3 +45,8 @@ pub fn acc_curve(data : &StepperData, t_min : f64, max_len : u64) -> Vec<f64> {
 
     return list;
 }
+
+pub fn get_linear_curve(curve : Vec<f64>)
+{
+    
+}
