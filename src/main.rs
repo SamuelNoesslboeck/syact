@@ -14,7 +14,7 @@ fn main() {
         3, 26);
 
     // ctrl.sf = 3.0;
-    ctrl.data.t_s /= 2.0;
+    // ctrl.data.t_s /= 2.0;
     // ctrl.data.j = 0.001;
 
     match args[1].as_str() {
