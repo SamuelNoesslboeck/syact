@@ -20,7 +20,7 @@ pub trait StepperCtrl
 
     /// Accelerates the motor as fast as possible to the given speed, canceling if it takes any longer than the stepcount given. The function returns the steps needed for the acceleration process
     fn accelerate(&mut self, stepcount : u64, omega : f64) -> Vec<f64>;
-    /// Drive curve
+    /// Drive a curve of step times
     fn drive_curve(&mut self, curve : Vec<f64>);
     /// Move a number of steps as fast as possible, the steps will be traveled without 
     fn steps(&mut self, stepcount : u64, omega : f64);
@@ -86,7 +86,7 @@ impl PwmStepperCtrl
     pub fn new(data : StepperData, pin_dir : u16, pin_step : u16) -> Self {
         return PwmStepperCtrl { 
             data: data,
-            sf: 2.0, 
+            sf: 1.5, 
             cf: 0.9,
             pin_dir: pin_dir, 
             pin_step: pin_step, 
@@ -165,7 +165,7 @@ impl StepperCtrl for PwmStepperCtrl
             self.step(*last);
         }
 
-        self.drive_curve(curve);
+        self.drive_curve(curve.reverse());
         self.set_speed(0.0);
     }
 
