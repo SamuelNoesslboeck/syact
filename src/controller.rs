@@ -127,7 +127,6 @@ impl StepperCtrl for PwmStepperCtrl
         let mut curve = vec![];
 
         while true {
-
             if i > stepcount {
                 self.set_speed(omega);
                 break;
@@ -167,7 +166,7 @@ impl StepperCtrl for PwmStepperCtrl
         let last = curve.last().unwrap();
         let time_step = self.data.time_step(omega);
 
-        println!("{} {} {}", curve.len(), last, time_step);
+        // println!("{} {} {}", curve.len(), last, time_step);
 
         for i in curve.len() .. (stepcount / 2) as usize {
             self.step(time_step);
