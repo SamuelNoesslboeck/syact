@@ -121,10 +121,11 @@ impl StepperCtrl for PwmStepperCtrl
         let t_min = self.data.time_step(omega);
 
         let mut time_step : f64 = 0.0;      // Time per step
-        let mut i: u64 = 0;                 // Step count
+        let mut i: u64 = 1;                 // Step count
         let mut curve = vec![];
 
         while true {
+
             if i > stepcount {
                 self.set_speed(omega);
                 break;
@@ -138,8 +139,8 @@ impl StepperCtrl for PwmStepperCtrl
             }
 
             self.step(time_step);
-            i += 1;
             curve.push(time_step);
+            i += 1;
         }
 
         return curve;
