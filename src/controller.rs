@@ -164,8 +164,9 @@ impl StepperCtrl for PwmStepperCtrl
         if (stepcount % 2) == 1 {
             self.step(*last);
         }
-
-        self.drive_curve(curve.reverse());
+        
+        curve.reverse();
+        self.drive_curve(curve);
         self.set_speed(0.0);
     }
 
