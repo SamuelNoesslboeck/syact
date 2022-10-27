@@ -47,8 +47,13 @@ impl StepperData
     }
 
     /// Time per step for the given omega
-    pub fn t_s(&self, omega : f64) -> f64 {
-        return 2.0 * PI * omega / self.n_s as f64;
+    pub fn time_step(&self, omega : f64) -> f64 {
+        return 2.0 * PI / (self.n_s as f64) / omega;
+    }
+
+    /// Omega for time per step
+    pub fn omega(&self, time_step : f64) -> f64 {
+        return (self.n_s as f64) / 2.0 / PI / time_step;
     }
 }
 

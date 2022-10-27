@@ -28,7 +28,7 @@ fn main() {
 fn test_step(_args : &Vec<String>, ctrl : &mut PwmStepperCtrl)
 {
     println!("Starting test 'step' ... ");
-    ctrl.step();
+    ctrl.step(0.01);
     println!("Step done ... ");
 }
 
