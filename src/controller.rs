@@ -153,7 +153,7 @@ impl StepperCtrl for PwmStepperCtrl
     }
 
     fn steps(&mut self, stepcount : u64, omega : f64) {
-        let curve = self.accelerate(stepcount / 2, omega);
+        let mut curve = self.accelerate(stepcount / 2, omega);
         let last = curve.last().unwrap();
         let time_step = self.data.time_step(omega);
 
@@ -164,7 +164,7 @@ impl StepperCtrl for PwmStepperCtrl
         if (stepcount % 2) == 1 {
             self.step(*last);
         }
-        
+
         curve.reverse();
         self.drive_curve(curve);
         self.set_speed(0.0);
