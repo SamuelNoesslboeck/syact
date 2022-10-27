@@ -22,6 +22,8 @@ pub trait StepperCtrl
     fn accelerate(&mut self, stepcount : u64, omega : f64) -> Vec<f64>;
     /// Drive a curve of step times
     fn drive_curve(&mut self, curve : Vec<f64>);
+    /// Drive a inverse curve of step times
+    fn drive_curve_inv(&mut self, curve : Vec<f64>);
     /// Move a number of steps as fast as possible, the steps will be traveled without 
     fn steps(&mut self, stepcount : u64, omega : f64);
     /// Move a number of steps safefy (with loads included)
@@ -152,6 +154,14 @@ impl StepperCtrl for PwmStepperCtrl
         }
     }
 
+    fn drive_curve_inv(&mut self, curve : Vec<f64>) {
+        let sync_time = curve.first().unwrap() + curve.last().unwrap();
+
+        for i in 0 .. curve.len() {
+            self.step(sync_time - curve[i]);
+        }
+    }
+
     fn steps(&mut self, stepcount : u64, omega : f64) {
         let mut curve = self.accelerate(stepcount / 2, omega);
         let last = curve.last().unwrap();
@@ -167,8 +177,7 @@ impl StepperCtrl for PwmStepperCtrl
             self.step(*last);
         }
 
-        curve.reverse();
-        self.drive_curve(curve);
+        self.drive_curve_inv(curve);
         self.set_speed(0.0);
     }
 
