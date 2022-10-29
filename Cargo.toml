@@ -11,3 +11,4 @@ path = "src/lib.rs"
 
 [dependencies]
 gpio = "0.4.1"
+gcode = "0.6.1"

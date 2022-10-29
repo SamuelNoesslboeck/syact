@@ -1,4 +1,3 @@
-use std::{time, thread};
 use stepper_lib::{data::StepperData, controller::{PwmStepperCtrl, StepperCtrl}};
 
 fn main() {
@@ -20,6 +19,7 @@ fn main() {
     match args[1].as_str() {
         "step" => test_step(&args, &mut ctrl),
         "steps" => test_steps(&args, &mut ctrl), 
+        "repeat" => test_repeat(&args, &mut ctrl),
 
         _ => println!("No test with the given name found")
     };
@@ -80,7 +80,16 @@ fn test_repeat(args : &Vec<String>, ctrl : &mut PwmStepperCtrl)
         }
     }
 
-    for i in 0 .. times {
-        
+    if args.len() > 4 {
+        let arg4 = args[4].parse::<u64>();
+
+        if arg4.is_ok() {
+            times = arg4.unwrap();
+        }
+    }
+
+    for _ in 0 .. times {
+        ctrl.steps(steps, omega);
+        ctrl.set_dir(!ctrl.get_dir());
     }
 }

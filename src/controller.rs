@@ -1,15 +1,13 @@
-use std::time::Duration;
 use std::{thread, time, vec};
 use std::f64::consts::PI;
-use std::ops::Index;
 
 use gpio::{sysfs::*, GpioOut};
 
 use crate::data::StepperData;
-use crate::math::{angluar_velocity, start_frequency};
+use crate::math::start_frequency;
 
-type UpdateLoadFunc = fn (&StepperData);
-type UpdatePosFunc = fn (&dyn StepperCtrl);
+// type UpdateLoadFunc = fn (&StepperData);
+// type UpdatePosFunc = fn (&dyn StepperCtrl);
 
 const PIN_ERR : u16 = 0xFF;
 
@@ -20,8 +18,8 @@ pub trait StepperCtrl
 
     /// Accelerates the motor as fast as possible to the given speed, canceling if it takes any longer than the stepcount given. The function returns the steps needed for the acceleration process
     fn accelerate(&mut self, stepcount : u64, omega : f64) -> Vec<f64>;
-    /// Drive a curve of step times
-    fn drive_curve(&mut self, curve : Vec<f64>);
+    /// Drive a curve of step times, represented by a list
+    fn drive_curve(&mut self, curve : &Vec<f64>);
     /// Move a number of steps as fast as possible, the steps will be traveled without 
     fn steps(&mut self, stepcount : u64, omega : f64);
     /// Move a number of steps safefy (with loads included)
@@ -47,6 +45,9 @@ pub trait StepperCtrl
     /// Returns the relative position (current rotation) in radians
     fn get_rel_pos(&self) -> f64;
 
+    /// Moves the motor in the current direction till the messure pin is true
+    fn messure(&mut self, max_steps : u64, omega : f64) -> Option<()>;
+
     // /// Sets the current absolute position
     // fn set_absolute_pos(&mut self) -> f64;
     // /// Sets the current relative position
@@ -70,13 +71,13 @@ pub struct PwmStepperCtrl
     pub pin_mes : u16, 
 
     /// The current direction (true for right, false for left)
-    pub dir : bool,
+    dir : bool,
     /// The current absolute position since set to a value
-    pub pos : i64,
+    pos : i64,
 
     sys_dir : SysFsGpioOutput,
     sys_step : SysFsGpioOutput,
-    sys_mes : Option<SysFsGpioInput>,
+    // sys_mes : Option<SysFsGpioInput>,
 
     omega : f64
 }
@@ -96,7 +97,7 @@ impl PwmStepperCtrl
             
             sys_dir: SysFsGpioOutput::open(pin_dir).unwrap(),
             sys_step: SysFsGpioOutput::open(pin_step).unwrap(),
-            sys_mes: None,
+            // sys_mes: None,
 
             omega: 0.0
         };
@@ -120,11 +121,11 @@ impl StepperCtrl for PwmStepperCtrl
         let t_start = self.sf / start_frequency(&self.data);
         let t_min = self.data.time_step(omega);
 
-        let mut time_step : f64 = 0.0;      // Time per step
+        let mut time_step : f64;      // Time per step
         let mut i: u64 = 1;                 // Step count
         let mut curve = vec![];
 
-        while true {
+        loop {
             if i > stepcount {
                 self.set_speed(omega);
                 break;
@@ -145,20 +146,20 @@ impl StepperCtrl for PwmStepperCtrl
         return curve;
     }
 
-    fn drive_curve(&mut self, curve : Vec<f64>) {
+    fn drive_curve(&mut self, curve : &Vec<f64>) {
         for i in 0 .. curve.len() {
             self.step(curve[i]);
         }
     }
 
     fn steps(&mut self, stepcount : u64, omega : f64) {
-        let mut curve = self.accelerate(stepcount / 2, omega);
+        let curve = self.accelerate(stepcount / 2, omega);
         let time_step = self.data.time_step(omega);
         let last = curve.last().unwrap_or(&time_step);
 
         println!("{} / {} / {}", curve.len(), last, time_step);
 
-        for i in curve.len() .. (stepcount / 2) as usize {
+        for _ in curve.len() .. (stepcount / 2) as usize {
             self.step(time_step);
         }
 
@@ -166,53 +167,16 @@ impl StepperCtrl for PwmStepperCtrl
             self.step(*last);
         }
 
-        for i in curve.len() .. (stepcount / 2) as usize {
+        for _ in curve.len() .. (stepcount / 2) as usize {
             self.step(time_step);
         }
 
-        self.drive_curve(curve);
+        self.drive_curve(&curve);
         self.set_speed(0.0);
     }
-
-    // fn steps_save(&mut self, stepcount : u64, omega : f64, up_load : UpdateLoadFunc) {
-        // let mut curve : Vec<f64> = vec![
-        //     1.0 / start_frequency(&self.data)
-        // ];
-
-        // self.step();
-
-        // let t_min = 2.0 * PI / self.data.n_s as f64 / omega;
-        // let mut t_total = curve[0];
-        // for i in 0 .. stepcount / 2 - 1 {
-        //     thread::sleep(Duration::from_secs_f64(*curve.index(i as usize)));
-        //     self.step();
-        //     curve.push(2.0 * PI / (self.data.n_s as f64) / angluar_velocity(&self.data, t_total));
-
-        //     if *curve.index(i as usize) > t_min {
-        //         t_total += *curve.index(i as usize + 1);
-        //     } else {
-        //         *curve.last_mut().unwrap() = t_min;
-        //     }
-        // }
-
-        // if (stepcount % 2) == 1 {
-        //     thread::sleep(Duration::from_secs_f64(*curve.last().unwrap()));
-        //     self.step()
-        // }
-
-        // for i in 1 .. stepcount / 2 + 1 {
-        //     thread::sleep(Duration::from_secs_f64(*curve.index((stepcount/2 - i) as usize)));
-        //     self.step();
-        // }
-    // }
-
-    // fn steps_update(&mut self, stepcount : u64, omega : f64, up_load : UpdateLoadFunc, up_pos : UpdatePosFunc) {
-        
-    // }
-    
     
     fn stop(&mut self) -> u64 {
-        0
+        0 // TODO
     }
 
     fn get_speed(&self) -> f64 {
@@ -229,6 +193,8 @@ impl StepperCtrl for PwmStepperCtrl
     
     fn set_dir(&mut self, dir : bool) {
         self.dir = dir;
+
+        self.sys_dir.set_value(dir).unwrap();
     }
 
     fn get_abs_pos(&self) -> f64 {
@@ -237,5 +203,14 @@ impl StepperCtrl for PwmStepperCtrl
 
     fn get_rel_pos(&self) -> f64 {
         return 2.0 * PI * (self.pos % self.data.n_s as i64) as f64 / self.data.n_s as f64;
+    }
+
+    fn messure(&mut self, max_steps : u64, omega : f64) -> Option<()> {
+        let mut curve = self.accelerate(max_steps / 2, omega);
+        
+        curve.reverse();
+        self.drive_curve(&curve);
+
+        return None;
     }
 }
