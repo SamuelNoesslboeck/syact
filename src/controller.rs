@@ -45,8 +45,8 @@ pub trait StepperCtrl
     /// Returns the relative position (current rotation) in radians
     fn get_rel_pos(&self) -> f64;
 
-    /// Moves the motor in the current direction till the messure pin is true
-    fn messure(&mut self, max_steps : u64, omega : f64) -> Option<()>;
+    /// Moves the motor in the current direction till the measure pin is true
+    fn measure(&mut self, max_steps : u64, omega : f64) -> Option<()>;
 
     // /// Sets the current absolute position
     // fn set_absolute_pos(&mut self) -> f64;
@@ -205,7 +205,7 @@ impl StepperCtrl for PwmStepperCtrl
         return 2.0 * PI * (self.pos % self.data.n_s as i64) as f64 / self.data.n_s as f64;
     }
 
-    fn messure(&mut self, max_steps : u64, omega : f64) -> Option<()> {
+    fn measure(&mut self, max_steps : u64, omega : f64) -> Option<()> {
         let mut curve = self.accelerate(max_steps / 2, omega);
         
         curve.reverse();
