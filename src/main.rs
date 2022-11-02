@@ -13,7 +13,7 @@ fn main() {
         StepperData::mot_17he15_1504s(12.0), 
         3, 26);
 
-    // ctrl.sf = 3.0;
+    ctrl.sf = 10.0;
     // ctrl.data.t_s /= 2.0;
     ctrl.data.j = 0.000_1;
 
