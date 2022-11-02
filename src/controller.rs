@@ -214,3 +214,35 @@ impl StepperCtrl for PwmStepperCtrl
         return None;
     }
 }
+
+pub struct Cylinder
+{
+    pub data : StepperCtrl,
+
+    pub rte_ratio : f64,
+    
+    pub pos_min : f64,
+    pub pos_max : f64
+}
+
+impl Cylinder
+{
+    /// Create a new cylinder instance
+    pub fn new(data : StepperCtrl, rte_ratio : f64, pos_min : f64, pos_max : f64) {
+        return Cylinder {
+            data,
+            rte_ratio,
+            pos_min,
+            pos_max
+        };
+    }
+
+    /// 
+    pub fn extend(dis : f64, v_max : f64) -> f64 {
+
+    }
+
+    pub fn get_ext() -> f64 {
+
+    }
+}

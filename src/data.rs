@@ -56,18 +56,3 @@ impl StepperData
         return (self.n_s as f64) / 2.0 / PI / time_step;
     }
 }
-
-pub struct Cylinder
-{
-    pub data : StepperData,
-
-    pub pos : f64,
-    
-    pub pos_min : f64,
-    pub pos_max : f64
-}
-
-impl Cylinder
-{
-    
-}
