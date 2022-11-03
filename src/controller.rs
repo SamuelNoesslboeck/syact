@@ -11,8 +11,13 @@ use crate::math::start_frequency;
 
 const PIN_ERR : u16 = 0xFF;
 
+/// A trait for structs used to control stepper motors through different methods
 pub trait StepperCtrl
 {
+    // Data
+    /// Get the data of the stepper that is being controlled
+    fn get_data(&self) -> &StepperData;
+
     /// Move a single step
     fn step(&mut self, time : f64);
 
@@ -75,7 +80,9 @@ pub struct PwmStepperCtrl
     /// The current absolute position since set to a value
     pos : i64,
 
+    /// Pin for defining the direction
     sys_dir : SysFsGpioOutput,
+    /// Pin for PWM Step pulses
     sys_step : SysFsGpioOutput,
     // sys_mes : Option<SysFsGpioInput>,
 
@@ -106,6 +113,10 @@ impl PwmStepperCtrl
 
 impl StepperCtrl for PwmStepperCtrl
 {
+    fn get_data(&self) -> &StepperData {
+        return &self.data;    
+    }
+
     fn step(&mut self, time : f64) {
         let step_time_half = time::Duration::from_secs_f64(time / 2.0);
 
@@ -217,32 +228,64 @@ impl StepperCtrl for PwmStepperCtrl
 
 pub struct Cylinder
 {
-    pub data : StepperCtrl,
+    /// Data of the connected stepper motor
+    pub ctrl : Box<dyn StepperCtrl>,
 
+    /// Distance traveled per rad [in mm]
     pub rte_ratio : f64,
     
+    /// Minimal extent [in mm]
     pub pos_min : f64,
+    /// Maximal extent [in mm]
     pub pos_max : f64
 }
 
 impl Cylinder
 {
     /// Create a new cylinder instance
-    pub fn new(data : StepperCtrl, rte_ratio : f64, pos_min : f64, pos_max : f64) {
+    pub fn new(ctrl : Box<dyn StepperCtrl>, rte_ratio : f64, pos_min : f64, pos_max : f64) -> Self {
         return Cylinder {
-            data,
+            ctrl,
             rte_ratio,
-            pos_min,
+            pos_min,        // TODO: Use min and max
             pos_max
         };
     }
 
-    /// 
-    pub fn extend(dis : f64, v_max : f64) -> f64 {
-
+    /// Get the stepper motor data for the cylinder
+    pub fn data(&self) -> &StepperData {
+        self.ctrl.get_data()
     }
 
-    pub fn get_ext() -> f64 {
+    // Conversions
+        pub fn phi_c(&self, dis_c : f64) -> f64 {
+            dis_c / self.rte_ratio
+        }
 
+        pub fn dis_c(&self, phi_c : f64) -> f64 {
+            phi_c * self.rte_ratio
+        }
+
+        pub fn omega_c(&self, v_c : f64) -> f64 {
+            v_c / self.rte_ratio
+        }
+
+        pub fn v_c(&self, omega : f64) -> f64 {
+            omega * self.rte_ratio
+        }
+    //
+
+    /// Extend the cylinder by a given distance _dis_ (in mm) with the maximum velocity _v max_ (in mm/s), returns the actual distance traveled
+    pub fn extend(&mut self, dis : f64, v_max : f64) -> f64 {
+        let steps = (self.phi_c(dis) / self.data().ang_dis()).floor() as u64;
+
+        self.ctrl.steps(steps, self.omega_c(v_max));
+
+        return steps as f64 * self.data().ang_dis();
+    }
+
+    /// Returns the extension of the cylinder
+    pub fn get_ext(&self) -> f64 {
+        return self.dis_c(self.ctrl.get_abs_pos());
     }
 }

@@ -55,4 +55,9 @@ impl StepperData
     pub fn omega(&self, time_step : f64) -> f64 {
         return (self.n_s as f64) / 2.0 / PI / time_step;
     }
+
+    /// Get the angular distance of a step in rad
+    pub fn ang_dis(&self) -> f64 {
+        return 2.0 * PI / self.n_s as f64;
+    }
 }
