@@ -323,7 +323,7 @@ impl CylinderTriangle
     }
 
     pub fn gamma(&self) -> f32 {
-        ((self.cylinder.length().powi(2) as f32 + self.l_a.powi(2) + self.l_b.powi(2)) / 2.0 / self.l_a / self.l_b).acos()
+        ((self.cylinder.length().powi(2) as f32 - self.l_a.powi(2) - self.l_b.powi(2)) / 2.0 / self.l_a / self.l_b).acos()
     }
 
     pub fn set_gamma(&mut self, gam : f32, v_max : f32) {
