@@ -39,7 +39,7 @@ fn test_steps(args : &Vec<String>, ctrl : &mut PwmStepperCtrl)
     } 
 
     if args.len() > 3 {
-        let arg3 = args[3].parse::<f64>();
+        let arg3 = args[3].parse::<f32>();
 
         if arg3.is_ok() {
             omega = arg3.unwrap();
@@ -66,7 +66,7 @@ fn test_repeat(args : &Vec<String>, ctrl : &mut PwmStepperCtrl)
     } 
 
     if args.len() > 3 {
-        let arg3 = args[3].parse::<f64>();
+        let arg3 = args[3].parse::<f32>();
 
         if arg3.is_ok() {
             omega = arg3.unwrap();
