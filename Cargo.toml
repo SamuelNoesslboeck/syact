@@ -9,9 +9,23 @@ edition = "2021"
 name = "stepper_lib"
 path = "src/lib.rs"
 
+# Tests
 [[bin]]
 name = "test_gcode"
 path = "bin/test_gcode.rs"
+
+[[bin]]
+name = "test_repeat"
+path = "bin/test_repeat.rs"
+
+[[bin]]
+name = "test_step"
+path = "bin/test_step.rs"
+
+[[bin]]
+name = "test_steps"
+path = "bin/test_steps.rs"
+# //
 
 [dependencies]
 gpio = "0.4.1"
