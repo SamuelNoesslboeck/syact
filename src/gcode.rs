@@ -4,14 +4,17 @@ use gcode::{Mnemonic, GCode};
 
 pub type GCodeFunc = fn (&Interpreter, &GCode) -> Option<()>;
 
+pub type NumEntries = HashMap<u32, GCodeFunc>;
+pub type LetterEntries = HashMap<Mnemonic, NumEntries>;
+
 pub struct Interpreter 
 {
-    funcs : HashMap<Mnemonic, HashMap<u32, GCodeFunc>>
+    funcs : LetterEntries
 }
 
 impl Interpreter
 {   
-    pub fn new(funcs : HashMap<Mnemonic, HashMap<u32, GCodeFunc>>) -> Self {
+    pub fn new(funcs : LetterEntries) -> Self {
         return Interpreter {
             funcs 
         }
