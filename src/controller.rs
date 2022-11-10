@@ -358,7 +358,7 @@ impl CylinderTriangle
         (self.l_a.powi(2) + self.l_b.powi(2) + 2.0 * self.l_a * self.l_b * gam.cos()).powf(0.5)
     }
 
-    pub fn gamma(&self) -> f32 {
+    pub fn get_gamma(&self) -> f32 {
         ((self.cylinder.length().powi(2) as f32 - self.l_a.powi(2) - self.l_b.powi(2)) / 2.0 / self.l_a / self.l_b).acos()
     }
 
