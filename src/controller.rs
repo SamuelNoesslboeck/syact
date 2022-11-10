@@ -11,6 +11,7 @@ use crate::math::start_frequency;
 
 const PIN_ERR : u16 = 0xFF;
 
+#[derive(Debug)]
 pub enum RaspPin {
     ErrPin(),
     Output(SysFsGpioOutput),
@@ -273,8 +274,8 @@ impl StepperCtrl for PwmStepperCtrl
 
     fn debug_pins(&self) {
         dbg!(
-            self.pin_dir,
-            self.pin_step
+            &self.sys_dir,
+            &self.sys_step
         );
     }
 }
