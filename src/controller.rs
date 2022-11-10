@@ -61,6 +61,8 @@ pub trait StepperCtrl
     /// Moves the motor in the current direction till the measure pin is true
     fn measure(&mut self, max_steps : u64, omega : f32) -> Option<()>;
 
+    fn debug_pins(&self);
+
     // /// Sets the current absolute position
     // fn set_absolute_pos(&mut self) -> f32;
     // /// Sets the current relative position
@@ -267,6 +269,13 @@ impl StepperCtrl for PwmStepperCtrl
         self.drive_curve(&curve);
 
         return None;
+    }
+
+    fn debug_pins(&self) {
+        dbg!(
+            self.pin_dir,
+            self.pin_step
+        );
     }
 }
 
