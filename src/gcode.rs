@@ -1,10 +1,11 @@
 use std::collections::HashMap;
 
-use gcode::{Mnemonic, GCode};
+use gcode::{Mnemonic};
 
 pub type GCodeFunc = fn (&Interpreter, &GCode) -> Option<()>;
 
 pub type Letter = Mnemonic;
+pub type GCode = gcode::GCode;
 
 pub type NumEntries = HashMap<u32, GCodeFunc>;
 pub type LetterEntries = HashMap<Letter, NumEntries>;
