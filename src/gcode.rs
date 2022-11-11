@@ -4,8 +4,10 @@ use gcode::{Mnemonic, GCode};
 
 pub type GCodeFunc = fn (&Interpreter, &GCode) -> Option<()>;
 
+pub type Letter = Mnemonic;
+
 pub type NumEntries = HashMap<u32, GCodeFunc>;
-pub type LetterEntries = HashMap<Mnemonic, NumEntries>;
+pub type LetterEntries = HashMap<Letter, NumEntries>;
 
 pub struct Interpreter 
 {
