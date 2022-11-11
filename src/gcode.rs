@@ -2,24 +2,26 @@ use std::collections::HashMap;
 
 use gcode::{Mnemonic};
 
-pub type GCodeFunc = fn (&Interpreter, &GCode) -> Option<()>;
+pub type GCodeFunc<T> = fn (&Interpreter<T>, &GCode, &T) -> Option<()>;
 
 pub type Letter = Mnemonic;
 pub type GCode = gcode::GCode;
 
-pub type NumEntries = HashMap<u32, GCodeFunc>;
-pub type LetterEntries = HashMap<Letter, NumEntries>;
+pub type NumEntries<T> = HashMap<u32, GCodeFunc<T>>;
+pub type LetterEntries<T> = HashMap<Letter, NumEntries<T>>;
 
-pub struct Interpreter 
+pub struct Interpreter<'a, T>
 {
-    funcs : LetterEntries
+    funcs : LetterEntries<T>,
+    pub mach : &'a T
 }
 
-impl Interpreter
+impl<'a, T> Interpreter<'a, T>
 {   
-    pub fn new(funcs : LetterEntries) -> Self {
+    pub fn new(mach : &'a T, funcs : LetterEntries<T>) -> Self {
         return Interpreter {
-            funcs 
+            funcs,
+            mach
         }
     }
 
@@ -32,7 +34,7 @@ impl Interpreter
 
         for gc_line in gcode::parse(gc_str) {
             self.get_func(&gc_line).and_then(|func| {
-                func(&self, &gc_line)
+                func(&self, &gc_line, self.mach)
             });
 
             line_count += 1;
@@ -42,7 +44,7 @@ impl Interpreter
     }
     
     /// Get the GCode Function stored for the given code
-    pub fn get_func(&self, gc : &GCode) -> Option<&GCodeFunc> {
+    pub fn get_func(&self, gc : &GCode) -> Option<&GCodeFunc<T>> {
         self.funcs.get(&gc.mnemonic()).and_then(|v| {
             v.get(&gc.major_number())
         })
