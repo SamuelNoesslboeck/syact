@@ -25,6 +25,8 @@ pub trait StepperCtrl
     /// Get the data of the stepper that is being controlled
     fn get_data(&self) -> &StepperData;
 
+    fn get_data_mut(&mut self) -> &mut StepperData;
+
     /// Move a single step
     fn step(&mut self, time : f32);
 
@@ -136,6 +138,10 @@ impl StepperCtrl for PwmStepperCtrl
 {
     fn get_data(&self) -> &StepperData {
         return &self.data;    
+    }
+
+    fn get_data_mut(&mut self) -> &mut StepperData {
+        return &mut self.data;
     }
 
     fn step(&mut self, time : f32) {
