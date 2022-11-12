@@ -105,12 +105,12 @@ pub struct PwmStepperCtrl
 impl PwmStepperCtrl
 {   
     pub fn new(data : StepperData, pin_dir : u16, pin_step : u16) -> Self {
-        let sys_dir = match SysFsGpioOutput::open(pin_dir) {
+        let sys_dir = match SysFsGpioOutput::open(pin_dir.clone()) {
             Ok(val) => RaspPin::Output(val),
             Err(_) => RaspPin::ErrPin()
         };
 
-        let sys_step = match SysFsGpioOutput::open(pin_step) {
+        let sys_step = match SysFsGpioOutput::open(pin_step.clone()) {
             Ok(val) => RaspPin::Output(val),
             Err(_) => RaspPin::ErrPin()
         };
