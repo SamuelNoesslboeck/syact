@@ -30,3 +30,4 @@ path = "bin/test_steps.rs"
 [dependencies]
 gpio = "0.4.1"
 gcode = "0.6.1"
+rppal = { version = "0.14.0", features = ["hal"] }

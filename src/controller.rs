@@ -1,7 +1,7 @@
 use std::{thread, time, vec};
 use std::f32::consts::PI;
 
-use gpio::{sysfs::*, GpioOut};
+use rppal::gpio::{Gpio, OutputPin, InputPin};
 
 use crate::data::StepperData;
 use crate::math::start_frequency;
@@ -14,8 +14,8 @@ const PIN_ERR : u16 = 0xFF;
 #[derive(Debug)]
 pub enum RaspPin {
     ErrPin(),
-    Output(SysFsGpioOutput),
-    Input(SysFsGpioInput)
+    Output(OutputPin),
+    Input(InputPin)
 }
 
 /// A trait for structs used to control stepper motors through different methods
@@ -82,11 +82,11 @@ pub struct PwmStepperCtrl
     pub cf : f32, 
 
     /// Pin for controlling direction
-    pub pin_dir : u16,
+    pub pin_dir : u8,
     /// Pin for controlling steps
-    pub pin_step : u16,
+    pub pin_step : u8,
     /// Pin for messuring distances
-    pub pin_mes : u16, 
+    pub pin_mes : u8, 
 
     /// The current direction (true for right, false for left)
     dir : bool,
@@ -104,15 +104,21 @@ pub struct PwmStepperCtrl
 
 impl PwmStepperCtrl
 {   
-    pub fn new(data : StepperData, pin_dir : u16, pin_step : u16) -> Self {
-        let sys_dir = match SysFsGpioOutput::open(pin_dir.clone()) {
-            Ok(val) => RaspPin::Output(val),
-            Err(_) => RaspPin::ErrPin()
+    pub fn new(data : StepperData, pin_dir : u8, pin_step : u8) -> Self {
+        let sys_dir = match Gpio::new() {
+            Ok(pin) => match pin.get(pin_dir) {
+                Ok(pin) => RaspPin::Output(pin.into_output()),
+                Err(err) => RaspPin::ErrPin()
+            },
+            Err(err) => RaspPin::ErrPin()
         };
 
-        let sys_step = match SysFsGpioOutput::open(pin_step.clone()) {
-            Ok(val) => RaspPin::Output(val),
-            Err(_) => RaspPin::ErrPin()
+        let sys_dir = match Gpio::new() {
+            Ok(pin) => match pin.get(pin_step) {
+                Ok(pin) => RaspPin::Output(pin.into_output()),
+                Err(err) => RaspPin::ErrPin()
+            },
+            Err(err) => RaspPin::ErrPin()
         };
 
         return PwmStepperCtrl { 
@@ -148,16 +154,15 @@ impl StepperCtrl for PwmStepperCtrl
         let step_time_half = time::Duration::from_secs_f32(time / 2.0);
         
         match &mut self.sys_step {
-            RaspPin::ErrPin() => { },
             RaspPin::Output(pin) => {
-                pin.set_high().unwrap();
+                pin.set_high();
                 thread::sleep(step_time_half);
-                pin.set_low().unwrap();
+                pin.set_low();
                 thread::sleep(step_time_half);
         
                 self.pos += if self.dir { 1 } else { -1 };
             },
-            RaspPin::Input(_) => { }
+            _ => { }
         };
     }
 
@@ -249,13 +254,16 @@ impl StepperCtrl for PwmStepperCtrl
     
     fn set_dir(&mut self, dir : bool) {
         match &mut self.sys_dir {
-            RaspPin::ErrPin() => { },
             RaspPin::Output(pin) => {
                 self.dir = dir;
-
-                pin.set_value(dir).unwrap();
+                
+                if dir {
+                    pin.set_high();
+                } else {
+                    pin.set_low();
+                }
             },
-            RaspPin::Input(_) => { }
+            _ => { }
         };
     }
 
