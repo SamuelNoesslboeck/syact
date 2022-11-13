@@ -9,7 +9,7 @@ use crate::math::start_frequency;
 // type UpdateLoadFunc = fn (&StepperData);
 // type UpdatePosFunc = fn (&dyn StepperCtrl);
 
-const PIN_ERR : u16 = 0xFF;
+const PIN_ERR : u8 = 0xFF;
 
 #[derive(Debug)]
 pub enum RaspPin {
@@ -113,7 +113,7 @@ impl PwmStepperCtrl
             Err(err) => RaspPin::ErrPin()
         };
 
-        let sys_dir = match Gpio::new() {
+        let sys_step = match Gpio::new() {
             Ok(pin) => match pin.get(pin_step) {
                 Ok(pin) => RaspPin::Output(pin.into_output()),
                 Err(err) => RaspPin::ErrPin()
