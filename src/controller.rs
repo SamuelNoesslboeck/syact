@@ -295,7 +295,7 @@ impl StepperCtrl for PwmStepperCtrl
 pub struct Cylinder
 {
     /// Data of the connected stepper motor
-    pub ctrl : PwmStepperCtrl,
+    pub ctrl : Box<dyn StepperCtrl>,
 
     /// Distance traveled per rad [in mm]
     pub rte_ratio : f32,
@@ -309,7 +309,7 @@ pub struct Cylinder
 impl Cylinder
 {
     /// Create a new cylinder instance
-    pub fn new(ctrl : PwmStepperCtrl, rte_ratio : f32, pos_min : f32, pos_max : f32) -> Self {
+    pub fn new(ctrl : Box<dyn StepperCtrl>, rte_ratio : f32, pos_min : f32, pos_max : f32) -> Self {
         return Cylinder {
             ctrl,
             rte_ratio,
@@ -383,7 +383,7 @@ impl CylinderTriangle
 
 pub struct GearBearing 
 {
-    pub ctrl : PwmStepperCtrl,
+    pub ctrl : Box<dyn StepperCtrl>,
     
     pub ratio : f32
 }
