@@ -155,10 +155,11 @@ impl StepperCtrl for PwmStepperCtrl
         
         match &mut self.sys_step {
             RaspPin::Output(pin) => {
+                pin.set_high().unwrap();
+                thread::sleep(step_time_half);
+                pin.set_low().unwrap();
+                thread::sleep(step_time_half);
                 
-                thread::sleep(step_time_half);
-                pin.set_low();
-                thread::sleep(step_time_half);
         
                 self.pos += if self.dir { 1 } else { -1 };
             },
