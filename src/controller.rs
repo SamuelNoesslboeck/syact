@@ -1,7 +1,7 @@
 use std::{thread, time, vec};
 use std::f32::consts::PI;
 
-use rppal::gpio::{Gpio, OutputPin, InputPin};
+use gpio::{GpioIn, GpioOut, sysfs::*};
 
 use crate::data::StepperData;
 use crate::math::start_frequency;
@@ -9,13 +9,13 @@ use crate::math::start_frequency;
 // type UpdateLoadFunc = fn (&StepperData);
 // type UpdatePosFunc = fn (&dyn StepperCtrl);
 
-const PIN_ERR : u8 = 0xFF;
+const PIN_ERR : u16 = 0xFF;
 
 #[derive(Debug)]
 pub enum RaspPin {
     ErrPin(),
-    Output(OutputPin),
-    Input(InputPin)
+    Output(SysFsGpioOutput),
+    Input(SysFsGpioInput)
 }
 
 /// A trait for structs used to control stepper motors through different methods
@@ -60,6 +60,8 @@ pub trait StepperCtrl
     fn get_abs_pos(&self) -> f32;    
     /// Returns the relative position (current rotation) in radians
     fn get_rel_pos(&self) -> f32;
+    /// Overwrite absolute position
+    fn write_pos(&mut self, pos : f32);
 
     /// Moves the motor in the current direction till the measure pin is true
     fn measure(&mut self, max_steps : u64, omega : f32) -> Option<()>;
@@ -82,11 +84,11 @@ pub struct PwmStepperCtrl
     pub cf : f32, 
 
     /// Pin for controlling direction
-    pub pin_dir : u8,
+    pub pin_dir : u16,
     /// Pin for controlling steps
-    pub pin_step : u8,
+    pub pin_step : u16,
     /// Pin for messuring distances
-    pub pin_mes : u8, 
+    pub pin_mes : u16, 
 
     /// The current direction (true for right, false for left)
     dir : bool,
@@ -104,24 +106,18 @@ pub struct PwmStepperCtrl
 
 impl PwmStepperCtrl
 {   
-    pub fn new(data : StepperData, pin_dir : u8, pin_step : u8) -> Self {
-        let sys_dir = match Gpio::new() {
-            Ok(pin) => match pin.get(pin_dir) {
-                Ok(pin) => RaspPin::Output(pin.into_output()),
-                Err(err) => RaspPin::ErrPin()
-            },
-            Err(err) => RaspPin::ErrPin()
+    pub fn new(data : StepperData, pin_dir : u16, pin_step : u16) -> Self {
+        let sys_dir = match SysFsGpioOutput::open(pin_dir.clone()) {
+            Ok(val) => RaspPin::Output(val),
+            Err(_) => RaspPin::ErrPin()
         };
 
-        let sys_step = match Gpio::new() {
-            Ok(pin) => match pin.get(pin_step) {
-                Ok(pin) => RaspPin::Output(pin.into_output()),
-                Err(err) => RaspPin::ErrPin()
-            },
-            Err(err) => RaspPin::ErrPin()
+        let sys_step = match SysFsGpioOutput::open(pin_step.clone()) {
+            Ok(val) => RaspPin::Output(val),
+            Err(_) => RaspPin::ErrPin()
         };
 
-        return PwmStepperCtrl { 
+        let mut ctrl = PwmStepperCtrl { 
             data: data,
             sf: 1.5, 
             cf: 0.9,
@@ -137,6 +133,10 @@ impl PwmStepperCtrl
 
             omega: 0.0
         };
+
+        ctrl.set_dir(true);
+
+        return ctrl;
     }
 }
 
@@ -155,7 +155,7 @@ impl StepperCtrl for PwmStepperCtrl
         
         match &mut self.sys_step {
             RaspPin::Output(pin) => {
-                pin.set_high();
+                
                 thread::sleep(step_time_half);
                 pin.set_low();
                 thread::sleep(step_time_half);
@@ -228,7 +228,7 @@ impl StepperCtrl for PwmStepperCtrl
         } else if distance > 0.0 {
             self.set_dir(true);
         } else if distance < 0.0 {
-            self.set_dir(true);
+            self.set_dir(false);
         }
 
         let steps : u64 = (distance.abs() / self.data.ang_dis()).round() as u64;
@@ -257,11 +257,7 @@ impl StepperCtrl for PwmStepperCtrl
             RaspPin::Output(pin) => {
                 self.dir = dir;
                 
-                if dir {
-                    pin.set_high();
-                } else {
-                    pin.set_low();
-                }
+                pin.set_value(dir).unwrap();
             },
             _ => { }
         };
@@ -273,6 +269,10 @@ impl StepperCtrl for PwmStepperCtrl
 
     fn get_rel_pos(&self) -> f32 {
         return 2.0 * PI * (self.pos % self.data.n_s as i64) as f32 / self.data.n_s as f32;
+    }
+
+    fn write_pos(&mut self, pos : f32) {
+        self.pos = (self.data.n_s as f32 * pos / 2.0 / PI) as i64;
     }
 
     fn measure(&mut self, max_steps : u64, omega : f32) -> Option<()> {
@@ -324,18 +324,22 @@ impl Cylinder
     }
 
     // Conversions
+        /// Angle for extent
         pub fn phi_c(&self, dis_c : f32) -> f32 {
             dis_c / self.rte_ratio
         }
 
+        /// Extent for angle
         pub fn dis_c(&self, phi_c : f32) -> f32 {
             phi_c * self.rte_ratio
         }
 
+        /// Angular speed for linear velocity
         pub fn omega_c(&self, v_c : f32) -> f32 {
             v_c / self.rte_ratio
         }
 
+        /// Linear velocity for angular speed
         pub fn v_c(&self, omega : f32) -> f32 {
             omega * self.rte_ratio
         }
@@ -348,6 +352,10 @@ impl Cylinder
         self.ctrl.steps(steps, self.omega_c(v_max));
 
         return steps as f32 * self.data().ang_dis();
+    }
+
+    pub fn write_length(&mut self, dis : f32) {
+        self.ctrl.write_pos(self.phi_c(dis));
     }
 
     /// Returns the extension of the cylinder
@@ -368,6 +376,19 @@ pub struct CylinderTriangle
 
 impl CylinderTriangle 
 {
+    pub fn new(cylinder : Cylinder, l_a : f32, l_b : f32) -> Self
+    {
+        let mut tri = CylinderTriangle {
+            l_a, 
+            l_b,
+            cylinder 
+        };
+
+        tri.cylinder.write_length(l_a.max(l_b));
+
+        return tri;
+    }
+
     pub fn length_for_gamma(&self, gam : f32) -> f32 {
         (self.l_a.powi(2) + self.l_b.powi(2) + 2.0 * self.l_a * self.l_b * gam.cos()).powf(0.5)
     }
@@ -379,6 +400,10 @@ impl CylinderTriangle
     pub fn set_gamma(&mut self, gam : f32, v_max : f32) {
         self.cylinder.extend(self.length_for_gamma(gam), v_max);
     }
+
+    // pub fn write_gamma(&mut self, gam : f32) {
+        
+    // }
 }
 
 pub struct GearBearing 
