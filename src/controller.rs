@@ -138,19 +138,19 @@ impl PwmStepperCtrl
             omega: 0.0
         };
     }
-// }
+}
 
-// impl StepperCtrl for PwmStepperCtrl
-// {
-    pub fn get_data(&self) -> &StepperData {
+impl StepperCtrl for PwmStepperCtrl
+{
+    fn get_data(&self) -> &StepperData {
         return &self.data;    
     }
 
-    pub fn get_data_mut(&mut self) -> &mut StepperData {
+    fn get_data_mut(&mut self) -> &mut StepperData {
         return &mut self.data;
     }
 
-    pub fn step(&mut self, time : f32) {
+    fn step(&mut self, time : f32) {
         let step_time_half = time::Duration::from_secs_f32(time / 2.0);
         
         match &mut self.sys_step {
@@ -166,7 +166,7 @@ impl PwmStepperCtrl
         };
     }
 
-    pub fn accelerate(&mut self, stepcount : u64, omega : f32) -> Vec<f32> {
+    fn accelerate(&mut self, stepcount : u64, omega : f32) -> Vec<f32> {
         let t_start = self.sf / start_frequency(&self.data);
         let t_min = self.data.time_step(omega);
 
@@ -195,13 +195,13 @@ impl PwmStepperCtrl
         return curve;
     }
 
-    pub fn drive_curve(&mut self, curve : &Vec<f32>) {
+    fn drive_curve(&mut self, curve : &Vec<f32>) {
         for i in 0 .. curve.len() {
             self.step(curve[i]);
         }
     }
 
-    pub fn steps(&mut self, stepcount : u64, omega : f32) {
+    fn steps(&mut self, stepcount : u64, omega : f32) {
         let curve = self.accelerate(stepcount / 2, omega);
         let time_step = self.data.time_step(omega);
         let last = curve.last().unwrap_or(&time_step);
@@ -222,7 +222,7 @@ impl PwmStepperCtrl
         self.set_speed(0.0);
     }
 
-    pub fn drive(&mut self, distance : f32, omega : f32) -> f32 {
+    fn drive(&mut self, distance : f32, omega : f32) -> f32 {
         if distance == 0.0 {
             return 0.0;
         } else if distance > 0.0 {
@@ -236,23 +236,23 @@ impl PwmStepperCtrl
         return steps as f32 * self.data.ang_dis();
     }
     
-    pub fn stop(&mut self) -> u64 {
+    fn stop(&mut self) -> u64 {
         0 // TODO
     }
 
-    pub fn get_speed(&self) -> f32 {
+    fn get_speed(&self) -> f32 {
         return self.omega;
     }
 
-    pub fn set_speed(&mut self, omega : f32) {
+    fn set_speed(&mut self, omega : f32) {
         self.omega = omega;
     }
 
-    pub fn get_dir(&self) -> bool {
+    fn get_dir(&self) -> bool {
         return self.dir;
     }
     
-    pub fn set_dir(&mut self, dir : bool) {
+    fn set_dir(&mut self, dir : bool) {
         match &mut self.sys_dir {
             RaspPin::Output(pin) => {
                 self.dir = dir;
@@ -267,15 +267,15 @@ impl PwmStepperCtrl
         };
     }
 
-    pub fn get_abs_pos(&self) -> f32 {
+    fn get_abs_pos(&self) -> f32 {
         return 2.0 * PI * self.pos as f32 / self.data.n_s as f32;
     }
 
-    pub fn get_rel_pos(&self) -> f32 {
+    fn get_rel_pos(&self) -> f32 {
         return 2.0 * PI * (self.pos % self.data.n_s as i64) as f32 / self.data.n_s as f32;
     }
 
-    pub fn measure(&mut self, max_steps : u64, omega : f32) -> Option<()> {
+    fn measure(&mut self, max_steps : u64, omega : f32) -> Option<()> {
         let mut curve = self.accelerate(max_steps / 2, omega);
         
         curve.reverse();
@@ -284,7 +284,7 @@ impl PwmStepperCtrl
         return None;
     }
 
-    pub fn debug_pins(&self) {
+    fn debug_pins(&self) {
         dbg!(
             &self.sys_dir,
             &self.sys_step
