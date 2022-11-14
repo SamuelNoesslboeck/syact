@@ -13,3 +13,9 @@ pub mod data;
 pub mod gcode;
 /// Functions and Structs for calculating Stepper Motor procedures and operations
 pub mod math;
+
+// Types
+
+pub type StepperData = data::StepperData;
+
+// 

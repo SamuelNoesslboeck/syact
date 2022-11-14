@@ -2,7 +2,7 @@ use std::{f32::consts::{E, PI}, ops::Index};
 
 use super::data::StepperData;
 
-/// Returns the current torque of a motor (data) at the given angluar speed (omega)
+/// Returns the current torque of a motor (data) at the given angluar speed (omega)  \
 /// Unit: [Nm]  
 pub fn torque(data : &StepperData, omega : f32) -> f32 {
     if omega == 0.0 {
@@ -16,7 +16,7 @@ pub fn torque(data : &StepperData, omega : f32) -> f32 {
     return (1.0 - pow) / (1.0 + pow) * data.t_s;
 }
 
-/// Returns the start freqency of a motor (data)
+/// Returns the start freqency of a motor (data)  \
 /// Unit: [Hz]
 pub fn start_frequency(data : &StepperData) -> f32 {
     return (data.t_s / data.j * (data.n_s as f32) / 4.0 / PI).powf(0.5);

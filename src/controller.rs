@@ -1,7 +1,7 @@
 use std::{thread, time, vec};
 use std::f32::consts::PI;
 
-use gpio::{GpioIn, GpioOut, sysfs::*};
+use gpio::{GpioOut, sysfs::*};
 
 use crate::data::StepperData;
 use crate::math::start_frequency;
@@ -24,7 +24,7 @@ pub trait StepperCtrl
     // Data
     /// Get the data of the stepper that is being controlled
     fn get_data(&self) -> &StepperData;
-
+    /// Returns a mutable reference to the stepperdata
     fn get_data_mut(&mut self) -> &mut StepperData;
 
     /// Move a single step
@@ -50,10 +50,9 @@ pub trait StepperCtrl
     fn set_speed(&mut self, omega : f32);
 
     /// Get the current direction of the motor
-    /// (True for right, False for left)
     fn get_dir(&self) -> bool;
-    /// Set the direction of the motor
-    /// (True for right, False for left)
+    /// Set the direction of the motor  \
+    /// Directions are defined by the electronics and the user
     fn set_dir(&mut self, dir : bool);
 
     /// Returns the absolute position in radians
@@ -65,13 +64,8 @@ pub trait StepperCtrl
 
     /// Moves the motor in the current direction till the measure pin is true
     fn measure(&mut self, max_steps : u64, omega : f32) -> Option<()>;
-
+    /// Display all pins
     fn debug_pins(&self);
-
-    // /// Sets the current absolute position
-    // fn set_absolute_pos(&mut self) -> f32;
-    // /// Sets the current relative position
-    // fn set_relative_pos(&mut self) -> f32;
 }
 
 pub struct PwmStepperCtrl
@@ -107,6 +101,7 @@ pub struct PwmStepperCtrl
 impl PwmStepperCtrl
 {   
     pub fn new(data : StepperData, pin_dir : u16, pin_step : u16) -> Self {
+        // Create pins if possible
         let sys_dir = match SysFsGpioOutput::open(pin_dir.clone()) {
             Ok(val) => RaspPin::Output(val),
             Err(_) => RaspPin::ErrPin()
@@ -134,7 +129,7 @@ impl PwmStepperCtrl
             omega: 0.0
         };
 
-        ctrl.set_dir(true);
+        ctrl.set_dir(ctrl.dir);
 
         return ctrl;
     }
@@ -241,40 +236,50 @@ impl StepperCtrl for PwmStepperCtrl
         0 // TODO
     }
 
-    fn get_speed(&self) -> f32 {
-        return self.omega;
-    }
+    // Speed
+        fn get_speed(&self) -> f32 {
+            return self.omega;
+        }
 
-    fn set_speed(&mut self, omega : f32) {
-        self.omega = omega;
-    }
+        fn set_speed(&mut self, omega : f32) {
+            self.omega = omega;
+        }
+    //
 
-    fn get_dir(&self) -> bool {
-        return self.dir;
-    }
-    
-    fn set_dir(&mut self, dir : bool) {
-        match &mut self.sys_dir {
-            RaspPin::Output(pin) => {
-                self.dir = dir;
-                
-                pin.set_value(dir).unwrap();
-            },
-            _ => { }
-        };
-    }
+    // Direction
+        fn get_dir(&self) -> bool {
+            return self.dir;
+        }
+        
+        fn set_dir(&mut self, dir : bool) {
+            match &mut self.sys_dir {
+                RaspPin::Output(pin) => {
+                    self.dir = dir;
+                    
+                    if self.dir {
+                        pin.set_high().unwrap();
+                    } else {
+                        pin.set_low().unwrap();
+                    }
+                },
+                _ => { }
+            };
+        }
+    //
 
-    fn get_abs_pos(&self) -> f32 {
-        return 2.0 * PI * self.pos as f32 / self.data.n_s as f32;
-    }
+    // Position
+        fn get_abs_pos(&self) -> f32 {
+            return 2.0 * PI * self.pos as f32 / self.data.n_s as f32;
+        }
 
-    fn get_rel_pos(&self) -> f32 {
-        return 2.0 * PI * (self.pos % self.data.n_s as i64) as f32 / self.data.n_s as f32;
-    }
+        fn get_rel_pos(&self) -> f32 {
+            return 2.0 * PI * (self.pos % self.data.n_s as i64) as f32 / self.data.n_s as f32;
+        }
 
-    fn write_pos(&mut self, pos : f32) {
-        self.pos = (self.data.n_s as f32 * pos / 2.0 / PI) as i64;
-    }
+        fn write_pos(&mut self, pos : f32) {
+            self.pos = (self.data.n_s as f32 * pos / 2.0 / PI) as i64;
+        }
+    //
 
     fn measure(&mut self, max_steps : u64, omega : f32) -> Option<()> {
         let mut curve = self.accelerate(max_steps / 2, omega);
