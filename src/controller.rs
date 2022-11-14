@@ -418,11 +418,7 @@ impl Cylinder
 
     /// Extend the cylinder by a given distance _dis_ (in mm) with the maximum velocity _v max_ (in mm/s), returns the actual distance traveled
     pub fn extend(&mut self, dis : f32, v_max : f32) -> f32 {
-        let steps = (self.phi_c(dis) / self.data().ang_dis()).floor() as u64;
-
-        self.ctrl.steps(steps, self.omega_c(v_max));
-
-        return steps as f32 * self.data().ang_dis();
+        self.ctrl.drive(self.phi_c(dis), self.omega_c(v_max))
     }
 
     pub fn write_length(&mut self, dis : f32) {
