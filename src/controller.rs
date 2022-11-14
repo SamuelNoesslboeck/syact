@@ -18,6 +18,20 @@ pub enum RaspPin {
     Input(SysFsGpioInput)
 }
 
+#[derive(Debug)]
+pub enum LimitType {
+    None,
+    Angle(f32)
+}
+
+#[derive(Debug)]
+pub enum LimitDest {
+    NoLimitSet,
+    NotReached,
+    Minimum(f32),
+    Maximum(f32)
+}
+
 /// A trait for structs used to control stepper motors through different methods
 pub trait StepperCtrl
 {
@@ -62,8 +76,14 @@ pub trait StepperCtrl
     /// Overwrite absolute position
     fn write_pos(&mut self, pos : f32);
 
+    /// Set the limit for the stepper motor
+    fn set_limit(&mut self, min : LimitType, max : LimitType);
+    /// Check if the stepper motor is in a limited position
+    fn get_limit_dest(&self) -> LimitDest;
+
     /// Moves the motor in the current direction till the measure pin is true
     fn measure(&mut self, max_steps : u64, omega : f32) -> Option<()>;
+    /// Limit distance
     /// Display all pins
     fn debug_pins(&self);
 }
@@ -95,6 +115,9 @@ pub struct PwmStepperCtrl
     sys_step : RaspPin,
     // sys_mes : Option<SysFsGpioInput>,
 
+    limit_min : LimitType,
+    limit_max : LimitType,
+
     omega : f32
 }
 
@@ -124,6 +147,9 @@ impl PwmStepperCtrl
             
             sys_dir,
             sys_step,
+
+            limit_min: LimitType::None,
+            limit_max: LimitType::None,
             // sys_mes: None,
 
             omega: 0.0
@@ -280,6 +306,45 @@ impl StepperCtrl for PwmStepperCtrl
             self.pos = (self.data.n_s as f32 * pos / 2.0 / PI) as i64;
         }
     //
+
+    // Limits
+        fn set_limit(&mut self, min : LimitType, max : LimitType) {
+            self.limit_min = min;
+            self.limit_max = max;
+        }
+    
+        fn get_limit_dest(&self) -> LimitDest {
+            let pos = self.get_abs_pos();
+
+            let match_b = |pdest : LimitDest| {
+                match self.limit_max {
+                    LimitType::Angle(ang) => {
+                        if pos > ang {
+                            return LimitDest::Minimum(pos - ang);
+                        }
+
+                        LimitDest::NotReached
+                    },
+                    _ => pdest
+                }
+            };
+
+            match match self.limit_min {
+                LimitType::Angle(ang) => {
+                    if pos < ang {
+                        return LimitDest::Minimum(pos - ang)
+                    }
+
+                    LimitDest::NotReached
+                },
+                _ => LimitDest::NoLimitSet
+            } {
+                LimitDest::NotReached => match_b(LimitDest::NotReached),
+                LimitDest::NoLimitSet => match_b(LimitDest::NoLimitSet),
+                other => other
+            }
+        }
+    // 
 
     fn measure(&mut self, max_steps : u64, omega : f32) -> Option<()> {
         let mut curve = self.accelerate(max_steps / 2, omega);
