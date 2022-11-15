@@ -21,7 +21,7 @@ pub enum RaspPin {
 #[derive(Debug)]
 pub enum LimitType {
     None,
-    Angle(f32)
+    Angle(i64)
 }
 
 #[derive(Debug)]
@@ -255,17 +255,17 @@ impl StepperCtrl for PwmStepperCtrl
 
         let mut passed : u64 = 0;
 
-        let mut __helper = || {
-            match ufunc {
-                UpdateFunc::Break(func, steps) => {
-                    
-                },
-                _ => false
-            }
-        };
-
         for _ in curve.len() .. (stepcount / 2) as usize {
             self.step(time_step);
+            match ufunc {
+                UpdateFunc::Break(func, steps) => {
+                    if passed >= steps {
+                        passed -= steps;
+                        func(&mut self.sys_meas);
+                    }
+                },
+                _ => { }
+            };
         }
 
         if (stepcount % 2) == 1 {
@@ -274,9 +274,15 @@ impl StepperCtrl for PwmStepperCtrl
 
         for _ in curve.len() .. (stepcount / 2) as usize {
             self.step(time_step);
-            if Self::__meas_helper(&mut self.sys_meas) {
-                break;
-            }
+            match ufunc {
+                UpdateFunc::Break(func, steps) => {
+                    if passed >= steps {
+                        passed -= steps;
+                        func(&mut self.sys_meas);
+                    }
+                },
+                _ => { }
+            };
         }
 
         self.drive_curve(&curve);
@@ -353,13 +359,13 @@ impl StepperCtrl for PwmStepperCtrl
         }
     
         fn get_limit_dest(&self) -> LimitDest {
-            let pos = self.get_abs_pos();
+            let pos = self.pos;
 
             let match_b = |pdest : LimitDest| {
                 match self.limit_max {
                     LimitType::Angle(ang) => {
                         if pos > ang {
-                            return LimitDest::Minimum(pos - ang);
+                            return LimitDest::Maximum((pos - ang) as f32 * self.data.ang_dis());
                         }
 
                         LimitDest::NotReached
@@ -371,7 +377,7 @@ impl StepperCtrl for PwmStepperCtrl
             match match self.limit_min {
                 LimitType::Angle(ang) => {
                     if pos < ang {
-                        return LimitDest::Minimum(pos - ang)
+                        return LimitDest::Minimum((pos - ang) as f32 * self.data.ang_dis())
                     }
 
                     LimitDest::NotReached
@@ -394,6 +400,11 @@ impl StepperCtrl for PwmStepperCtrl
         // Successful measurement
         if Self::__meas_helper(&mut self.sys_meas) {
             self.pos = set_pos;
+
+            self.set_limit(
+                if dir { LimitType::None } else { LimitType::Angle(set_pos) },
+                if dir { LimitType::Angle(set_pos) } else { LimitType::None }
+            )
         }
     }
 
