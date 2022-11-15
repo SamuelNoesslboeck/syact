@@ -5,6 +5,8 @@
 
 // Modules
 
+/// Components including stepper motors
+pub mod comp;
 /// Collection of structs and functions for controlling Stepper Motors
 pub mod controller;
 /// Structs for storing characteristics of stepper motors and devices
@@ -17,5 +19,6 @@ pub mod math;
 // Types
 
 pub type StepperData = data::StepperData;
+pub type UpdateFunc = controller::UpdateFunc;
 
 // 
