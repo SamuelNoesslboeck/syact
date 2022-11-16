@@ -17,7 +17,12 @@ pub struct StepperData
     /// Stall current [in Nm]
     pub t_s : f32,
     /// Inhertia moment [in kg*m^2]
-    pub j : f32
+    pub j_s : f32,
+
+    // Dynamic
+    /// Load torque
+    pub t_load : f32,   
+    pub j_load : f32
 }
 
 impl StepperData
@@ -32,32 +37,54 @@ impl StepperData
             n_s: 200, 
             n_c: 100,
             t_s: 0.42, 
-            j: 0.000_005_7 
+            j_s: 0.000_005_7,
+
+            t_load: 0.0,
+            j_load: 0.0
         };
     }
 
     /// The maximum angular acceleration of the motor (in stall) [in s^-2]
     pub fn alpha_max(&self) -> f32 {
-        return self.t_s / self.j;
+        self.t() / self.j()
     }
 
     /// The inductivity constant [in s]
     pub fn tau(&self) -> f32 {
-        return self.i_max * self.l / self.u;
+        self.i_max * self.l / self.u
     }
 
     /// Time per step for the given omega
     pub fn time_step(&self, omega : f32) -> f32 {
-        return 2.0 * PI / (self.n_s as f32) / omega;
+        2.0 * PI / (self.n_s as f32) / omega
     }
 
     /// Omega for time per step
     pub fn omega(&self, time_step : f32) -> f32 {
-        return (self.n_s as f32) / 2.0 / PI / time_step;
+        (self.n_s as f32) / 2.0 / PI / time_step
     }
 
     /// Get the angular distance of a step in rad
-    pub fn ang_dis(&self) -> f32 {
-        return 2.0 * PI / self.n_s as f32;
+    pub fn step_ang(&self) -> f32 {
+        2.0 * PI / self.n_s as f32
     }
+
+    // Load calculations
+        // Max motor torque when having a load
+        pub fn t(&self) -> f32 {
+            (self.t_s - self.t_load).clamp(0.0, self.t_s)
+        }
+
+        /// Motor inertia when having a load
+        pub fn j(&self) -> f32 {
+            self.j_s + self.j_load
+        }
+    //
 }
+
+pub struct SimpleServoData
+{
+    pub t_max : f32
+}
+
+// TODO: Servos

@@ -21,4 +21,8 @@ pub mod math;
 pub type StepperData = data::StepperData;
 pub type UpdateFunc = controller::UpdateFunc;
 
+// Library Types
+
+pub type Vec3 = glam::Vec3;
+
 // 

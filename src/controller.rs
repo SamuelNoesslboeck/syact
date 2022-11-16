@@ -1,5 +1,4 @@
 use std::{thread, time, vec};
-use std::f32::consts::PI;
 
 use gpio::{GpioIn, GpioOut, sysfs::*};
 
@@ -41,11 +40,25 @@ pub enum UpdateFunc {
 /// A trait for structs used to control stepper motors through different methods
 pub trait StepperCtrl
 {
+    // Init
+    /// Initializes measuring systems
+    fn init_meas(&mut self, pin_meas : u16); 
+
     // Data
     /// Get the data of the stepper that is being controlled
     fn get_data(&self) -> &StepperData;
     /// Returns a mutable reference to the stepperdata
     fn get_data_mut(&mut self) -> &mut StepperData;
+
+    // Conversions
+    /// Converts the given angle into the amount of steps required to come as close as possible to that distance
+    fn ang_to_steps(&self, ang : f32) -> u64;
+    /// Converts the given angle into the amount of steps required to come as close as possible to that distance, if the angle is negative, the amount of steps in negative 
+    fn ang_to_steps_dir(&self, ang : f32) -> i64;
+    /// Converts the given steps into an angle
+    fn steps_to_ang(&self, steps : u64) -> f32;
+    /// Converts the given steps into an angle, including directions
+    fn steps_to_ang_dir(&self, steps : i64) -> f32;
 
     /// Move a single step
     fn step(&mut self, time : f32);
@@ -77,8 +90,6 @@ pub trait StepperCtrl
 
     /// Returns the absolute position in radians
     fn get_abs_pos(&self) -> f32;    
-    /// Returns the relative position (current rotation) in radians
-    fn get_rel_pos(&self) -> f32;
     /// Overwrite absolute position
     fn write_pos(&mut self, pos : f32);
 
@@ -91,7 +102,14 @@ pub trait StepperCtrl
     fn measure(&mut self, max_steps : u64, omega : f32, dir : bool, set_pos : i64, accuracy : u64);
     /// Returns the measurement pin
     fn get_meas(&mut self) -> &mut RaspPin;
-    /// Limit distance
+
+    // Loads
+    /// Applies a load torque to the stepper motor that will affect calculations
+    fn apply_load_t(&mut self, t : f32);
+    /// Applies a load inertia to the stepper motor that will affect calculations
+    fn apply_load_j(&mut self, j : f32);
+    // 
+
     /// Display all pins
     fn debug_pins(&self);
 }
@@ -168,14 +186,6 @@ impl PwmStepperCtrl
         return ctrl;
     }
 
-    pub fn init_measure(&mut self, pin_mes : u16) {
-        self.pin_mes = pin_mes;
-        self.sys_meas = match SysFsGpioInput::open(pin_mes) {
-            Ok(val) => RaspPin::Input(val),
-            Err(_) => RaspPin::ErrPin
-        }
-    }
-
     fn __meas_helper(pin : &mut RaspPin) -> bool {
         match pin {
             RaspPin::Input(gpio_pin) => {
@@ -188,6 +198,16 @@ impl PwmStepperCtrl
 
 impl StepperCtrl for PwmStepperCtrl
 {
+    // Init
+        fn init_meas(&mut self, pin_mes : u16) {
+            self.pin_mes = pin_mes;
+            self.sys_meas = match SysFsGpioInput::open(pin_mes) {
+                Ok(val) => RaspPin::Input(val),
+                Err(_) => RaspPin::ErrPin
+            }
+        }
+    //
+
     fn get_data(&self) -> &StepperData {
         return &self.data;    
     }
@@ -195,6 +215,24 @@ impl StepperCtrl for PwmStepperCtrl
     fn get_data_mut(&mut self) -> &mut StepperData {
         return &mut self.data;
     }
+
+    // Conversions
+        fn ang_to_steps(&self, ang : f32) -> u64 {
+            (ang.abs() / self.data.step_ang()).round() as u64
+        }
+
+        fn ang_to_steps_dir(&self, ang : f32) -> i64 {
+            (ang / self.data.step_ang()).round() as i64
+        }
+
+        fn steps_to_ang(&self, steps : u64) -> f32 {
+            steps as f32 * self.data.step_ang()
+        }
+
+        fn steps_to_ang_dir(&self, steps : i64) -> f32 {
+            steps as f32 * self.data.step_ang()
+        }
+    //
 
     fn step(&mut self, time : f32) {
         let step_time_half = time::Duration::from_secs_f32(time / 2.0);
@@ -298,9 +336,9 @@ impl StepperCtrl for PwmStepperCtrl
             self.set_dir(false);
         }
 
-        let steps : u64 = (distance.abs() / self.data.ang_dis()).round() as u64;
+        let steps : u64 =  self.ang_to_steps(distance);
         self.steps(steps, omega, ufunc);
-        return steps as f32 * self.data.ang_dis();
+        return steps as f32 * self.data.step_ang();
     }
     
     fn stop(&mut self) -> u64 {
@@ -340,15 +378,11 @@ impl StepperCtrl for PwmStepperCtrl
 
     // Position
         fn get_abs_pos(&self) -> f32 {
-            return 2.0 * PI * self.pos as f32 / self.data.n_s as f32;
-        }
-
-        fn get_rel_pos(&self) -> f32 {
-            return 2.0 * PI * (self.pos % self.data.n_s as i64) as f32 / self.data.n_s as f32;
+            self.steps_to_ang_dir(self.pos)
         }
 
         fn write_pos(&mut self, pos : f32) {
-            self.pos = (self.data.n_s as f32 * pos / 2.0 / PI) as i64;
+            self.pos = self.ang_to_steps_dir(pos);
         }
     //
 
@@ -365,7 +399,7 @@ impl StepperCtrl for PwmStepperCtrl
                 match self.limit_max {
                     LimitType::Angle(ang) => {
                         if pos > ang {
-                            return LimitDest::Maximum((pos - ang) as f32 * self.data.ang_dis());
+                            return LimitDest::Maximum((pos - ang) as f32 * self.data.step_ang());
                         }
 
                         LimitDest::NotReached
@@ -377,7 +411,7 @@ impl StepperCtrl for PwmStepperCtrl
             match match self.limit_min {
                 LimitType::Angle(ang) => {
                     if pos < ang {
-                        return LimitDest::Minimum((pos - ang) as f32 * self.data.ang_dis())
+                        return LimitDest::Minimum((pos - ang) as f32 * self.data.step_ang())
                     }
 
                     LimitDest::NotReached
@@ -411,6 +445,16 @@ impl StepperCtrl for PwmStepperCtrl
     fn get_meas(&mut self) -> &mut RaspPin {
         &mut self.sys_meas
     }
+
+    // Loads
+        fn apply_load_j(&mut self, j : f32) {
+            self.data.j_load = j;
+        }
+
+        fn apply_load_t(&mut self, t : f32) {
+            self.data.t_load = t;
+        }
+    // 
 
     fn debug_pins(&self) {
         dbg!(

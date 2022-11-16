@@ -1,20 +1,20 @@
 use std::collections::HashMap;
 
 use gcode::{Mnemonic, GCode};
-use stepper_lib::gcode::{Interpreter, GCodeFunc};
+use stepper_lib::gcode::{Interpreter, GCodeFunc, Args, Command};
 
 struct Data 
 {
     pub pos : f64
 }
 
-fn g_0(data : &mut Data, _gc : &GCode) -> Option<()> {
+fn g_0(data : &mut Data, _gc : &GCode, _args : &Args) -> Option<()> {
     data.pos += 10.0;
     // intpr.log_ln("G0 function executed");
     None
 }
 
-fn g_1(data : &mut Data, _gc : &GCode) -> Option<()> {
+fn g_1(data : &mut Data, _gc : &GCode, _args : &Args) -> Option<()> {
     data.pos -= 5.0;
     None
 }
@@ -22,8 +22,8 @@ fn g_1(data : &mut Data, _gc : &GCode) -> Option<()> {
 fn main() {
     let map = HashMap::from([
         ( Mnemonic::General, HashMap::from([
-            ( 0u32, g_0 as GCodeFunc<Data> ),
-            ( 1u32, g_1 as GCodeFunc<Data> )
+            ( 0u32, Command::new(g_0 as GCodeFunc<Data>, 0) ),
+            ( 1u32, Command::new(g_1 as GCodeFunc<Data>, 0) )
         ]) )
     ]);
 

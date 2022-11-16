@@ -1,9 +1,10 @@
 use std::collections::HashMap;
 
-pub type GCodeFunc<T> = fn (&mut T, &GCode, &[gcode::Word]) -> Option<()>;
+pub type GCodeFunc<T> = fn (&mut T, &GCode, &Args) -> Option<()>;
 
 pub type Letter = gcode::Mnemonic;
 pub type GCode = gcode::GCode;
+pub type Args = [gcode::Word];
 
 pub type NumEntries<T> = HashMap<u32, Command<T>>;
 pub type LetterEntries<T> = HashMap<Letter, NumEntries<T>>;

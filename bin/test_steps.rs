@@ -9,7 +9,7 @@ fn main() {
 
     ctrl.sf = 10.0;
     // ctrl.data.t_s /= 2.0;
-    ctrl.data.j = 0.000_1;
+    ctrl.data.j_s = 0.000_1;
 
     test_steps(&args, &mut ctrl);
 }
@@ -36,6 +36,6 @@ fn test_steps(args : &Vec<String>, ctrl : &mut PwmStepperCtrl)
     }
 
     println!("Starting test 'steps' ... ");
-    ctrl.steps(steps, omega);
+    ctrl.steps(steps, omega, stepper_lib::controller::UpdateFunc::None);
     println!("{} with max speed {}rad/s done", steps, omega);
 }
