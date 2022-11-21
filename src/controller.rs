@@ -459,7 +459,8 @@ impl StepperCtrl for PwmStepperCtrl
     fn debug_pins(&self) {
         dbg!(
             &self.sys_dir,
-            &self.sys_step
+            &self.sys_step,
+            &self.sys_meas
         );
     }
 }
