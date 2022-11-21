@@ -54,28 +54,28 @@ impl StepperData
         self.i_max * self.l / self.u
     }
 
-    /// Time per step for the given omega
+    /// Time per step for the given omega [in s]
     pub fn time_step(&self, omega : f32) -> f32 {
         2.0 * PI / (self.n_s as f32) / omega
     }
 
-    /// Omega for time per step
+    /// Omega for time per step [in 1/s]
     pub fn omega(&self, time_step : f32) -> f32 {
         (self.n_s as f32) / 2.0 / PI / time_step
     }
 
-    /// Get the angular distance of a step in rad
+    /// Get the angular distance of a step in rad [in 1]
     pub fn step_ang(&self) -> f32 {
         2.0 * PI / self.n_s as f32
     }
 
     // Load calculations
-        // Max motor torque when having a load
+        // Max motor torque when having a load [in Nm]
         pub fn t(&self) -> f32 {
             (self.t_s - self.t_load).clamp(0.0, self.t_s)
         }
 
-        /// Motor inertia when having a load
+        /// Motor inertia when having a load [kg*m^2]
         pub fn j(&self) -> f32 {
             self.j_s + self.j_load
         }
