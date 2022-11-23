@@ -15,6 +15,10 @@ name = "test_gcode"
 path = "bin/test_gcode.rs"
 
 [[bin]]
+name = "test_input"
+path = "bin/test_input.rs"
+
+[[bin]]
 name = "test_repeat"
 path = "bin/test_repeat.rs"
 
