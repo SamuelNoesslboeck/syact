@@ -2,7 +2,6 @@ use std::{thread, time, vec};
 
 use gpio::{GpioIn, GpioOut, sysfs::*};
 
-use crate::UpdateFunc;
 use crate::data::StepperData;
 use crate::math::start_frequency;
 
@@ -296,8 +295,14 @@ impl StepperCtrl for PwmStepperCtrl
 
         self.drive_curve(&curve);
 
+        if (stepcount % 2) == 1 {
+            self.step(*last);
+        }
+
         for _ in curve.len() .. (stepcount / 2) as usize {
             self.step(time_step);
+            passed += 1;
+
             if match ufunc {
                 UpdateFunc::Break(func, steps) => {
                     if passed >= steps {
@@ -309,12 +314,9 @@ impl StepperCtrl for PwmStepperCtrl
                 },
                 _ => false
             } {
+                println!("Meas conducted!");
                 break;
             }
-        }
-
-        if (stepcount % 2) == 1 {
-            self.step(*last);
         }
 
         curve.reverse();
