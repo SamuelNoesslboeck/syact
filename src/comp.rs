@@ -187,6 +187,12 @@ pub trait Tool
 {
     /// Returns the characteristic vector of the tool
     fn get_vec(&self) -> Vec3;
+
+    /// Returns the tool inhertia 
+    fn get_inertia(&self) -> f32;
+
+    /// Return the tool mass
+    fn get_mass(&self) -> f32;
 }
 
 pub struct NoTool { } // Empty struct
@@ -202,5 +208,13 @@ impl Tool for NoTool
 {
     fn get_vec(&self) -> Vec3 {
         Vec3::new(0.0, 0.0, 0.0)
+    }
+
+    fn get_inertia(&self) -> f32 {
+        return 0.0;
+    }
+
+    fn get_mass(&self) -> f32 {
+        return 0.0;
     }
 }
