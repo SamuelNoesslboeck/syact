@@ -1,4 +1,4 @@
-use stepper_lib::{data::StepperData, controller::{PwmStepperCtrl, StepperCtrl}};
+use stepper_lib::{data::StepperData, ctrl::{PwmStepperCtrl, StepperCtrl}};
 
 
 fn main() {

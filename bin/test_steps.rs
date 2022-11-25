@@ -1,4 +1,4 @@
-use stepper_lib::{data::StepperData, controller::{PwmStepperCtrl, StepperCtrl}};
+use stepper_lib::{data::StepperData, ctrl::{PwmStepperCtrl, StepperCtrl}};
 
 fn main() {
     let args : Vec<String> = std::env::args().collect();
@@ -36,6 +36,6 @@ fn test_steps(args : &Vec<String>, ctrl : &mut PwmStepperCtrl)
     }
 
     println!("Starting test 'steps' ... ");
-    ctrl.steps(steps, omega, stepper_lib::controller::UpdateFunc::None);
+    ctrl.steps(steps, omega, stepper_lib::ctrl::UpdateFunc::None);
     println!("{} with max speed {}rad/s done", steps, omega);
 }

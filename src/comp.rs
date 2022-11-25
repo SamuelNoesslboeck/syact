@@ -1,4 +1,4 @@
-use crate::{StepperData, controller::StepperCtrl, UpdateFunc, Vec3};
+use crate::{StepperData, ctrl::StepperCtrl, UpdateFunc, Vec3};
 
 pub struct Cylinder
 {

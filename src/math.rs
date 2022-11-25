@@ -46,6 +46,7 @@ pub fn acc_curve(data : &StepperData, t_min : f32, max_len : u64) -> Vec<f32> {
     return list;
 }
 
+// Inertias
 pub fn inertia_rod(length : f32, mass : f32) -> f32 {
     length.powi(2) * mass / 12.0
 }
