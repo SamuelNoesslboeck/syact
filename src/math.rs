@@ -1,5 +1,7 @@
 use std::{f32::consts::{E, PI}, ops::Index};
 
+use glam::{Vec3, Mat3};
+
 use super::data::StepperData;
 
 /// Returns the current torque of a motor (data) at the given angluar speed (omega)  \
@@ -61,4 +63,49 @@ pub fn inertia_point(dist : f32, mass : f32) -> f32 {
 
 pub fn inertia_rot_rod(length : f32, dist : f32, mass : f32) -> f32 {
     inertia_rod(length, mass) + inertia_point(dist, mass)
+}
+
+// Construction
+/// Rod helper type, consists of (mass : f32, vec : Vec3)
+pub type Rod = (f32, Vec3); 
+/// Rod helper type for coords, consists of (mass : f32, coord : f32)
+pub type RodCoord = (f32, f32); 
+
+pub fn inertia_rod_constr_coord(constr : &Vec<RodCoord>) -> f32 {
+    let mut inertia = 0.0;
+
+    for i in 0 .. constr.len() {
+        let mut len_sum = 0.0;
+
+        for j in 0 .. i {
+            len_sum += constr[j].1;
+        }
+
+        inertia += constr[i].0 * (constr[i].1.powi(2) / 12.0 + (len_sum + constr[i].1 / 2.0).powi(2));
+    }
+
+    inertia
+}
+
+pub fn inertia_rod_constr(constr : &Vec<Rod>) -> Mat3 {
+    let mut x_list : Vec<RodCoord> = vec![];
+    for rod in constr {
+        x_list.push((rod.0, rod.1.x));
+    }
+
+    let mut y_list : Vec<RodCoord> = vec![];
+    for rod in constr {
+        y_list.push((rod.0, rod.1.y));
+    }
+
+    let mut z_list : Vec<RodCoord> = vec![];
+    for rod in constr {
+        z_list.push((rod.0, rod.1.z));
+    }
+
+    Mat3 { 
+        x_axis: Vec3 { x: inertia_rod_constr_coord(&x_list), y: 0.0, z: 0.0 }, 
+        y_axis: Vec3 { x: 0.0, y: inertia_rod_constr_coord(&y_list), z: 0.0 }, 
+        z_axis: Vec3 { x: 0.0, y: 0.0, z: inertia_rod_constr_coord(&z_list) } 
+    }
 }
