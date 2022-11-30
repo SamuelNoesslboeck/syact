@@ -95,10 +95,14 @@ pub fn acc_curve(data : &StepperData, t_min : f32, max_len : u64) -> Vec<f32> {
             z_list.push((rod.0, rod.1.z));
         }
 
+        let j_x = inertia_rod_constr_coord(&x_list);
+        let j_y = inertia_rod_constr_coord(&y_list);
+        let j_z = inertia_rod_constr_coord(&z_list);
+
         Mat3 { 
-            x_axis: Vec3 { x: inertia_rod_constr_coord(&x_list), y: 0.0, z: 0.0 }, 
-            y_axis: Vec3 { x: 0.0, y: inertia_rod_constr_coord(&y_list), z: 0.0 }, 
-            z_axis: Vec3 { x: 0.0, y: 0.0, z: inertia_rod_constr_coord(&z_list) } 
+            x_axis: Vec3 { x: (j_y + j_z), y: 0.0, z: 0.0 }, 
+            y_axis: Vec3 { x: 0.0, y: (j_x + j_z), z: 0.0 }, 
+            z_axis: Vec3 { x: 0.0, y: 0.0, z: (j_x + j_y) } 
         }
     }
 

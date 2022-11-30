@@ -81,11 +81,11 @@ impl Cylinder
 
     // Loads
     pub fn apply_load_m(&mut self, mass : f32) {
-        self.ctrl.apply_load_j(mass * self.rte_ratio.powi(2));
+        self.ctrl.apply_load_j(mass * (self.rte_ratio / 1000.0).powi(2));
     }
 
     pub fn apply_load_f(&mut self, force : f32) {
-        self.ctrl.apply_load_t(force * self.rte_ratio);
+        self.ctrl.apply_load_t(force * self.rte_ratio / 1000.0);
     }
     //
 }
