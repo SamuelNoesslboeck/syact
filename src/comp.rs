@@ -5,7 +5,8 @@ pub struct Cylinder
     /// Data of the connected stepper motor
     pub ctrl : Box<dyn StepperCtrl>,
 
-    /// Distance traveled per rad [in mm]
+    /// Distance traveled per rad [in mm]   \
+    /// f_rte = pitch / (2pi)
     pub rte_ratio : f32,
     
     /// Minimal extent [in mm]
@@ -179,6 +180,14 @@ impl GearBearing
             self.ctrl.ang_to_steps_dir(self.ang_for_motor(set_pos)),
             accuracy
         );
+    }
+
+    pub fn apply_load_j(&mut self, inertia : f32) {
+        self.ctrl.apply_load_j(inertia * self.ratio);
+    }
+
+    pub fn apply_load_t(&mut self, torque : f32) {
+        self.ctrl.apply_load_t(torque * self.ratio);
     }
 }
 

@@ -48,64 +48,85 @@ pub fn acc_curve(data : &StepperData, t_min : f32, max_len : u64) -> Vec<f32> {
     return list;
 }
 
-// Inertias
-pub fn inertia_rod(length : f32, mass : f32) -> f32 {
-    length.powi(2) * mass / 12.0
-}
+// || Inertias ||
+    pub fn inertia_point(dist : Vec3, mass : f32) -> Mat3 {
+        return mass * Mat3 {
+            x_axis: Vec3 { x: dist.y.powi(2) + dist.z.powi(2), y: 0.0, z: 0.0 }, 
+            y_axis: Vec3 { x: 0.0, y: dist.x.powi(2) + dist.z.powi(2), z: 0.0 },
+            z_axis: Vec3 { x: 0.0, y: 0.0, z: dist.x.powi(2) + dist.y.powi(2) }
+        }; 
+    }
 
-pub fn inertia_rod_end(length : f32, mass : f32) -> f32 {
-    length.powi(2) * mass / 3.0
-}
+    // Construction
+    /// Rod helper type, consists of (mass : f32, vec : Vec3)
+    pub type Rod = (f32, Vec3); 
+    /// Rod helper type for coords, consists of (mass : f32, coord : f32)
+    pub type RodCoord = (f32, f32); 
 
-pub fn inertia_point(dist : f32, mass : f32) -> f32 {
-    dist.powi(2) * mass
-}
+    pub fn inertia_rod_constr_coord(constr : &Vec<RodCoord>) -> f32 {
+        let mut inertia = 0.0;
 
-pub fn inertia_rot_rod(length : f32, dist : f32, mass : f32) -> f32 {
-    inertia_rod(length, mass) + inertia_point(dist, mass)
-}
+        for i in 0 .. constr.len() {
+            let mut len_sum = 0.0;
 
-// Construction
-/// Rod helper type, consists of (mass : f32, vec : Vec3)
-pub type Rod = (f32, Vec3); 
-/// Rod helper type for coords, consists of (mass : f32, coord : f32)
-pub type RodCoord = (f32, f32); 
+            for j in 0 .. i {
+                len_sum += constr[j].1;
+            }
 
-pub fn inertia_rod_constr_coord(constr : &Vec<RodCoord>) -> f32 {
-    let mut inertia = 0.0;
-
-    for i in 0 .. constr.len() {
-        let mut len_sum = 0.0;
-
-        for j in 0 .. i {
-            len_sum += constr[j].1;
+            inertia += constr[i].0 * (constr[i].1.powi(2) / 12.0 + (len_sum + constr[i].1 / 2.0).powi(2));
         }
 
-        inertia += constr[i].0 * (constr[i].1.powi(2) / 12.0 + (len_sum + constr[i].1 / 2.0).powi(2));
+        inertia
     }
 
-    inertia
-}
+    pub fn inertia_rod_constr(constr : &Vec<Rod>) -> Mat3 {
+        let mut x_list : Vec<RodCoord> = vec![];
+        for rod in constr {
+            x_list.push((rod.0, rod.1.x));
+        }
 
-pub fn inertia_rod_constr(constr : &Vec<Rod>) -> Mat3 {
-    let mut x_list : Vec<RodCoord> = vec![];
-    for rod in constr {
-        x_list.push((rod.0, rod.1.x));
+        let mut y_list : Vec<RodCoord> = vec![];
+        for rod in constr {
+            y_list.push((rod.0, rod.1.y));
+        }
+
+        let mut z_list : Vec<RodCoord> = vec![];
+        for rod in constr {
+            z_list.push((rod.0, rod.1.z));
+        }
+
+        Mat3 { 
+            x_axis: Vec3 { x: inertia_rod_constr_coord(&x_list), y: 0.0, z: 0.0 }, 
+            y_axis: Vec3 { x: 0.0, y: inertia_rod_constr_coord(&y_list), z: 0.0 }, 
+            z_axis: Vec3 { x: 0.0, y: 0.0, z: inertia_rod_constr_coord(&z_list) } 
+        }
     }
 
-    let mut y_list : Vec<RodCoord> = vec![];
-    for rod in constr {
-        y_list.push((rod.0, rod.1.y));
-    }
+    pub fn inertia_to_mass(inertia : Mat3, radius : Vec3, mut a_hat : Vec3) -> f32 {
+        a_hat = a_hat.normalize();
 
-    let mut z_list : Vec<RodCoord> = vec![];
-    for rod in constr {
-        z_list.push((rod.0, rod.1.z));
+        let eta = radius.cross(a_hat);
+        
+        (inertia * (eta/eta.length().powi(3))).length()
     }
+//
 
-    Mat3 { 
-        x_axis: Vec3 { x: inertia_rod_constr_coord(&x_list), y: 0.0, z: 0.0 }, 
-        y_axis: Vec3 { x: 0.0, y: inertia_rod_constr_coord(&y_list), z: 0.0 }, 
-        z_axis: Vec3 { x: 0.0, y: 0.0, z: inertia_rod_constr_coord(&z_list) } 
+// || Forces || 
+    /// Calculates all forces for a segment
+    pub fn forces_segment(actions : &Vec<(Vec3, Vec3)>, ac : Vec3, ac_hat : Vec3) -> (Vec3, Vec3) {
+        let eta_ = ac.cross(ac_hat);
+        let eta = eta_ / eta_.length().powi(2);
+
+        let mut torque = Vec3::ZERO;
+        let mut f_j = Vec3::ZERO;
+
+        for (f_a, a_f) in actions {
+            torque += a_f.cross(*f_a);
+            f_j += *f_a;
+        }
+
+        let f_c = torque.dot(eta) * ac_hat;
+
+        (f_c, f_j - f_c) 
     }
-}
+//
