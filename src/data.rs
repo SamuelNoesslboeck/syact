@@ -70,12 +70,12 @@ impl StepperData
     }
 
     // Load calculations
-        // Max motor torque when having a load [in Nm]
+        /// Max motor torque when having a load [in Nm]
         pub fn t(&self) -> f32 {
             (self.t_s - self.t_load).clamp(0.0, self.t_s)
         }
 
-        /// Motor inertia when having a load [kg*m^2]
+        /// Motor inertia when having a load [in kg*m^2]
         pub fn j(&self) -> f32 {
             self.j_s + self.j_load
         }

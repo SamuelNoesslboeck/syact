@@ -18,11 +18,11 @@ pub mod math;
 
 // Types
 
-pub type StepperData = data::StepperData;
-pub type UpdateFunc = ctrl::UpdateFunc;
+pub use  data::StepperData;
+pub use ctrl::UpdateFunc;
 
 // Library Types
 
-pub type Vec3 = glam::Vec3;
+pub use glam::Vec3;
 
 // 
