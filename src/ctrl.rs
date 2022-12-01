@@ -255,9 +255,9 @@ impl StepperCtrl for PwmStepperCtrl
         let t_start = self.sf / start_frequency(&self.data);
         let t_min = self.data.time_step(omega);
 
-        let mut t_total : f32 = 0.0;
-        let mut time_step : f32 = t_start;      // Time per step
-        let mut i: u64 = 1;                 // Step count
+        let mut t_total : f32 = t_start;
+        let mut time_step : f32 = t_start;          // Time per step
+        let mut i: u64 = 1;                         // Step count
         let mut curve = vec![];
 
         self.step(time_step);
