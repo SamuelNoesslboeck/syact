@@ -3,7 +3,7 @@ use std::{thread, time, vec};
 use gpio::{GpioIn, GpioOut, sysfs::*};
 
 use crate::data::StepperData;
-use crate::math::start_frequency;
+use crate::math::{start_frequency, angluar_velocity};
 
 // type UpdateLoadFunc = fn (&StepperData);
 // type UpdatePosFunc = fn (&dyn StepperCtrl);
@@ -255,9 +255,13 @@ impl StepperCtrl for PwmStepperCtrl
         let t_start = self.sf / start_frequency(&self.data);
         let t_min = self.data.time_step(omega);
 
-        let mut time_step : f32;      // Time per step
+        let mut t_total : f32 = 0.0;
+        let mut time_step : f32 = t_start;      // Time per step
         let mut i: u64 = 1;                 // Step count
         let mut curve = vec![];
+
+        self.step(time_step);
+        curve.push(time_step);
 
         loop {
             if i > stepcount {
@@ -265,7 +269,8 @@ impl StepperCtrl for PwmStepperCtrl
                 break;
             }
 
-            time_step = t_start / (i as f32).powf(0.5 * self.cf);
+            time_step = self.data.step_ang() / angluar_velocity(&self.data, t_total);
+            t_total += time_step;
 
             if time_step < t_min {
                 self.set_speed(omega);
