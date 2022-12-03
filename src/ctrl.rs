@@ -3,7 +3,7 @@ use std::{thread, time, vec};
 use gpio::{GpioIn, GpioOut, sysfs::*};
 
 use crate::data::StepperData;
-use crate::math::{start_frequency, angluar_velocity};
+use crate::math::{start_frequency, angluar_velocity, angluar_velocity_dyn, angluar_velocity_dyn_rel};
 
 // type UpdateLoadFunc = fn (&StepperData);
 // type UpdatePosFunc = fn (&dyn StepperCtrl);
@@ -37,6 +37,12 @@ pub enum UpdateFunc {
     Break(for<'a> fn (&'a mut RaspPin) -> bool, u64)
 }
 
+pub enum StepResult {
+    None,
+    Break,
+    Error
+}
+
 /// A trait for structs used to control stepper motors through different methods
 pub trait StepperCtrl
 {
@@ -61,14 +67,14 @@ pub trait StepperCtrl
     fn steps_to_ang_dir(&self, steps : i64) -> f32;
 
     /// Move a single step
-    fn step(&mut self, time : f32);
+    fn step(&mut self, time : f32, ufunc : &UpdateFunc) -> StepResult;
 
     /// Accelerates the motor as fast as possible to the given speed, canceling if it takes any longer than the stepcount given. The function returns the steps needed for the acceleration process
-    fn accelerate(&mut self, stepcount : u64, omega : f32) -> Vec<f32>;
+    fn accelerate(&mut self, stepcount : u64, omega : f32, ufunc : &UpdateFunc) -> (StepResult, Vec<f32>);
     /// Drive a curve of step times, represented by a list
     fn drive_curve(&mut self, curve : &Vec<f32>);
     /// Move a number of steps as fast as possible, the steps will be traveled without 
-    fn steps(&mut self, stepcount : u64, omega : f32, ufunc : UpdateFunc);
+    fn steps(&mut self, stepcount : u64, omega : f32, ufunc : UpdateFunc) -> StepResult;
     /// Drive a certain distance, returns the actual distance traveled
     fn drive(&mut self, distance : f32, omega : f32, ufunc : UpdateFunc) -> f32;
     /// Move a number of steps safefy (with loads included)
@@ -234,7 +240,7 @@ impl StepperCtrl for PwmStepperCtrl
         }
     //
 
-    fn step(&mut self, time : f32) {
+    fn step(&mut self, time : f32, ufunc : &UpdateFunc) -> StepResult {
         let step_time_half = time::Duration::from_secs_f32(time / 2.0);
         
         match &mut self.sys_step {
@@ -246,30 +252,45 @@ impl StepperCtrl for PwmStepperCtrl
                 
         
                 self.pos += if self.dir { 1 } else { -1 };
+
+                match ufunc {
+                    UpdateFunc::Break(func, steps) => {
+                        if (self.pos % (*steps as i64)) == 0 {
+                            if func(&mut self.sys_meas) {
+                                return StepResult::Break
+                            } 
+                        }
+
+                        StepResult::None
+                    },
+                    _ => StepResult::None
+                }
             },
-            _ => { }
-        };
+            _ => StepResult::Error
+        }
     }
 
-    fn accelerate(&mut self, stepcount : u64, omega : f32) -> Vec<f32> {
+    fn accelerate(&mut self, stepcount : u64, omega : f32, ufunc : &UpdateFunc) -> (StepResult, Vec<f32>) {
         let t_start = self.sf / start_frequency(&self.data);
         let t_min = self.data.time_step(omega);
 
+        let mut o_last : f32 = 0.0;
         let mut t_total : f32 = t_start;
         let mut time_step : f32 = t_start;          // Time per step
         let mut i: u64 = 1;                         // Step count
         let mut curve = vec![];
 
-        self.step(time_step);
+        self.step(time_step, ufunc);
         curve.push(time_step);
 
         loop {
-            if i > stepcount {
+            if i >= stepcount {
                 self.set_speed(omega);
                 break;
             }
 
-            time_step = self.data.step_ang() / angluar_velocity(&self.data, t_total);
+            o_last = angluar_velocity_dyn(&self.data, t_total, o_last);
+            time_step = self.data.step_ang() / o_last * self.sf;
             t_total += time_step;
 
             if time_step < t_min {
@@ -277,57 +298,61 @@ impl StepperCtrl for PwmStepperCtrl
                 break;
             }
 
-            self.step(time_step);
+            match self.step(time_step, ufunc) {
+                StepResult::Break => {
+                    return ( StepResult::Break, curve )
+                },
+                _ => { }
+            }
             curve.push(time_step);
             i += 1;
         }
 
-        return curve;
+        ( StepResult::None, curve )
     }
 
     fn drive_curve(&mut self, curve : &Vec<f32>) {
         for i in 0 .. curve.len() {
-            self.step(curve[i]);
+            self.step(curve[i], &UpdateFunc::None);
         }
     }
 
-    fn steps(&mut self, stepcount : u64, omega : f32, ufunc : UpdateFunc) {
-        let mut curve = self.accelerate(stepcount / 2, omega);
+    fn steps(&mut self, stepcount : u64, omega : f32, ufunc : UpdateFunc) -> StepResult{
+        let ( result, mut curve ) = self.accelerate(stepcount / 2, omega, &ufunc);
         let time_step = self.data.time_step(omega);
         let last = curve.last().unwrap_or(&time_step);
 
         let mut passed : u64 = 0;
 
+        match result {
+            StepResult::Break => {
+                return result;
+            },
+            _ => { }
+        }
+
         self.drive_curve(&curve);
 
         if (stepcount % 2) == 1 {
-            self.step(*last);
+            self.step(*last, &UpdateFunc::None);
         }
 
         for _ in curve.len() .. (stepcount / 2) as usize {
-            self.step(time_step);
-            passed += 1;
-
-            if match ufunc {
-                UpdateFunc::Break(func, steps) => {
-                    if passed >= steps {
-                        passed -= steps;
-                        func(&mut self.sys_meas)
-                    } else {
-                        false
-                    }
+            match self.step(time_step, &ufunc) {
+                StepResult::Break => {
+                    break;
                 },
-                _ => false
-            } {
-                println!("Meas conducted!");
-                break;
+                _ => { }
             }
+            passed += 1;
         }
 
         curve.reverse();
         self.drive_curve(&curve);
         
         self.set_speed(0.0);
+
+        StepResult::None
     }
 
     fn drive(&mut self, distance : f32, omega : f32, ufunc : UpdateFunc) -> f32 {

@@ -49,6 +49,10 @@ impl StepperData
         self.t() / self.j()
     }
 
+    pub fn alpha_max_dyn(&self, t_s : f32) -> f32 {
+        self.t_dyn(t_s) / self.j()
+    }
+
     /// The inductivity constant [in s]
     pub fn tau(&self) -> f32 {
         self.i_max * self.l / self.u
@@ -73,6 +77,10 @@ impl StepperData
         /// Max motor torque when having a load [in Nm]
         pub fn t(&self) -> f32 {
             (self.t_s - self.t_load).clamp(0.0, self.t_s)
+        }
+
+        pub fn t_dyn(&self, t_s : f32) -> f32 {
+            (t_s - self.t_load).clamp(0.0, t_s)
         }
 
         /// Motor inertia when having a load [in kg*m^2]

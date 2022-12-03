@@ -6,7 +6,7 @@ use super::data::StepperData;
 
 /// Returns the current torque of a motor (data) at the given angluar speed (omega)  \
 /// Unit: [Nm]  
-pub fn torque(data : &StepperData, omega : f32) -> f32 {
+pub fn torque_dyn(data : &StepperData, omega : f32) -> f32 {
     if omega == 0.0 {
         return data.t();
     }
@@ -21,12 +21,22 @@ pub fn torque(data : &StepperData, omega : f32) -> f32 {
 /// Returns the start freqency of a motor (data)  \
 /// Unit: [Hz]
 pub fn start_frequency(data : &StepperData) -> f32 {
-    return (data.t() / data.j() * (data.n_s as f32) / 4.0 / PI).powf(0.5);
+    return (data.alpha_max() * (data.n_s as f32) / 4.0 / PI).powf(0.5);
 }
 
 /// The angluar velocity of a motor that is constantly accelerating after the time t [in s], [in s^-1]
 pub fn angluar_velocity(data : &StepperData, t : f32) -> f32 {
     return data.alpha_max() * (t + data.tau()*E.powf(-t/data.tau()));
+}
+
+/// The angluar velocity of a motor that is constantly accelerating after the time t [in s], [in s^-1]
+pub fn angluar_velocity_dyn(data : &StepperData, t : f32, omega_approx : f32) -> f32 {
+    torque_dyn(data, omega_approx) / data.j() * (t + data.tau()*E.powf(-t/data.tau()))
+}
+
+/// The angluar velocity of a motor that is constantly accelerating after the time t [in s], [in s^-1]
+pub fn angluar_velocity_dyn_rel(data : &StepperData, t_rel : f32, omega_approx : f32) -> f32 {
+    data.alpha_max_dyn(torque_dyn(data, omega_approx)) * (t_rel)
 }
 
 /// Creates the acceleration curve for the given Stepperdata _data_, the curve can be modified by modifying the stepper data or defining a minium steptime _t min_ or a maximum length of _max len_
