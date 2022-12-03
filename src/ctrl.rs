@@ -3,7 +3,7 @@ use std::{thread, time, vec};
 use gpio::{GpioIn, GpioOut, sysfs::*};
 
 use crate::data::StepperData;
-use crate::math::{start_frequency, angluar_velocity, angluar_velocity_dyn, angluar_velocity_dyn_rel};
+use crate::math::{start_frequency, angluar_velocity_dyn};
 
 // type UpdateLoadFunc = fn (&StepperData);
 // type UpdatePosFunc = fn (&dyn StepperCtrl);
@@ -317,12 +317,10 @@ impl StepperCtrl for PwmStepperCtrl
         }
     }
 
-    fn steps(&mut self, stepcount : u64, omega : f32, ufunc : UpdateFunc) -> StepResult{
+    fn steps(&mut self, stepcount : u64, omega : f32, ufunc : UpdateFunc) -> StepResult {
         let ( result, mut curve ) = self.accelerate(stepcount / 2, omega, &ufunc);
         let time_step = self.data.time_step(omega);
         let last = curve.last().unwrap_or(&time_step);
-
-        let mut passed : u64 = 0;
 
         match result {
             StepResult::Break => {
@@ -340,11 +338,10 @@ impl StepperCtrl for PwmStepperCtrl
         for _ in curve.len() .. (stepcount / 2) as usize {
             match self.step(time_step, &ufunc) {
                 StepResult::Break => {
-                    break;
+                    return StepResult::Break;
                 },
                 _ => { }
             }
-            passed += 1;
         }
 
         curve.reverse();
