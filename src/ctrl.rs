@@ -257,6 +257,7 @@ impl StepperCtrl for PwmStepperCtrl
                     UpdateFunc::Break(func, steps) => {
                         if (self.pos % (*steps as i64)) == 0 {
                             if func(&mut self.sys_meas) {
+                                println!("Meas conducted!");
                                 return StepResult::Break
                             } 
                         }
