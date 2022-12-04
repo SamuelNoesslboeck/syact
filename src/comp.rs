@@ -145,7 +145,9 @@ impl CylinderTriangle
         }
 
         pub fn set_gamma(&mut self, gam : f32, v_max : f32) {
-            self.cylinder.extend(self.length_for_gamma(gam - self.get_gamma()), v_max);
+            let a = self.length_for_gamma(gam - self.get_gamma());
+            println!("{}", a);
+            self.cylinder.extend(a, v_max);
         }
     //
 
