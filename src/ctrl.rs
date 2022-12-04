@@ -330,18 +330,18 @@ impl StepperCtrl for PwmStepperCtrl
             _ => { }
         }
 
-        self.drive_curve(&curve);
-
         if (stepcount % 2) == 1 {
             self.step(*last, &UpdateFunc::None);
         }
-
-        for _ in curve.len() .. (stepcount / 2) as usize {
-            match self.step(time_step, &ufunc) {
-                StepResult::Break => {
-                    return StepResult::Break;
-                },
-                _ => { }
+        
+        for _ in 0 .. 2 {
+            for _ in curve.len() .. (stepcount / 2) as usize {
+                match self.step(time_step, &ufunc) {
+                    StepResult::Break => {
+                        return StepResult::Break;
+                    },
+                    _ => { }
+                }
             }
         }
 
