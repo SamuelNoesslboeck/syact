@@ -136,7 +136,7 @@ impl CylinderTriangle
 
     /// Returns the angle gamma for the given cylinder length _(len < (l_a + l_b))_
     pub fn gamma_for_length(&self, len : f32) -> f32 {
-        ((len.powi(2) as f32 - self.l_a.powi(2) - self.l_b.powi(2)) / 2.0 / self.l_a / self.l_b).acos()
+        ((len.powi(2) - self.l_a.powi(2) - self.l_b.powi(2)) / 2.0 / self.l_a / self.l_b).acos()
     }
 
     // Angle
@@ -151,6 +151,10 @@ impl CylinderTriangle
 
     pub fn write_gamma(&mut self, gam : f32) {
         self.cylinder.write_length(self.length_for_gamma(gam))
+    }
+
+    pub fn measure(&mut self, max_dis : f32, v_max : f32, dir : bool, set_angle : f32, accuracy : u64) {
+        self.cylinder.measure(max_dis, v_max, dir, self.length_for_gamma(set_angle), accuracy);
     }
     
     // Limit
