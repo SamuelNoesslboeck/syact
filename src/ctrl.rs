@@ -20,7 +20,8 @@ pub enum RaspPin {
 #[derive(Debug)]
 pub enum LimitType {
     None,
-    Angle(i64)
+    Angle(i64),
+    Distance(f32)
 }
 
 #[derive(Debug)]
@@ -253,7 +254,25 @@ impl StepperCtrl for PwmStepperCtrl
         
                 self.pos += if self.dir { 1 } else { -1 };
 
-                match ufunc {
+                match self.limit_max {
+                    LimitType::Angle(pos) => {
+                        if self.pos > pos {
+                            return StepResult::Break;
+                        }
+                    }, 
+                    _ => { }
+                };
+
+                match self.limit_min {
+                    LimitType::Angle(pos) => {
+                        if self.pos < pos {
+                            return StepResult::Break;
+                        }
+                    }, 
+                    _ => { }
+                };
+
+                return match ufunc {
                     UpdateFunc::Break(func, steps) => {
                         if (self.pos % (*steps as i64)) == 0 {
                             if func(&mut self.sys_meas) {

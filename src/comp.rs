@@ -1,4 +1,4 @@
-use crate::{StepperData, ctrl::StepperCtrl, UpdateFunc, Vec3};
+use crate::{StepperData, ctrl::{StepperCtrl, LimitType}, UpdateFunc, Vec3};
 
 pub struct Cylinder
 {
@@ -53,6 +53,20 @@ impl Cylinder
             omega * self.rte_ratio
         }
     //
+
+    // Limits
+        pub fn conv_limit(&self, limit : LimitType) -> LimitType {
+            match limit {
+                LimitType::Distance(dist) => LimitType::Angle(self.ctrl.ang_to_steps_dir(self.phi_c(dist))), 
+                LimitType::Angle(_) => limit,
+                _ => LimitType::None
+            }
+        }
+
+        pub fn set_limit(&mut self, limit_max : LimitType, limit_min : LimitType) {
+            self.ctrl.set_limit(self.conv_limit(limit_max), self.conv_limit(limit_min));
+        }
+    //
     
     /// Extend the cylinder by a given distance _dis_ (in mm) with the maximum velocity _v max_ (in mm/s), returns the actual distance traveled
     pub fn extend(&mut self, dis : f32, v_max : f32) -> f32 {
@@ -80,13 +94,13 @@ impl Cylinder
     }
 
     // Loads
-    pub fn apply_load_m(&mut self, mass : f32) {
-        self.ctrl.apply_load_j(mass * (self.rte_ratio / 1000.0).powi(2));
-    }
+        pub fn apply_load_m(&mut self, mass : f32) {
+            self.ctrl.apply_load_j(mass * (self.rte_ratio / 1000.0).powi(2));
+        }
 
-    pub fn apply_load_f(&mut self, force : f32) {
-        self.ctrl.apply_load_t(force * self.rte_ratio / 1000.0);
-    }
+        pub fn apply_load_f(&mut self, force : f32) {
+            self.ctrl.apply_load_t(force * self.rte_ratio / 1000.0);
+        }
     //
 }
 
@@ -131,13 +145,17 @@ impl CylinderTriangle
         }
 
         pub fn set_gamma(&mut self, gam : f32, v_max : f32) {
-            self.cylinder.extend(self.length_for_gamma(gam), v_max);
+            self.cylinder.extend(self.length_for_gamma(gam - self.get_gamma()), v_max);
         }
     //
 
-    // pub fn write_gamma(&mut self, gam : f32) {
-        
-    // }
+    pub fn write_gamma(&mut self, gam : f32) {
+        self.cylinder.write_length(self.length_for_gamma(gam))
+    }
+    
+    // Limit
+    
+    //
 }
 
 /// A bearing powered by a motor with a certain gear ratio
