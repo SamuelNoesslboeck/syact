@@ -10,9 +10,9 @@ pub struct StepperData
     /// Motor inductence [in H]
     pub l : f32,
 
-    /// Step count [in (1)]
+    /// Step count per revolution [in (1)]
     pub n_s : u64,
-    /// Charge count [in (1)]
+    /// Coil pair count (n_s / 2) in many cases [in (1)]
     pub n_c : u64,
     /// Stall current [in Nm]
     pub t_s : f32,
@@ -20,8 +20,9 @@ pub struct StepperData
     pub j_s : f32,
 
     // Dynamic
-    /// Load torque
+    /// Load torque [in Nm]
     pub t_load : f32,   
+    /// Load inertia [in kg*m^2]
     pub j_load : f32
 }
 

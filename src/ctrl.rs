@@ -8,8 +8,10 @@ use crate::math::{start_frequency, angluar_velocity_dyn};
 // type UpdateLoadFunc = fn (&StepperData);
 // type UpdatePosFunc = fn (&dyn StepperCtrl);
 
+/// Constant for expressing an incorrect pin number
 const PIN_ERR : u16 = 0xFF;
 
+/// Pin helper enum for safe use in Debug enviroments
 #[derive(Debug)]
 pub enum RaspPin {
     ErrPin,
@@ -17,6 +19,7 @@ pub enum RaspPin {
     Input(SysFsGpioInput)
 }
 
+/// Different types of enums and their values
 #[derive(Debug)]
 pub enum LimitType {
     None,
@@ -24,6 +27,7 @@ pub enum LimitType {
     Distance(f32)
 }
 
+/// Current status of the limits set
 #[derive(Debug)]
 pub enum LimitDest {
     NoLimitSet,
@@ -32,12 +36,14 @@ pub enum LimitDest {
     Maximum(f32)
 }
 
+/// Update functions for updating stepper data in 
 pub enum UpdateFunc {
     None,
     Data(fn (StepperData) -> StepperData, u64),
     Break(for<'a> fn (&'a mut RaspPin) -> bool, u64)
 }
 
+/// Result of a stepper operation
 pub enum StepResult {
     None,
     Break,

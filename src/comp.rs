@@ -1,5 +1,6 @@
 use crate::{StepperData, ctrl::{StepperCtrl, LimitType}, UpdateFunc, Vec3};
 
+/// Cylinder component struct
 pub struct Cylinder
 {
     /// Data of the connected stepper motor
@@ -8,22 +9,15 @@ pub struct Cylinder
     /// Distance traveled per rad [in mm]   \
     /// f_rte = pitch / (2pi)
     pub rte_ratio : f32,
-    
-    /// Minimal extent [in mm]
-    pub pos_min : f32,
-    /// Maximal extent [in mm]
-    pub pos_max : f32
 }
 
 impl Cylinder
 {
     /// Create a new cylinder instance
-    pub fn new(ctrl : Box<dyn StepperCtrl>, rte_ratio : f32, pos_min : f32, pos_max : f32) -> Self {
+    pub fn new(ctrl : Box<dyn StepperCtrl>, rte_ratio : f32) -> Self {
         return Cylinder {
             ctrl,
-            rte_ratio,
-            pos_min,        // TODO: Use min and max
-            pos_max
+            rte_ratio
         };
     }
 
@@ -64,7 +58,7 @@ impl Cylinder
         }
 
         pub fn set_limit(&mut self, limit_max : LimitType, limit_min : LimitType) {
-            self.ctrl.set_limit(self.conv_limit(limit_max), self.conv_limit(limit_min));
+            self.ctrl.set_limit(self.conv_limit(limit_min), self.conv_limit(limit_max));
         }
     //
     
@@ -131,7 +125,7 @@ impl CylinderTriangle
 
     /// Returns the cylinder length for the given angle gamma
     pub fn length_for_gamma(&self, gam : f32) -> f32 {
-        (self.l_a.powi(2) + self.l_b.powi(2) + 2.0 * self.l_a * self.l_b * gam.cos()).powf(0.5)
+        (self.l_a.powi(2) + self.l_b.powi(2) - 2.0 * self.l_a * self.l_b * gam.cos()).powf(0.5)
     }
 
     /// Returns the angle gamma for the given cylinder length _(len < (l_a + l_b))_

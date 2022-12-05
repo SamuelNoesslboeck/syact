@@ -45,7 +45,7 @@ checksum = "292a948cd991e376cf75541fe5b97a1081d713c618b4f1b9500f8844e49eb565"
 
 [[package]]
 name = "stepper_lib"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "gcode",
  "glam",
