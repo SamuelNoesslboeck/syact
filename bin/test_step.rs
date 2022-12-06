@@ -13,7 +13,7 @@ fn main() {
 
     // Test
     println!("Doing single step ... ");
-    ctrl.step(0.01);
+    ctrl.step(0.01, &stepper_lib::UpdateFunc::None);
     println!("Step done ... ");
     // 
 }
