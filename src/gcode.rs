@@ -20,6 +20,11 @@ pub struct Interpreter<T>
     pub mach : T
 }
 
+pub struct Path
+{
+    
+}
+
 impl<T> Interpreter<T>
 {   
     pub fn new(mach : T, funcs : LetterEntries<T>) -> Self {
@@ -71,4 +76,14 @@ pub fn get_func<'a, T>(funcs : &'a LetterEntries<T>, gc : &'a GCode) -> Option<&
     funcs.get(&gc.mnemonic()).and_then(|v| {
         v.get(&gc.major_number())
     })
+}
+
+pub fn get_arg_letter(args : &Args, letter : char) -> Option<f32> {
+    for i in 0 .. args.len() {
+        if args[i].letter == letter {
+            return Some(args[i].value);
+        }
+    }
+
+    None
 }
