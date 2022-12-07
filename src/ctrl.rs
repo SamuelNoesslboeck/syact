@@ -36,6 +36,16 @@ pub enum LimitDest {
     Maximum(f32)
 }
 
+impl LimitDest {
+    pub fn reached(&self) -> bool {
+        match self {
+            LimitDest::Maximum(_) => true,
+            LimitDest::Minimum(_) => true,
+            _ => false
+        }
+    }
+}
+
 /// Update functions for updating stepper data in 
 pub enum UpdateFunc {
     None,
@@ -109,7 +119,7 @@ pub trait StepperCtrl
     /// Set the limit for the stepper motor
     fn set_limit(&mut self, min : LimitType, max : LimitType);
     /// Check if the stepper motor is in a limited position
-    fn get_limit_dest(&self) -> LimitDest;
+    fn get_limit_dest(&self, pos : i64) -> LimitDest;
 
     /// Moves the motor in the current direction till the measure pin is true
     fn measure(&mut self, max_steps : u64, omega : f32, dir : bool, set_pos : i64, accuracy : u64);
@@ -443,23 +453,8 @@ impl StepperCtrl for PwmStepperCtrl
             self.limit_max = max;
         }
     
-        fn get_limit_dest(&self) -> LimitDest {
-            let pos = self.pos;
-
-            let match_b = |pdest : LimitDest| {
-                match self.limit_max {
-                    LimitType::Angle(ang) => {
-                        if pos > ang {
-                            return LimitDest::Maximum((pos - ang) as f32 * self.data.step_ang());
-                        }
-
-                        LimitDest::NotReached
-                    },
-                    _ => pdest
-                }
-            };
-
-            match match self.limit_min {
+        fn get_limit_dest(&self, pos : i64) -> LimitDest {
+            let res_min = match self.limit_min {
                 LimitType::Angle(ang) => {
                     if pos < ang {
                         return LimitDest::Minimum((pos - ang) as f32 * self.data.step_ang())
@@ -468,10 +463,21 @@ impl StepperCtrl for PwmStepperCtrl
                     LimitDest::NotReached
                 },
                 _ => LimitDest::NoLimitSet
-            } {
-                LimitDest::NotReached => match_b(LimitDest::NotReached),
-                LimitDest::NoLimitSet => match_b(LimitDest::NoLimitSet),
-                other => other
+            };
+             
+            if !res_min.reached() {
+                return match self.limit_max {
+                    LimitType::Angle(ang) => {
+                        if pos > ang {
+                            return LimitDest::Maximum((pos - ang) as f32 * self.data.step_ang());
+                        }
+
+                        LimitDest::NotReached
+                    },
+                    _ => res_min
+                };
+            } else {
+                return res_min;
             }
         }
     // 

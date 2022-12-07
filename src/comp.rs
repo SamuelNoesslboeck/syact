@@ -1,4 +1,4 @@
-use crate::{StepperData, ctrl::{StepperCtrl, LimitType}, UpdateFunc, Vec3};
+use crate::{StepperData, ctrl::{StepperCtrl, LimitType, LimitDest}, UpdateFunc, Vec3};
 
 /// Cylinder component struct
 pub struct Cylinder
@@ -59,6 +59,14 @@ impl Cylinder
 
         pub fn set_limit(&mut self, limit_max : LimitType, limit_min : LimitType) {
             self.ctrl.set_limit(self.conv_limit(limit_min), self.conv_limit(limit_max));
+        }
+
+        pub fn get_limit_dest(&self, dist : f32) -> LimitDest {
+            match self.ctrl.get_limit_dest(self.ctrl.ang_to_steps_dir(self.phi_c(dist))) {
+                LimitDest::Minimum(ang) => LimitDest::Minimum(self.dis_c(ang)), 
+                LimitDest::Maximum(ang) => LimitDest::Maximum(self.dis_c(ang)), 
+                other => other
+            }
         }
     //
     
@@ -124,38 +132,48 @@ impl CylinderTriangle
     }
 
     /// Returns the cylinder length for the given angle gamma
-    pub fn length_for_gamma(&self, gam : f32) -> f32 {
+    pub fn len_for_gam(&self, gam : f32) -> f32 {
         (self.l_a.powi(2) + self.l_b.powi(2) - 2.0 * self.l_a * self.l_b * gam.cos()).powf(0.5)
     }
 
     /// Returns the angle gamma for the given cylinder length _(len < (l_a + l_b))_
-    pub fn gamma_for_length(&self, len : f32) -> f32 {
+    pub fn gam_for_len(&self, len : f32) -> f32 {
         ((self.l_a.powi(2) + self.l_b.powi(2) - len.powi(2)) / 2.0 / self.l_a / self.l_b).acos()
     }
 
     // Angle
-        pub fn get_gamma(&self) -> f32 {
-            self.gamma_for_length(self.cylinder.length())
+        pub fn get_gam(&self) -> f32 {
+            self.gam_for_len(self.cylinder.length())
         }
 
-        pub fn set_gamma(&mut self, gam : f32, v_max : f32) {
-            let a = self.length_for_gamma(gam) - self.cylinder.length();
+        pub fn set_gam(&mut self, gam : f32, v_max : f32) {
+            let a = self.len_for_gam(gam) - self.cylinder.length();
             println!("[Gamma: {}] [Len: {}] [Drive: {}] [Cylinder Length: {}] [Current gamma: {}]",    
-                gam, self.length_for_gamma(gam), a, self.cylinder.length(), self.get_gamma());
+                gam, self.len_for_gam(gam), a, self.cylinder.length(), self.get_gam());
             self.cylinder.extend(a, v_max);
         }
     //
 
-    pub fn write_gamma(&mut self, gam : f32) {
-        self.cylinder.write_length(self.length_for_gamma(gam))
+    pub fn write_gam(&mut self, gam : f32) {
+        self.cylinder.write_length(self.len_for_gam(gam))
     }
 
     pub fn measure(&mut self, max_dis : f32, v_max : f32, dir : bool, set_angle : f32, accuracy : u64) {
-        self.cylinder.measure(max_dis, v_max, dir, self.length_for_gamma(set_angle), accuracy);
+        self.cylinder.measure(max_dis, v_max, dir, self.len_for_gam(set_angle), accuracy);
     }
     
     // Limit
-    
+        pub fn set_limit(&mut self, limit_min : LimitType, limit_max : LimitType) {
+            self.cylinder.set_limit(limit_max, limit_min)
+        }
+
+        pub fn get_limit_dest(&self, gam : f32) -> LimitDest {
+            match self.cylinder.get_limit_dest(self.len_for_gam(gam)) {
+                LimitDest::Maximum(dist) => LimitDest::Maximum(self.gam_for_len(dist)),
+                LimitDest::Minimum(dist) => LimitDest::Minimum(self.gam_for_len(dist)),
+                other => other  
+            }
+        }
     //
 }
 
@@ -181,6 +199,11 @@ impl GearBearing
         pub fn omega_for_motor(&self, omega : f32) -> f32 {
             omega / self.ratio
         }
+
+        /// Returns the angle for the motor from a given bearing angle
+        pub fn ang_for_bear(&self, ang : f32) -> f32 {
+            ang * self.ratio
+        }
     //  
 
     pub fn get_pos(&self) -> f32 {
@@ -200,6 +223,16 @@ impl GearBearing
             accuracy
         );
     }
+
+    // Limits
+        pub fn get_limit_dest(&self, gam : f32) -> LimitDest {
+            match self.ctrl.get_limit_dest(self.ctrl.ang_to_steps_dir(self.ang_for_motor(gam))) {
+                LimitDest::Maximum(dist) => LimitDest::Maximum(self.ang_for_bear(dist)),
+                LimitDest::Minimum(dist) => LimitDest::Minimum(self.ang_for_bear(dist)),
+                other => other  
+            }
+        }
+    //
 
     pub fn apply_load_j(&mut self, inertia : f32) {
         self.ctrl.apply_load_j(inertia * self.ratio);
