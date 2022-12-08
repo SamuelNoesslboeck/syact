@@ -23,7 +23,8 @@ pub enum RaspPin {
 #[derive(Debug)]
 pub enum LimitType {
     None,
-    Angle(i64),
+    Steps(i64),
+    Angle(f32),
     Distance(f32)
 }
 
@@ -34,6 +35,17 @@ pub enum LimitDest {
     NotReached,
     Minimum(f32),
     Maximum(f32)
+}
+
+impl std::fmt::Display for LimitDest {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            LimitDest::NoLimitSet => write!(f, "No limit set"),
+            LimitDest::NotReached => write!(f, "No limit reached"),
+            LimitDest::Minimum(ang) => write!(f, "In minimum {}", ang),
+            LimitDest::Maximum(ang) => write!(f, "In maximum {}", ang) 
+        }
+    }
 }
 
 impl LimitDest {
@@ -214,7 +226,7 @@ impl PwmStepperCtrl
             RaspPin::Input(gpio_pin) => {
                 gpio_pin.read_value().unwrap() == gpio::GpioValue::High
             },
-            _ => false
+            _ => true
         }
     }
 }
@@ -271,7 +283,7 @@ impl StepperCtrl for PwmStepperCtrl
                 self.pos += if self.dir { 1 } else { -1 };
 
                 match self.limit_max {
-                    LimitType::Angle(pos) => {
+                    LimitType::Steps(pos) => {
                         if self.pos > pos {
                             return StepResult::Break;
                         }
@@ -280,7 +292,7 @@ impl StepperCtrl for PwmStepperCtrl
                 };
 
                 match self.limit_min {
-                    LimitType::Angle(pos) => {
+                    LimitType::Steps(pos) => {
                         if self.pos < pos {
                             return StepResult::Break;
                         }
@@ -455,9 +467,9 @@ impl StepperCtrl for PwmStepperCtrl
     
         fn get_limit_dest(&self, pos : i64) -> LimitDest {
             let res_min = match self.limit_min {
-                LimitType::Angle(ang) => {
+                LimitType::Steps(ang) => {
                     if pos < ang {
-                        return LimitDest::Minimum((pos - ang) as f32 * self.data.step_ang())
+                        return LimitDest::Minimum((pos - ang) as f32 * self.data.step_ang());
                     }
 
                     LimitDest::NotReached
@@ -467,7 +479,7 @@ impl StepperCtrl for PwmStepperCtrl
              
             if !res_min.reached() {
                 return match self.limit_max {
-                    LimitType::Angle(ang) => {
+                    LimitType::Steps(ang) => {
                         if pos > ang {
                             return LimitDest::Maximum((pos - ang) as f32 * self.data.step_ang());
                         }
@@ -493,8 +505,8 @@ impl StepperCtrl for PwmStepperCtrl
             self.pos = set_pos;
 
             self.set_limit(
-                if dir { LimitType::None } else { LimitType::Angle(set_pos) },
-                if dir { LimitType::Angle(set_pos) } else { LimitType::None }
+                if dir { LimitType::None } else { LimitType::Steps(set_pos) },
+                if dir { LimitType::Steps(set_pos) } else { LimitType::None }
             )
         }
     }

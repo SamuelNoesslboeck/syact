@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use gcode::{Mnemonic, GCode};
-use stepper_lib::gcode::{Interpreter, GCodeFunc, Args, Command};
+use stepper_lib::gcode::{Interpreter, GCodeFunc, Args};
 
 struct Data 
 {
@@ -22,8 +22,8 @@ fn g_1(data : &mut Data, _gc : &GCode, _args : &Args) -> Option<()> {
 fn main() {
     let map = HashMap::from([
         ( Mnemonic::General, HashMap::from([
-            ( 0u32, Command::new(g_0 as GCodeFunc<Data>, 0) ),
-            ( 1u32, Command::new(g_1 as GCodeFunc<Data>, 0) )
+            ( 0u32, g_0 as GCodeFunc<Data, Option<()>> ),
+            ( 1u32, g_1 as GCodeFunc<Data, Option<()>> )
         ]) )
     ]);
 

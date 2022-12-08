@@ -51,8 +51,8 @@ impl Cylinder
     // Limits
         pub fn conv_limit(&self, limit : LimitType) -> LimitType {
             match limit {
-                LimitType::Distance(dist) => LimitType::Angle(self.ctrl.ang_to_steps_dir(self.phi_c(dist))), 
-                LimitType::Angle(_) => limit,
+                LimitType::Distance(dist) => LimitType::Steps(self.ctrl.ang_to_steps_dir(self.phi_c(dist))), 
+                LimitType::Steps(_) => limit,
                 _ => LimitType::None
             }
         }
@@ -147,10 +147,7 @@ impl CylinderTriangle
         }
 
         pub fn set_gam(&mut self, gam : f32, v_max : f32) {
-            let a = self.len_for_gam(gam) - self.cylinder.length();
-            println!("[Gamma: {}] [Len: {}] [Drive: {}] [Cylinder Length: {}] [Current gamma: {}]",    
-                gam, self.len_for_gam(gam), a, self.cylinder.length(), self.get_gam());
-            self.cylinder.extend(a, v_max);
+            self.cylinder.extend(self.len_for_gam(gam) - self.cylinder.length(), v_max);
         }
     //
 
@@ -225,6 +222,18 @@ impl GearBearing
     }
 
     // Limits
+        pub fn set_limit(&mut self, limit_min : LimitType, limit_max : LimitType) {
+            self.ctrl.set_limit(
+                match limit_min {
+                    LimitType::Angle(ang) => LimitType::Steps(self.ctrl.ang_to_steps_dir(self.ang_for_motor(ang))), 
+                    _ => LimitType::None
+                }, match limit_max {
+                    LimitType::Angle(ang) => LimitType::Steps(self.ctrl.ang_to_steps_dir(self.ang_for_motor(ang))),
+                    _ => LimitType::None
+                }
+            )
+        }
+
         pub fn get_limit_dest(&self, gam : f32) -> LimitDest {
             match self.ctrl.get_limit_dest(self.ctrl.ang_to_steps_dir(self.ang_for_motor(gam))) {
                 LimitDest::Maximum(dist) => LimitDest::Maximum(self.ang_for_bear(dist)),

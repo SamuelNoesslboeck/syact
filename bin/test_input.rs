@@ -1,4 +1,4 @@
-use gpio::{GpioIn, GpioOut, sysfs::*};
+use gpio::{GpioIn, sysfs::*};
 
 fn main() {
     let mut pin = SysFsGpioInput::open(25).expect("Could not open pin");
