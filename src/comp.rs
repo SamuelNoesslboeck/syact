@@ -85,6 +85,10 @@ impl Cylinder
         );
     }
 
+    pub async fn measure_async(&mut self, max_dis : f32, v_max : f32, dir : bool, set_len : f32, accuracy : u64) {
+        self.measure(max_dis, v_max, dir, set_len, accuracy)
+    }
+
     /// Overwrite the current cylinder length without moving
     pub fn write_length(&mut self, dis_c : f32) {
         self.ctrl.write_pos(self.phi_c(dis_c));
