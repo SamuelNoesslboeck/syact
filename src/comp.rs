@@ -221,6 +221,10 @@ impl GearBearing
         );
     }
 
+    pub async fn measure_async(&mut self, max_angle : f32, omega : f32, dir : bool, set_pos : f32, accuracy : u64) {
+        self.measure(max_angle, omega, dir, set_pos, accuracy)
+    }
+
     // Limits
         pub fn set_limit(&mut self, limit_min : LimitType, limit_max : LimitType) {
             self.ctrl.set_limit(
