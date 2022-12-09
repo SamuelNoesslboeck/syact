@@ -85,10 +85,6 @@ impl Cylinder
         );
     }
 
-    pub async fn measure_async(&mut self, max_dis : f32, v_max : f32, dir : bool, set_len : f32, accuracy : u64) {
-        self.measure(max_dis, v_max, dir, set_len, accuracy)
-    }
-
     /// Overwrite the current cylinder length without moving
     pub fn write_length(&mut self, dis_c : f32) {
         self.ctrl.write_pos(self.phi_c(dis_c));
@@ -223,10 +219,6 @@ impl GearBearing
             self.ctrl.ang_to_steps_dir(self.ang_for_motor(set_pos)),
             accuracy
         );
-    }
-
-    pub async fn measure_async(&mut self, max_angle : f32, omega : f32, dir : bool, set_pos : f32, accuracy : u64) {
-        self.measure(max_angle, omega, dir, set_pos, accuracy)
     }
 
     // Limits
