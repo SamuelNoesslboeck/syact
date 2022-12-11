@@ -1,4 +1,13 @@
-use std::{thread, time, vec};
+use std::{
+    sync::{
+        mpsc::{channel, Sender, Receiver}, 
+        Mutex,
+        Arc
+    },
+    thread::{self, JoinHandle}, 
+    time, 
+    vec
+};
 
 use gpio::{GpioIn, GpioOut, sysfs::*};
 
@@ -135,6 +144,8 @@ pub trait StepperCtrl
 
     /// Moves the motor in the current direction till the measure pin is true
     fn measure(&mut self, max_steps : u64, omega : f32, dir : bool, set_pos : i64, accuracy : u64);
+    /// Moves the motor in the current direction till the measure pin is true
+    fn measure_async(&mut self, comms : &StepperComms, max_steps : f32, omega : f32, dir : bool, set_pos : i64, accuracy : u64);
     /// Returns the measurement pin
     fn get_meas(&mut self) -> &mut RaspPin;
 
@@ -220,6 +231,8 @@ impl PwmStepperCtrl
 
         return ctrl;
     }
+
+    pub fn new_async(&mut self, )
 
     fn __meas_helper(pin : &mut RaspPin) -> bool {
         match pin {
@@ -511,6 +524,23 @@ impl StepperCtrl for PwmStepperCtrl
         }
     }
 
+    fn measure_async(&mut self, comms : &StepperComms, max_dist : f32, omega : f32, dir : bool, set_pos : i64, accuracy : u64) {
+        // TODO: Add failsafes
+
+        self.set_dir(dir);
+        comms.drive_async(max_dist, omega, UpdateFunc::Break(Self::__meas_helper, accuracy));
+        
+        // Successful measurement
+        if Self::__meas_helper(&mut self.sys_meas) {
+            self.pos = set_pos;
+
+            self.set_limit(
+                if dir { LimitType::None } else { LimitType::Steps(set_pos) },
+                if dir { LimitType::Steps(set_pos) } else { LimitType::None }
+            )
+        }
+    }
+
     fn get_meas(&mut self) -> &mut RaspPin {
         &mut self.sys_meas
     }
@@ -531,5 +561,39 @@ impl StepperCtrl for PwmStepperCtrl
             &self.sys_step,
             &self.sys_meas
         );
+    }
+}
+
+pub type Message = (f32, f32, UpdateFunc);
+
+pub struct StepperComms
+{
+    pub thr : JoinHandle<()>,
+    pub sender : Sender<Message>
+}
+
+impl StepperComms {
+    pub fn new(ctrl : Arc<Mutex<Box<PwmStepperCtrl>>>) -> Self {
+        let (sender , receiver) : (Sender<Message>, Receiver<Message>) = channel();
+
+        let thr = thread::spawn(move || {
+            loop {
+                let msg = receiver.recv().unwrap();
+                let mut sel = ctrl.lock().unwrap();
+                
+                sel.drive(msg.0, msg.1, msg.2);
+
+                drop(sel);
+            };
+        });
+
+        Self {
+            thr, 
+            sender
+        }
+    }
+
+    pub fn drive_async(&self, dist : f32, omega : f32, ufunc : UpdateFunc) {
+        self.sender.send((dist, omega, ufunc)).unwrap();
     }
 }
