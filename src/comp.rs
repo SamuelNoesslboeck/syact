@@ -1,4 +1,4 @@
-use crate::{StepperData, ctrl::{StepperCtrl, LimitType, LimitDest}, UpdateFunc, Vec3};
+use crate::{StepperData, ctrl::{StepperCtrl, LimitType, LimitDest, StepperComms}, UpdateFunc, Vec3};
 
 /// Cylinder component struct
 pub struct Cylinder
@@ -71,18 +71,25 @@ impl Cylinder
     //
     
     /// Extend the cylinder by a given distance _dis_ (in mm) with the maximum velocity _v max_ (in mm/s), returns the actual distance traveled
-    pub fn extend(&mut self, dis : f32, v_max : f32) -> f32 {
-        self.ctrl.drive(self.phi_c(dis), self.omega_c(v_max), UpdateFunc::None)
+    pub fn extend(&mut self, dist : f32, v_max : f32) -> f32 {
+        self.ctrl.drive(self.phi_c(dist), self.omega_c(v_max), UpdateFunc::None)
     }
 
-    pub fn measure(&mut self, max_dis : f32, v_max : f32, dir : bool, set_len : f32, accuracy : u64) {
+    pub fn extend_async(&mut self, comms : &StepperComms, dist : f32, v_max : f32) {
+        self.ctrl.drive_async(comms, self.phi_c(dist), self.omega_c(v_max), UpdateFunc::None)
+    }
+
+    pub fn measure(&mut self, max_dis : f32, v_max : f32, set_len : f32, accuracy : u64) {
         self.ctrl.measure(
-            self.ctrl.ang_to_steps(self.phi_c(max_dis)), 
+            self.phi_c(max_dis), 
             self.omega_c(v_max), 
-            dir, 
-            self.ctrl.ang_to_steps_dir(self.phi_c(set_len)), 
+            self.phi_c(set_len), 
             accuracy
         );
+    }
+
+    pub fn measure_async(&mut self, comms : &StepperComms, max_dis : f32, v_max : f32, set_len : f32, accuracy : u64) {
+        self.ctrl.measure_async(comms, self.phi_c(max_dis), self.omega_c(v_max), self.phi_c(set_len), accuracy);
     }
 
     /// Overwrite the current cylinder length without moving
@@ -155,8 +162,12 @@ impl CylinderTriangle
         self.cylinder.write_length(self.len_for_gam(gam))
     }
 
-    pub fn measure(&mut self, max_dis : f32, v_max : f32, dir : bool, set_angle : f32, accuracy : u64) {
-        self.cylinder.measure(max_dis, v_max, dir, self.len_for_gam(set_angle), accuracy);
+    pub fn measure(&mut self, max_dis : f32, v_max : f32, set_angle : f32, accuracy : u64) {
+        self.cylinder.measure(max_dis, v_max,self.len_for_gam(set_angle), accuracy);
+    }
+
+    pub fn measure_async(&mut self, comms : &StepperComms, max_dis : f32, v_max : f32, set_angle : f32, accuracy : u64) {
+        self.cylinder.measure_async(comms, max_dis, v_max,self.len_for_gam(set_angle), accuracy);
     }
     
     // Limit
@@ -211,12 +222,21 @@ impl GearBearing
         self.ctrl.drive(self.ang_for_motor(pos - self.get_pos()), self.omega_for_motor(omega), UpdateFunc::None)
     }
 
-    pub fn measure(&mut self, max_angle : f32, omega : f32, dir : bool, set_pos : f32, accuracy : u64) {
+    pub fn measure(&mut self, max_angle : f32, omega : f32, set_pos : f32, accuracy : u64) {
         self.ctrl.measure(
-            self.ctrl.ang_to_steps(self.ang_for_motor(max_angle)), 
+            self.ang_for_motor(max_angle), 
             self.omega_for_motor(omega), 
-            dir, 
-            self.ctrl.ang_to_steps_dir(self.ang_for_motor(set_pos)),
+            self.ang_for_motor(set_pos),
+            accuracy
+        );
+    }
+
+    pub fn measure_async(&mut self, comms : &StepperComms, max_angle : f32, omega : f32, set_pos : f32, accuracy : u64) {
+        self.ctrl.measure_async(
+            comms,
+            self.ang_for_motor(max_angle), 
+            self.omega_for_motor(omega), 
+            self.ang_for_motor(set_pos),
             accuracy
         );
     }

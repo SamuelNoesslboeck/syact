@@ -29,7 +29,7 @@ pub enum RaspPin {
 }
 
 /// Different types of enums and their values
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum LimitType {
     None,
     Steps(i64),
@@ -114,12 +114,8 @@ pub trait StepperCtrl
     /// Move a number of steps as fast as possible, the steps will be traveled without 
     fn steps(&mut self, stepcount : u64, omega : f32, ufunc : UpdateFunc) -> StepResult;
     /// Drive a certain distance, returns the actual distance traveled
-    fn drive(&mut self, distance : f32, omega : f32, ufunc : UpdateFunc) -> f32;
-    /// Move a number of steps safefy (with loads included)
-        // fn steps_save(&mut self, stepcount : u64, omega : f32, up_load : UpdateLoadFunc);
-        // fn steps_update(&mut self, stepcount : u64, omega : f32, up_load : UpdateLoadFunc, up_pos : UpdatePosFunc);
-    // Stops the motor as fast as possible
-    fn stop(&mut self) -> u64;
+    fn drive(&mut self, dist : f32, omega : f32, ufunc : UpdateFunc) -> f32;
+    fn drive_async(&mut self, comms : &StepperComms, dist : f32, omega : f32, ufunc : UpdateFunc);
 
     /// Get the current speed
     fn get_speed(&self) -> f32;
@@ -141,11 +137,13 @@ pub trait StepperCtrl
     fn set_limit(&mut self, min : LimitType, max : LimitType);
     /// Check if the stepper motor is in a limited position
     fn get_limit_dest(&self, pos : i64) -> LimitDest;
+    /// Set the limit at the current position, so that the motor cannot continue
+    fn set_endpoint(&mut self, set_pos : f32);
 
     /// Moves the motor in the current direction till the measure pin is true
-    fn measure(&mut self, max_steps : u64, omega : f32, dir : bool, set_pos : i64, accuracy : u64);
+    fn measure(&mut self, max_pos : f32, omega : f32, set_pos : f32, accuracy : u64);
     /// Moves the motor in the current direction till the measure pin is true
-    fn measure_async(&mut self, comms : &StepperComms, max_steps : f32, omega : f32, dir : bool, set_pos : i64, accuracy : u64);
+    fn measure_async(&mut self, comms : &StepperComms, max_pos : f32, omega : f32, set_pos : f32, accuracy : u64);
     /// Returns the measurement pin
     fn get_meas(&mut self) -> &mut RaspPin;
 
@@ -231,8 +229,6 @@ impl PwmStepperCtrl
 
         return ctrl;
     }
-
-    pub fn new_async(&mut self, )
 
     fn __meas_helper(pin : &mut RaspPin) -> bool {
         match pin {
@@ -426,9 +422,9 @@ impl StepperCtrl for PwmStepperCtrl
         self.steps(steps, omega, ufunc);
         return steps as f32 * self.data.step_ang();
     }
-    
-    fn stop(&mut self) -> u64 {
-        0 // TODO
+
+    fn drive_async(&mut self, comms : &StepperComms, dist : f32, omega : f32, ufunc : UpdateFunc) {
+        comms.drive_async(dist, omega, ufunc);
     }
 
     // Speed
@@ -505,40 +501,29 @@ impl StepperCtrl for PwmStepperCtrl
                 return res_min;
             }
         }
+
+        fn set_endpoint(&mut self, set_pos : f32) {
+            if Self::__meas_helper(&mut self.sys_meas) {
+                let set_pos_step = self.ang_to_steps_dir(set_pos);
+
+                self.pos = set_pos_step;
+    
+                self.set_limit(
+                    if self.dir { self.limit_min.clone() } else { LimitType::Steps(set_pos_step) },
+                    if self.dir { LimitType::Steps(set_pos_step) } else { self.limit_max.clone() }
+                )
+            }
+        }
     // 
 
-    fn measure(&mut self, max_steps : u64, omega : f32, dir : bool, set_pos : i64, accuracy : u64) {
-        // TODO: Add failsafes
-
-        self.set_dir(dir);
-        self.steps(max_steps, omega, UpdateFunc::Break(Self::__meas_helper, accuracy));
-        
-        // Successful measurement
-        if Self::__meas_helper(&mut self.sys_meas) {
-            self.pos = set_pos;
-
-            self.set_limit(
-                if dir { LimitType::None } else { LimitType::Steps(set_pos) },
-                if dir { LimitType::Steps(set_pos) } else { LimitType::None }
-            )
-        }
+    fn measure(&mut self, max_pos : f32, omega : f32, set_pos : f32, accuracy : u64) {
+        self.drive(max_pos, omega, UpdateFunc::Break(Self::__meas_helper, accuracy));
+        self.set_endpoint(set_pos);
     }
 
-    fn measure_async(&mut self, comms : &StepperComms, max_dist : f32, omega : f32, dir : bool, set_pos : i64, accuracy : u64) {
-        // TODO: Add failsafes
-
-        self.set_dir(dir);
-        comms.drive_async(max_dist, omega, UpdateFunc::Break(Self::__meas_helper, accuracy));
-        
-        // Successful measurement
-        if Self::__meas_helper(&mut self.sys_meas) {
-            self.pos = set_pos;
-
-            self.set_limit(
-                if dir { LimitType::None } else { LimitType::Steps(set_pos) },
-                if dir { LimitType::Steps(set_pos) } else { LimitType::None }
-            )
-        }
+    fn measure_async(&mut self, comms : &StepperComms, max_dist : f32, omega : f32, set_pos : f32, accuracy : u64) {
+        self.drive_async(comms, max_dist, omega, UpdateFunc::Break(Self::__meas_helper, accuracy));
+        self.set_endpoint(set_pos);
     }
 
     fn get_meas(&mut self) -> &mut RaspPin {
@@ -565,35 +550,45 @@ impl StepperCtrl for PwmStepperCtrl
 }
 
 pub type Message = (f32, f32, UpdateFunc);
+pub type Response = ();
 
 pub struct StepperComms
 {
     pub thr : JoinHandle<()>,
-    pub sender : Sender<Message>
+    pub sender : Sender<Message>,
+    pub receiver : Receiver<Response>
 }
 
 impl StepperComms {
-    pub fn new(ctrl : Arc<Mutex<Box<PwmStepperCtrl>>>) -> Self {
-        let (sender , receiver) : (Sender<Message>, Receiver<Message>) = channel();
+    pub fn new(ctrl : Arc<Mutex<PwmStepperCtrl>>) -> Self {
+        let (sender_com, receiver_thr) : (Sender<Message>, Receiver<Message>) = channel();
+        let (sender_thr, receiver_com) : (Sender<Response>, Receiver<Response>) = channel();
 
         let thr = thread::spawn(move || {
             loop {
-                let msg = receiver.recv().unwrap();
+                let msg = receiver_thr.recv().unwrap();
                 let mut sel = ctrl.lock().unwrap();
                 
                 sel.drive(msg.0, msg.1, msg.2);
 
                 drop(sel);
+
+                sender_thr.send(()).unwrap();
             };
         });
 
         Self {
             thr, 
-            sender
+            sender: sender_com,
+            receiver: receiver_com
         }
     }
 
     pub fn drive_async(&self, dist : f32, omega : f32, ufunc : UpdateFunc) {
         self.sender.send((dist, omega, ufunc)).unwrap();
+    }
+
+    pub fn await_inactive(&self) {
+        self.receiver.recv().unwrap()
     }
 }
