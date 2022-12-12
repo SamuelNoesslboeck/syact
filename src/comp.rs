@@ -1,10 +1,12 @@
+use std::sync::Arc;
+
 use crate::{StepperData, ctrl::{StepperCtrl, LimitType, LimitDest, StepperComms}, UpdateFunc, Vec3};
 
 /// Cylinder component struct
 pub struct Cylinder
 {
     /// Data of the connected stepper motor
-    pub ctrl : Box<dyn StepperCtrl>,
+    pub ctrl : StepperCtrl,
 
     /// Distance traveled per rad [in mm]   \
     /// f_rte = pitch / (2pi)
@@ -14,7 +16,7 @@ pub struct Cylinder
 impl Cylinder
 {
     /// Create a new cylinder instance
-    pub fn new(ctrl : Box<dyn StepperCtrl>, rte_ratio : f32) -> Self {
+    pub fn new(ctrl : StepperCtrl, rte_ratio : f32) -> Self {
         return Cylinder {
             ctrl,
             rte_ratio
@@ -22,8 +24,8 @@ impl Cylinder
     }
 
     /// Get the stepper motor data for the cylinder
-    pub fn data(&self) -> &StepperData {
-        self.ctrl.get_data()
+    pub fn data(&self) -> &Arc<StepperData> {
+        &self.ctrl.data
     }
 
     // Conversions
@@ -156,6 +158,10 @@ impl CylinderTriangle
         pub fn set_gam(&mut self, gam : f32, v_max : f32) {
             self.cylinder.extend(self.len_for_gam(gam) - self.cylinder.length(), v_max);
         }
+
+        pub fn set_gam_async(&mut self, comms : &StepperComms, gam : f32, v_max : f32) {
+            self.cylinder.extend_async(comms, self.len_for_gam(gam) - self.cylinder.length(), v_max);
+        }
     //
 
     pub fn write_gam(&mut self, gam : f32) {
@@ -189,7 +195,7 @@ impl CylinderTriangle
 pub struct GearBearing 
 {
     /// Steppercontrol for the motor of the bearing
-    pub ctrl : Box<dyn StepperCtrl>,
+    pub ctrl : StepperCtrl,
     
     /// Angle ration from motor to bearing (omega_b / omega_m)
     pub ratio : f32
@@ -220,6 +226,10 @@ impl GearBearing
 
     pub fn set_pos(&mut self, pos : f32, omega : f32) -> f32 {
         self.ctrl.drive(self.ang_for_motor(pos - self.get_pos()), self.omega_for_motor(omega), UpdateFunc::None)
+    }
+
+    pub fn set_pos_async(&mut self, comms : &StepperComms, pos : f32, omega : f32) {
+        self.ctrl.drive_async(comms, self.ang_for_motor(pos - self.get_pos()), self.omega_for_motor(omega), UpdateFunc::None);
     }
 
     pub fn measure(&mut self, max_angle : f32, omega : f32, set_pos : f32, accuracy : u64) {

@@ -23,14 +23,16 @@ pub struct StepperData
     /// Load torque [in Nm]
     pub t_load : f32,   
     /// Load inertia [in kg*m^2]
-    pub j_load : f32
+    pub j_load : f32,
+
+    pub sf : f32
 }
 
 impl StepperData
 {
     /// Stepper motor from stepperonline 
     /// Link: https://www.omc-stepperonline.com/de/e-serie-nema-17-bipolar-42ncm-59-49oz-in-1-5a-42x42x38mm-4-draehte-w-1m-kabel-verbinder-17he15-1504s
-    pub fn mot_17he15_1504s(u : f32) -> Self {
+    pub fn mot_17he15_1504s(u : f32, sf : f32) -> Self {
         return StepperData { 
             u, 
             i_max: 1.5, 
@@ -41,7 +43,9 @@ impl StepperData
             j_s: 0.000_005_7,
 
             t_load: 0.0,
-            j_load: 0.0
+            j_load: 0.0,
+
+            sf
         };
     }
 
@@ -87,6 +91,32 @@ impl StepperData
         /// Motor inertia when having a load [in kg*m^2]
         pub fn j(&self) -> f32 {
             self.j_s + self.j_load
+        }
+
+        pub fn apply_load_j(&mut self, j : f32) {
+            self.j_load = j;
+        }  
+
+        pub fn apply_load_t(&mut self, t : f32) {
+            self.t_load = t;
+        }
+    //
+
+    // Conversions
+        pub fn ang_to_steps(&self, ang : f32) -> u64 {
+            (ang.abs() / self.step_ang()).round() as u64
+        }
+
+        pub fn ang_to_steps_dir(&self, ang : f32) -> i64 {
+            (ang / self.step_ang()).round() as i64
+        }
+
+        pub fn steps_to_ang(&self, steps : u64) -> f32 {
+            steps as f32 * self.step_ang()
+        }
+
+        pub fn steps_to_ang_dir(&self, steps : i64) -> f32 {
+            steps as f32 * self.step_ang()
         }
     //
 }
