@@ -1,6 +1,4 @@
-use std::sync::Arc;
-
-use crate::{StepperData, ctrl::{StepperCtrl, LimitType, LimitDest, StepperComms}, UpdateFunc, Vec3};
+use crate::{ctrl::{StepperCtrl, LimitType, LimitDest}, UpdateFunc, Vec3};
 
 /// Cylinder component struct
 pub struct Cylinder
@@ -21,11 +19,6 @@ impl Cylinder
             ctrl,
             rte_ratio
         };
-    }
-
-    /// Get the stepper motor data for the cylinder
-    pub fn data(&self) -> &Arc<StepperData> {
-        &self.ctrl.data
     }
 
     // Conversions
@@ -53,8 +46,8 @@ impl Cylinder
     // Limits
         pub fn conv_limit(&self, limit : LimitType) -> LimitType {
             match limit {
-                LimitType::Distance(dist) => LimitType::Steps(self.ctrl.ang_to_steps_dir(self.phi_c(dist))), 
-                LimitType::Steps(_) => limit,
+                LimitType::Distance(dist) => LimitType::Angle(self.phi_c(dist)), 
+                LimitType::Angle(_) => limit,
                 _ => LimitType::None
             }
         }
@@ -64,7 +57,7 @@ impl Cylinder
         }
 
         pub fn get_limit_dest(&self, dist : f32) -> LimitDest {
-            match self.ctrl.get_limit_dest(self.ctrl.ang_to_steps_dir(self.phi_c(dist))) {
+            match self.ctrl.get_limit_dest(self.phi_c(dist)) {
                 LimitDest::Minimum(ang) => LimitDest::Minimum(self.dis_c(ang)), 
                 LimitDest::Maximum(ang) => LimitDest::Maximum(self.dis_c(ang)), 
                 other => other
@@ -77,8 +70,8 @@ impl Cylinder
         self.ctrl.drive(self.phi_c(dist), self.omega_c(v_max), UpdateFunc::None)
     }
 
-    pub fn extend_async(&mut self, comms : &StepperComms, dist : f32, v_max : f32) {
-        self.ctrl.drive_async(comms, self.phi_c(dist), self.omega_c(v_max), UpdateFunc::None)
+    pub fn extend_async(&mut self, dist : f32, v_max : f32) {
+        self.ctrl.drive_async(self.phi_c(dist), self.omega_c(v_max), UpdateFunc::None)
     }
 
     pub fn measure(&mut self, max_dis : f32, v_max : f32, set_len : f32, accuracy : u64) {
@@ -90,8 +83,8 @@ impl Cylinder
         );
     }
 
-    pub fn measure_async(&mut self, comms : &StepperComms, max_dis : f32, v_max : f32, set_len : f32, accuracy : u64) {
-        self.ctrl.measure_async(comms, self.phi_c(max_dis), self.omega_c(v_max), self.phi_c(set_len), accuracy);
+    pub fn measure_async(&mut self, max_dis : f32, v_max : f32, set_len : f32, accuracy : u64) {
+        self.ctrl.measure_async(self.phi_c(max_dis), self.omega_c(v_max), self.phi_c(set_len), accuracy);
     }
 
     /// Overwrite the current cylinder length without moving
@@ -159,8 +152,8 @@ impl CylinderTriangle
             self.cylinder.extend(self.len_for_gam(gam) - self.cylinder.length(), v_max);
         }
 
-        pub fn set_gam_async(&mut self, comms : &StepperComms, gam : f32, v_max : f32) {
-            self.cylinder.extend_async(comms, self.len_for_gam(gam) - self.cylinder.length(), v_max);
+        pub fn set_gam_async(&mut self, gam : f32, v_max : f32) {
+            self.cylinder.extend_async( self.len_for_gam(gam) - self.cylinder.length(), v_max);
         }
     //
 
@@ -172,8 +165,8 @@ impl CylinderTriangle
         self.cylinder.measure(max_dis, v_max,self.len_for_gam(set_angle), accuracy);
     }
 
-    pub fn measure_async(&mut self, comms : &StepperComms, max_dis : f32, v_max : f32, set_angle : f32, accuracy : u64) {
-        self.cylinder.measure_async(comms, max_dis, v_max,self.len_for_gam(set_angle), accuracy);
+    pub fn measure_async(&mut self, max_dis : f32, v_max : f32, set_angle : f32, accuracy : u64) {
+        self.cylinder.measure_async(max_dis, v_max,self.len_for_gam(set_angle), accuracy);
     }
     
     // Limit
@@ -228,8 +221,8 @@ impl GearBearing
         self.ctrl.drive(self.ang_for_motor(pos - self.get_pos()), self.omega_for_motor(omega), UpdateFunc::None)
     }
 
-    pub fn set_pos_async(&mut self, comms : &StepperComms, pos : f32, omega : f32) {
-        self.ctrl.drive_async(comms, self.ang_for_motor(pos - self.get_pos()), self.omega_for_motor(omega), UpdateFunc::None);
+    pub fn set_pos_async(&mut self, pos : f32, omega : f32) {
+        self.ctrl.drive_async(self.ang_for_motor(pos - self.get_pos()), self.omega_for_motor(omega), UpdateFunc::None);
     }
 
     pub fn measure(&mut self, max_angle : f32, omega : f32, set_pos : f32, accuracy : u64) {
@@ -241,9 +234,8 @@ impl GearBearing
         );
     }
 
-    pub fn measure_async(&mut self, comms : &StepperComms, max_angle : f32, omega : f32, set_pos : f32, accuracy : u64) {
+    pub fn measure_async(&mut self, max_angle : f32, omega : f32, set_pos : f32, accuracy : u64) {
         self.ctrl.measure_async(
-            comms,
             self.ang_for_motor(max_angle), 
             self.omega_for_motor(omega), 
             self.ang_for_motor(set_pos),
@@ -255,17 +247,17 @@ impl GearBearing
         pub fn set_limit(&mut self, limit_min : LimitType, limit_max : LimitType) {
             self.ctrl.set_limit(
                 match limit_min {
-                    LimitType::Angle(ang) => LimitType::Steps(self.ctrl.ang_to_steps_dir(self.ang_for_motor(ang))), 
+                    LimitType::Angle(ang) => LimitType::Angle(self.ang_for_motor(ang)), 
                     _ => LimitType::None
                 }, match limit_max {
-                    LimitType::Angle(ang) => LimitType::Steps(self.ctrl.ang_to_steps_dir(self.ang_for_motor(ang))),
+                    LimitType::Angle(ang) => LimitType::Angle(self.ang_for_motor(ang)),
                     _ => LimitType::None
                 }
             )
         }
 
         pub fn get_limit_dest(&self, gam : f32) -> LimitDest {
-            match self.ctrl.get_limit_dest(self.ctrl.ang_to_steps_dir(self.ang_for_motor(gam))) {
+            match self.ctrl.get_limit_dest(self.ang_for_motor(gam)) {
                 LimitDest::Maximum(dist) => LimitDest::Maximum(self.ang_for_bear(dist)),
                 LimitDest::Minimum(dist) => LimitDest::Minimum(self.ang_for_bear(dist)),
                 other => other  

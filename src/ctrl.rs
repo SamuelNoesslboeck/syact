@@ -14,72 +14,9 @@ use gpio::{GpioIn, GpioOut, sysfs::*};
 use crate::data::StepperData;
 use crate::math::{start_frequency, angluar_velocity_dyn};
 
-// type UpdateLoadFunc = pub fn (&StepperData);
-// type UpdatePosFunc = pub fn (&dyn StepperCtrl);
-
-/// Constant for expressing an incorrect pin number
-const PIN_ERR : u16 = 0xFF;
-
-/// Pin helper enum for safe use in Debug enviroments
-#[derive(Debug)]
-pub enum RaspPin {
-    ErrPin,
-    Output(SysFsGpioOutput),
-    Input(SysFsGpioInput)
-}
-
-/// Different types of enums and their values
-#[derive(Debug, Clone)]
-pub enum LimitType {
-    None,
-    Steps(i64),
-    Angle(f32),
-    Distance(f32)
-}
-
-/// Current status of the limits set
-#[derive(Debug)]
-pub enum LimitDest {
-    NoLimitSet,
-    NotReached,
-    Minimum(f32),
-    Maximum(f32)
-}
-
-impl std::fmt::Display for LimitDest {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            LimitDest::NoLimitSet => write!(f, "No limit set"),
-            LimitDest::NotReached => write!(f, "No limit reached"),
-            LimitDest::Minimum(ang) => write!(f, "In minimum {}", ang),
-            LimitDest::Maximum(ang) => write!(f, "In maximum {}", ang) 
-        }
-    }
-}
-
-impl LimitDest {
-    pub fn reached(&self) -> bool {
-        match self {
-            LimitDest::Maximum(_) => true,
-            LimitDest::Minimum(_) => true,
-            _ => false
-        }
-    }
-}
-
-/// Update functions for updating stepper data in 
-pub enum UpdateFunc {
-    None,
-    Data(fn (StepperData) -> StepperData, u64),
-    Break(for<'a> fn (&'a mut RaspPin) -> bool, u64)
-}
-
-/// Result of a stepper operation
-pub enum StepResult {
-    None,
-    Break,
-    Error
-}
+// Use local types module
+mod types;
+pub use types::*;
 
 pub struct Driver 
 {
@@ -101,7 +38,55 @@ pub struct Driver
     limit_max : LimitType
 }
 
+/// StepperCtrl
+pub struct StepperCtrl
+{
+    /// Motor driver
+    pub driver : Arc<Mutex<Driver>>,
+    /// Async comms
+    pub comms : StepperComms,
+
+    /// Pin for controlling direction
+    pub pin_dir : u16,
+    /// Pin for controlling steps
+    pub pin_step : u16,
+    /// Pin for messuring distances
+    pub pin_mes : u16, 
+}
+
 impl Driver {
+    // Init
+    pub fn new(data : StepperData, pin_dir : u16, pin_step : u16) -> Self {
+        // Create pins if possible
+        let sys_dir = match SysFsGpioOutput::open(pin_dir.clone()) {
+            Ok(val) => RaspPin::Output(val),
+            Err(_) => RaspPin::ErrPin
+        };
+
+        let sys_step = match SysFsGpioOutput::open(pin_step.clone()) {
+            Ok(val) => RaspPin::Output(val),
+            Err(_) => RaspPin::ErrPin
+        };
+
+        let mut driver = Driver {
+            data, 
+            dir: true, 
+            pos: 0,
+            
+            sys_dir,
+            sys_step,
+            sys_meas: RaspPin::ErrPin,
+
+            limit_min: LimitType::None,
+            limit_max: LimitType::None
+        };
+
+        driver.set_dir(driver.dir);
+
+        driver
+    }
+
+
     // Misc
     fn __meas_helper(pin : &mut RaspPin) -> bool {
         match pin {
@@ -127,8 +112,8 @@ impl Driver {
                 self.pos += if self.dir { 1 } else { -1 };
 
                 match self.limit_max {
-                    LimitType::Steps(pos) => {
-                        if self.pos > pos {
+                    LimitType::Angle(pos) => {
+                        if self.get_abs_pos() > pos {
                             return StepResult::Break;
                         }
                     }, 
@@ -136,8 +121,8 @@ impl Driver {
                 };
 
                 match self.limit_min {
-                    LimitType::Steps(pos) => {
-                        if self.pos < pos {
+                    LimitType::Angle(pos) => {
+                        if self.get_abs_pos() < pos {
                             return StepResult::Break;
                         }
                     }, 
@@ -194,6 +179,7 @@ impl Driver {
                 },
                 _ => { }
             }
+
             curve.push(time_step);
             i += 1;
         }
@@ -270,8 +256,12 @@ impl Driver {
     }
 
     // Position
+        pub fn get_abs_pos(&self) -> f32 {
+            self.steps_to_ang_dir(self.pos)
+        }
+
         pub fn write_pos(&mut self, pos : f32) {
-            self.driver.lock().unwrap().pos = self.ang_to_steps_dir(pos);
+            self.pos = self.ang_to_steps_dir(pos);
         }
     //
 
@@ -281,11 +271,11 @@ impl Driver {
             self.limit_max = max;
         }
 
-        pub fn get_limit_dest(&self, pos : i64, ang_dis : f32) -> LimitDest {
+        pub fn get_limit_dest(&self, pos : f32) -> LimitDest {
             let res_min = match self.limit_min {
-                LimitType::Steps(ang) => {
+                LimitType::Angle(ang) => {
                     if pos < ang {
-                        return LimitDest::Minimum((pos - ang) as f32 * ang_dis);
+                        return LimitDest::Minimum(pos - ang);
                     }
 
                     LimitDest::NotReached
@@ -295,11 +285,11 @@ impl Driver {
             
             if !res_min.reached() {
                 return match self.limit_max {
-                    LimitType::Steps(ang) => {
+                    LimitType::Angle(ang) => {
                         if pos > ang {
-                            return LimitDest::Maximum((pos - ang) as f32 * ang_dis);
+                            return LimitDest::Maximum(pos - ang);
                         }
-
+    
                         LimitDest::NotReached
                     },
                     _ => res_min
@@ -311,13 +301,11 @@ impl Driver {
 
         pub fn set_endpoint(&mut self, set_pos : f32) {
             if Self::__meas_helper(&mut self.sys_meas) {
-                let set_pos_step = self.ang_to_steps_dir(set_pos);
-
-                self.pos = set_pos_step;
+                self.pos = self.ang_to_steps_dir(set_pos);
     
                 self.set_limit(
-                    if self.dir { self.limit_min.clone() } else { LimitType::Steps(set_pos_step) },
-                    if self.dir { LimitType::Steps(set_pos_step) } else { self.limit_max.clone() }
+                    if self.dir { self.limit_min.clone() } else { LimitType::Angle(set_pos) },
+                    if self.dir { LimitType::Angle(set_pos) } else { self.limit_max.clone() }
                 )
             }
         }
@@ -341,6 +329,16 @@ impl Driver {
         }
     //
 
+    // Loads
+        pub fn apply_load_j(&mut self, j : f32) {
+            self.data.apply_load_j(j);
+        }
+
+        pub fn apply_load_t(&mut self, t : f32) {
+            self.data.apply_load_t(t);
+        }
+    // 
+
     // Debug
         pub fn debug_pins(&self) {
             dbg!(
@@ -352,72 +350,21 @@ impl Driver {
     // 
 }
 
-/// StepperCtrl
-pub struct StepperCtrl
-{
-    /// Motor driver
-    pub driver : Arc<Mutex<Driver>>,
-
-    /// Safety factor for load and speed calculations
-    pub sf : f32,
-    /// Curve factor for slower acceleration
-    pub cf : f32, 
-
-    /// Pin for controlling direction
-    pub pin_dir : u16,
-    /// Pin for controlling steps
-    pub pin_step : u16,
-    /// Pin for messuring distances
-    pub pin_mes : u16, 
-
-    omega : f32
-}
-
 impl StepperCtrl
 {   
     pub fn new(data : StepperData, pin_dir : u16, pin_step : u16) -> Self {
-        // Create pins if possible
-        let sys_dir = match SysFsGpioOutput::open(pin_dir.clone()) {
-            Ok(val) => RaspPin::Output(val),
-            Err(_) => RaspPin::ErrPin
-        };
+        let driver = Arc::new(Mutex::new(Driver::new(data, pin_dir, pin_step)));
 
-        let sys_step = match SysFsGpioOutput::open(pin_step.clone()) {
-            Ok(val) => RaspPin::Output(val),
-            Err(_) => RaspPin::ErrPin
-        };
-
-        let mut ctrl = StepperCtrl { 
-            sf: 1.5, 
-            cf: 0.9,
+        let ctrl = StepperCtrl { 
             pin_dir: pin_dir, 
             pin_step: pin_step, 
             pin_mes: PIN_ERR, 
 
-            driver: Arc::new(Mutex::new(Driver {
-                data, 
-                dir: true, 
-                pos: 0,
-                
-                sys_dir,
-                sys_step,
-                sys_meas: RaspPin::ErrPin,
-
-                limit_min: LimitType::None,
-                limit_max: LimitType::None,
-            })),
-
-            omega: 0.0
+            comms: StepperComms::new(Arc::clone(&driver)),
+            driver: driver
         };
 
-        let dir = ctrl.driver.lock().unwrap().dir;
-        ctrl.set_dir(dir);
-
-        return ctrl;
-    }
-
-    pub fn new_comms(&self) -> StepperComms {
-        StepperComms::new(Arc::clone(&self.driver))
+        ctrl
     }
 
     // Init
@@ -430,39 +377,31 @@ impl StepperCtrl
         }
     //
 
-    pub fn step(&mut self, time : f32, ufunc : &UpdateFunc) -> StepResult {
-        self.driver.lock().unwrap().step(time, ufunc)
-    }
-
-    pub fn accelerate(&mut self, stepcount : u64, omega : f32, ufunc : &UpdateFunc) -> (StepResult, Vec<f32>) {
-        self.driver.lock().unwrap().accelerate(stepcount, omega, ufunc)
-    }
-
-    pub fn drive_curve(&mut self, curve : &Vec<f32>) {
-        for i in 0 .. curve.len() {
-            self.step(curve[i], &UpdateFunc::None);
-        }
-    }
-
-    pub fn steps(&mut self, stepcount : u64, omega : f32, ufunc : UpdateFunc) -> StepResult {
-        self.driver.lock().unwrap().steps(stepcount, omega, ufunc)
-    }
-
-    pub fn drive(&mut self, distance : f32, omega : f32, ufunc : UpdateFunc) -> f32 {
-        self.driver.lock().unwrap().drive(distance, omega, ufunc)
-    }
-
-    pub fn drive_async(&mut self, comms : &StepperComms, dist : f32, omega : f32, ufunc : UpdateFunc) {
-        comms.drive_async(dist, omega, ufunc);
-    }
-
-    // Speed
-        pub fn get_speed(&self) -> f32 {
-            return self.omega;
+    // Movements
+        pub fn step(&mut self, time : f32, ufunc : &UpdateFunc) -> StepResult {
+            self.driver.lock().unwrap().step(time, ufunc)
         }
 
-        pub fn set_speed(&mut self, omega : f32) {
-            self.omega = omega;
+        pub fn accelerate(&mut self, stepcount : u64, omega : f32, ufunc : &UpdateFunc) -> (StepResult, Vec<f32>) {
+            self.driver.lock().unwrap().accelerate(stepcount, omega, ufunc)
+        }
+
+        pub fn drive_curve(&mut self, curve : &Vec<f32>) {
+            for i in 0 .. curve.len() {
+                self.step(curve[i], &UpdateFunc::None);
+            }
+        }
+
+        pub fn steps(&mut self, stepcount : u64, omega : f32, ufunc : UpdateFunc) -> StepResult {
+            self.driver.lock().unwrap().steps(stepcount, omega, ufunc)
+        }
+
+        pub fn drive(&mut self, distance : f32, omega : f32, ufunc : UpdateFunc) -> f32 {
+            self.driver.lock().unwrap().drive(distance, omega, ufunc)
+        }
+
+        pub fn drive_async(&mut self, dist : f32, omega : f32, ufunc : UpdateFunc) {
+            self.comms.drive_async(dist, omega, ufunc);
         }
     //
 
@@ -478,11 +417,11 @@ impl StepperCtrl
 
     // Position
         pub fn get_abs_pos(&self) -> f32 {
-            self.steps_to_ang_dir(self.driver.lock().unwrap().pos)
+            self.driver.lock().unwrap().get_abs_pos()
         }
 
         pub fn write_pos(&mut self, pos : f32) {
-            self.driver.lock().unwrap().pos = self.ang_to_steps_dir(pos);
+            self.driver.lock().unwrap().write_pos(pos);
         }
     //
 
@@ -491,7 +430,7 @@ impl StepperCtrl
             self.driver.lock().unwrap().set_limit(min, max)
         }
     
-        pub fn get_limit_dest(&self, pos : i64) -> LimitDest {
+        pub fn get_limit_dest(&self, pos : f32) -> LimitDest {
             self.driver.lock().unwrap().get_limit_dest(pos)
         }
 
@@ -505,20 +444,26 @@ impl StepperCtrl
         self.set_endpoint(set_pos);
     }
 
-    pub fn measure_async(&mut self, comms : &StepperComms, max_dist : f32, omega : f32, set_pos : f32, accuracy : u64) {
-        self.drive_async(comms, max_dist, omega, UpdateFunc::Break(Driver::__meas_helper, accuracy));
+    pub fn measure_async(&mut self, max_dist : f32, omega : f32, set_pos : f32, accuracy : u64) {
+        self.drive_async(max_dist, omega, UpdateFunc::Break(Driver::__meas_helper, accuracy));
         self.set_endpoint(set_pos);
     }
 
     // Loads
         pub fn apply_load_j(&mut self, j : f32) {
-            self.data.apply_load_j(j);
+            self.driver.lock().unwrap().apply_load_j(j);
         }
 
         pub fn apply_load_t(&mut self, t : f32) {
-            self.data.t_load = t;
+            self.driver.lock().unwrap().apply_load_t(t);
         }
     // 
+
+    // Debug 
+        pub fn debug_pins(&self) {
+            self.driver.lock().unwrap().debug_pins();
+        }
+    //
 }
 
 pub type Message = (f32, f32, UpdateFunc);
@@ -543,7 +488,7 @@ impl StepperComms {
                 
                 sel.drive(msg.0, msg.1, msg.2);
 
-                drop(sel);
+                // drop(sel);
 
                 sender_thr.send(()).unwrap();
             };

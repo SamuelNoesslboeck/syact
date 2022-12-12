@@ -1,15 +1,13 @@
-use stepper_lib::{data::StepperData, ctrl::{PwmStepperCtrl, StepperCtrl}};
+use stepper_lib::{data::StepperData, ctrl::{StepperCtrl}};
 
 
 fn main() {
-    let mut ctrl = PwmStepperCtrl::new(
-        StepperData::mot_17he15_1504s(12.0), 
-        3, 26);
+    let mut ctrl = StepperCtrl::new(
+        StepperData::mot_17he15_1504s(12.0, 1.5), 
+        3, 26
+    );
 
-    ctrl.sf = 10.0;
-    // ctrl.data.t_s /= 2.0;
-    ctrl.data.j_s = 0.000_1;
-
+    ctrl.apply_load_j(0.000_01);
 
     // Test
     println!("Doing single step ... ");

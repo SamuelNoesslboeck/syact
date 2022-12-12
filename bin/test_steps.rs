@@ -1,20 +1,18 @@
-use stepper_lib::{data::StepperData, ctrl::{PwmStepperCtrl, StepperCtrl}};
+use stepper_lib::{data::StepperData, ctrl::StepperCtrl};
 
 fn main() {
     let args : Vec<String> = std::env::args().collect();
 
-    let mut ctrl = PwmStepperCtrl::new(
-        StepperData::mot_17he15_1504s(12.0), 
+    let mut ctrl = StepperCtrl::new(
+        StepperData::mot_17he15_1504s(12.0, 1.5), 
         3, 26);
 
-    ctrl.sf = 10.0;
-    // ctrl.data.t_s /= 2.0;
-    ctrl.data.j_s = 0.000_1;
+    ctrl.apply_load_j(0.000_01);
 
     test_steps(&args, &mut ctrl);
 }
 
-fn test_steps(args : &Vec<String>, ctrl : &mut PwmStepperCtrl)
+fn test_steps(args : &Vec<String>, ctrl : &mut StepperCtrl)
 {
     let mut steps = 200;
     let mut omega = 10.0;
