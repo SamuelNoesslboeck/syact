@@ -149,7 +149,7 @@ impl Driver {
 
     pub fn accelerate(&mut self, stepcount : u64, omega : f32, ufunc : &UpdateFunc) -> (StepResult, Vec<f32>) {
         let t_start = self.data.sf / start_frequency(&self.data);
-        let t_min = self.data.time_step(omega);
+        let t_min = self.data.step_time(omega);
 
         let mut o_last : f32 = 0.0;
         let mut t_total : f32 = t_start;
@@ -195,7 +195,7 @@ impl Driver {
 
     pub fn steps(&mut self, stepcount : u64, omega : f32, ufunc : UpdateFunc) -> StepResult {
         let ( result, mut curve ) = self.accelerate( stepcount / 2, omega, &ufunc);
-        let time_step = self.data.time_step(omega);
+        let time_step = self.data.step_time(omega);
         let last = curve.last().unwrap_or(&time_step);
 
         match result {
@@ -235,7 +235,7 @@ impl Driver {
             self.set_dir(false);
         }
 
-        let steps : u64 = self.data.ang_to_steps(distance);
+        let steps : u64 = self.data.ang_to_steps_dir(distance).abs() as u64;
         self.steps(steps, omega, ufunc);
         return steps as f32 * self.data.step_ang();
     }
@@ -439,15 +439,17 @@ impl StepperCtrl
         }
     // 
 
-    pub fn measure(&mut self, max_pos : f32, omega : f32, set_pos : f32, accuracy : u64) {
-        self.drive(max_pos, omega, UpdateFunc::Break(Driver::__meas_helper, accuracy));
-        self.set_endpoint(set_pos);
-    }
+    // Measurement
+        pub fn measure(&mut self, max_pos : f32, omega : f32, set_pos : f32, accuracy : u64) {
+            self.drive(max_pos, omega, UpdateFunc::Break(Driver::__meas_helper, accuracy));
+            self.set_endpoint(set_pos);
+        }
 
-    pub fn measure_async(&mut self, max_dist : f32, omega : f32, set_pos : f32, accuracy : u64) {
-        self.drive_async(max_dist, omega, UpdateFunc::Break(Driver::__meas_helper, accuracy));
-        self.set_endpoint(set_pos);
-    }
+        pub fn measure_async(&mut self, max_dist : f32, omega : f32, set_pos : f32, accuracy : u64) {
+            self.drive_async(max_dist, omega, UpdateFunc::Break(Driver::__meas_helper, accuracy));
+            self.set_endpoint(set_pos);
+        }
+    //
 
     // Loads
         pub fn apply_load_j(&mut self, j : f32) {
@@ -466,14 +468,14 @@ impl StepperCtrl
     //
 }
 
-pub type Message = (f32, f32, UpdateFunc);
+pub type Message = Option<(f32, f32, UpdateFunc)>;
 pub type Response = ();
 
 pub struct StepperComms
 {
-    pub thr : JoinHandle<()>,
-    pub sender : Sender<Message>,
-    pub receiver : Receiver<Response>
+    thr : JoinHandle<()>,
+    sender : Sender<Message>,
+    receiver : Receiver<Response>
 }
 
 impl StepperComms {
@@ -483,14 +485,19 @@ impl StepperComms {
 
         let thr = thread::spawn(move || {
             loop {
-                let msg = receiver_thr.recv().unwrap();
-                let mut sel = ctrl.lock().unwrap();
+                match receiver_thr.recv().unwrap() {
+                    Some(msg) => {
+                        let mut sel = ctrl.lock().unwrap();
                 
-                sel.drive(msg.0, msg.1, msg.2);
-
-                // drop(sel);
-
-                sender_thr.send(()).unwrap();
+                        sel.drive(msg.0, msg.1, msg.2);
+        
+                        drop(sel);
+                        sender_thr.send(()).unwrap();
+                    },
+                    None => {
+                        break;
+                    }
+                }
             };
         });
 
@@ -502,10 +509,15 @@ impl StepperComms {
     }
 
     pub fn drive_async(&self, dist : f32, omega : f32, ufunc : UpdateFunc) {
-        self.sender.send((dist, omega, ufunc)).unwrap();
+        self.sender.send(Some((dist, omega, ufunc))).expect("Thread crashed")
     }
 
     pub fn await_inactive(&self) {
-        self.receiver.recv().unwrap()
+        self.receiver.recv().unwrap_or(())
+    }
+
+    pub fn kill(&self) -> &JoinHandle<()> {
+        self.sender.send(None).unwrap_or(());
+        &self.thr
     }
 }

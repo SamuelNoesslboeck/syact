@@ -7,9 +7,10 @@
 
 /// Components including stepper motors
 pub mod comp;
+
 /// Collection of structs and functions for controlling Stepper Motors
 pub mod ctrl;
-/// Structs for storing characteristics of stepper motors and devices
+// Structs for storing characteristics of stepper motors and devices
 pub mod data;
 /// Resources required to process and generate G-Code
 pub mod gcode;
