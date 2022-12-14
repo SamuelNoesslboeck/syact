@@ -74,17 +74,17 @@ impl Cylinder
         self.ctrl.drive_async(self.phi_c(dist), self.omega_c(v_max), UpdateFunc::None)
     }
 
-    pub fn measure(&mut self, max_dis : f32, v_max : f32, set_len : f32, accuracy : u64) {
+    pub fn measure(&mut self, max_dis : f32, v_max : f32, set_len : f32, accuracy : u64) -> bool {
         self.ctrl.measure(
             self.phi_c(max_dis), 
             self.omega_c(v_max), 
             self.phi_c(set_len), 
             accuracy
-        );
+        )
     }
 
-    pub fn measure_async(&mut self, max_dis : f32, v_max : f32, set_len : f32, accuracy : u64) {
-        self.ctrl.measure_async(self.phi_c(max_dis), self.omega_c(v_max), self.phi_c(set_len), accuracy);
+    pub fn measure_async(&mut self, max_dis : f32, v_max : f32, accuracy : u64) {
+        self.ctrl.measure_async(self.phi_c(max_dis), self.omega_c(v_max),  accuracy);
     }
 
     /// Overwrite the current cylinder length without moving
@@ -161,12 +161,12 @@ impl CylinderTriangle
         self.cylinder.write_length(self.len_for_gam(gam))
     }
 
-    pub fn measure(&mut self, max_dis : f32, v_max : f32, set_angle : f32, accuracy : u64) {
-        self.cylinder.measure(max_dis, v_max,self.len_for_gam(set_angle), accuracy);
+    pub fn measure(&mut self, max_dis : f32, v_max : f32, set_angle : f32, accuracy : u64) -> bool {
+        self.cylinder.measure(max_dis, v_max,self.len_for_gam(set_angle), accuracy)
     }
 
-    pub fn measure_async(&mut self, max_dis : f32, v_max : f32, set_angle : f32, accuracy : u64) {
-        self.cylinder.measure_async(max_dis, v_max,self.len_for_gam(set_angle), accuracy);
+    pub fn measure_async(&mut self, max_dis : f32, v_max : f32, accuracy : u64) {
+        self.cylinder.measure_async(max_dis, v_max, accuracy);
     }
     
     // Limit
@@ -225,20 +225,19 @@ impl GearBearing
         self.ctrl.drive_async(self.ang_for_motor(pos - self.get_pos()), self.omega_for_motor(omega), UpdateFunc::None);
     }
 
-    pub fn measure(&mut self, max_angle : f32, omega : f32, set_pos : f32, accuracy : u64) {
+    pub fn measure(&mut self, max_angle : f32, omega : f32, set_pos : f32, accuracy : u64) -> bool {
         self.ctrl.measure(
             self.ang_for_motor(max_angle), 
             self.omega_for_motor(omega), 
             self.ang_for_motor(set_pos),
             accuracy
-        );
+        )
     }
 
-    pub fn measure_async(&mut self, max_angle : f32, omega : f32, set_pos : f32, accuracy : u64) {
+    pub fn measure_async(&mut self, max_angle : f32, omega : f32, accuracy : u64) {
         self.ctrl.measure_async(
             self.ang_for_motor(max_angle), 
             self.omega_for_motor(omega), 
-            self.ang_for_motor(set_pos),
             accuracy
         );
     }

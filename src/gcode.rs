@@ -6,48 +6,40 @@ pub type Letter = gcode::Mnemonic;
 pub type GCode = gcode::GCode;
 pub type Args = [gcode::Word];
 
-pub type NumEntries<T, E> = HashMap<u32, GCodeFunc<T, E>>;
-pub type LetterEntries<T, E> = HashMap<Letter, NumEntries<T, E>>;
+pub type NumEntries<T, R> = HashMap<u32, GCodeFunc<T, R>>;
+pub type LetterEntries<T, R> = HashMap<Letter, NumEntries<T, R>>;
 
-pub struct Interpreter<T, E>
+pub type NotFoundFunc<R> = fn (GCode) -> R;
+
+pub struct Interpreter<T, R>
 {
-    pub funcs : LetterEntries<T, E>,
+    pub funcs : LetterEntries<T, R>,
     pub mach : T
 }
 
-pub struct Path
-{
-
-}
-
-impl<T, E> Interpreter<T, E>
+impl<T, R> Interpreter<T, R>
 {   
-    pub fn new(mach : T, funcs : LetterEntries<T, E>) -> Self {
+    pub fn new(mach : T, funcs : LetterEntries<T, R>) -> Self {
         return Interpreter {
             funcs,
             mach
         }
     }
-
-    pub fn log_ln(&self, line : &str) {
-        println!("{}", line);
-    }
-
-    pub fn interpret(&mut self, gc_str : &str) -> Vec<E> {
-        let mut line_count : u64 = 0;
+    
+    pub fn interpret(&mut self, gc_str : &str, not_found : NotFoundFunc<R>) -> Vec<R> {
         let mut res = vec![];
 
-        for gc_line in gcode::parse(gc_str) {
-            let func_res = get_func(&self.funcs, &gc_line);
+        for gc_str_line in gc_str.split('\n') {
+            for gc_line in gcode::parse(gc_str_line) {
+                // dbg!(gc_line.major_number(), gc_line.arguments());
+                let func_res = get_func(&self.funcs, &gc_line);
 
-            res.push(func_res.and_then(|func| {
-                Some(func(&mut self.mach, &gc_line, gc_line.arguments()))
-            }).unwrap());
-
-            line_count += 1;
+                res.push(match func_res {
+                    Some(func) => func(&mut self.mach, &gc_line, gc_line.arguments()),
+                    None => not_found(gc_line)
+                });
+            }
         }
-
-        self.log_ln(format!("Interpreted {} lines", line_count).as_str());
 
         res
     }

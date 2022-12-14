@@ -1,6 +1,6 @@
 [package]
 name = "stepper_lib"
-version = "0.7.2"
+version = "0.7.3"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -10,6 +10,10 @@ name = "stepper_lib"
 path = "src/lib.rs"
 
 # Tests
+[[bin]]
+name = "test_async"
+path = "bin/test_async.rs"
+
 [[bin]]
 name = "test_gcode"
 path = "bin/test_gcode.rs"

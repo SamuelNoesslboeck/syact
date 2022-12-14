@@ -241,9 +241,12 @@ impl Driver {
     }
 
     pub fn set_dir(&mut self, dir : bool) {
+        // Added dir assignment for debug purposes
+        self.dir = dir;
+        
         match &mut self.sys_dir {
             RaspPin::Output(pin) => {
-                self.dir = dir;
+                // Removed dir assignment from here
                 
                 if self.dir {
                     pin.set_high().unwrap();
@@ -299,14 +302,18 @@ impl Driver {
             }
         }
 
-        pub fn set_endpoint(&mut self, set_pos : f32) {
+        pub fn set_endpoint(&mut self, set_pos : f32) -> bool {
             if Self::__meas_helper(&mut self.sys_meas) {
                 self.pos = self.ang_to_steps_dir(set_pos);
     
                 self.set_limit(
                     if self.dir { self.limit_min.clone() } else { LimitType::Angle(set_pos) },
                     if self.dir { LimitType::Angle(set_pos) } else { self.limit_max.clone() }
-                )
+                );
+
+                true
+            } else {
+                false
             }
         }
     //
@@ -434,20 +441,21 @@ impl StepperCtrl
             self.driver.lock().unwrap().get_limit_dest(pos)
         }
 
-        pub fn set_endpoint(&mut self, set_pos : f32) {
+        pub fn set_endpoint(&mut self, set_pos : f32) -> bool {
             self.driver.lock().unwrap().set_endpoint(set_pos)
         }
     // 
 
     // Measurement
-        pub fn measure(&mut self, max_pos : f32, omega : f32, set_pos : f32, accuracy : u64) {
-            self.drive(max_pos, omega, UpdateFunc::Break(Driver::__meas_helper, accuracy));
-            self.set_endpoint(set_pos);
+        pub fn measure(&mut self, max_pos : f32, omega : f32, set_pos : f32, accuracy : u64) -> bool {
+            let mut driver = self.driver.lock().unwrap();
+
+            driver.drive(max_pos, omega, UpdateFunc::Break(Driver::__meas_helper, accuracy));
+            driver.set_endpoint(set_pos)
         }
 
-        pub fn measure_async(&mut self, max_dist : f32, omega : f32, set_pos : f32, accuracy : u64) {
+        pub fn measure_async(&mut self, max_dist : f32, omega : f32, accuracy : u64) {
             self.drive_async(max_dist, omega, UpdateFunc::Break(Driver::__meas_helper, accuracy));
-            self.set_endpoint(set_pos);
         }
     //
 
@@ -473,11 +481,22 @@ pub type Response = ();
 
 pub struct StepperComms
 {
-    thr : JoinHandle<()>,
+    pub thr : JoinHandle<()>,
     sender : Sender<Message>,
     receiver : Receiver<Response>
 }
 
+/// ### `StepperComms`
+/// Struct for managing async movements
+/// ```rust
+/// use stepper_lib::{StepperCtrl, StepperData, UpdateFunc};
+/// use std::f32::consts::PI;
+/// 
+/// let ctrl = StepperCtrl::new(StepperData::mot_17he15_1504s(12.0, 1.5), 27, 19);
+/// ctrl.comms.drive_async(4.0 * PI, 2.0 * PI, UpdateFunc::None);
+///
+/// ctrl.comms.await_inactive();
+/// ```
 impl StepperComms {
     pub fn new(ctrl : Arc<Mutex<Driver>>) -> Self {
         let (sender_com, receiver_thr) : (Sender<Message>, Receiver<Message>) = channel();
@@ -485,17 +504,25 @@ impl StepperComms {
 
         let thr = thread::spawn(move || {
             loop {
-                match receiver_thr.recv().unwrap() {
-                    Some(msg) => {
-                        let mut sel = ctrl.lock().unwrap();
+                match receiver_thr.recv() {
+                    Ok(msg_opt) => 
+                        match msg_opt {
+                            Some(msg) => {
+                                let mut sel = ctrl.lock().unwrap();
+
+                                println!("Proccessing msg in thread: {} {}", msg.0, msg.1); 
+                        
+                                sel.drive(msg.0, msg.1, msg.2);
                 
-                        sel.drive(msg.0, msg.1, msg.2);
-        
-                        drop(sel);
-                        sender_thr.send(()).unwrap();
-                    },
-                    None => {
-                        break;
+                                drop(sel);
+                                sender_thr.send(()).unwrap();
+                            },
+                            None => {
+                                break;
+                            }
+                        },
+                    Err(err) => {
+                        println!("Error occured in thread! {}", err.to_string());
                     }
                 }
             };
@@ -517,7 +544,16 @@ impl StepperComms {
     }
 
     pub fn kill(&self) -> &JoinHandle<()> {
-        self.sender.send(None).unwrap_or(());
+        if !self.thr.is_finished() {
+            self.sender.send(None).unwrap_or(());
+        }
+
         &self.thr
+    }
+}
+
+impl Drop for StepperComms {
+    fn drop(&mut self) {
+        self.kill();
     }
 }
