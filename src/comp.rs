@@ -276,14 +276,20 @@ impl GearBearing
 // Tools
 pub trait Tool
 {
-    /// Returns the characteristic vector of the tool
-    fn get_vec(&self) -> Vec3;
+    // Actions
+        fn activate(&self);
+    // 
 
-    /// Returns the tool inhertia 
-    fn get_inertia(&self) -> f32;
+    // Stats
+        /// Returns the characteristic vector of the tool
+        fn get_vec(&self) -> Vec3;
 
-    /// Return the tool mass
-    fn get_mass(&self) -> f32;
+        /// Returns the tool inhertia 
+        fn get_inertia(&self) -> f32;
+
+        /// Return the tool mass
+        fn get_mass(&self) -> f32;
+    //
 }
 
 pub struct NoTool { } // Empty struct
@@ -297,6 +303,8 @@ impl NoTool
 
 impl Tool for NoTool
 {
+    fn activate(&self) { }
+
     fn get_vec(&self) -> Vec3 {
         Vec3::new(0.0, 0.0, 0.0)
     }

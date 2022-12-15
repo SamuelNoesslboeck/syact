@@ -18,12 +18,15 @@ use crate::math::{start_frequency, angluar_velocity_dyn};
 mod types;
 pub use types::*;
 
+/// ### Driver
+/// Driver class for basic stepper motor operations
 pub struct Driver 
 {
     /// Stepper data
     pub data : StepperData,
 
-    /// The current direction (true for right, false for left)
+    /// The current direction of the driver, the bool value is written to the `pin_dir` GPIO pin\
+    /// DO NOT WRITE TO THIS VALUE! Use the `Driver::set_dir()` function instead
     pub dir : bool,
     /// The current absolute position since set to a value
     pub pos : i64,
@@ -32,9 +35,12 @@ pub struct Driver
     sys_dir : RaspPin,
     /// Pin for PWM Step pulses
     sys_step : RaspPin,
+    /// Measurement pin
     sys_meas : RaspPin,
 
+    /// Limit for minimum angle/step count
     limit_min : LimitType,
+    /// Limit for maximum angle/step count
     limit_max : LimitType
 }
 
@@ -56,6 +62,8 @@ pub struct StepperCtrl
 
 impl Driver {
     // Init
+    /// Creates a new Driver from the given stepper `StepperData` \
+    /// Pin numbers are based on the BCM-Scheme, not by absolute board numbers
     pub fn new(data : StepperData, pin_dir : u16, pin_step : u16) -> Self {
         // Create pins if possible
         let sys_dir = match SysFsGpioOutput::open(pin_dir.clone()) {
@@ -81,6 +89,7 @@ impl Driver {
             limit_max: LimitType::None
         };
 
+        // Write initial direction to output pins
         driver.set_dir(driver.dir);
 
         driver
@@ -88,175 +97,179 @@ impl Driver {
 
 
     // Misc
-    fn __meas_helper(pin : &mut RaspPin) -> bool {
-        match pin {
-            RaspPin::Input(gpio_pin) => {
-                gpio_pin.read_value().unwrap() == gpio::GpioValue::High
-            },
-            _ => true
+        /// Helper function for measurements with a single pin
+        fn __meas_helper(pin : &mut RaspPin) -> bool {
+            match pin {
+                RaspPin::Input(gpio_pin) => {
+                    gpio_pin.read_value().unwrap() == gpio::GpioValue::High
+                },
+                _ => true
+            }
         }
-    }
+    //
 
-    // Move
-    pub fn step(&mut self, time : f32, ufunc : &UpdateFunc) -> StepResult {
-        let step_time_half = time::Duration::from_secs_f32(time / 2.0);
+    // Movements
+        /// Move a single step into the previously set direction. Uses `thread::sleep()` for step times, so the function takes `time` in seconds to process
+        pub fn step(&mut self, time : f32, ufunc : &UpdateFunc) -> StepResult {
+            match &mut self.sys_step {
+                RaspPin::Output(pin) => {
+                    let step_time_half = time::Duration::from_secs_f32(time / 2.0);
+
+                    pin.set_high().unwrap();
+                    thread::sleep(step_time_half);
+                    pin.set_low().unwrap();
+                    thread::sleep(step_time_half);
+                    
+            
+                    self.pos += if self.dir { 1 } else { -1 };
         
-        match &mut self.sys_step {
-            RaspPin::Output(pin) => {
-                pin.set_high().unwrap();
-                thread::sleep(step_time_half);
-                pin.set_low().unwrap();
-                thread::sleep(step_time_half);
-                
+                    match self.limit_max {
+                        LimitType::Angle(pos) => {
+                            if self.get_abs_pos() > pos {
+                                return StepResult::Break;
+                            }
+                        }, 
+                        _ => { }
+                    };
         
-                self.pos += if self.dir { 1 } else { -1 };
+                    match self.limit_min {
+                        LimitType::Angle(pos) => {
+                            if self.get_abs_pos() < pos {
+                                return StepResult::Break;
+                            }
+                        }, 
+                        _ => { }
+                    };
+        
+                    return match ufunc {
+                        UpdateFunc::Break(func, steps) => {
+                            if (self.pos % (*steps as i64)) == 0 {
+                                if func(&mut self.sys_meas) {
+                                    println!("Meas conducted!");
+                                    return StepResult::Break
+                                } 
+                            }
+        
+                            StepResult::None
+                        },
+                        _ => StepResult::None
+                    }
+                },
+                _ => StepResult::Error
+            }
+        }
 
-                match self.limit_max {
-                    LimitType::Angle(pos) => {
-                        if self.get_abs_pos() > pos {
-                            return StepResult::Break;
-                        }
-                    }, 
-                    _ => { }
-                };
+        pub fn accelerate(&mut self, stepcount : u64, omega : f32, ufunc : &UpdateFunc) -> (StepResult, Vec<f32>) {
+            let t_start = self.data.sf / start_frequency(&self.data);
+            let t_min = self.data.step_time(omega);
 
-                match self.limit_min {
-                    LimitType::Angle(pos) => {
-                        if self.get_abs_pos() < pos {
-                            return StepResult::Break;
-                        }
-                    }, 
-                    _ => { }
-                };
+            let mut o_last : f32 = 0.0;
+            let mut t_total : f32 = t_start;
+            let mut time_step : f32 = t_start;          // Time per step
+            let mut i: u64 = 1;                         // Step count
+            let mut curve = vec![];
 
-                return match ufunc {
-                    UpdateFunc::Break(func, steps) => {
-                        if (self.pos % (*steps as i64)) == 0 {
-                            if func(&mut self.sys_meas) {
-                                println!("Meas conducted!");
-                                return StepResult::Break
-                            } 
-                        }
+            self.step(time_step, ufunc);
+            curve.push(time_step);
 
-                        StepResult::None
-                    },
-                    _ => StepResult::None
+            loop {
+                if i >= stepcount {
+                    break;
                 }
-            },
-            _ => StepResult::Error
+
+                o_last = angluar_velocity_dyn(&self.data, t_total, o_last);
+                time_step = self.data.step_ang() / o_last * self.data.sf;
+                t_total += time_step;
+
+                if time_step < t_min {
+                    break;
+                }
+
+                match self.step(time_step, ufunc) {
+                    StepResult::Break => {
+                        return ( StepResult::Break, curve )
+                    },
+                    _ => { }
+                }
+
+                curve.push(time_step);
+                i += 1;
+            }
+
+            ( StepResult::None, curve )
         }
-    }
 
-    pub fn accelerate(&mut self, stepcount : u64, omega : f32, ufunc : &UpdateFunc) -> (StepResult, Vec<f32>) {
-        let t_start = self.data.sf / start_frequency(&self.data);
-        let t_min = self.data.step_time(omega);
-
-        let mut o_last : f32 = 0.0;
-        let mut t_total : f32 = t_start;
-        let mut time_step : f32 = t_start;          // Time per step
-        let mut i: u64 = 1;                         // Step count
-        let mut curve = vec![];
-
-        self.step(time_step, ufunc);
-        curve.push(time_step);
-
-        loop {
-            if i >= stepcount {
-                break;
+        pub fn drive_curve(&mut self, curve : &Vec<f32>) {
+            for i in 0 .. curve.len() {
+                self.step(curve[i], &UpdateFunc::None);
             }
+        }
 
-            o_last = angluar_velocity_dyn(&self.data, t_total, o_last);
-            time_step = self.data.step_ang() / o_last * self.data.sf;
-            t_total += time_step;
+        pub fn steps(&mut self, stepcount : u64, omega : f32, ufunc : UpdateFunc) -> StepResult {
+            let ( result, mut curve ) = self.accelerate( stepcount / 2, omega, &ufunc);
+            let time_step = self.data.step_time(omega);
+            let last = curve.last().unwrap_or(&time_step);
 
-            if time_step < t_min {
-                break;
-            }
-
-            match self.step(time_step, ufunc) {
+            match result {
                 StepResult::Break => {
-                    return ( StepResult::Break, curve )
+                    return result;
                 },
                 _ => { }
             }
 
-            curve.push(time_step);
-            i += 1;
-        }
-
-        ( StepResult::None, curve )
-    }
-
-    pub fn drive_curve(&mut self, curve : &Vec<f32>) {
-        for i in 0 .. curve.len() {
-            self.step(curve[i], &UpdateFunc::None);
-        }
-    }
-
-    pub fn steps(&mut self, stepcount : u64, omega : f32, ufunc : UpdateFunc) -> StepResult {
-        let ( result, mut curve ) = self.accelerate( stepcount / 2, omega, &ufunc);
-        let time_step = self.data.step_time(omega);
-        let last = curve.last().unwrap_or(&time_step);
-
-        match result {
-            StepResult::Break => {
-                return result;
-            },
-            _ => { }
-        }
-
-        if (stepcount % 2) == 1 {
-            self.step(*last, &UpdateFunc::None);
-        }
-        
-        for _ in 0 .. 2 {
-            for _ in curve.len() .. (stepcount / 2) as usize {
-                match self.step(time_step, &ufunc) {
-                    StepResult::Break => {
-                        return StepResult::Break;
-                    },
-                    _ => { }
+            if (stepcount % 2) == 1 {
+                self.step(*last, &UpdateFunc::None);
+            }
+            
+            for _ in 0 .. 2 {
+                for _ in curve.len() .. (stepcount / 2) as usize {
+                    match self.step(time_step, &ufunc) {
+                        StepResult::Break => {
+                            return StepResult::Break;
+                        },
+                        _ => { }
+                    }
                 }
             }
+
+            curve.reverse();
+            self.drive_curve(&curve);
+
+            StepResult::None
         }
 
-        curve.reverse();
-        self.drive_curve(&curve);
+        pub fn drive(&mut self, distance : f32, omega : f32, ufunc : UpdateFunc) -> f32 {
+            if distance == 0.0 {
+                return 0.0;
+            } else if distance > 0.0 {
+                self.set_dir(true);
+            } else if distance < 0.0 {
+                self.set_dir(false);
+            }
 
-        StepResult::None
-    }
-
-    pub fn drive(&mut self, distance : f32, omega : f32, ufunc : UpdateFunc) -> f32 {
-        if distance == 0.0 {
-            return 0.0;
-        } else if distance > 0.0 {
-            self.set_dir(true);
-        } else if distance < 0.0 {
-            self.set_dir(false);
+            let steps : u64 = self.data.ang_to_steps_dir(distance).abs() as u64;
+            self.steps(steps, omega, ufunc);
+            return steps as f32 * self.data.step_ang();
         }
 
-        let steps : u64 = self.data.ang_to_steps_dir(distance).abs() as u64;
-        self.steps(steps, omega, ufunc);
-        return steps as f32 * self.data.step_ang();
-    }
+        pub fn set_dir(&mut self, dir : bool) {
+            // Added dir assignment for debug purposes
+            self.dir = dir;
 
-    pub fn set_dir(&mut self, dir : bool) {
-        // Added dir assignment for debug purposes
-        self.dir = dir;
-        
-        match &mut self.sys_dir {
-            RaspPin::Output(pin) => {
-                // Removed dir assignment from here
-                
-                if self.dir {
-                    pin.set_high().unwrap();
-                } else {
-                    pin.set_low().unwrap();
-                }
-            },
-            _ => { }
-        };
-    }
+            match &mut self.sys_dir {
+                RaspPin::Output(pin) => {
+                    // Removed dir assignment from here
+                    
+                    if self.dir {
+                        pin.set_high().unwrap();
+                    } else {
+                        pin.set_low().unwrap();
+                    }
+                },
+                _ => { }
+            };
+        }
+    // 
 
     // Position
         pub fn get_abs_pos(&self) -> f32 {
@@ -536,6 +549,13 @@ impl StepperComms {
     }
 
     pub fn drive_async(&self, dist : f32, omega : f32, ufunc : UpdateFunc) {
+        // Clean recv buffer
+        loop {
+            if self.receiver.try_recv().is_err() {
+                break;
+            }
+        }
+
         self.sender.send(Some((dist, omega, ufunc))).expect("Thread crashed")
     }
 

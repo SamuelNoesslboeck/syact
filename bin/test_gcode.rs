@@ -29,5 +29,5 @@ fn main() {
 
     let mut intpr = Interpreter::new(Data { pos: 0.0 }, map);
 
-    intpr.interpret("G0\nG1");
+    intpr.interpret("G0\nG1", |_| { Some(()) });
 }
