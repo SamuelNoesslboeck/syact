@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::fs;
 
 pub type GCodeFunc<T, E> = fn (&mut T, &GCode, &Args) -> E;
 
@@ -42,6 +43,11 @@ impl<T, R> Interpreter<T, R>
         }
 
         res
+    }
+
+    pub fn interpret_file(&mut self, file_path : &str, not_found : NotFoundFunc<R>) -> Vec<R> {
+        self.interpret(
+            fs::read_to_string(file_path).unwrap().as_str(), not_found)
     }
 }
 
