@@ -1,4 +1,4 @@
-use crate::{ctrl::{StepperCtrl, LimitType, LimitDest}, UpdateFunc, Vec3};
+use crate::{ctrl::{StepperCtrl, LimitType, LimitDest, ServoDriver}, UpdateFunc, Vec3, data::ServoData};
 
 /// Cylinder component struct
 pub struct Cylinder
@@ -278,6 +278,8 @@ pub trait Tool
 {
     // Actions
         fn activate(&self);
+
+        fn rotate(&self);
     // 
 
     // Stats
@@ -305,6 +307,8 @@ impl Tool for NoTool
 {
     fn activate(&self) { }
 
+    fn rotate(&self) { }
+
     fn get_vec(&self) -> Vec3 {
         Vec3::new(0.0, 0.0, 0.0)
     }
@@ -317,3 +321,39 @@ impl Tool for NoTool
         return 0.0;
     }
 }
+
+// Tools
+pub struct AxialBearing
+{
+    pub servo : ServoDriver,
+    pub length : f32
+}
+
+impl AxialBearing {
+    pub fn new(pin_servo : u16, length : f32) -> Self {
+        AxialBearing {
+            servo: ServoDriver::new(ServoData::mg996r(), pin_servo),
+            length
+        }
+    }
+}
+
+impl Tool for AxialBearing
+{
+    fn activate(&self) { }
+
+    fn rotate(&self) { }
+
+    fn get_vec(&self) -> Vec3 {
+        Vec3::new(0.0, self.length, 0.0)
+    }
+
+    fn get_inertia(&self) -> f32 {
+        return 0.0;
+    }
+
+    fn get_mass(&self) -> f32 {
+        return 0.0;
+    }
+}
+//

@@ -1,17 +1,17 @@
 use std::{
     sync::{
         mpsc::{channel, Sender, Receiver}, 
-        Mutex,
+        Mutex, 
         Arc
     },
     thread::{self, JoinHandle}, 
-    time, 
+    time::Duration, 
     vec
 };
 
 use gpio::{GpioIn, GpioOut, sysfs::*};
 
-use crate::data::StepperData;
+use crate::data::{StepperData, ServoData};
 use crate::math::{start_frequency, angluar_velocity_dyn};
 
 // Use local types module
@@ -20,7 +20,7 @@ pub use types::*;
 
 /// ### Driver
 /// Driver class for basic stepper motor operations
-pub struct Driver 
+pub struct StepperDriver 
 {
     /// Stepper data
     pub data : StepperData,
@@ -48,9 +48,9 @@ pub struct Driver
 pub struct StepperCtrl
 {
     /// Motor driver
-    pub driver : Arc<Mutex<Driver>>,
+    pub driver : Arc<Mutex<StepperDriver>>,
     /// Async comms
-    pub comms : StepperComms,
+    pub comms : AsyncStepper,
 
     /// Pin for controlling direction
     pub pin_dir : u16,
@@ -60,7 +60,17 @@ pub struct StepperCtrl
     pub pin_mes : u16, 
 }
 
-impl Driver {
+pub struct ServoDriver
+{
+    pub pos : f32,
+    pub pin_pwm : u16,
+
+    // Thread
+    pub thr : JoinHandle<()>,
+    pub sender : Sender<f32>
+}
+
+impl StepperDriver {
     // Init
     /// Creates a new Driver from the given stepper `StepperData` \
     /// Pin numbers are based on the BCM-Scheme, not by absolute board numbers
@@ -76,7 +86,7 @@ impl Driver {
             Err(_) => RaspPin::ErrPin
         };
 
-        let mut driver = Driver {
+        let mut driver = StepperDriver {
             data, 
             dir: true, 
             pos: 0,
@@ -113,7 +123,7 @@ impl Driver {
         pub fn step(&mut self, time : f32, ufunc : &UpdateFunc) -> StepResult {
             match &mut self.sys_step {
                 RaspPin::Output(pin) => {
-                    let step_time_half = time::Duration::from_secs_f32(time / 2.0);
+                    let step_time_half = Duration::from_secs_f32(time / 2.0);
 
                     pin.set_high().unwrap();
                     thread::sleep(step_time_half);
@@ -373,14 +383,22 @@ impl Driver {
 impl StepperCtrl
 {   
     pub fn new(data : StepperData, pin_dir : u16, pin_step : u16) -> Self {
-        let driver = Arc::new(Mutex::new(Driver::new(data, pin_dir, pin_step)));
+        let driver = Arc::new(Mutex::new(StepperDriver::new(data, pin_dir, pin_step)));
 
         let ctrl = StepperCtrl { 
             pin_dir: pin_dir, 
             pin_step: pin_step, 
             pin_mes: PIN_ERR, 
 
-            comms: StepperComms::new(Arc::clone(&driver)),
+            comms: AsyncStepper::new(Arc::clone(&driver), 
+                |driver_mutex , msg| { 
+                    let mut driver = driver_mutex.lock().unwrap();
+
+                    println!("Proccessing msg in thread: {} {}", msg.0, msg.1); 
+                    driver.drive(msg.0, msg.1, msg.2);
+
+                    () 
+                }),
             driver: driver
         };
 
@@ -421,7 +439,7 @@ impl StepperCtrl
         }
 
         pub fn drive_async(&mut self, dist : f32, omega : f32, ufunc : UpdateFunc) {
-            self.comms.drive_async(dist, omega, ufunc);
+            self.comms.send_msg((dist, omega, ufunc));
         }
     //
 
@@ -463,12 +481,12 @@ impl StepperCtrl
         pub fn measure(&mut self, max_pos : f32, omega : f32, set_pos : f32, accuracy : u64) -> bool {
             let mut driver = self.driver.lock().unwrap();
 
-            driver.drive(max_pos, omega, UpdateFunc::Break(Driver::__meas_helper, accuracy));
+            driver.drive(max_pos, omega, UpdateFunc::Break(StepperDriver::__meas_helper, accuracy));
             driver.set_endpoint(set_pos)
         }
 
         pub fn measure_async(&mut self, max_dist : f32, omega : f32, accuracy : u64) {
-            self.drive_async(max_dist, omega, UpdateFunc::Break(Driver::__meas_helper, accuracy));
+            self.drive_async(max_dist, omega, UpdateFunc::Break(StepperDriver::__meas_helper, accuracy));
         }
     //
 
@@ -489,15 +507,75 @@ impl StepperCtrl
     //
 }
 
-pub type Message = Option<(f32, f32, UpdateFunc)>;
-pub type Response = ();
+impl ServoDriver 
+{
+    pub fn new(data : ServoData, pin_pwm : u16) -> Self {
+        let pos = data.phi_max / 2.0;
 
-pub struct StepperComms
+        let mut sys_pwm = match SysFsGpioOutput::open(pin_pwm.clone()) {
+            Ok(val) => RaspPin::Output(val),
+            Err(_) => RaspPin::ErrPin
+        };
+
+        let (sender, recv) : (Sender<f32>, Receiver<f32>) = channel();
+
+        let thr = thread::spawn(move || {
+            let mut pos = data.default_pos();
+
+            loop {
+                match recv.try_recv() {
+                    Ok(ang) => { pos = ang; },
+                    _ => { }
+                }
+
+                ServoDriver::pulse(&data, &mut sys_pwm, pos);
+            }
+        }); 
+
+        ServoDriver {
+            pos,
+            thr,
+            sender,
+            pin_pwm
+        }
+    }
+
+    pub fn pulse(data : &ServoData, sys_pwm : &mut RaspPin, pos : f32) {
+        match sys_pwm {
+            RaspPin::Output(pin) => {
+                let cycle = data.cycle_time();
+                let pulse = data.pulse_time(pos);
+
+                pin.set_high().unwrap();
+                thread::sleep(Duration::from_secs_f32(pulse));
+                pin.set_low().unwrap(); 
+                thread::sleep(Duration::from_secs_f32(cycle - pulse));
+            },
+            _ => { }
+        }
+    }
+}
+
+
+type StepperMsg = (f32, f32, UpdateFunc);
+type StepperRes = ();
+
+type AsyncStepper = AsyncComms<StepperMsg, StepperRes>;
+
+// type ServoMsg = f32;
+// type ServoRes = ();
+
+// type AsyncServo = AsyncComms<ServoMsg, ServoRes>;
+
+type CommsFunc<Ctrl, Msg, Res> = fn (&mut Ctrl, Msg) -> Res;
+
+pub struct AsyncComms<Msg: Send + 'static, Res: Send + 'static>
 {
     pub thr : JoinHandle<()>,
-    sender : Sender<Message>,
-    receiver : Receiver<Response>
+    sender : Sender<Option<Msg>>,
+    receiver : Receiver<Res>
 }
+
 
 /// ### `StepperComms`
 /// Struct for managing async movements
@@ -510,10 +588,10 @@ pub struct StepperComms
 ///
 /// ctrl.comms.await_inactive();
 /// ```
-impl StepperComms {
-    pub fn new(ctrl : Arc<Mutex<Driver>>) -> Self {
-        let (sender_com, receiver_thr) : (Sender<Message>, Receiver<Message>) = channel();
-        let (sender_thr, receiver_com) : (Sender<Response>, Receiver<Response>) = channel();
+impl<Msg: Send + 'static, Res: Send + 'static> AsyncComms<Msg, Res> {
+    pub fn new<Ctrl: Send + 'static>(mut ctrl : Ctrl, comms_func : CommsFunc<Ctrl, Msg, Res>) -> Self {
+        let (sender_com, receiver_thr) : (Sender<Option<Msg>>, Receiver<Option<Msg>>) = channel();
+        let (sender_thr, receiver_com) : (Sender<Res>, Receiver<Res>) = channel();
 
         let thr = thread::spawn(move || {
             loop {
@@ -521,14 +599,9 @@ impl StepperComms {
                     Ok(msg_opt) => 
                         match msg_opt {
                             Some(msg) => {
-                                let mut sel = ctrl.lock().unwrap();
-
-                                println!("Proccessing msg in thread: {} {}", msg.0, msg.1); 
-                        
-                                sel.drive(msg.0, msg.1, msg.2);
+                                let res = comms_func(&mut ctrl, msg);
                 
-                                drop(sel);
-                                sender_thr.send(()).unwrap();
+                                sender_thr.send(res).unwrap();
                             },
                             None => {
                                 break;
@@ -548,7 +621,7 @@ impl StepperComms {
         }
     }
 
-    pub fn drive_async(&self, dist : f32, omega : f32, ufunc : UpdateFunc) {
+    pub fn send_msg(&self, msg : Msg) {
         // Clean recv buffer
         loop {
             if self.receiver.try_recv().is_err() {
@@ -556,11 +629,11 @@ impl StepperComms {
             }
         }
 
-        self.sender.send(Some((dist, omega, ufunc))).expect("Thread crashed")
+        self.sender.send(Some(msg)).expect("Thread crashed")
     }
 
-    pub fn await_inactive(&self) {
-        self.receiver.recv().unwrap_or(())
+    pub fn await_inactive(&self) -> Res {
+        self.receiver.recv().expect("Recv failed")  // TODO: Improve error handling
     }
 
     pub fn kill(&self) -> &JoinHandle<()> {
@@ -572,7 +645,7 @@ impl StepperComms {
     }
 }
 
-impl Drop for StepperComms {
+impl<Msg: Send + 'static, Res: Send + 'static> Drop for AsyncComms<Msg, Res> {
     fn drop(&mut self) {
         self.kill();
     }
