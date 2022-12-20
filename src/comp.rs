@@ -314,11 +314,11 @@ impl Tool for NoTool
     }
 
     fn get_inertia(&self) -> f32 {
-        return 0.0;
+        0.0
     }
 
     fn get_mass(&self) -> f32 {
-        return 0.0;
+        0.0
     }
 }
 
@@ -326,14 +326,16 @@ impl Tool for NoTool
 pub struct AxialBearing
 {
     pub servo : ServoDriver,
-    pub length : f32
+    pub length : f32,
+    pub mass : f32
 }
 
 impl AxialBearing {
-    pub fn new(pin_servo : u16, length : f32) -> Self {
+    pub fn new(pin_servo : u16, length : f32, mass : f32) -> Self {
         AxialBearing {
             servo: ServoDriver::new(ServoData::mg996r(), pin_servo),
-            length
+            length,
+            mass
         }
     }
 }
@@ -349,11 +351,45 @@ impl Tool for AxialBearing
     }
 
     fn get_inertia(&self) -> f32 {
-        return 0.0;
+        self.mass * self.length.powi(2) / 12.0
     }
 
     fn get_mass(&self) -> f32 {
-        return 0.0;
+        self.mass
+    }
+}
+
+pub struct PencilTool
+{
+    pub length : f32,
+    pub mass : f32
+}
+
+impl PencilTool {
+    pub fn new(length : f32, mass : f32) -> Self {
+        PencilTool {
+            length,
+            mass
+        }
+    }
+}
+
+impl Tool for PencilTool
+{
+    fn activate(&self) { }
+
+    fn rotate(&self) { }
+
+    fn get_vec(&self) -> Vec3 {
+        Vec3::new(0.0, self.length, 0.0)
+    }
+
+    fn get_inertia(&self) -> f32 {
+        self.mass * self.length.powi(2) / 12.0
+    }
+
+    fn get_mass(&self) -> f32 {
+        self.mass
     }
 }
 //
