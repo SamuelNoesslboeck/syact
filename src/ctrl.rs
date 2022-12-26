@@ -18,6 +18,42 @@ use crate::math::{start_frequency, angluar_velocity_dyn};
 mod types;
 pub use types::*;
 
+/// Trait for defining controls and components
+pub trait Component 
+{
+    /// Move the component to the given position as fast as possible and returns the actual distance traveled
+    ///  - The distance `dist` can be either an angle (Unit radians) or a distancce (Unit mm)
+    ///  - The velocity `vel` is the maximum change rate of the distance, either angular velocity (Unit radians per secoond) or linear velocity (mm per second)
+    fn drive(&mut self, dist : f32, vel : f32) -> f32;
+
+    /// Move the component to the given position as fast as possible
+    ///  - The distance `dist` can be either an angle (Unit radians) or a distancce (Unit mm)
+    ///  - The velocity `vel` is the maximum change rate of the distance, either angular velocity (Unit radians per secoond) or linear velocity (mm per second) \
+    /// To wait unti the movement operation is completed, use the `await inactive` function
+    fn drive_async(&mut self, dist : f32, vel : f32);
+
+    /// Measure the component by driving the component with the velocity `vel` until either the measurement condition is true or the maximum distance `dist` 
+    /// is reached. When the endpoint is reached, the controls will set the distance to `set_dist`. The lower the `accuracy`, the higher 
+    /// are the computational difficulties, as the function checks more often if the measure pin has a HIGH signal
+    fn measure(&mut self, dist : f32, vel : f32, set_dist : f32, accuracy : u64) -> bool;
+
+    fn measure_async(&mut self, dist : f32, vel : f32, accuracy : u64);
+
+    // Position
+        fn get_dist(&self) -> f32;
+
+        fn drive_pos(&mut self, dist : f32, vel : f32) -> f32;
+
+        fn write_dist(&mut self, dist : f32);
+    // 
+
+    // Load calculation
+        fn apply_load_force(&mut self, force : f32);
+
+        fn apply_load_inertia(&mut self, inertia : f32);
+    // 
+}
+
 /// ### Driver
 /// Driver class for basic stepper motor operations
 pub struct StepperDriver 
@@ -135,7 +171,7 @@ impl StepperDriver {
         
                     match self.limit_max {
                         LimitType::Angle(pos) => {
-                            if self.get_abs_pos() > pos {
+                            if self.get_dist() > pos {
                                 return StepResult::Break;
                             }
                         }, 
@@ -144,7 +180,7 @@ impl StepperDriver {
         
                     match self.limit_min {
                         LimitType::Angle(pos) => {
-                            if self.get_abs_pos() < pos {
+                            if self.get_dist() < pos {
                                 return StepResult::Break;
                             }
                         }, 
@@ -282,11 +318,11 @@ impl StepperDriver {
     // 
 
     // Position
-        pub fn get_abs_pos(&self) -> f32 {
+        pub fn get_dist(&self) -> f32 {
             self.steps_to_ang_dir(self.pos)
         }
 
-        pub fn write_pos(&mut self, pos : f32) {
+        pub fn write_dist(&mut self, pos : f32) {
             self.pos = self.ang_to_steps_dir(pos);
         }
     //
@@ -360,11 +396,11 @@ impl StepperDriver {
     //
 
     // Loads
-        pub fn apply_load_j(&mut self, j : f32) {
+        pub fn apply_load_inertia(&mut self, j : f32) {
             self.data.apply_load_j(j);
         }
 
-        pub fn apply_load_t(&mut self, t : f32) {
+        pub fn apply_load_force(&mut self, t : f32) {
             self.data.apply_load_t(t);
         }
     // 
@@ -433,14 +469,6 @@ impl StepperCtrl
         pub fn steps(&mut self, stepcount : u64, omega : f32, ufunc : UpdateFunc) -> StepResult {
             self.driver.lock().unwrap().steps(stepcount, omega, ufunc)
         }
-
-        pub fn drive(&mut self, distance : f32, omega : f32, ufunc : UpdateFunc) -> f32 {
-            self.driver.lock().unwrap().drive(distance, omega, ufunc)
-        }
-
-        pub fn drive_async(&mut self, dist : f32, omega : f32, ufunc : UpdateFunc) {
-            self.comms.send_msg((dist, omega, ufunc));
-        }
     //
 
     // Direction
@@ -450,16 +478,6 @@ impl StepperCtrl
         
         pub fn set_dir(&mut self, dir : bool) {
             self.driver.lock().unwrap().set_dir(dir);
-        }
-    //
-
-    // Position
-        pub fn get_abs_pos(&self) -> f32 {
-            self.driver.lock().unwrap().get_abs_pos()
-        }
-
-        pub fn write_pos(&mut self, pos : f32) {
-            self.driver.lock().unwrap().write_pos(pos);
         }
     //
 
@@ -477,32 +495,55 @@ impl StepperCtrl
         }
     // 
 
-    // Measurement
-        pub fn measure(&mut self, max_pos : f32, omega : f32, set_pos : f32, accuracy : u64) -> bool {
-            let mut driver = self.driver.lock().unwrap();
+    // Debug 
+        pub fn debug_pins(&self) {
+            self.driver.lock().unwrap().debug_pins();
+        }
+    //
+}
 
-            driver.drive(max_pos, omega, UpdateFunc::Break(StepperDriver::__meas_helper, accuracy));
-            driver.set_endpoint(set_pos)
+impl Component for StepperCtrl 
+{
+    fn drive(&mut self, distance : f32, omega : f32) -> f32 {
+        self.driver.lock().unwrap().drive(distance, omega, UpdateFunc::None)
+    }
+
+    fn drive_async(&mut self, dist : f32, omega : f32) {
+        self.comms.send_msg((dist, omega, UpdateFunc::None));
+    }
+
+    fn measure(&mut self, max_pos : f32, omega : f32, set_pos : f32, accuracy : u64) -> bool {
+        let mut driver = self.driver.lock().unwrap();
+
+        driver.drive(max_pos, omega, UpdateFunc::Break(StepperDriver::__meas_helper, accuracy));
+        driver.set_endpoint(set_pos)
+    }
+
+    fn measure_async(&mut self, max_dist : f32, omega : f32, accuracy : u64) {
+        self.comms.send_msg((max_dist, omega, UpdateFunc::Break(StepperDriver::__meas_helper, accuracy)));
+    }
+
+    // Position
+        fn get_dist(&self) -> f32 {
+            self.driver.lock().unwrap().get_dist()
         }
 
-        pub fn measure_async(&mut self, max_dist : f32, omega : f32, accuracy : u64) {
-            self.drive_async(max_dist, omega, UpdateFunc::Break(StepperDriver::__meas_helper, accuracy));
+        fn drive_pos(&mut self, dist : f32, vel : f32) -> f32 {
+            self.driver.lock().unwrap().drive(dist - self.get_dist(), vel, UpdateFunc::None)
+        }
+
+        fn write_dist(&mut self, pos : f32) {
+            self.driver.lock().unwrap().write_dist(pos);
         }
     //
 
     // Loads
-        pub fn apply_load_j(&mut self, j : f32) {
-            self.driver.lock().unwrap().apply_load_j(j);
+        fn apply_load_inertia(&mut self, inertia : f32) {
+            self.driver.lock().unwrap().apply_load_inertia(inertia);
         }
 
-        pub fn apply_load_t(&mut self, t : f32) {
-            self.driver.lock().unwrap().apply_load_t(t);
-        }
-    // 
-
-    // Debug 
-        pub fn debug_pins(&self) {
-            self.driver.lock().unwrap().debug_pins();
+        fn apply_load_force(&mut self, force : f32) {
+            self.driver.lock().unwrap().apply_load_force(force);
         }
     //
 }

@@ -19,9 +19,8 @@ pub mod math;
 
 // Types
 
-pub use ctrl::StepperCtrl;
+pub use ctrl::{Component, StepperCtrl, UpdateFunc};
 pub use data::StepperData;
-pub use ctrl::UpdateFunc;
 
 // Library Types
 
