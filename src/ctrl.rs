@@ -42,7 +42,9 @@ pub trait Component
     // Position
         fn get_dist(&self) -> f32;
 
-        fn drive_pos(&mut self, dist : f32, vel : f32) -> f32;
+        fn drive_abs(&mut self, dist : f32, vel : f32) -> f32;
+
+        fn drive_abs_async(&mut self, dist : f32, vel : f32);
 
         fn write_dist(&mut self, dist : f32);
     // 
@@ -528,8 +530,12 @@ impl Component for StepperCtrl
             self.driver.lock().unwrap().get_dist()
         }
 
-        fn drive_pos(&mut self, dist : f32, vel : f32) -> f32 {
+        fn drive_abs(&mut self, dist : f32, vel : f32) -> f32 {
             self.driver.lock().unwrap().drive(dist - self.get_dist(), vel, UpdateFunc::None)
+        }
+
+        fn drive_abs_async(&mut self, dist : f32, vel : f32) {
+            self.comms.send_msg((dist - self.get_dist(), vel, UpdateFunc::None))
         }
 
         fn write_dist(&mut self, pos : f32) {

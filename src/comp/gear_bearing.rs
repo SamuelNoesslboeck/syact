@@ -1,4 +1,4 @@
-use crate::{ctrl::{Component, StepperCtrl, LimitType, LimitDest}, UpdateFunc};
+use crate::{Component, StepperCtrl, ctrl::{LimitType, LimitDest}};
 
 /// A bearing powered by a motor with a certain gear ratio
 pub struct GearBearing 
@@ -29,35 +29,6 @@ impl GearBearing
         }
     //  
 
-    pub fn get_pos(&self) -> f32 {
-        self.ctrl.get_dist() * self.ratio
-    }
-
-    pub fn set_pos(&mut self, pos : f32, omega : f32) -> f32 {
-        self.ctrl.drive(self.ang_for_motor(pos - self.get_pos()), self.omega_for_motor(omega), UpdateFunc::None)
-    }
-
-    pub fn set_pos_async(&mut self, pos : f32, omega : f32) {
-        self.ctrl.drive_async(self.ang_for_motor(pos - self.get_pos()), self.omega_for_motor(omega), UpdateFunc::None);
-    }
-
-    pub fn measure(&mut self, max_angle : f32, omega : f32, set_pos : f32, accuracy : u64) -> bool {
-        self.ctrl.measure(
-            self.ang_for_motor(max_angle), 
-            self.omega_for_motor(omega), 
-            self.ang_for_motor(set_pos),
-            accuracy
-        )
-    }
-
-    pub fn measure_async(&mut self, max_angle : f32, omega : f32, accuracy : u64) {
-        self.ctrl.measure_async(
-            self.ang_for_motor(max_angle), 
-            self.omega_for_motor(omega), 
-            accuracy
-        );
-    }
-
     // Limits
         pub fn set_limit(&mut self, limit_min : LimitType, limit_max : LimitType) {
             self.ctrl.set_limit(
@@ -79,12 +50,51 @@ impl GearBearing
             }
         }
     //
+}
 
-    pub fn apply_load_j(&mut self, inertia : f32) {
-        self.ctrl.apply_load_j(inertia * self.ratio);
+impl Component for GearBearing 
+{
+    fn drive(&mut self, dist : f32, vel : f32) -> f32 {
+        self.ctrl.drive(self.ang_for_motor(dist), self.omega_for_motor(vel))
     }
 
-    pub fn apply_load_t(&mut self, torque : f32) {
-        self.ctrl.apply_load_t(torque * self.ratio);
+    fn drive_async(&mut self, dist : f32, vel : f32) {
+        self.ctrl.drive_async(self.ang_for_motor(dist), vel)
     }
+
+    fn measure(&mut self, dist : f32, vel : f32, set_dist : f32, accuracy : u64) -> bool {
+        self.ctrl.measure(self.ang_for_motor(dist), self.omega_for_motor(vel), self.ang_for_motor(set_dist), accuracy)
+    }
+
+    fn measure_async(&mut self, dist : f32, vel : f32, accuracy : u64) {
+        self.ctrl.measure_async(self.ang_for_motor(dist), self.omega_for_motor(vel), accuracy)
+    }
+
+    // Position
+        fn get_dist(&self) -> f32 {
+            self.ctrl.get_dist() * self.ratio
+        }
+
+        fn drive_abs(&mut self, pos : f32, omega : f32) -> f32 {
+            self.ctrl.drive_abs(self.ang_for_motor(pos), self.omega_for_motor(omega))
+        }
+        
+        fn drive_abs_async(&mut self, dist : f32, vel : f32) {
+            self.ctrl.drive_abs_async(self.ang_for_motor(dist), vel)
+        }
+
+        fn write_dist(&mut self, dist : f32) {
+            self.ctrl.write_dist(self.ang_for_motor(dist))
+        }
+    //
+
+    // Forces
+        fn apply_load_force(&mut self, force : f32) {
+            self.ctrl.apply_load_force(force * self.ratio);
+        }
+
+        fn apply_load_inertia(&mut self, inertia : f32) {
+            self.ctrl.apply_load_inertia(inertia * self.ratio);
+        }
+    //
 }

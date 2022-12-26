@@ -1,4 +1,4 @@
-use crate::ctrl::{Component, StepperCtrl, LimitType, LimitDest};
+use crate::ctrl::{Component, LimitType, LimitDest};
 
 use crate::comp::Cylinder;
 
@@ -22,7 +22,7 @@ impl CylinderTriangle
             cylinder 
         };
 
-        tri.cylinder.write_length(l_a.max(l_b));
+        tri.cylinder.write_dist(l_a.max(l_b));
 
         return tri;
     }
@@ -39,32 +39,6 @@ impl CylinderTriangle
         }
     //
 
-    // Angle
-        pub fn get_gam(&self) -> f32 {
-            self.gam_for_len(self.cylinder.length())
-        }
-
-        pub fn set_gam(&mut self, gam : f32, v_max : f32) {
-            self.cylinder.drive(self.len_for_gam(gam) - self.cylinder.length(), v_max);
-        }
-
-        pub fn set_gam_async(&mut self, gam : f32, v_max : f32) {
-            self.cylinder.drive_async( self.len_for_gam(gam) - self.cylinder.length(), v_max);
-        }
-    //
-
-    pub fn write_gam(&mut self, gam : f32) {
-        self.cylinder.write_length(self.len_for_gam(gam))
-    }
-
-    pub fn measure(&mut self, max_dis : f32, v_max : f32, set_angle : f32, accuracy : u64) -> bool {
-        self.cylinder.measure(max_dis, v_max,self.len_for_gam(set_angle), accuracy)
-    }
-
-    pub fn measure_async(&mut self, max_dis : f32, v_max : f32, accuracy : u64) {
-        self.cylinder.measure_async(max_dis, v_max, accuracy);
-    }
-    
     // Limit
         pub fn set_limit(&mut self, limit_min : LimitType, limit_max : LimitType) {
             self.cylinder.set_limit(limit_max, limit_min)
@@ -81,20 +55,24 @@ impl CylinderTriangle
 }
 
 impl Component for CylinderTriangle {
-    /// See [Component::drive](`Component::drive()`)
+    /// See [Component::drive()](`Component::drive()`)
     /// - `dist`is the angular distance to be moved (Unit radians)
     /// - `vel` is the cylinders extend velocity (Unit mm per second)
     fn drive(&mut self, dist : f32, vel : f32) -> f32 {
-        self.cylinder.drive(self.len_for_gam(dist) - self.cylinder.get_length(), vel)
+        self.cylinder.drive(self.len_for_gam(dist) - self.cylinder.get_dist(), vel)
     }
 
-    /// See [Component::drive_async](`Component::drive_async()`)
+    /// See [Component::drive_async()](`Component::drive_async()`)
     /// - `dist`is the angular distance to be moved (Unit radians)
     /// - `vel` is the cylinders extend velocity (Unit mm per second)
     fn drive_async(&mut self, dist : f32, vel : f32) {
-        self.cylinder.drive_async(self.len_for_gam(dist) - self.cylinder.get_length(), vel)
+        self.cylinder.drive_async(self.len_for_gam(dist) - self.cylinder.get_dist(), vel)
     }
 
+    /// See [Component::measure()](`Component::measure()`)
+    /// - `dist` is the maximum distance for the cylinder in mm
+    /// - `vel` is the maximum linear velocity for the cylinder in mm per second
+    /// - `set_dist` is the set distance for the cylinder in mm
     fn measure(&mut self, dist : f32, vel : f32, set_dist : f32, accuracy : u64) -> bool {
         self.cylinder.measure(dist, vel, set_dist, accuracy)
     }
@@ -103,5 +81,34 @@ impl Component for CylinderTriangle {
         self.cylinder.measure_async(dist, vel, accuracy)
     }
 
+    // Distance
+        fn get_dist(&self) -> f32 {
+            self.gam_for_len(self.cylinder.get_dist())
+        }
+
+        /// See [Component::drive_abs](`Component::drive_abs()`)
+        /// - `dist`is the angular distance to be moved (Unit radians)
+        /// - `vel` is the cylinders extend velocity (Unit mm per second)
+        fn drive_abs(&mut self, dist : f32, vel : f32) -> f32 {
+            self.cylinder.drive_abs(self.len_for_gam(dist), vel)
+        }
+
+        fn drive_abs_async(&mut self, dist : f32, vel : f32) {
+            self.cylinder.drive_abs_async(self.len_for_gam(dist), vel)
+        }
+
+        fn write_dist(&mut self, dist : f32) {
+            self.cylinder.write_dist(self.len_for_gam(dist))
+        }
+    // 
     
+    // Forces
+        fn apply_load_force(&mut self, force : f32) {
+            self.cylinder.apply_load_force(force)
+        }
+
+        fn apply_load_inertia(&mut self, inertia : f32) {
+            self.cylinder.apply_load_inertia(inertia)
+        }
+    // 
 }

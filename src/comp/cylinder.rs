@@ -8,20 +8,16 @@ pub struct Cylinder
 
     /// Distance traveled per rad (Unit mm)   \
     /// f_rte = pitch / (2pi)
-    pub rte_ratio : f32,
-
-    /// Base length of the cylinder (Unit mm)
-    pub base_length : f32   
+    pub rte_ratio : f32
 }
 
 impl Cylinder
 {
     /// Create a new cylinder instance
-    pub fn new(ctrl : StepperCtrl, rte_ratio : f32, base_length : f32) -> Self {
+    pub fn new(ctrl : StepperCtrl, rte_ratio : f32) -> Self {
         return Cylinder {
             ctrl,
-            rte_ratio,
-            base_length
+            rte_ratio
         };
     }
 
@@ -44,12 +40,6 @@ impl Cylinder
         /// Linear velocity for angular speed
         pub fn omega_to_vel(&self, omega : f32) -> f32 {
             omega * self.rte_ratio
-        }
-    //
-
-    // Position
-        pub fn get_length(&self) -> f32 {
-            self.get_dist() + self.base_length
         }
     //
 
@@ -79,7 +69,8 @@ impl Cylinder
 impl Component for Cylinder 
 {
     fn drive(&mut self, dist : f32, vel : f32) -> f32 {
-        self.ang_to_dist(self.ctrl.drive(self.dist_to_ang(dist), self.vel_to_omega(vel)))
+        let res = self.ctrl.drive(self.dist_to_ang(dist), self.vel_to_omega(vel));
+        self.ang_to_dist(res)
     }
 
     fn drive_async(&mut self, dist : f32, v_max : f32) {
@@ -101,11 +92,15 @@ impl Component for Cylinder
 
     // Position
         fn get_dist(&self) -> f32 {
-            return self.ang_to_dist(self.ctrl.get_dist());
+            self.ang_to_dist(self.ctrl.get_dist())
         }
 
-        fn drive_pos(&mut self, dist : f32, vel : f32) -> f32 {
-            self.ctrl.drive_pos(self.dist_to_ang(dist), self.vel_to_omega(vel))
+        fn drive_abs(&mut self, dist : f32, vel : f32) -> f32 {
+            self.ctrl.drive_abs(self.dist_to_ang(dist), self.vel_to_omega(vel))
+        }
+
+        fn drive_abs_async(&mut self, dist : f32, vel : f32) {
+            self.ctrl.drive_abs_async(self.dist_to_ang(dist), self.vel_to_omega(vel))
         }
 
         fn write_dist(&mut self, dis_c : f32) {
