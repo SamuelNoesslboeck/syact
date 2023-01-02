@@ -1,4 +1,4 @@
-use crate::ctrl::{Component, LimitType, LimitDest};
+use crate::{ctrl::{Component, LimitType, LimitDest}};
 
 use crate::comp::Cylinder;
 
@@ -36,6 +36,23 @@ impl CylinderTriangle
         /// Returns the angle gamma for the given cylinder length _(len < (l_a + l_b))_
         pub fn gam_for_len(&self, len : f32) -> f32 {
             ((self.l_a.powi(2) + self.l_b.powi(2) - len.powi(2)) / 2.0 / self.l_a / self.l_b).acos()
+        }
+
+        // Other angles
+        pub fn alpha_for_gam(&self, gam : f32) -> f32 {
+            (self.l_a / self.len_for_gam(gam) * gam.sin()).asin()
+        }
+
+        pub fn beta_for_gam(&self, gam : f32) -> f32 {
+            (self.l_b / self.len_for_gam(gam) * gam.sin()).asin()
+        }
+
+        pub fn omega_for_gam(&self, vel : f32, gam : f32) -> f32 {
+            vel / self.l_a * self.beta_for_gam(gam).sin()
+        }
+
+        pub fn vel_for_gam(&self, omega : f32, gam : f32) -> f32 {
+            omega * self.l_a / self.beta_for_gam(gam).sin()
         }
     //
 
@@ -103,6 +120,10 @@ impl Component for CylinderTriangle {
     // 
     
     // Forces
+        fn accel_dyn(&self, vel : f32) -> f32 {
+            self.cylinder.accel_dyn(self.vel_for_gam(vel, self.get_dist()))
+        }
+
         fn apply_load_force(&mut self, force : f32) {
             self.cylinder.apply_load_force(force)
         }

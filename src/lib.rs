@@ -17,6 +17,10 @@ pub mod gcode;
 /// Functions and Structs for calculating Stepper Motor procedures and operations
 pub mod math;
 
+/// Module with all the tests required to assure the library funcitons as intended
+#[cfg(test)]
+mod tests;
+
 // Types
 
 pub use ctrl::{Component, StepperCtrl, UpdateFunc};

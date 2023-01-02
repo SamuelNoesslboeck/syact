@@ -11,7 +11,7 @@ use std::{
 
 use gpio::{GpioIn, GpioOut, sysfs::*};
 
-use crate::data::{StepperData, ServoData};
+use crate::{data::{StepperData, ServoData}, math::torque_dyn};
 use crate::math::{start_frequency, angluar_velocity_dyn};
 
 // Use local types module
@@ -39,6 +39,8 @@ pub trait Component
 
     fn measure_async(&mut self, dist : f32, vel : f32, accuracy : u64);
 
+    fn lin_move(&mut self, dist : f32, vel : f32, vel_max : f32) -> f32;
+
     // Position
         fn get_dist(&self) -> f32;
 
@@ -50,6 +52,8 @@ pub trait Component
     // 
 
     // Load calculation
+        fn accel_dyn(&self, vel : f32) -> f32;
+
         fn apply_load_force(&mut self, force : f32);
 
         fn apply_load_inertia(&mut self, inertia : f32);
@@ -141,6 +145,26 @@ impl StepperDriver {
         driver.set_dir(driver.dir);
 
         driver
+    }
+
+    pub fn new_save(data : StepperData, pin_dir : u16, pin_step : u16) -> Result<Self, std::io::Error> {
+        let mut driver = StepperDriver {
+            data, 
+            dir: true, 
+            pos: 0,
+            
+            sys_dir: RaspPin::Output(SysFsGpioOutput::open(pin_dir.clone())?),
+            sys_step: RaspPin::Output(SysFsGpioOutput::open(pin_step.clone())?),
+            sys_meas: RaspPin::ErrPin,
+
+            limit_min: LimitType::None,
+            limit_max: LimitType::None
+        };
+
+        // Write initial direction to output pins
+        driver.set_dir(driver.dir);
+
+        Ok(driver)
     }
 
 
@@ -247,6 +271,8 @@ impl StepperDriver {
             ( StepResult::None, curve )
         }
 
+        // pub fn accelerate(&mut self, stepcount : f32, )
+
         pub fn drive_curve(&mut self, curve : &Vec<f32>) {
             for i in 0 .. curve.len() {
                 self.step(curve[i], &UpdateFunc::None);
@@ -286,16 +312,16 @@ impl StepperDriver {
             StepResult::None
         }
 
-        pub fn drive(&mut self, distance : f32, omega : f32, ufunc : UpdateFunc) -> f32 {
-            if distance == 0.0 {
+        pub fn drive(&mut self, dist : f32, omega : f32, ufunc : UpdateFunc) -> f32 {
+            if dist == 0.0 {
                 return 0.0;
-            } else if distance > 0.0 {
+            } else if dist > 0.0 {
                 self.set_dir(true);
-            } else if distance < 0.0 {
+            } else if dist < 0.0 {
                 self.set_dir(false);
             }
 
-            let steps : u64 = self.data.ang_to_steps_dir(distance).abs() as u64;
+            let steps : u64 = self.data.ang_to_steps_dir(dist).abs() as u64;
             self.steps(steps, omega, ufunc);
             return steps as f32 * self.data.step_ang();
         }
@@ -316,6 +342,10 @@ impl StepperDriver {
                 },
                 _ => { }
             };
+        }
+
+        pub fn lin_move(&mut self, dist : f32, vel_0 : f32, vel_max : f32) -> f32 {
+
         }
     // 
 
@@ -525,6 +555,10 @@ impl Component for StepperCtrl
         self.comms.send_msg((max_dist, omega, UpdateFunc::Break(StepperDriver::__meas_helper, accuracy)));
     }
 
+    fn lin_move(&mut self, dist : f32, vel : f32, vel_max : f32) -> f32 {
+        
+    }
+
     // Position
         fn get_dist(&self) -> f32 {
             self.driver.lock().unwrap().get_dist()
@@ -544,6 +578,11 @@ impl Component for StepperCtrl
     //
 
     // Loads
+        fn accel_dyn(&self, vel : f32) -> f32 {
+            let data = &self.driver.lock().unwrap().data;
+            data.alpha_max_dyn(torque_dyn(data, vel))
+        }
+
         fn apply_load_inertia(&mut self, inertia : f32) {
             self.driver.lock().unwrap().apply_load_inertia(inertia);
         }
@@ -616,6 +655,17 @@ type AsyncStepper = AsyncComms<StepperMsg, StepperRes>;
 
 type CommsFunc<Ctrl, Msg, Res> = fn (&mut Ctrl, Msg) -> Res;
 
+/// ### `AsyncComms`
+/// Struct for managing async movements
+/// ```rust
+/// use stepper_lib::{StepperCtrl, StepperData, UpdateFunc};
+/// use std::f32::consts::PI;
+/// 
+/// let ctrl = StepperCtrl::new(StepperData::mot_17he15_1504s(12.0, 1.5), 27, 19);
+/// ctrl.comms.send_msg((4.0 * PI, 2.0 * PI, UpdateFunc::None));
+///
+/// ctrl.comms.await_inactive();
+/// ```
 pub struct AsyncComms<Msg: Send + 'static, Res: Send + 'static>
 {
     pub thr : JoinHandle<()>,
@@ -623,18 +673,6 @@ pub struct AsyncComms<Msg: Send + 'static, Res: Send + 'static>
     receiver : Receiver<Res>
 }
 
-
-/// ### `StepperComms`
-/// Struct for managing async movements
-/// ```rust
-/// use stepper_lib::{StepperCtrl, StepperData, UpdateFunc};
-/// use std::f32::consts::PI;
-/// 
-/// let ctrl = StepperCtrl::new(StepperData::mot_17he15_1504s(12.0, 1.5), 27, 19);
-/// ctrl.comms.drive_async(4.0 * PI, 2.0 * PI, UpdateFunc::None);
-///
-/// ctrl.comms.await_inactive();
-/// ```
 impl<Msg: Send + 'static, Res: Send + 'static> AsyncComms<Msg, Res> {
     pub fn new<Ctrl: Send + 'static>(mut ctrl : Ctrl, comms_func : CommsFunc<Ctrl, Msg, Res>) -> Self {
         let (sender_com, receiver_thr) : (Sender<Option<Msg>>, Receiver<Option<Msg>>) = channel();

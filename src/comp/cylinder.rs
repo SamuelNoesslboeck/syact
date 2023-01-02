@@ -1,4 +1,4 @@
-use crate::ctrl::{Component, StepperCtrl, LimitType, LimitDest};
+use crate::{ctrl::{Component, StepperCtrl, LimitType, LimitDest}};
 
 /// Cylinder component struct
 pub struct Cylinder
@@ -109,6 +109,10 @@ impl Component for Cylinder
     //
 
     // Loads
+        fn accel_dyn(&self, vel : f32) -> f32 {
+            self.ctrl.accel_dyn(self.vel_to_omega(vel))
+        }
+
         fn apply_load_inertia(&mut self, mass : f32) {
             self.ctrl.apply_load_inertia(mass * (self.rte_ratio / 1000.0).powi(2));
         }

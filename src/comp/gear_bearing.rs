@@ -18,8 +18,8 @@ impl GearBearing
             ang / self.ratio
         }
 
-        /// Returns the omega for the motor from a given bearing omega
-        pub fn omega_for_motor(&self, omega : f32) -> f32 {
+        /// Returns the omega (angluar velocity) for the motor from a given bearing omega
+        pub fn vel_for_motor(&self, omega : f32) -> f32 {
             omega / self.ratio
         }
 
@@ -55,7 +55,7 @@ impl GearBearing
 impl Component for GearBearing 
 {
     fn drive(&mut self, dist : f32, vel : f32) -> f32 {
-        self.ctrl.drive(self.ang_for_motor(dist), self.omega_for_motor(vel))
+        self.ctrl.drive(self.ang_for_motor(dist), self.vel_for_motor(vel))
     }
 
     fn drive_async(&mut self, dist : f32, vel : f32) {
@@ -63,11 +63,11 @@ impl Component for GearBearing
     }
 
     fn measure(&mut self, dist : f32, vel : f32, set_dist : f32, accuracy : u64) -> bool {
-        self.ctrl.measure(self.ang_for_motor(dist), self.omega_for_motor(vel), self.ang_for_motor(set_dist), accuracy)
+        self.ctrl.measure(self.ang_for_motor(dist), self.vel_for_motor(vel), self.ang_for_motor(set_dist), accuracy)
     }
 
     fn measure_async(&mut self, dist : f32, vel : f32, accuracy : u64) {
-        self.ctrl.measure_async(self.ang_for_motor(dist), self.omega_for_motor(vel), accuracy)
+        self.ctrl.measure_async(self.ang_for_motor(dist), self.vel_for_motor(vel), accuracy)
     }
 
     // Position
@@ -76,7 +76,7 @@ impl Component for GearBearing
         }
 
         fn drive_abs(&mut self, pos : f32, omega : f32) -> f32 {
-            self.ctrl.drive_abs(self.ang_for_motor(pos), self.omega_for_motor(omega))
+            self.ctrl.drive_abs(self.ang_for_motor(pos), self.vel_for_motor(omega))
         }
         
         fn drive_abs_async(&mut self, dist : f32, vel : f32) {
@@ -89,6 +89,10 @@ impl Component for GearBearing
     //
 
     // Forces
+        fn accel_dyn(&self, vel : f32) -> f32 {
+            self.ctrl.accel_dyn(self.vel_for_motor(vel))
+        }
+
         fn apply_load_force(&mut self, force : f32) {
             self.ctrl.apply_load_force(force * self.ratio);
         }

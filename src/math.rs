@@ -4,9 +4,11 @@ use glam::{Vec3, Mat3};
 
 use super::data::StepperData;
 
-/// Returns the current torque of a motor (data) at the given angluar speed (omega)  \
+/// Returns the current torque of a motor (data) at the given angluar speed (omega), returns only positive values  \
 /// Unit: [Nm]  
-pub fn torque_dyn(data : &StepperData, omega : f32) -> f32 {
+pub fn torque_dyn(data : &StepperData, mut omega : f32) -> f32 {
+    omega = omega.abs();
+    
     if omega == 0.0 {
         return data.t();
     }
