@@ -11,7 +11,7 @@ use std::{
 
 use gpio::{GpioIn, GpioOut, sysfs::*};
 
-use crate::data::{StepperData, ServoData};
+use crate::{data::{StepperData, ServoData}, math::torque_dyn};
 use crate::math::{start_frequency, angluar_velocity_dyn};
 
 // Use local types module
@@ -50,6 +50,8 @@ pub trait Component
     // 
 
     // Load calculation
+        fn accel_dyn(&mut self, vel : f32) -> f32; 
+
         fn apply_load_force(&mut self, force : f32);
 
         fn apply_load_inertia(&mut self, inertia : f32);
@@ -544,6 +546,11 @@ impl Component for StepperCtrl
     //
 
     // Loads
+        fn accel_dyn(&mut self, vel : f32) -> f32 {
+            let data = &self.driver.lock().unwrap().data; 
+            data.alpha_max_dyn(torque_dyn(data, vel))
+        }
+
         fn apply_load_inertia(&mut self, inertia : f32) {
             self.driver.lock().unwrap().apply_load_inertia(inertia);
         }

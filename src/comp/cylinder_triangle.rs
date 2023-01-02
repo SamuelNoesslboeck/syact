@@ -103,6 +103,10 @@ impl Component for CylinderTriangle {
     // 
     
     // Forces
+        fn accel_dyn(&mut self, vel : f32) -> f32 {
+                
+        }
+
         fn apply_load_force(&mut self, force : f32) {
             self.cylinder.apply_load_force(force)
         }
