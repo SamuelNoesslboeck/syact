@@ -16,6 +16,8 @@ pub mod data;
 pub mod gcode;
 /// Functions and Structs for calculating Stepper Motor procedures and operations
 pub mod math;
+/// Functions and Structs required for calculating complex movements asyncronous movements of multiple stepper motors
+pub mod paths;
 
 /// Module with all the tests required to assure the library funcitons as intended
 #[cfg(test)]

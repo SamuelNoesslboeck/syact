@@ -345,7 +345,6 @@ impl StepperDriver {
         }
 
         pub fn lin_move(&mut self, dist : f32, vel_0 : f32, vel_max : f32) -> f32 {
-
         }
     // 
 
