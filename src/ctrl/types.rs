@@ -26,7 +26,7 @@ pub enum LimitType {
 }
 
 /// Current status of the stepper motor considering the limits set
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub enum LimitDest {
     /// No limit has been set yet
     NoLimitSet,

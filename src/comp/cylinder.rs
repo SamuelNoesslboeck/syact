@@ -55,14 +55,6 @@ impl Cylinder
         pub fn set_limit(&mut self, limit_max : LimitType, limit_min : LimitType) {
             self.ctrl.set_limit(self.conv_limit(limit_min), self.conv_limit(limit_max));
         }
-
-        pub fn get_limit_dest(&self, dist : f32) -> LimitDest {
-            match self.ctrl.get_limit_dest(self.dist_to_ang(dist)) {
-                LimitDest::Minimum(ang) => LimitDest::Minimum(self.ang_to_dist(ang)), 
-                LimitDest::Maximum(ang) => LimitDest::Maximum(self.ang_to_dist(ang)), 
-                other => other
-            }
-        }
     //
 }
 
@@ -105,6 +97,14 @@ impl Component for Cylinder
 
         fn write_dist(&mut self, dis_c : f32) {
             self.ctrl.write_dist(self.dist_to_ang(dis_c));
+        }
+
+        fn get_limit_dest(&self, dist : f32) -> LimitDest {
+            match self.ctrl.get_limit_dest(self.dist_to_ang(dist)) {
+                LimitDest::Minimum(ang) => LimitDest::Minimum(self.ang_to_dist(ang)), 
+                LimitDest::Maximum(ang) => LimitDest::Maximum(self.ang_to_dist(ang)), 
+                other => other
+            }
         }
     //
 

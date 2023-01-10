@@ -60,14 +60,6 @@ impl CylinderTriangle
         pub fn set_limit(&mut self, limit_min : LimitType, limit_max : LimitType) {
             self.cylinder.set_limit(limit_max, limit_min)
         }
-
-        pub fn get_limit_dest(&self, gam : f32) -> LimitDest {
-            match self.cylinder.get_limit_dest(self.len_for_gam(gam)) {
-                LimitDest::Maximum(dist) => LimitDest::Maximum(self.gam_for_len(dist)),
-                LimitDest::Minimum(dist) => LimitDest::Minimum(self.gam_for_len(dist)),
-                other => other  
-            }
-        }
     //
 }
 
@@ -116,6 +108,14 @@ impl Component for CylinderTriangle {
 
         fn write_dist(&mut self, dist : f32) {
             self.cylinder.write_dist(self.len_for_gam(dist))
+        }
+
+        fn get_limit_dest(&self, gam : f32) -> LimitDest {
+            match self.cylinder.get_limit_dest(self.len_for_gam(gam)) {
+                LimitDest::Maximum(dist) => LimitDest::Maximum(self.gam_for_len(dist)),
+                LimitDest::Minimum(dist) => LimitDest::Minimum(self.gam_for_len(dist)),
+                other => other  
+            }
         }
     // 
     
