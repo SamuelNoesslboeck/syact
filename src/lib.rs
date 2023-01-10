@@ -25,7 +25,7 @@ mod tests;
 
 // Types
 
-pub use ctrl::{Component, StepperCtrl, UpdateFunc};
+pub use ctrl::{Component, ComponentGroup, StepperCtrl, UpdateFunc};
 pub use data::StepperData;
 
 // Library Types

@@ -120,8 +120,8 @@ impl Component for CylinderTriangle {
     // 
     
     // Forces
-        fn accel_dyn(&self, vel : f32) -> f32 {
-            self.cylinder.accel_dyn(self.vel_for_gam(vel, self.get_dist()))
+        fn accel_dyn(&self, vel : f32, pos : f32) -> f32 {
+            self.omega_for_gam(self.cylinder.accel_dyn(self.vel_for_gam(vel, pos), pos), pos)
         }
 
         fn apply_load_force(&mut self, force : f32) {

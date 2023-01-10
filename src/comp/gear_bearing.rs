@@ -89,8 +89,8 @@ impl Component for GearBearing
     //
 
     // Forces
-        fn accel_dyn(&self, vel : f32) -> f32 {
-            self.ctrl.accel_dyn(self.vel_for_motor(vel))
+        fn accel_dyn(&self, vel : f32, pos : f32) -> f32 {
+            self.ang_for_bear(self.ctrl.accel_dyn(self.vel_for_motor(vel), pos))
         }
 
         fn apply_load_force(&mut self, force : f32) {

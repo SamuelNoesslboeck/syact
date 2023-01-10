@@ -109,8 +109,8 @@ impl Component for Cylinder
     //
 
     // Loads
-        fn accel_dyn(&self, vel : f32) -> f32 {
-            self.ctrl.accel_dyn(self.vel_to_omega(vel))
+        fn accel_dyn(&self, vel : f32, pos : f32) -> f32 {
+            self.omega_to_vel(self.ctrl.accel_dyn(self.vel_to_omega(vel), pos))
         }
 
         fn apply_load_inertia(&mut self, mass : f32) {

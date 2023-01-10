@@ -15,50 +15,14 @@ use crate::{data::{StepperData, ServoData}, math::torque_dyn};
 use crate::math::{start_frequency, angluar_velocity_dyn};
 
 // Use local types module
+mod asynchr;
+pub use asynchr::*;
+
+mod comp;
+pub use comp::*;
+
 mod types;
 pub use types::*;
-
-/// Trait for defining controls and components
-pub trait Component 
-{
-    /// Move the component to the given position as fast as possible and returns the actual distance traveled
-    ///  - The distance `dist` can be either an angle (Unit radians) or a distancce (Unit mm)
-    ///  - The velocity `vel` is the maximum change rate of the distance, either angular velocity (Unit radians per secoond) or linear velocity (mm per second)
-    fn drive(&mut self, dist : f32, vel : f32) -> f32;
-
-    /// Move the component to the given position as fast as possible
-    ///  - The distance `dist` can be either an angle (Unit radians) or a distancce (Unit mm)
-    ///  - The velocity `vel` is the maximum change rate of the distance, either angular velocity (Unit radians per secoond) or linear velocity (mm per second) \
-    /// To wait unti the movement operation is completed, use the `await inactive` function
-    fn drive_async(&mut self, dist : f32, vel : f32);
-
-    /// Measure the component by driving the component with the velocity `vel` until either the measurement condition is true or the maximum distance `dist` 
-    /// is reached. When the endpoint is reached, the controls will set the distance to `set_dist`. The lower the `accuracy`, the higher 
-    /// are the computational difficulties, as the function checks more often if the measure pin has a HIGH signal
-    fn measure(&mut self, dist : f32, vel : f32, set_dist : f32, accuracy : u64) -> bool;
-
-    fn measure_async(&mut self, dist : f32, vel : f32, accuracy : u64);
-
-    fn lin_move(&mut self, dist : f32, vel : f32, vel_max : f32) -> f32;
-
-    // Position
-        fn get_dist(&self) -> f32;
-
-        fn drive_abs(&mut self, dist : f32, vel : f32) -> f32;
-
-        fn drive_abs_async(&mut self, dist : f32, vel : f32);
-
-        fn write_dist(&mut self, dist : f32);
-    // 
-
-    // Load calculation
-        fn accel_dyn(&self, vel : f32) -> f32;
-
-        fn apply_load_force(&mut self, force : f32);
-
-        fn apply_load_inertia(&mut self, inertia : f32);
-    // 
-}
 
 /// ### Driver
 /// Driver class for basic stepper motor operations
@@ -344,8 +308,8 @@ impl StepperDriver {
             };
         }
 
-        pub fn lin_move(&mut self, dist : f32, vel_0 : f32, vel_max : f32) -> f32 {
-        }
+        // pub fn lin_move(&mut self, dist : f32, vel_0 : f32, vel_max : f32) -> f32 {
+        // }
     // 
 
     // Position
@@ -554,9 +518,9 @@ impl Component for StepperCtrl
         self.comms.send_msg((max_dist, omega, UpdateFunc::Break(StepperDriver::__meas_helper, accuracy)));
     }
 
-    fn lin_move(&mut self, dist : f32, vel : f32, vel_max : f32) -> f32 {
+    // fn lin_move(&mut self, dist : f32, vel : f32, vel_max : f32) -> f32 {
         
-    }
+    // }
 
     // Position
         fn get_dist(&self) -> f32 {
@@ -577,7 +541,7 @@ impl Component for StepperCtrl
     //
 
     // Loads
-        fn accel_dyn(&self, vel : f32) -> f32 {
+        fn accel_dyn(&self, vel : f32, _ : f32) -> f32 {
             let data = &self.driver.lock().unwrap().data;
             data.alpha_max_dyn(torque_dyn(data, vel))
         }
@@ -638,99 +602,5 @@ impl ServoDriver
             },
             _ => { }
         }
-    }
-}
-
-
-type StepperMsg = (f32, f32, UpdateFunc);
-type StepperRes = ();
-
-type AsyncStepper = AsyncComms<StepperMsg, StepperRes>;
-
-// type ServoMsg = f32;
-// type ServoRes = ();
-
-// type AsyncServo = AsyncComms<ServoMsg, ServoRes>;
-
-type CommsFunc<Ctrl, Msg, Res> = fn (&mut Ctrl, Msg) -> Res;
-
-/// ### `AsyncComms`
-/// Struct for managing async movements
-/// ```rust
-/// use stepper_lib::{StepperCtrl, StepperData, UpdateFunc};
-/// use std::f32::consts::PI;
-/// 
-/// let ctrl = StepperCtrl::new(StepperData::mot_17he15_1504s(12.0, 1.5), 27, 19);
-/// ctrl.comms.send_msg((4.0 * PI, 2.0 * PI, UpdateFunc::None));
-///
-/// ctrl.comms.await_inactive();
-/// ```
-pub struct AsyncComms<Msg: Send + 'static, Res: Send + 'static>
-{
-    pub thr : JoinHandle<()>,
-    sender : Sender<Option<Msg>>,
-    receiver : Receiver<Res>
-}
-
-impl<Msg: Send + 'static, Res: Send + 'static> AsyncComms<Msg, Res> {
-    pub fn new<Ctrl: Send + 'static>(mut ctrl : Ctrl, comms_func : CommsFunc<Ctrl, Msg, Res>) -> Self {
-        let (sender_com, receiver_thr) : (Sender<Option<Msg>>, Receiver<Option<Msg>>) = channel();
-        let (sender_thr, receiver_com) : (Sender<Res>, Receiver<Res>) = channel();
-
-        let thr = thread::spawn(move || {
-            loop {
-                match receiver_thr.recv() {
-                    Ok(msg_opt) => 
-                        match msg_opt {
-                            Some(msg) => {
-                                let res = comms_func(&mut ctrl, msg);
-                
-                                sender_thr.send(res).unwrap();
-                            },
-                            None => {
-                                break;
-                            }
-                        },
-                    Err(err) => {
-                        println!("Error occured in thread! {}", err.to_string());
-                    }
-                }
-            };
-        });
-
-        Self {
-            thr, 
-            sender: sender_com,
-            receiver: receiver_com
-        }
-    }
-
-    pub fn send_msg(&self, msg : Msg) {
-        // Clean recv buffer
-        loop {
-            if self.receiver.try_recv().is_err() {
-                break;
-            }
-        }
-
-        self.sender.send(Some(msg)).expect("Thread crashed")
-    }
-
-    pub fn await_inactive(&self) -> Res {
-        self.receiver.recv().expect("Recv failed")  // TODO: Improve error handling
-    }
-
-    pub fn kill(&self) -> &JoinHandle<()> {
-        if !self.thr.is_finished() {
-            self.sender.send(None).unwrap_or(());
-        }
-
-        &self.thr
-    }
-}
-
-impl<Msg: Send + 'static, Res: Send + 'static> Drop for AsyncComms<Msg, Res> {
-    fn drop(&mut self) {
-        self.kill();
     }
 }
