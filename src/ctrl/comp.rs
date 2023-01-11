@@ -25,6 +25,8 @@ pub trait Component
 
     fn measure_async(&mut self, dist : f32, vel : f32, accuracy : u64);
 
+    fn await_inactive(&self);
+
     // fn lin_move(&mut self, dist : f32, vel : f32, vel_max : f32) -> f32;
 
     // Position
@@ -33,6 +35,8 @@ pub trait Component
         fn write_dist(&mut self, dist : f32);
 
         fn get_limit_dest(&self, pos : f32) -> LimitDest;
+
+        fn set_endpoint(&mut self, set_dist : f32) -> bool;
     // 
 
     // Load calculation
@@ -105,6 +109,12 @@ pub trait ComponentGroup<const N : usize>
         }
     }
 
+    fn await_inactive(&self) {
+        for i in 0 .. N {
+            self.comps()[i].await_inactive();
+        }
+    }
+
     // Position
         fn get_dist(&self) -> [f32; N] {
             let mut dists = [0.0; N];
@@ -112,6 +122,12 @@ pub trait ComponentGroup<const N : usize>
                 dists[i] = self.comps()[i].get_dist();
             }
             dists
+        }
+
+        fn write_dist(&mut self, angles : &[f32; N]) {
+            for i in 0 .. N {
+                self.comps_mut()[i].write_dist(angles[i])
+            }
         }
 
         fn get_limit_dest(&self, dist : [f32; N]) -> [LimitDest; N] {
@@ -137,7 +153,29 @@ pub trait ComponentGroup<const N : usize>
             }
             res
         }
+
+        fn set_endpoint(&mut self, set_dist : [f32; N]) -> [bool; N] {
+            let mut res = [false; N];
+            for i in 0 .. N {
+                res[i] = self.comps_mut()[i].set_endpoint(set_dist[i]);
+            }   
+            res
+        }
     //
+
+    // Load calculation
+        fn apply_load_inertia(&mut self, inertias : [f32; N]) {
+            for i in 0 .. N {
+                self.comps_mut()[i].apply_load_inertia(inertias[i]);
+            }
+        }
+
+        fn apply_load_force(&mut self, forces : [f32; N]) {
+            for i in 0 .. N {
+                self.comps_mut()[i].apply_load_force(forces[i]);
+            }
+        }
+    // 
 }
 
 impl<const N : usize> ComponentGroup<N> for [Box<dyn Component>; N] 

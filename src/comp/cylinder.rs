@@ -82,6 +82,10 @@ impl Component for Cylinder
         self.ctrl.measure_async(self.dist_to_ang(max_dis), self.vel_to_omega(v_max),  accuracy);
     }
 
+    fn await_inactive(&self) {
+        self.ctrl.await_inactive();
+    }
+
     // Position
         fn get_dist(&self) -> f32 {
             self.ang_to_dist(self.ctrl.get_dist())
@@ -105,6 +109,10 @@ impl Component for Cylinder
                 LimitDest::Maximum(ang) => LimitDest::Maximum(self.ang_to_dist(ang)), 
                 other => other
             }
+        }
+
+        fn set_endpoint(&mut self, set_dist : f32) -> bool {
+            self.ctrl.set_endpoint(self.dist_to_ang(set_dist))
         }
     //
 

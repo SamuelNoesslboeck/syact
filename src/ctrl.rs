@@ -480,10 +480,6 @@ impl StepperCtrl
         pub fn set_limit(&mut self, min : LimitType, max : LimitType) {
             self.driver.lock().unwrap().set_limit(min, max)
         }
-
-        pub fn set_endpoint(&mut self, set_pos : f32) -> bool {
-            self.driver.lock().unwrap().set_endpoint(set_pos)
-        }
     // 
 
     // Debug 
@@ -503,6 +499,14 @@ impl Component for StepperCtrl
         self.comms.send_msg((dist, omega, UpdateFunc::None));
     }
 
+    fn drive_abs(&mut self, dist : f32, vel : f32) -> f32 {
+        self.driver.lock().unwrap().drive(dist - self.get_dist(), vel, UpdateFunc::None)
+    }
+
+    fn drive_abs_async(&mut self, dist : f32, vel : f32) {
+        self.comms.send_msg((dist - self.get_dist(), vel, UpdateFunc::None))
+    }
+
     fn measure(&mut self, max_pos : f32, omega : f32, set_pos : f32, accuracy : u64) -> bool {
         let mut driver = self.driver.lock().unwrap();
 
@@ -514,6 +518,10 @@ impl Component for StepperCtrl
         self.comms.send_msg((max_dist, omega, UpdateFunc::Break(StepperDriver::__meas_helper, accuracy)));
     }
 
+    fn await_inactive(&self) {
+        self.comms.await_inactive();
+    }
+
     // fn lin_move(&mut self, dist : f32, vel : f32, vel_max : f32) -> f32 {
         
     // }
@@ -523,20 +531,16 @@ impl Component for StepperCtrl
             self.driver.lock().unwrap().get_dist()
         }
 
-        fn drive_abs(&mut self, dist : f32, vel : f32) -> f32 {
-            self.driver.lock().unwrap().drive(dist - self.get_dist(), vel, UpdateFunc::None)
-        }
-
-        fn drive_abs_async(&mut self, dist : f32, vel : f32) {
-            self.comms.send_msg((dist - self.get_dist(), vel, UpdateFunc::None))
-        }
-
         fn write_dist(&mut self, pos : f32) {
             self.driver.lock().unwrap().write_dist(pos);
         }
 
         fn get_limit_dest(&self, pos : f32) -> LimitDest {
             self.driver.lock().unwrap().get_limit_dest(pos)
+        }
+
+        fn set_endpoint(&mut self, set_dist : f32) -> bool {
+            self.driver.lock().unwrap().set_endpoint(set_dist)
         }
     //
 

@@ -90,6 +90,10 @@ impl Component for CylinderTriangle {
         self.cylinder.measure_async(dist, vel, accuracy)
     }
 
+    fn await_inactive(&self) {
+        self.cylinder.await_inactive();
+    }
+
     // Distance
         fn get_dist(&self) -> f32 {
             self.gam_for_len(self.cylinder.get_dist())
@@ -116,6 +120,10 @@ impl Component for CylinderTriangle {
                 LimitDest::Minimum(dist) => LimitDest::Minimum(self.gam_for_len(dist)),
                 other => other  
             }
+        }
+        
+        fn set_endpoint(&mut self, set_dist : f32) -> bool {
+            self.cylinder.set_endpoint(self.len_for_gam(set_dist))
         }
     // 
     

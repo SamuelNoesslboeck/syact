@@ -62,6 +62,14 @@ impl Component for GearBearing
         self.ctrl.drive_async(self.ang_for_motor(dist), vel)
     }
 
+    fn drive_abs(&mut self, pos : f32, omega : f32) -> f32 {
+        self.ctrl.drive_abs(self.ang_for_motor(pos), self.vel_for_motor(omega))
+    }
+    
+    fn drive_abs_async(&mut self, dist : f32, vel : f32) {
+        self.ctrl.drive_abs_async(self.ang_for_motor(dist), vel)
+    }
+
     fn measure(&mut self, dist : f32, vel : f32, set_dist : f32, accuracy : u64) -> bool {
         self.ctrl.measure(self.ang_for_motor(dist), self.vel_for_motor(vel), self.ang_for_motor(set_dist), accuracy)
     }
@@ -70,21 +78,29 @@ impl Component for GearBearing
         self.ctrl.measure_async(self.ang_for_motor(dist), self.vel_for_motor(vel), accuracy)
     }
 
+    fn await_inactive(&self) {
+        self.ctrl.await_inactive();
+    }
+
     // Position
         fn get_dist(&self) -> f32 {
             self.ctrl.get_dist() * self.ratio
         }
 
-        fn drive_abs(&mut self, pos : f32, omega : f32) -> f32 {
-            self.ctrl.drive_abs(self.ang_for_motor(pos), self.vel_for_motor(omega))
-        }
-        
-        fn drive_abs_async(&mut self, dist : f32, vel : f32) {
-            self.ctrl.drive_abs_async(self.ang_for_motor(dist), vel)
-        }
-
         fn write_dist(&mut self, dist : f32) {
             self.ctrl.write_dist(self.ang_for_motor(dist))
+        }
+
+        fn get_limit_dest(&self, gam : f32) -> LimitDest {
+            match self.ctrl.get_limit_dest(self.ang_for_motor(gam)) {
+                LimitDest::Maximum(dist) => LimitDest::Maximum(self.ang_for_bear(dist)),
+                LimitDest::Minimum(dist) => LimitDest::Minimum(self.ang_for_bear(dist)),
+                other => other  
+            }
+        }
+
+        fn set_endpoint(&mut self, set_dist : f32) -> bool {
+            self.ctrl.set_endpoint(self.ang_for_motor(set_dist))
         }
     //
 
