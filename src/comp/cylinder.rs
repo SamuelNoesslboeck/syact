@@ -1,4 +1,4 @@
-use crate::{ctrl::{Component, StepperCtrl, LimitType, LimitDest}};
+use crate::{ctrl::{Component, StepperCtrl, LimitType, LimitDest, SimpleMeas}};
 
 /// Cylinder component struct
 pub struct Cylinder
@@ -129,4 +129,11 @@ impl Component for Cylinder
             self.ctrl.apply_load_force(force * self.rte_ratio / 1000.0);
         }
     //
+}
+
+impl SimpleMeas for Cylinder 
+{
+    fn init_meas(&mut self, pin_meas : u16) {
+        self.ctrl.init_meas(pin_meas)
+    }
 }

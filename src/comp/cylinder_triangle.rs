@@ -1,4 +1,4 @@
-use crate::{ctrl::{Component, LimitType, LimitDest}};
+use crate::{ctrl::{Component, LimitType, LimitDest, SimpleMeas}};
 
 use crate::comp::Cylinder;
 
@@ -140,4 +140,11 @@ impl Component for CylinderTriangle {
             self.cylinder.apply_load_inertia(inertia)
         }
     // 
+}
+
+impl SimpleMeas for CylinderTriangle 
+{
+    fn init_meas(&mut self, pin_meas : u16) {
+        self.cylinder.init_meas(pin_meas)
+    }
 }

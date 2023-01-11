@@ -21,6 +21,9 @@ pub use asynchr::*;
 mod comp;
 pub use comp::*;
 
+mod meas;
+pub use meas::*;
+
 mod types;
 pub use types::*;
 
@@ -63,7 +66,7 @@ pub struct StepperCtrl
     /// Pin for controlling steps
     pub pin_step : u16,
     /// Pin for messuring distances
-    pub pin_mes : u16, 
+    pub pin_meas : u16, 
 }
 
 pub struct ServoDriver
@@ -419,7 +422,7 @@ impl StepperCtrl
         let ctrl = StepperCtrl { 
             pin_dir: pin_dir, 
             pin_step: pin_step, 
-            pin_mes: PIN_ERR, 
+            pin_meas: PIN_ERR, 
 
             comms: AsyncStepper::new(Arc::clone(&driver), 
                 |driver_mutex , msg| { 
@@ -435,16 +438,6 @@ impl StepperCtrl
 
         ctrl
     }
-
-    // Init
-        pub fn init_meas(&mut self, pin_mes : u16) {
-            self.pin_mes = pin_mes;
-            self.driver.lock().unwrap().sys_meas = match SysFsGpioInput::open(pin_mes) {
-                Ok(val) => RaspPin::Input(val),
-                Err(_) => RaspPin::ErrPin
-            }
-        }
-    //
 
     // Movements
         pub fn step(&mut self, time : f32, ufunc : &UpdateFunc) -> StepResult {
@@ -487,6 +480,17 @@ impl StepperCtrl
             self.driver.lock().unwrap().debug_pins();
         }
     //
+}
+
+impl SimpleMeas for StepperCtrl
+{
+    fn init_meas(&mut self, pin_mes : u16) {
+        self.pin_meas = pin_mes;
+        self.driver.lock().unwrap().sys_meas = match SysFsGpioInput::open(pin_mes) {
+            Ok(val) => RaspPin::Input(val),
+            Err(_) => RaspPin::ErrPin
+        }
+    }
 }
 
 impl Component for StepperCtrl 

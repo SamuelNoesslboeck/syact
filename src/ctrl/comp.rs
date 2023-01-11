@@ -1,7 +1,7 @@
 use super::*;
 
 /// Trait for defining controls and components
-pub trait Component 
+pub trait Component : SimpleMeas
 {
     /// Move the component to the given position as fast as possible and returns the actual distance traveled
     ///  - The distance `dist` can be either an angle (Unit radians) or a distancce (Unit mm)

@@ -1,4 +1,4 @@
-use crate::{Component, StepperCtrl, ctrl::{LimitType, LimitDest}};
+use crate::{Component, StepperCtrl, ctrl::{LimitType, LimitDest, SimpleMeas}};
 
 /// A bearing powered by a motor with a certain gear ratio
 pub struct GearBearing 
@@ -117,4 +117,11 @@ impl Component for GearBearing
             self.ctrl.apply_load_inertia(inertia * self.ratio);
         }
     //
+}
+
+impl SimpleMeas for GearBearing 
+{
+    fn init_meas(&mut self, pin_meas : u16) {
+        self.ctrl.init_meas(pin_meas);
+    }
 }
