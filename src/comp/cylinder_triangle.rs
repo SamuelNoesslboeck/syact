@@ -1,4 +1,4 @@
-use crate::{ctrl::{Component, LimitType, LimitDest, SimpleMeas}};
+use crate::{ctrl::{Component, LimitType, LimitDest, SimpleMeas}, math::MathActor};
 
 use crate::comp::Cylinder;
 
@@ -61,6 +61,20 @@ impl CylinderTriangle
             self.cylinder.set_limit(limit_max, limit_min)
         }
     //
+}
+
+impl MathActor for CylinderTriangle
+{
+    fn accel_dyn(&self, vel : f32, pos : f32) -> f32 {
+        self.omega_for_gam(self.cylinder.accel_dyn(self.vel_for_gam(vel, pos), pos), pos)
+    }
+}
+
+impl SimpleMeas for CylinderTriangle
+{
+    fn init_meas(&mut self, pin_meas : u16) {
+        self.cylinder.init_meas(pin_meas)
+    }
 }
 
 impl Component for CylinderTriangle {
@@ -128,10 +142,6 @@ impl Component for CylinderTriangle {
     // 
     
     // Forces
-        fn accel_dyn(&self, vel : f32, pos : f32) -> f32 {
-            self.omega_for_gam(self.cylinder.accel_dyn(self.vel_for_gam(vel, pos), pos), pos)
-        }
-
         fn apply_load_force(&mut self, force : f32) {
             self.cylinder.apply_load_force(force)
         }
@@ -140,11 +150,4 @@ impl Component for CylinderTriangle {
             self.cylinder.apply_load_inertia(inertia)
         }
     // 
-}
-
-impl SimpleMeas for CylinderTriangle 
-{
-    fn init_meas(&mut self, pin_meas : u16) {
-        self.cylinder.init_meas(pin_meas)
-    }
 }

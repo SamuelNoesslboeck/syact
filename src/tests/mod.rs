@@ -1,6 +1,6 @@
 use gpio::{GpioIn, sysfs::*};
 use gcode::{Mnemonic, GCode};
-use crate::{Component, StepperCtrl, StepperData, UpdateFunc, gcode::{Interpreter, GCodeFunc, Args}};
+use crate::{Component, StepperCtrl, StepperData, UpdateFunc, gcode::{Interpreter, GCodeFunc, Args}, ctrl::PIN_ERR};
 use std::{f32::consts::PI, collections::HashMap};
  
 // Test Async
@@ -108,5 +108,36 @@ use std::{f32::consts::PI, collections::HashMap};
         println!("Staring to move");
         ctrl.steps(STEPS, OMEGA, crate::ctrl::UpdateFunc::None);
         println!("{} with max speed {}rad/s done", STEPS, OMEGA);
+    }
+// 
+
+// Test G1
+    // const L1 : f32 = 100.0;
+    // const L2 : f32 = 100.0;
+
+    // fn get_pos(comps : &[Box<dyn Component>; 2]) -> [f32; 2] {
+
+    //     let [ g_1, g_2 ] = comps.get_dist();
+    //     [
+    //         L1 * g_1.cos() + L2 * (g_1 + g_2).cos(),
+    //         L1 * g_1.sin() + L2 * (g_1 + g_2).sin()
+    //     ]
+    // }
+
+    // fn get_angles(pos : [f32; 2]) -> [f32; 2] {
+    //     // Todo
+    // }
+
+    #[test]
+    fn test_g1() {
+        const U : f32 = 12.0;
+        const SF : f32 = 1.5;
+
+        let comps : [Box<dyn Component>; 2] = [ 
+            Box::new(StepperCtrl::new(StepperData::mot_17he15_1504s(U, SF), PIN_ERR, PIN_ERR)),
+            Box::new(StepperCtrl::new(StepperData::mot_17he15_1504s(U, SF), PIN_ERR, PIN_ERR))
+        ]; 
+
+        dbg!(comps[0].compl_times(0.1, 0.2, 0.1));
     }
 // 

@@ -1,4 +1,4 @@
-use crate::{ctrl::{Component, StepperCtrl, LimitType, LimitDest, SimpleMeas}};
+use crate::{ctrl::{Component, StepperCtrl, LimitType, LimitDest, SimpleMeas}, math::MathActor};
 
 /// Cylinder component struct
 pub struct Cylinder
@@ -56,6 +56,20 @@ impl Cylinder
             self.ctrl.set_limit(self.conv_limit(limit_min), self.conv_limit(limit_max));
         }
     //
+}
+
+impl MathActor for Cylinder 
+{
+    fn accel_dyn(&self, vel : f32, pos : f32) -> f32 {
+        self.omega_to_vel(self.ctrl.accel_dyn(self.vel_to_omega(vel), pos))
+    }
+}
+
+impl SimpleMeas for Cylinder 
+{
+    fn init_meas(&mut self, pin_meas : u16) {
+        self.ctrl.init_meas(pin_meas)
+    }
 }
 
 impl Component for Cylinder 
@@ -117,10 +131,6 @@ impl Component for Cylinder
     //
 
     // Loads
-        fn accel_dyn(&self, vel : f32, pos : f32) -> f32 {
-            self.omega_to_vel(self.ctrl.accel_dyn(self.vel_to_omega(vel), pos))
-        }
-
         fn apply_load_inertia(&mut self, mass : f32) {
             self.ctrl.apply_load_inertia(mass * (self.rte_ratio / 1000.0).powi(2));
         }
@@ -129,11 +139,4 @@ impl Component for Cylinder
             self.ctrl.apply_load_force(force * self.rte_ratio / 1000.0);
         }
     //
-}
-
-impl SimpleMeas for Cylinder 
-{
-    fn init_meas(&mut self, pin_meas : u16) {
-        self.ctrl.init_meas(pin_meas)
-    }
 }

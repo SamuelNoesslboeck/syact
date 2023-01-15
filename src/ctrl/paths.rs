@@ -37,3 +37,4 @@ impl StepperCurve
         }
     }
 }
+

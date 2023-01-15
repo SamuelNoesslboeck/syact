@@ -1,7 +1,7 @@
 use super::*;
 
 /// Trait for defining controls and components
-pub trait Component : SimpleMeas
+pub trait Component : SimpleMeas + MathActor
 {
     /// Move the component to the given position as fast as possible and returns the actual distance traveled
     ///  - The distance `dist` can be either an angle (Unit radians) or a distancce (Unit mm)
@@ -40,22 +40,10 @@ pub trait Component : SimpleMeas
     // 
 
     // Load calculation
-        fn accel_dyn(&self, vel : f32, pos : f32) -> f32;
-
         fn apply_load_force(&mut self, force : f32);
 
         fn apply_load_inertia(&mut self, inertia : f32);
     // 
-}
-
-pub trait RotElement
-{
-
-}
-
-pub trait LinElement
-{
-    
 }
 
 

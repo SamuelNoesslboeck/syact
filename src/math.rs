@@ -156,3 +156,48 @@ pub fn acc_curve(data : &StepperData, t_min : f32, max_len : u64) -> Vec<f32> {
         (torque, f_j)
     }
 //
+
+/// Trait for advanced calculations of mechanical actors
+pub trait MathActor
+{
+    fn accel_dyn(&self, vel : f32, pos : f32) -> f32;
+
+    /// Returns (time, acceleration)
+    fn compl_time_endpoints(&self, delta_pos : f32, vel_0 : f32, vel : f32) -> (f32, f32) {
+        let time = 2.0 * delta_pos / (vel_0 + vel);
+        ( time, (vel - vel_0) / time )
+    }
+
+    /// Returns ([t_min, t_max], [vel exit case min, vel exit case max])
+    fn compl_times(&self, pos_0 : f32, pos : f32, vel_0 : f32) -> ([f32; 2], [f32; 2]) {
+        let delta_pos = pos - pos_0;
+        let accel = self.accel_dyn(vel_0, pos);
+
+        let p = 2.0 * vel_0 / accel; 
+        let q = 2.0 * delta_pos / accel;
+
+        let mut t_1 = -p + (p.powi(2) + q).sqrt();
+        let mut t_2 = p + (p.powi(2) - q).sqrt();
+
+        if t_1.is_nan() {
+            t_1 = std::f32::INFINITY;
+        }
+
+        if t_2.is_nan() {
+            t_2 = std::f32::INFINITY;
+        }
+
+        let vel_accel = vel_0 + t_1 * accel;
+        let vel_deccel = vel_0 - t_2 * accel;
+        
+        ([ 
+            if t_1 < t_2 { t_1 } else { t_2 },
+            if t_1 > t_2 { t_1 } else { t_2 }
+        ],
+        [
+            if t_1 < t_2 { vel_accel } else { vel_deccel },
+            if t_1 > t_2 { vel_accel } else { vel_deccel }
+        ]) 
+    }
+}
+

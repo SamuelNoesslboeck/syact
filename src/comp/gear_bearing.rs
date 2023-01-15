@@ -1,4 +1,4 @@
-use crate::{Component, StepperCtrl, ctrl::{LimitType, LimitDest, SimpleMeas}};
+use crate::{Component, StepperCtrl, ctrl::{LimitType, LimitDest, SimpleMeas}, math::MathActor};
 
 /// A bearing powered by a motor with a certain gear ratio
 pub struct GearBearing 
@@ -50,6 +50,20 @@ impl GearBearing
             }
         }
     //
+}
+
+impl SimpleMeas for GearBearing 
+{
+    fn init_meas(&mut self, pin_meas : u16) {
+        self.ctrl.init_meas(pin_meas);
+    }
+}
+
+impl MathActor for GearBearing
+{
+    fn accel_dyn(&self, vel : f32, pos : f32) -> f32 {
+        self.ang_for_bear(self.ctrl.accel_dyn(self.vel_for_motor(vel), pos))
+    }
 }
 
 impl Component for GearBearing 
@@ -105,10 +119,6 @@ impl Component for GearBearing
     //
 
     // Forces
-        fn accel_dyn(&self, vel : f32, pos : f32) -> f32 {
-            self.ang_for_bear(self.ctrl.accel_dyn(self.vel_for_motor(vel), pos))
-        }
-
         fn apply_load_force(&mut self, force : f32) {
             self.ctrl.apply_load_force(force * self.ratio);
         }
@@ -117,11 +127,4 @@ impl Component for GearBearing
             self.ctrl.apply_load_inertia(inertia * self.ratio);
         }
     //
-}
-
-impl SimpleMeas for GearBearing 
-{
-    fn init_meas(&mut self, pin_meas : u16) {
-        self.ctrl.init_meas(pin_meas);
-    }
 }
