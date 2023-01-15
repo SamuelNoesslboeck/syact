@@ -78,10 +78,10 @@ use std::{f32::consts::PI, collections::HashMap};
     fn test_step() {
         let mut ctrl = StepperCtrl::new(
             StepperData::mot_17he15_1504s(12.0, 1.5), 
-            3, 26
+            27, 19
         );
 
-        ctrl.apply_load_inertia(0.000_01);
+        ctrl.apply_load_inertia(0.000_1);
 
         // Test
         println!("Doing single step ... ");
@@ -101,9 +101,10 @@ use std::{f32::consts::PI, collections::HashMap};
     fn test_steps() {
         let mut ctrl = StepperCtrl::new(
             StepperData::mot_17he15_1504s(12.0, 1.5), 
-            3, 26);
+            27, 19);
 
-        ctrl.apply_load_inertia(0.000_01);
+        ctrl.apply_load_inertia(0.1);
+        ctrl.apply_load_force(0.1);
 
         println!("Staring to move");
         ctrl.steps(STEPS, OMEGA, crate::ctrl::UpdateFunc::None);
