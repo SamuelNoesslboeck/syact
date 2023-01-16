@@ -1,3 +1,5 @@
+use crate::math::{self, actors};
+
 use super::*;
 
 pub struct StepperCurve 
@@ -38,3 +40,42 @@ impl StepperCurve
     }
 }
 
+pub struct CompPath<const N : usize>
+{
+    pub phis : Vec<[f32; N]>,
+    pub omegas : Vec<[f32; N]>,
+    pub times : Vec<[f32; N]>,
+    pub scalars : Vec<[f32; N]>
+}
+
+impl<const N : usize> CompPath<N> 
+{
+    pub fn new(phis : Vec<[f32; N]>) -> Self {
+        CompPath {
+            phis,
+            omegas: vec![],
+            times: vec![], 
+            scalars: vec![]
+        }
+    }
+
+    pub fn add_node(&mut self, omegas : [f32; N], times : [f32; N], scalars : [f32; N]) {
+        self.omegas.push(omegas);
+        self.times.push(times);
+        self.scalars.push(scalars);
+    }
+
+    pub fn generate(&mut self, comps : &[Box<dyn Component>; N], vel_0 : [f32; N], vel_max : f32) {
+        for i in 0 .. (self.phis.len() - 1) {
+            let relv = actors::relv_factors(self.phis[i], self.phis[i + 1]);
+            let compl = actors::compl_times(comps, self.phis[i], self.phis[i + 1], vel_0, vel_max);
+            let ( f_s, index_min, index_max ) = actors::f_s(&compl);
+
+            if f_s < 1.0 {
+                // Backwards correction
+            }
+
+
+        }
+    }
+}

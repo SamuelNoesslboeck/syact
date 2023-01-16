@@ -1,6 +1,6 @@
 use gpio::{GpioIn, sysfs::*};
 use gcode::{Mnemonic, GCode};
-use crate::{Component, StepperCtrl, StepperData, UpdateFunc, gcode::{Interpreter, GCodeFunc, Args}, ctrl::PIN_ERR};
+use crate::{Component, StepperCtrl, StepperData, UpdateFunc, gcode::{Interpreter, GCodeFunc, Args}, ctrl::PIN_ERR, math::actors};
 use std::{f32::consts::PI, collections::HashMap};
  
 // Test Async
@@ -139,6 +139,7 @@ use std::{f32::consts::PI, collections::HashMap};
             Box::new(StepperCtrl::new(StepperData::mot_17he15_1504s(U, SF), PIN_ERR, PIN_ERR))
         ]; 
 
-        dbg!(comps[0].compl_times(0.1, 0.2, 0.1));
+        dbg!(comps[0].compl_times(0.1, 0.2, 0.1, 0.5));
+        dbg!(actors::f_s(&dbg!(actors::compl_times(&comps, [0.0, 0.0], [0.1, 0.2], [0.2, 0.1], 0.5))));
     }
 // 

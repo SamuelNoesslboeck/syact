@@ -169,9 +169,9 @@ pub trait MathActor
     }
 
     /// Returns ([t_min, t_max], [vel exit case min, vel exit case max])
-    fn compl_times(&self, pos_0 : f32, pos : f32, vel_0 : f32) -> ([f32; 2], [f32; 2]) {
-        let delta_pos = pos - pos_0;
-        let accel = self.accel_dyn(vel_0, pos);
+    fn compl_times(&self, pos_0 : f32, delta_pos : f32, vel_0 : f32, vel_max : f32) -> [[f32; 2]; 2] {
+        let ( t_min, accel_max ) = self.compl_time_endpoints(delta_pos, vel_0, vel_max);
+        let accel = self.accel_dyn(vel_0, pos_0).clamp(0.0, accel_max);
 
         let p = 2.0 * vel_0 / accel; 
         let q = 2.0 * delta_pos / accel;
@@ -190,14 +190,67 @@ pub trait MathActor
         let vel_accel = vel_0 + t_1 * accel;
         let vel_deccel = vel_0 - t_2 * accel;
         
-        ([ 
+        [[ 
             if t_1 < t_2 { t_1 } else { t_2 },
             if t_1 > t_2 { t_1 } else { t_2 }
         ],
         [
             if t_1 < t_2 { vel_accel } else { vel_deccel },
             if t_1 > t_2 { vel_accel } else { vel_deccel }
-        ]) 
+        ]]
     }
 }
 
+pub mod actors 
+{
+    use std::f32::INFINITY;
+
+    use crate::Component;
+
+    pub fn delta_phis<const N : usize>(pos_0 : [f32; N], pos : [f32; N]) -> [f32; N] {
+        let mut delta_phis = [0.0; N];
+        for i in 0 .. N {
+            delta_phis[i] = pos[i] - pos_0[i];
+        }
+        delta_phis
+    }
+
+    pub fn relv_factors<const N : usize>(delta_phis : &[f32; N]) -> [f32; N] {
+        let mut delta_phi_max 
+    }
+
+    pub fn compl_times<const N : usize>(comps : &[Box<dyn Component>; N], pos_0 : [f32; N], pos : [f32; N], vel_0 : [f32; N], vel_max : [f32; N]) -> [[[f32; 2]; 2]; N] {
+        let mut res = [[[0.0; 2]; 2]; N]; 
+        for i in 0 .. N {
+            res[i] = comps[i].compl_times(pos_0[i], pos[i] - pos_0[i], vel_0[i], vel_max[i]);
+        }
+        res
+    }
+
+    /// Returns [ f_s, index max of t_min, index min of t_max ]
+    pub fn f_s<const N : usize>(res : &[[[f32; 2]; 2]; N]) -> (f32, usize, usize) {
+        // Highest of all minimum required times
+        let mut t_min_max = 0.0;
+        // Lowest of all maximum allowed times
+        let mut t_max_min = INFINITY;
+
+        let mut t_min_max_index : usize = 0;
+        let mut t_max_min_index : usize = 0;
+
+        for i in 0 .. N {
+            let [ t_min, t_max ] = res[i][0];
+
+            if t_min > t_min_max {
+                t_min_max = t_min;
+                t_min_max_index = i;
+            }
+            
+            if t_max < t_max_min {
+                t_max_min = t_max;
+                t_max_min_index = i;
+            }
+        }
+
+        ( t_max_min / t_min_max, t_min_max_index, t_max_min_index )
+    }
+}

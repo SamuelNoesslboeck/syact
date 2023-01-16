@@ -73,7 +73,7 @@ impl Component for GearBearing
     }
 
     fn drive_async(&mut self, dist : f32, vel : f32) {
-        self.ctrl.drive_async(self.ang_for_motor(dist), vel)
+        self.ctrl.drive_async(self.ang_for_motor(dist), self.vel_for_motor(vel))
     }
 
     fn drive_abs(&mut self, pos : f32, omega : f32) -> f32 {
@@ -81,7 +81,7 @@ impl Component for GearBearing
     }
     
     fn drive_abs_async(&mut self, dist : f32, vel : f32) {
-        self.ctrl.drive_abs_async(self.ang_for_motor(dist), vel)
+        self.ctrl.drive_abs_async(self.ang_for_motor(dist), self.vel_for_motor(vel))
     }
 
     fn measure(&mut self, dist : f32, vel : f32, set_dist : f32, accuracy : u64) -> bool {
