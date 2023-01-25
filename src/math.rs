@@ -157,73 +157,64 @@ pub fn acc_curve(data : &StepperData, t_min : f32, max_len : u64) -> Vec<f32> {
     }
 //
 
+// Helper
+fn pq_formula(p : f32, q : f32) -> (f32, f32) {
+    ( -p + (p.powi(2) + q).sqrt(), -p - (p.powi(2) + q).sqrt() )
+}
+
+fn correct_time(t : f32) -> f32 {
+    if t.is_nan() { f32::INFINITY } else { if t < 0.0 { f32::INFINITY } else { t } } 
+}
+
+fn correct_times(times : (f32, f32)) -> (f32, f32) {
+    ( correct_time(times.0), correct_time(times.1) )
+}
+// 
+
 /// Trait for advanced calculations of mechanical actors
 pub trait MathActor
 {
     fn accel_dyn(&self, vel : f32, pos : f32) -> f32;
 
-    /// Returns (time, acceleration)
-    fn compl_time_endpoints(&self, delta_pos : f32, vel_0 : f32, vel : f32) -> (f32, f32) {
-        if (vel_0 + vel).abs() <= f32::EPSILON {
-            return ( f32::INFINITY, f32::NAN );
-        }
+    fn accel_max_node(&self, pos_0 : f32, delta_pos : f32, vel_0 : f32, vel_max : f32) -> (f32, f32) {
+        // Get maximum accelerations
+        let ( _, accel_max_pos ) = self.node_from_vel(delta_pos, vel_0, vel_max.abs());
+        let ( _, accel_max_neg ) = self.node_from_vel(delta_pos, vel_0, -(vel_max.abs()));
 
-        let time = 2.0 * delta_pos / (vel_0 + vel);
+        let accel = self.accel_dyn(vel_0.abs(), pos_0.abs());
+
+        ( accel.min(accel_max_pos), (-accel).max(accel_max_neg) )
+    }
+
+    /// Returns (time, acceleration)
+    fn node_from_vel(&self, delta_pos : f32, vel_0 : f32, vel : f32) -> (f32, f32) {
+        let time = correct_time(2.0 * delta_pos / (vel_0 + vel));
         ( time, (vel - vel_0) / time )
     }
 
-    /// Returns ([t_min, t_max], [vel exit case min, vel exit case max])
+    /// Returns ([t_min, t_max], [vel exit case min, vel exit case max])  
+    /// 
     fn compl_times(&self, pos_0 : f32, delta_pos : f32, vel_0 : f32, vel_max : f32) -> [[f32; 2]; 2] {
-        let ( _, accel_max ) = self.compl_time_endpoints(delta_pos.abs(), vel_0, vel_max);
-        let mut accel = self.accel_dyn(vel_0.abs(), pos_0.abs());
+        let ( accel_pos, accel_neg ) = self.accel_max_node(pos_0, delta_pos, vel_0, vel_max); 
 
-        if accel > accel_max {
-            accel = accel_max
+        let ( t_pos_1, t_pos_2 ) = correct_times(pq_formula(2.0 * vel_0 / accel_pos, 2.0 * delta_pos / accel_pos));
+        let ( t_neg_1, t_neg_2 ) = correct_times(pq_formula(2.0 * vel_0 / accel_neg, 2.0 * delta_pos / accel_neg));
+
+        let time;
+        let vels;
+
+        let t_pos = t_pos_1.min(t_pos_2);
+        let t_neg = t_neg_1.min(t_neg_2);
+
+        if t_pos <= t_neg {
+            time = [ t_pos, t_neg ];
+            vels = [ vel_0 + t_pos * accel_pos, vel_0 + t_neg * accel_neg ];
+        } else {
+            time = [ t_neg, t_pos ];
+            vels = [ vel_0 + t_neg * accel_neg, vel_0 + t_pos * accel_pos ];
         }
         
-        let p = 2.0 * vel_0 / accel; 
-        let q = 2.0 * delta_pos / accel;
-
-        let mut t_1 = -p + (p.powi(2) + q).sqrt();
-        let t_1_sec = -p - (p.powi(2) + q).sqrt();
-        let mut t_2 = p + (p.powi(2) - q).sqrt();
-        let t_2_sec = p - (p.powi(2) - q).sqrt();
-
-        if t_1 < 0.0 {
-            t_1 = t_1_sec;
-
-            if t_1_sec < 0.0 {
-                t_1 = f32::INFINITY;
-            }
-        }
-
-        if t_2 < 0.0 {
-            t_2 = t_2_sec;
-
-            if t_2_sec < 0.0 {
-                t_2 = f32::INFINITY;
-            }
-        }
-
-        if t_1.is_nan() {
-            t_1 = std::f32::INFINITY;
-        }
-
-        if t_2.is_nan() {
-            t_2 = std::f32::INFINITY;
-        }
-
-        let vel_accel = vel_0 + t_1 * accel;
-        let vel_deccel = vel_0 - t_2 * accel;
-        
-        [[ 
-            if t_1 < t_2 { t_1 } else { t_2 },
-            if t_1 > t_2 { t_1 } else { t_2 }
-        ],
-        [
-            if t_1 < t_2 { vel_accel } else { vel_deccel },
-            if t_1 > t_2 { vel_accel } else { vel_deccel }
-        ]]
+        [ time, vels ]
     }
 }
 
@@ -245,7 +236,7 @@ pub mod actors
     pub fn compl_times_endpoints<const N : usize>(comps : &[Box<dyn Component>; N], delta_pos : [f32; N], vel_0 : [f32; N], vel : [f32; N]) -> [(f32, f32); N] {
         let mut res = [(0.0, 0.0); N];
         for i in 0 .. N {
-            res[i] = comps[i].compl_time_endpoints(delta_pos[i], vel_0[i], vel[i]);
+            res[i] = comps[i].node_from_vel(delta_pos[i], vel_0[i], vel[i]);
         }
         res
     }

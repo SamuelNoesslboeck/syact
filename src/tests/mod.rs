@@ -129,7 +129,7 @@ use std::{f32::consts::PI, collections::HashMap};
                 return 0.0;
             }
 
-            (y / x).atan()
+            (y / x).atan() + if x < 0.0 { PI } else { 0.0 }
         }
 
         fn law_of_cosines(a : f32, b : f32, c : f32) -> f32 {
@@ -213,10 +213,13 @@ use std::{f32::consts::PI, collections::HashMap};
         const U : f32 = 12.0;
         const SF : f32 = 1.5;
 
-        let comps : [Box<dyn Component>; 2] = [ 
+        let mut comps : [Box<dyn Component>; 2] = [ 
             Box::new(StepperCtrl::new(StepperData::mot_17he15_1504s(U, SF), PIN_ERR, PIN_ERR)),
             Box::new(StepperCtrl::new(StepperData::mot_17he15_1504s(U, SF), PIN_ERR, PIN_ERR))
         ]; 
+
+        // dbg!(comps[0].accel_max_node(0.0, -0.1, 0.2, 10.0));
+        // dbg!(comps[0].compl_times(0.0, -0.1, 0.2, 10.0));
 
         comps.apply_load_inertia([0.001; 2]);
 
@@ -226,6 +229,6 @@ use std::{f32::consts::PI, collections::HashMap};
 
         path.generate(&comps, [0.0, 0.0], [0.0, 0.0], 50.0);
 
-        dbg!(path.omegas);
+        path.debug_path(0);
     }
 // 
