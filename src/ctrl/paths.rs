@@ -46,7 +46,7 @@ pub struct CompPath<const N : usize>
     pub relev : Vec<[f32; N]>,
     pub omegas : Vec<[f32; N]>,
 
-    pub scalars : Vec<f32>,
+    // pub scalars : Vec<f32>,
     pub times : Vec<f32>
 }
 
@@ -58,36 +58,89 @@ impl<const N : usize> CompPath<N>
             relev,
             omegas: vec![],
             times: vec![], 
-            scalars: vec![]
+            // scalars: vec![]
+        }
+    }
+
+    pub fn fill_empty(&mut self, length : usize) {
+        for _ in 0 .. length {
+            self.omegas.push([f32::INFINITY; N]);
+            self.times.push(0.0);
         }
     }
 
     pub fn add_node(&mut self, omegas : [f32; N], scalar : f32, time : f32) {
         self.omegas.push(omegas);
         self.times.push(time);
-        self.scalars.push(scalar);
+        // self.scalars.push(scalar);
     }
 
-    pub fn generate(&mut self, comps : &[Box<dyn Component>; N], vel_0 : [f32; N], vel_max : f32) {
-        for i in 0 .. (self.phis.len() - 1) {
-            let compl = actors::compl_times(comps, self.phis[i], self.phis[i + 1], vel_0, self.relev[i], vel_max);
-            let ( f_s, index_min, _ ) = actors::f_s(&compl);
+    pub fn edit_node(&mut self, index : usize, omegas : [f32; N], scalar : f32, time : f32) {
+        self.omegas[index] = omegas; 
+        // self.scalars[index] = scalar;
+        self.times[index] = time;
+    }
 
-            if f_s < 1.0 {
-                // Backwards correction
+    pub fn generate(&mut self, comps : &[Box<dyn Component>; N], vel_0 : [f32; N], vel_end : [f32; N], vel_max : f32) {
+        let path_len = self.phis.len(); 
+
+        self.fill_empty(path_len);
+        self.omegas[0] = vel_0;
+
+        for i in 0 .. (path_len - 1) {
+            // Modfify relevance 
+            for n in 0 .. N {
+                if self.phis[i][n] < 0.0 {
+                    self.relev[i][n] *= -1.0;
+                }
             }
+
+            let compl = actors::compl_times(comps, self.phis[i], self.phis[i + 1], 
+            self.omegas[i], self.relev[i], vel_max
+            );
+            let ( _, index_min, _ ) = actors::f_s(&compl);
 
             let dt = compl[index_min][0][0];
             let omega_fixed = compl[index_min][1][0];
 
             let mut omegas = [0.0; N];
 
+            // For each component
             for n in 0 .. N {
-                let factor = self.relev[n][i] / self.relev[n][index_min];
+                let factor = self.relev[i][n] / self.relev[i][index_min];
                 omegas[n] = omega_fixed * factor;
             }
 
-            self.add_node(omegas, f_s, dt);
+            if dt > self.times[i] {
+                self.omegas[i + 1] = omegas;
+                self.times[i] = dt;
+            }
+        }
+
+        self.omegas[path_len - 1] = vel_end;
+
+        for i in 1 .. (path_len - 1) {
+
+            let compl = actors::compl_times(comps, self.phis[path_len - i], self.phis[path_len - i - 1], 
+                if i == 1 { vel_end } else { self.omegas[path_len - i + 1] }, self.relev[path_len - i], vel_max
+            );
+            let ( _, index_min, _ ) = actors::f_s(&compl);
+
+            let dt = compl[index_min][0][0];
+            let omega_fixed = compl[index_min][1][0];
+
+            let mut omegas = [0.0; N];
+
+            // For each component
+            for n in 0 .. N {
+                let factor = self.relev[path_len - i][n] / self.relev[path_len - i][index_min];
+                omegas[n] = omega_fixed * factor;
+            }
+
+            if dt > self.times[path_len - i] {
+                self.omegas[path_len - i - 1] = omegas;
+                self.times[path_len - i] = dt;
+            }
         }
     }
 }

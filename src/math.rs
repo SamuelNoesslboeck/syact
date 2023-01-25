@@ -164,20 +164,46 @@ pub trait MathActor
 
     /// Returns (time, acceleration)
     fn compl_time_endpoints(&self, delta_pos : f32, vel_0 : f32, vel : f32) -> (f32, f32) {
+        if (vel_0 + vel).abs() <= f32::EPSILON {
+            return ( f32::INFINITY, f32::NAN );
+        }
+
         let time = 2.0 * delta_pos / (vel_0 + vel);
         ( time, (vel - vel_0) / time )
     }
 
     /// Returns ([t_min, t_max], [vel exit case min, vel exit case max])
     fn compl_times(&self, pos_0 : f32, delta_pos : f32, vel_0 : f32, vel_max : f32) -> [[f32; 2]; 2] {
-        let ( _, accel_max ) = self.compl_time_endpoints(delta_pos, vel_0, vel_max);
-        let accel = self.accel_dyn(vel_0, pos_0).clamp(0.0, accel_max);
+        let ( _, accel_max ) = self.compl_time_endpoints(delta_pos.abs(), vel_0, vel_max);
+        let mut accel = self.accel_dyn(vel_0.abs(), pos_0.abs());
 
+        if accel > accel_max {
+            accel = accel_max
+        }
+        
         let p = 2.0 * vel_0 / accel; 
         let q = 2.0 * delta_pos / accel;
 
         let mut t_1 = -p + (p.powi(2) + q).sqrt();
+        let t_1_sec = -p - (p.powi(2) + q).sqrt();
         let mut t_2 = p + (p.powi(2) - q).sqrt();
+        let t_2_sec = p - (p.powi(2) - q).sqrt();
+
+        if t_1 < 0.0 {
+            t_1 = t_1_sec;
+
+            if t_1_sec < 0.0 {
+                t_1 = f32::INFINITY;
+            }
+        }
+
+        if t_2 < 0.0 {
+            t_2 = t_2_sec;
+
+            if t_2_sec < 0.0 {
+                t_2 = f32::INFINITY;
+            }
+        }
 
         if t_1.is_nan() {
             t_1 = std::f32::INFINITY;
@@ -215,6 +241,7 @@ pub mod actors
         delta_phis
     }
 
+    /// Calculate the completion times out of the two velocity endpoints
     pub fn compl_times_endpoints<const N : usize>(comps : &[Box<dyn Component>; N], delta_pos : [f32; N], vel_0 : [f32; N], vel : [f32; N]) -> [(f32, f32); N] {
         let mut res = [(0.0, 0.0); N];
         for i in 0 .. N {
