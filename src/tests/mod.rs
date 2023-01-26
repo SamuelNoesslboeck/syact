@@ -218,17 +218,17 @@ use std::{f32::consts::PI, collections::HashMap};
             Box::new(StepperCtrl::new(StepperData::mot_17he15_1504s(U, SF), PIN_ERR, PIN_ERR))
         ]; 
 
-        comps.apply_load_inertia([1.0; 2]);
+        comps.apply_load_inertia([0.5; 2]);
 
         // dbg!(comps[0].accel_max_node(0.0, 0.0, 0.5, 10.0));
         // dbg!(comps[0].compl_times(0.0, 0.0, 0.5, 10.0));
 
-        let mut path = get_lin_move(Vec2::new(100.0, 100.0), Vec2::new(-100.0, 100.0), 5.0, 200);
+        let mut path = get_lin_move(Vec2::new(100.0, 100.0), Vec2::new(-100.0, 100.0), 100.0, 200);
 
-        // dbg!(&path.relev);
-
+        
         path.generate(&comps, [0.0, 0.0], [0.0, 0.0]);
 
-        path.debug_path(0);
+        // path.debug_path(0);
+        dbg!(path.omegas);
     }
 // 

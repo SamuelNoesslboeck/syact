@@ -189,7 +189,7 @@ pub trait MathActor
     /// Returns (time, acceleration)
     fn node_from_vel(&self, delta_pos : f32, vel_0 : f32, vel : f32) -> (f32, f32) {
         let time = correct_time(2.0 * delta_pos / (vel_0 + vel));
-        println!("{} {} | {} {} ", time, (vel - vel_0) / time, vel_0, vel );
+        // println!("{} {} | {} {} ", time, (vel - vel_0) / time, vel_0, vel );
         ( time, (vel - vel_0) / time )
     }
 
@@ -204,8 +204,16 @@ pub trait MathActor
         let vels;
         let accel;
 
-        let t_pos = t_pos_1.min(t_pos_2);
-        let t_neg = t_neg_1.min(t_neg_2);
+        let mut t_pos = t_pos_1.min(t_pos_2);
+        let mut t_neg = t_neg_1.min(t_neg_2);
+
+        if accel_pos == 0.0 {
+            t_pos = delta_pos / vel_0;
+        }
+
+        if accel_neg == 0.0 {
+            t_neg = delta_pos / vel_0;
+        }
 
         if t_pos <= t_neg {
             time = [ t_pos, t_neg ];

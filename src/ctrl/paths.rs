@@ -106,7 +106,7 @@ impl<const N : usize> CompPath<N>
             for n in 0 .. N {
                 let factor = self.relev[i][n] / self.relev[i][index_min];
                 omegas[n] = omega_fixed * factor;
-                accels[n] = compl[n][2][0]
+                accels[n] = compl[n][2][0];
             }
 
             if dt > self.times[i] {
@@ -116,39 +116,42 @@ impl<const N : usize> CompPath<N>
             }
         }
 
-        // self.omegas[path_len - 1] = vel_end;
+        self.omegas[path_len - 1] = vel_end;
 
-        // for i in 1 .. (path_len - 1) {
-        //     let index = path_len - 1;
+        for i in 1 .. (path_len - 1) {
+            let index = path_len - i;
 
-        //     let compl = actors::compl_times(comps, self.phis[index], self.phis[index - 1], 
-        //         self.omegas[index], self.relev[index], vel_max
-        //     );
-        //     let ( _, index_min, _ ) = actors::f_s(&compl);
+            let compl = actors::compl_times(comps, self.phis[index - 1], self.phis[index], 
+                self.omegas[index], self.relev[index]
+            );
+            let ( _, index_min, _ ) = actors::f_s(&compl);
 
-        //     let dt = compl[index_min][0][0];
-        //     let omega_fixed = compl[index_min][1][0];
+            let dt = compl[index_min][0][0];
+            let omega_fixed = compl[index_min][1][0];
 
-        //     let mut omegas = [0.0; N];
+            let mut omegas = [0.0; N];
+            let mut accels = [0.0; N];
 
-        //     // For each component
-        //     for n in 0 .. N {
-        //         let factor = self.relev[index][n] / self.relev[index][index_min];
-        //         omegas[n] = omega_fixed * factor;
-        //     }
+            // For each component
+            for n in 0 .. N {
+                let factor = self.relev[index][n] / self.relev[index][index_min];
+                omegas[n] = omega_fixed * factor;
+                accels[n] = compl[n][2][0];
+            }
 
-        //     if dt > self.times[index] {
-        //         self.omegas[index - 1] = omegas;
-        //         self.times[index] = dt;
-        //     }
-        // }
+            if dt > self.times[index] {
+                self.omegas[index] = omegas;
+                self.times[index - 1] = dt;
+                self.accels[index - 1] = accels;
+            }
+        }
     }
 
     pub fn debug_path(&self, index : usize) {
-        println!("d-phi\t|omega\t|relev\t");
+        println!("index\t|d-phi\t|omega\t|relev\t|times\t|accel");
         for i in 0 .. self.phis.len() {
-            println!("{}\t|{}\t|{}\t|{}\t|{}\t", 
-                self.phis.get(i + 1).unwrap_or(&self.phis[i])[index] - self.phis[i][index], self.omegas[i][index], self.relev[i][index], self.times[i], self.accels[i][index]);
+            println!("{}\t|{}\t|{}\t|{}\t|{}\t|{}\t", 
+                i, self.phis.get(i + 1).unwrap_or(&self.phis[i])[index] - self.phis[i][index], self.omegas[i][index], self.relev[i][index], self.times[i], self.accels[i][index]);
         }
     }
 }

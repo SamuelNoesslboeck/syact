@@ -16,14 +16,20 @@ assert type(raw_data) == type([])
 # plt.ylabel('Time')
 
 plt.plot(
-    [ i*5 for i in range(0, len(raw_data)) ],
-    [ raw_data[i] for i in range(0, len(raw_data)) ],
-    color="red"
+    [ i for i in range(0, len(raw_data)) ],
+    [ raw_data[i][0] for i in range(0, len(raw_data)) ],
+    color="red", label="Comp 0"
 )
 
-plt.title('Torque curve')
-plt.xlabel('Omega [1/s]')
-plt.ylabel('Torque [Nm]')
+plt.plot(
+    [ i for i in range(0, len(raw_data)) ],
+    [ raw_data[i][1] for i in range(0, len(raw_data)) ],
+    color="blue", label="Comp 1"
+)
+
+plt.title('Speed curves')
+plt.xlabel('Step [1]')
+plt.ylabel('Omega [1/s]')
 
 plt.grid(True)
 plt.show()
