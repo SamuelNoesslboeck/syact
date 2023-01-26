@@ -117,32 +117,32 @@ impl<const N : usize> CompPath<N>
             }
         }
 
-        self.omegas[path_len - 1] = vel_end;
+        // self.omegas[path_len - 1] = vel_end;
 
-        for i in 1 .. (path_len - 1) {
-            let index = path_len - 1;
+        // for i in 1 .. (path_len - 1) {
+        //     let index = path_len - 1;
 
-            let compl = actors::compl_times(comps, self.phis[index], self.phis[index - 1], 
-                self.omegas[index], self.relev[index], vel_max
-            );
-            let ( _, index_min, _ ) = actors::f_s(&compl);
+        //     let compl = actors::compl_times(comps, self.phis[index], self.phis[index - 1], 
+        //         self.omegas[index], self.relev[index], vel_max
+        //     );
+        //     let ( _, index_min, _ ) = actors::f_s(&compl);
 
-            let dt = compl[index_min][0][0];
-            let omega_fixed = compl[index_min][1][0];
+        //     let dt = compl[index_min][0][0];
+        //     let omega_fixed = compl[index_min][1][0];
 
-            let mut omegas = [0.0; N];
+        //     let mut omegas = [0.0; N];
 
-            // For each component
-            for n in 0 .. N {
-                let factor = self.relev[index][n] / self.relev[index][index_min];
-                omegas[n] = omega_fixed * factor;
-            }
+        //     // For each component
+        //     for n in 0 .. N {
+        //         let factor = self.relev[index][n] / self.relev[index][index_min];
+        //         omegas[n] = omega_fixed * factor;
+        //     }
 
-            if dt > self.times[index] {
-                self.omegas[index - 1] = omegas;
-                self.times[index] = dt;
-            }
-        }
+        //     if dt > self.times[index] {
+        //         self.omegas[index - 1] = omegas;
+        //         self.times[index] = dt;
+        //     }
+        // }
     }
 
     pub fn debug_path(&self, index : usize) {

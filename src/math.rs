@@ -232,15 +232,6 @@ pub mod actors
         delta_phis
     }
 
-    /// Calculate the completion times out of the two velocity endpoints
-    pub fn compl_times_endpoints<const N : usize>(comps : &[Box<dyn Component>; N], delta_pos : [f32; N], vel_0 : [f32; N], vel : [f32; N]) -> [(f32, f32); N] {
-        let mut res = [(0.0, 0.0); N];
-        for i in 0 .. N {
-            res[i] = comps[i].node_from_vel(delta_pos[i], vel_0[i], vel[i]);
-        }
-        res
-    }
-
     /// Returns an array of [ [ t_min, t_max ], [vel exit case min]]
     pub fn compl_times<const N : usize>(comps : &[Box<dyn Component>; N], pos_0 : [f32; N], pos : [f32; N], vel_0 : [f32; N], relev : [f32; N], vel_max : f32) -> [[[f32; 2]; 2]; N] {
         let mut res = [[[0.0; 2]; 2]; N]; 
@@ -263,12 +254,12 @@ pub mod actors
         for i in 0 .. N {
             let [ t_min, t_max ] = res[i][0];
 
-            if t_min > t_min_max {
+            if (t_min > t_min_max) & t_min.is_finite() {
                 t_min_max = t_min;
                 t_min_max_index = i;
             }
             
-            if t_max < t_max_min {
+            if (t_max < t_max_min) & t_max.is_finite() {
                 t_max_min = t_max;
                 t_max_min_index = i;
             }
