@@ -176,12 +176,12 @@ use std::{f32::consts::PI, collections::HashMap};
     }
 
     fn relevance(actors : &[Vec2; 2], vel : Vec2) -> Vec2 {
-        let mut relev = (Mat2::from_cols(actors[0], actors[1]).inverse() * vel).abs();
-        if relev.x < f32::EPSILON {
+        let mut relev = (Mat2::from_cols(actors[0], actors[1]).inverse() * vel);
+        if relev.x.abs() < f32::EPSILON {
             relev.x = 0.0;
         }
 
-        if relev.y < f32::EPSILON {
+        if relev.y.abs() < f32::EPSILON {
             relev.y = 0.0;
         }
 
@@ -218,16 +218,16 @@ use std::{f32::consts::PI, collections::HashMap};
             Box::new(StepperCtrl::new(StepperData::mot_17he15_1504s(U, SF), PIN_ERR, PIN_ERR))
         ]; 
 
-        // dbg!(comps[0].accel_max_node(0.0, -0.1, 0.2, 10.0));
-        // dbg!(comps[0].compl_times(0.0, -0.1, 0.2, 10.0));
+        comps.apply_load_inertia([1.0; 2]);
 
-        comps.apply_load_inertia([0.001; 2]);
+        // dbg!(comps[0].accel_max_node(0.0, 0.0, 0.5, 10.0));
+        // dbg!(comps[0].compl_times(0.0, 0.0, 0.5, 10.0));
 
-        let mut path = get_lin_move(Vec2::new(100.0, 100.0), Vec2::new(-100.0, 100.0), 50.0, 10);
+        let mut path = get_lin_move(Vec2::new(100.0, 100.0), Vec2::new(-100.0, 100.0), 5.0, 200);
 
         // dbg!(&path.relev);
 
-        path.generate(&comps, [0.0, 0.0], [0.0, 0.0], 50.0);
+        path.generate(&comps, [0.0, 0.0], [0.0, 0.0]);
 
         path.debug_path(0);
     }

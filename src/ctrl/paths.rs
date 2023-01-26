@@ -47,7 +47,8 @@ pub struct CompPath<const N : usize>
     pub omegas : Vec<[f32; N]>,
 
     // pub scalars : Vec<f32>,
-    pub times : Vec<f32>
+    pub times : Vec<f32>,
+    pub accels : Vec<[f32; N]>
 }
 
 impl<const N : usize> CompPath<N> 
@@ -57,7 +58,8 @@ impl<const N : usize> CompPath<N>
             phis,
             relev,
             omegas: vec![],
-            times: vec![], 
+            times: vec![],
+            accels : vec![]
             // scalars: vec![]
         }
     }
@@ -66,6 +68,7 @@ impl<const N : usize> CompPath<N>
         for _ in 0 .. length {
             self.omegas.push([f32::INFINITY; N]);
             self.times.push(0.0);
+            self.accels.push([f32::INFINITY; N]);
         }
     }
 
@@ -81,22 +84,15 @@ impl<const N : usize> CompPath<N>
         self.times[index] = time;
     }
 
-    pub fn generate(&mut self, comps : &[Box<dyn Component>; N], vel_0 : [f32; N], vel_end : [f32; N], vel_max : f32) {
+    pub fn generate(&mut self, comps : &[Box<dyn Component>; N], vel_0 : [f32; N], vel_end : [f32; N]) {
         let path_len = self.phis.len(); 
 
         self.fill_empty(path_len);
         self.omegas[0] = vel_0;
 
         for i in 0 .. (path_len - 1) {
-            // Modfify relevance 
-            for n in 0 .. N {
-                if self.phis[i][n] < 0.0 {
-                    self.relev[i][n] *= -1.0;
-                }
-            }
-
             let compl = actors::compl_times(comps, self.phis[i], self.phis[i + 1], 
-            self.omegas[i], self.relev[i], vel_max
+            self.omegas[i], self.relev[i]
             );
             let ( _, index_min, _ ) = actors::f_s(&compl);
 
@@ -104,16 +100,19 @@ impl<const N : usize> CompPath<N>
             let omega_fixed = compl[index_min][1][0];
 
             let mut omegas = [0.0; N];
+            let mut accels = [0.0; N];
 
             // For each component
             for n in 0 .. N {
                 let factor = self.relev[i][n] / self.relev[i][index_min];
                 omegas[n] = omega_fixed * factor;
+                accels[n] = compl[n][2][0]
             }
 
             if dt > self.times[i] {
                 self.omegas[i + 1] = omegas;
                 self.times[i] = dt;
+                self.accels[i] = accels;
             }
         }
 
@@ -148,7 +147,8 @@ impl<const N : usize> CompPath<N>
     pub fn debug_path(&self, index : usize) {
         println!("d-phi\t|omega\t|relev\t");
         for i in 0 .. self.phis.len() {
-            println!("{}\t|{}\t|{}", self.phis.get(i + 1).unwrap_or(&self.phis[i])[index] - self.phis[i][index], self.omegas[i][index], self.relev[i][index]);
+            println!("{}\t|{}\t|{}\t|{}\t|{}\t", 
+                self.phis.get(i + 1).unwrap_or(&self.phis[i])[index] - self.phis[i][index], self.omegas[i][index], self.relev[i][index], self.times[i], self.accels[i][index]);
         }
     }
 }

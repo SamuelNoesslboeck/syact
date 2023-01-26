@@ -150,7 +150,7 @@ pub fn acc_curve(data : &StepperData, t_min : f32, max_len : u64) -> Vec<f32> {
 
         for (f_a, a_f) in actions {
             torque += a_f.cross(*f_a);
-            f_j += *f_a;
+            f_j += *f_a; 
         }
 
         (torque, f_j)
@@ -163,7 +163,7 @@ fn pq_formula(p : f32, q : f32) -> (f32, f32) {
 }
 
 fn correct_time(t : f32) -> f32 {
-    if t.is_nan() { f32::INFINITY } else { if t < 0.0 { f32::INFINITY } else { t } } 
+    if t.is_nan() { f32::INFINITY } else { if t <= 0.0 { f32::INFINITY } else { t } } 
 }
 
 fn correct_times(times : (f32, f32)) -> (f32, f32) {
@@ -181,20 +181,20 @@ pub trait MathActor
         let ( _, accel_max_pos ) = self.node_from_vel(delta_pos, vel_0, vel_max.abs());
         let ( _, accel_max_neg ) = self.node_from_vel(delta_pos, vel_0, -(vel_max.abs()));
 
-        let accel = self.accel_dyn(vel_0.abs(), pos_0.abs());
+        let accel = self.accel_dyn(((vel_0 + vel_max) / 2.0).abs(), pos_0);
 
-        ( accel.min(accel_max_pos), (-accel).max(accel_max_neg) )
+        ( accel.min(accel_max_pos), (-accel).min(accel_max_neg) )
     }
 
     /// Returns (time, acceleration)
     fn node_from_vel(&self, delta_pos : f32, vel_0 : f32, vel : f32) -> (f32, f32) {
         let time = correct_time(2.0 * delta_pos / (vel_0 + vel));
+        println!("{} {} | {} {} ", time, (vel - vel_0) / time, vel_0, vel );
         ( time, (vel - vel_0) / time )
     }
 
     /// Returns ([t_min, t_max], [vel exit case min, vel exit case max])  
-    /// 
-    fn compl_times(&self, pos_0 : f32, delta_pos : f32, vel_0 : f32, vel_max : f32) -> [[f32; 2]; 2] {
+    fn compl_times(&self, pos_0 : f32, delta_pos : f32, vel_0 : f32, vel_max : f32) -> [[f32; 2]; 3] {
         let ( accel_pos, accel_neg ) = self.accel_max_node(pos_0, delta_pos, vel_0, vel_max); 
 
         let ( t_pos_1, t_pos_2 ) = correct_times(pq_formula(2.0 * vel_0 / accel_pos, 2.0 * delta_pos / accel_pos));
@@ -202,6 +202,7 @@ pub trait MathActor
 
         let time;
         let vels;
+        let accel;
 
         let t_pos = t_pos_1.min(t_pos_2);
         let t_neg = t_neg_1.min(t_neg_2);
@@ -209,12 +210,14 @@ pub trait MathActor
         if t_pos <= t_neg {
             time = [ t_pos, t_neg ];
             vels = [ vel_0 + t_pos * accel_pos, vel_0 + t_neg * accel_neg ];
+            accel = [ accel_pos, accel_neg ];
         } else {
             time = [ t_neg, t_pos ];
             vels = [ vel_0 + t_neg * accel_neg, vel_0 + t_pos * accel_pos ];
+            accel = [ accel_neg, accel_pos ];
         }
         
-        [ time, vels ]
+        [ time, vels, accel ]
     }
 }
 
@@ -233,16 +236,16 @@ pub mod actors
     }
 
     /// Returns an array of [ [ t_min, t_max ], [vel exit case min]]
-    pub fn compl_times<const N : usize>(comps : &[Box<dyn Component>; N], pos_0 : [f32; N], pos : [f32; N], vel_0 : [f32; N], relev : [f32; N], vel_max : f32) -> [[[f32; 2]; 2]; N] {
-        let mut res = [[[0.0; 2]; 2]; N]; 
+    pub fn compl_times<const N : usize>(comps : &[Box<dyn Component>; N], pos_0 : [f32; N], pos : [f32; N], vel_0 : [f32; N], vel_max : [f32; N]) -> [[[f32; 2]; 3]; N] {
+        let mut res = [[[0.0; 2]; 3]; N]; 
         for i in 0 .. N {
-            res[i] = comps[i].compl_times(pos_0[i], pos[i] - pos_0[i], vel_0[i], vel_max * relev[i]);
+            res[i] = comps[i].compl_times(pos_0[i], pos[i] - pos_0[i], vel_0[i], vel_max[i]);
         }
         res
     }
 
     /// Returns [ f_s, index max of t_min, index min of t_max ]
-    pub fn f_s<const N : usize>(res : &[[[f32; 2]; 2]; N]) -> (f32, usize, usize) {
+    pub fn f_s<const N : usize>(res : &[[[f32; 2]; 3]; N]) -> (f32, usize, usize) {
         // Highest of all minimum required times
         let mut t_min_max = 0.0;
         // Lowest of all maximum allowed times
