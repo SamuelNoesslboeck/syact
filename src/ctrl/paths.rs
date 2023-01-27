@@ -118,11 +118,11 @@ impl<const N : usize> CompPath<N>
 
         self.omegas[path_len - 1] = vel_end;
 
-        for i in 1 .. (path_len - 1) {
+        for i in 2 .. (path_len - 1) {
             let index = path_len - i;
 
-            let compl = actors::compl_times(comps, self.phis[index - 1], self.phis[index], 
-                self.omegas[index], self.relev[index]
+            let compl = actors::compl_times(comps, self.phis[index], self.phis[index + 1], 
+                self.omegas[index + 1], self.relev[index]
             );
             let ( _, index_min, _ ) = actors::f_s(&compl);
 
@@ -141,8 +141,8 @@ impl<const N : usize> CompPath<N>
 
             if dt > self.times[index] {
                 self.omegas[index] = omegas;
-                self.times[index - 1] = dt;
-                self.accels[index - 1] = accels;
+                self.times[index] = dt;
+                self.accels[index] = accels;
             }
         }
     }
