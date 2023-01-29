@@ -114,6 +114,10 @@ use std::{f32::consts::PI, collections::HashMap};
 // 
 
 // Test G1
+mod test_g1 
+{
+    use super::*;
+
     const L1 : f32 = 100.0;
     const L2 : f32 = 100.0;
 
@@ -165,10 +169,10 @@ use std::{f32::consts::PI, collections::HashMap};
         ]
     }
 
-    fn points_for_angles(angles : [f32; 2]) -> [Vec2; 2] {
-        let [ a_1, a_2 ] = vectors_for_angles(angles); 
-        [ a_1, a_1 + a_2 ]
-    }
+    // fn points_for_angles(angles : [f32; 2]) -> [Vec2; 2] {
+    //     let [ a_1, a_2 ] = vectors_for_angles(angles); 
+    //     [ a_1, a_1 + a_2 ]
+    // }
 
     fn actor_vecs(angles : [f32; 2]) -> [Vec2; 2] {
         let [ a_1, a_2 ] = vectors_for_angles(angles); 
@@ -232,4 +236,110 @@ use std::{f32::consts::PI, collections::HashMap};
         // dbg!(path.phis);
         dbg!(path.omegas);
     }
+}
+// 
+
+// Test Simple G1
+mod test_simple_g1 
+{
+    use super::*;
+
+    use super::*;
+
+    const L1 : f32 = 100.0;
+
+    // Helper
+        fn full_atan(x : f32, y : f32) -> f32 {
+            if x == 0.0 {
+                if y > 0.0 {
+                    return PI / 2.0;
+                } else if y < 0.0 {
+                    return -(PI / 2.0); 
+                }
+
+                return 0.0;
+            }
+
+            (y / x).atan() + if x < 0.0 { PI } else { 0.0 }
+        }
+
+        fn law_of_cosines(a : f32, b : f32, c : f32) -> f32 {
+            ((a.powi(2) + b.powi(2) - c.powi(2)) / 2.0 / a / b).acos()
+        }
+    // 
+
+    fn get_pos(comps : &[Box<dyn Component>; 2]) -> Vec2 {
+        let [ g_1, g_2 ] = comps.get_dist();
+        Vec2::new(
+            L1 * g_1.cos(),
+            L1 * g_1.sin()
+        )
+    }
+
+    fn get_angles(pos : Vec2) -> [f32; 1] {
+        let angle = full_atan(pos[0], pos[1]);
+
+        [ angle ]
+    }
+
+    // fn vectors_for_angles(angles : [f32; 1]) -> [Vec2; 1] {
+    //     [
+    //         Mat2::from_angle(angles[0]) * Vec2::new(L1, 0.0)
+    //     ]
+    // }
+
+    // fn points_for_angles(angles : [f32; 2]) -> [Vec2; 2] {
+    //     let [ a_1, a_2 ] = vectors_for_angles(angles); 
+    //     [ a_1, a_1 + a_2 ]
+    // }
+
+    // fn actor_vecs(angles : [f32; 1]) -> [Vec2; 1] {
+    //     let [ a_1 ] = vectors_for_angles(angles); 
+    //     [ Mat2::from_angle(PI / 2.0) * a_1 ]
+    // }
+
+    fn relevance(pos : [f32; 2], vel : [f32; 2]) -> [f32; 1] {
+        let x = vel[1] / pos[0];
+        let y = vel[0] / pos[1];
+
+        [ if x.is_finite() { x } else { 0.0 } - if y.is_finite() { -y } else { -0.0 } ]
+    }   
+
+    fn get_lin_move(pos_0 : Vec2, pos : Vec2, vel_max : f32, n_seg : usize) -> CompPath<1> {
+        let delta_pos = pos - pos_0;
+        let delta_seg = delta_pos / (n_seg as f32);
+
+        let mut phis = vec![];
+        let mut relev = vec![];
+
+        for i in 0 .. (n_seg + 1) {
+            let current_pos = pos_0 + delta_seg * (i as f32);
+
+            let angles = get_angles(current_pos);
+
+            relev.push(relevance(current_pos.to_array(), (delta_pos.normalize() * vel_max).to_array()));
+            phis.push(angles);
+        }
+
+        CompPath::new(phis, relev)
+    }
+
+    #[test]
+    fn test_simple_g1() {
+        const U : f32 = 12.0;
+        const SF : f32 = 1.5;
+
+        let mut comps : [Box<dyn Component>; 1] = [ 
+            Box::new(StepperCtrl::new(StepperData::mot_17he15_1504s(U, SF), PIN_ERR, PIN_ERR))
+        ]; 
+
+        comps.apply_load_inertia([ 0.5 ]);
+
+        let mut path = get_lin_move(Vec2::new(50.0, -50.0), Vec2::new(50.0, 50.0), 50.0, 100);
+
+        path.generate(&comps, [ 0.0 ], [ 0.0 ]);
+
+        dbg!(path.omegas);
+    }
+}
 // 

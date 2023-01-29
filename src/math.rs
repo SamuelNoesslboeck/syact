@@ -159,7 +159,7 @@ pub fn acc_curve(data : &StepperData, t_min : f32, max_len : u64) -> Vec<f32> {
 
 // Helper
 fn pq_formula(p : f32, q : f32) -> (f32, f32) {
-    ( -p + (p.powi(2) + q).sqrt(), -p - (p.powi(2) + q).sqrt() )
+    ( -p/2.0 + ((p/2.0).powi(2) - q).sqrt(), -p/2.0 - ((p/2.0).powi(2) - q).sqrt() )
 }
 
 fn correct_time(t : f32) -> f32 {
@@ -193,7 +193,7 @@ pub trait MathActor
         ( time, (vel - vel_0) / time )
     }
 
-    /// Returns ([t_min, t_max], [vel exit case min, vel exit case max])  
+    /// Returns ([t_min, t_max], [vel exit case min, vel exit case max], [accel exit case min, accel exit case max])  
     fn compl_times(&self, pos_0 : f32, delta_pos : f32, vel_0 : f32, vel_max : f32) -> [[f32; 2]; 3] {
         let ( accel_pos, accel_neg ) = self.accel_max_node(pos_0, delta_pos, vel_0, vel_max); 
 
@@ -208,11 +208,11 @@ pub trait MathActor
         let mut t_neg = t_neg_1.min(t_neg_2);
 
         if accel_pos == 0.0 {
-            t_pos = delta_pos / vel_0;
+            t_pos = correct_time(delta_pos / vel_0);
         }
 
         if accel_neg == 0.0 {
-            t_neg = delta_pos / vel_0;
+            t_neg = correct_time(delta_pos / vel_0);
         }
 
         if t_pos <= t_neg {

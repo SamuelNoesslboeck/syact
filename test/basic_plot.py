@@ -20,18 +20,15 @@ assert type(raw_data) == type([])
 # plt.xlabel('Steps')
 # plt.ylabel('Time')
 
-plt.plot(
-    [ i for i in range(0, len(raw_data)) ], # [ sum(times[0:i]) for i in range(0, len(raw_data)) ],
-    [ raw_data[i][0] for i in range(0, len(raw_data)) ],
-    color="red", label="Comp 0"
-)
+colors = [ "red", "blue" ]
 
-plt.plot(
-    [ i for i in range(0, len(raw_data)) ], # [ sum(times[0:i]) for i in range(0, len(raw_data)) ],
-    [ raw_data[i][1] for i in range(0, len(raw_data)) ],
-    color="blue", label="Comp 1"
-)
-
+for n in range(0, len(raw_data[0])):
+    plt.plot(
+        [ i for i in range(0, len(raw_data)) ], # [ sum(times[0:i]) for i in range(0, len(raw_data)) ],
+        [ raw_data[i][n] for i in range(0, len(raw_data)) ],
+        color=colors[n], label="Comp " + str(n)
+    )
+    
 plt.title('Speed curves')
 plt.xlabel('Step [1]')
 plt.ylabel('Omega [1/s]')
