@@ -84,6 +84,14 @@ impl<const N : usize> CompPath<N>
         self.times[index] = time;
     }
 
+    pub fn reverse(&mut self) {
+        self.phis.reverse();
+        self.relev.reverse();
+        self.omegas.reverse();
+        self.times.reverse(); 
+        self.accels.reverse();
+    }
+
     pub fn generate(&mut self, comps : &[Box<dyn Component>; N], vel_0 : [f32; N], vel_end : [f32; N]) {
         let path_len = self.phis.len(); 
 
@@ -101,6 +109,8 @@ impl<const N : usize> CompPath<N>
 
             let mut omegas = [0.0; N];
             let mut accels = [0.0; N];
+            
+            // println!("{} | {} {} ", index_min, compl[0][0][0], compl[1][0][0]);
 
             // For each component
             for n in 0 .. N {

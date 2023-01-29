@@ -197,8 +197,8 @@ pub trait MathActor
     fn compl_times(&self, pos_0 : f32, delta_pos : f32, vel_0 : f32, vel_max : f32) -> [[f32; 2]; 3] {
         let ( accel_pos, accel_neg ) = self.accel_max_node(pos_0, delta_pos, vel_0, vel_max); 
 
-        let ( t_pos_1, t_pos_2 ) = correct_times(pq_formula(2.0 * vel_0 / accel_pos, 2.0 * delta_pos / accel_pos));
-        let ( t_neg_1, t_neg_2 ) = correct_times(pq_formula(2.0 * vel_0 / accel_neg, 2.0 * delta_pos / accel_neg));
+        let ( t_pos_1, t_pos_2 ) = correct_times(pq_formula(2.0 * vel_0 / accel_pos, -2.0 * delta_pos / accel_pos));
+        let ( t_neg_1, t_neg_2 ) = correct_times(pq_formula(2.0 * vel_0 / accel_neg, -2.0 * delta_pos / accel_neg));
 
         let time;
         let vels;
