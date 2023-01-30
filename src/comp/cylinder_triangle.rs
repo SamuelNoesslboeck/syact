@@ -78,6 +78,10 @@ impl SimpleMeas for CylinderTriangle
 }
 
 impl Component for CylinderTriangle {
+    fn link(&mut self, lk : std::sync::Arc<crate::ctrl::LinkedData>) {
+        self.cylinder.link(lk);
+    }
+
     /// See [Component::drive()](`Component::drive()`)
     /// - `dist`is the angular distance to be moved (Unit radians)
     /// - `vel` is the cylinders extend velocity (Unit mm per second)

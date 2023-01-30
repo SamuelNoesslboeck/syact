@@ -1,13 +1,40 @@
 use glam::{Vec2, Mat2};
 use gpio::{GpioIn, sysfs::*};
 use gcode::{Mnemonic, GCode};
-use crate::{Component, StepperCtrl, StepperData, UpdateFunc, gcode::{Interpreter, GCodeFunc, Args}, ctrl::{PIN_ERR, CompPath}, math::actors, ComponentGroup};
-use std::{f32::consts::PI, collections::HashMap};
+use crate::{Component, StepperCtrl, StepperConst, UpdateFunc, gcode::{Interpreter, GCodeFunc, Args}, ctrl::{PIN_ERR, CompPath, LinkedData}, ComponentGroup};
+use std::{f32::consts::PI, collections::HashMap, sync::Arc};
+
+mod stepper_data 
+{
+    use serde::{Serialize, Deserialize};
+    use serde_json::json;
+
+    use super::*;
+
+    #[derive(Debug, Serialize, Deserialize)]
+    struct Test {
+        #[serde(serialize_with = "StepperConst::to_standard", deserialize_with = "StepperConst::from_standard")]
+        data: StepperConst
+    }
+
+    #[test]
+    fn json_io() 
+    {
+        let json_init = json!(Test { data: StepperConst::MOT_17HE15_1504S });
+        let data : Test = serde_json::from_value(json_init).unwrap();
+
+        dbg!(&data);
+
+        println!("{}", serde_json::to_string(&data).unwrap());
+    }
+}
  
 // Test Async
     #[test]
     fn test_async() {
-        let ctrl = StepperCtrl::new(StepperData::mot_17he15_1504s(12.0, 1.5), 27, 19);
+        let mut ctrl = StepperCtrl::new(StepperConst::MOT_17HE15_1504S, 27, 19);
+        ctrl.link(Arc::new(LinkedData { u: 12.0, s_f: 1.5 })); 
+
         ctrl.comms.send_msg((4.0 * PI, 2.0 * PI, UpdateFunc::None));
 
         println!("Msg sent!");
@@ -77,10 +104,8 @@ use std::{f32::consts::PI, collections::HashMap};
 // Test step
     #[test]
     fn test_step() {
-        let mut ctrl = StepperCtrl::new(
-            StepperData::mot_17he15_1504s(12.0, 1.5), 
-            27, 19
-        );
+        let mut ctrl = StepperCtrl::new(StepperConst::MOT_17HE15_1504S, 27, 19);
+        ctrl.link(Arc::new(LinkedData { u: 12.0, s_f: 1.5 })); 
 
         ctrl.apply_load_inertia(0.000_1);
 
@@ -100,9 +125,8 @@ use std::{f32::consts::PI, collections::HashMap};
 
     #[test]
     fn test_steps() {
-        let mut ctrl = StepperCtrl::new(
-            StepperData::mot_17he15_1504s(12.0, 1.5), 
-            27, 19);
+        let mut ctrl = StepperCtrl::new(StepperConst::MOT_17HE15_1504S, 27, 19);
+        ctrl.link(Arc::new(LinkedData { u: 12.0, s_f: 1.5 })); 
 
         ctrl.apply_load_inertia(0.1);
         ctrl.apply_load_force(0.1);
@@ -141,13 +165,13 @@ mod test_g1
         }
     // 
 
-    fn get_pos(comps : &[Box<dyn Component>; 2]) -> Vec2 {
-        let [ g_1, g_2 ] = comps.get_dist();
-        Vec2::new(
-            L1 * g_1.cos() + L2 * (g_1 + g_2).cos(),
-            L1 * g_1.sin() + L2 * (g_1 + g_2).sin()
-        )
-    }
+    // fn get_pos(comps : &[Box<dyn Component>; 2]) -> Vec2 {
+    //     let [ g_1, g_2 ] = comps.get_dist();
+    //     Vec2::new(
+    //         L1 * g_1.cos() + L2 * (g_1 + g_2).cos(),
+    //         L1 * g_1.sin() + L2 * (g_1 + g_2).sin()
+    //     )
+    // }
 
     fn get_angles(pos : Vec2) -> [f32; 2] {
         let length = (pos[0].powi(2) + pos[1].powi(2)).powf(0.5);
@@ -176,11 +200,11 @@ mod test_g1
 
     fn actor_vecs(angles : [f32; 2]) -> [Vec2; 2] {
         let [ a_1, a_2 ] = vectors_for_angles(angles); 
-        [ Mat2::from_angle(PI / 2.0) * a_1, Mat2::from_angle(PI / 2.0) * a_2 ]
+        [ Mat2::from_angle(PI / 2.0) * (a_1 + a_2), Mat2::from_angle(PI / 2.0) * a_2 ]
     }
 
     fn relevance(actors : &[Vec2; 2], vel : Vec2) -> Vec2 {
-        let mut relev = (Mat2::from_cols(actors[0], actors[1]).inverse() * vel);
+        let mut relev = Mat2::from_cols(actors[0], actors[1]).inverse() * vel;
         if relev.x.abs() < f32::EPSILON {
             relev.x = 0.0;
         }
@@ -218,19 +242,19 @@ mod test_g1
         const SF : f32 = 1.5;
 
         let mut comps : [Box<dyn Component>; 2] = [ 
-            Box::new(StepperCtrl::new(StepperData::mot_17he15_1504s(U, SF), PIN_ERR, PIN_ERR)),
-            Box::new(StepperCtrl::new(StepperData::mot_17he15_1504s(U, SF), PIN_ERR, PIN_ERR))
+            Box::new(StepperCtrl::new(StepperConst::MOT_17HE15_1504S, PIN_ERR, PIN_ERR)),
+            Box::new(StepperCtrl::new(StepperConst::MOT_17HE15_1504S, PIN_ERR, PIN_ERR))
         ]; 
 
-        comps.apply_load_inertia([0.5, 0.5]);
+        comps.link(Arc::new(LinkedData { u: U, s_f: SF }));
+        comps.apply_load_inertia([0.05, 0.05]);
 
         // dbg!(comps[0].accel_max_node(0.0, 0.0, 0.5, 10.0));
         // dbg!(comps[0].compl_times(0.0, 0.0, 0.5, 10.0));
 
-        let mut path = get_lin_move(Vec2::new(50.0, 0.0), Vec2::new(150.0, 0.0), 100.0, 20);
+        let mut path = get_lin_move(Vec2::new(50.0, 100.0), Vec2::new(150.0, -50.0), 1000.0, 50);
 
-        
-        path.generate(&comps, [0.0, 0.0], [0.0, 0.0]);
+        path.generate(&comps, [0.0, 0.0], [0.0, 0.0], 0.98);
 
         // path.debug_path(0);
         // dbg!(path.phis);
@@ -244,9 +268,7 @@ mod test_simple_g1
 {
     use super::*;
 
-    use super::*;
-
-    const L1 : f32 = 100.0;
+    // const L1 : f32 = 100.0;
 
     // Helper
         fn full_atan(x : f32, y : f32) -> f32 {
@@ -263,18 +285,18 @@ mod test_simple_g1
             (y / x).atan() + if x < 0.0 { PI } else { 0.0 }
         }
 
-        fn law_of_cosines(a : f32, b : f32, c : f32) -> f32 {
-            ((a.powi(2) + b.powi(2) - c.powi(2)) / 2.0 / a / b).acos()
-        }
+        // fn law_of_cosines(a : f32, b : f32, c : f32) -> f32 {
+        //     ((a.powi(2) + b.powi(2) - c.powi(2)) / 2.0 / a / b).acos()
+        // }
     // 
 
-    fn get_pos(comps : &[Box<dyn Component>; 2]) -> Vec2 {
-        let [ g_1, g_2 ] = comps.get_dist();
-        Vec2::new(
-            L1 * g_1.cos(),
-            L1 * g_1.sin()
-        )
-    }
+    // fn get_pos(comps : &[Box<dyn Component>; 2]) -> Vec2 {
+    //     let [ g_1, g_2 ] = comps.get_dist();
+    //     Vec2::new(
+    //         L1 * g_1.cos(),
+    //         L1 * g_1.sin()
+    //     )
+    // }
 
     fn get_angles(pos : Vec2) -> [f32; 1] {
         let angle = full_atan(pos[0], pos[1]);
@@ -330,14 +352,15 @@ mod test_simple_g1
         const SF : f32 = 1.5;
 
         let mut comps : [Box<dyn Component>; 1] = [ 
-            Box::new(StepperCtrl::new(StepperData::mot_17he15_1504s(U, SF), PIN_ERR, PIN_ERR))
+            Box::new(StepperCtrl::new(StepperConst::MOT_17HE15_1504S, PIN_ERR, PIN_ERR))
         ]; 
 
+        comps.link(Arc::new(LinkedData { u: U, s_f: SF }));
         comps.apply_load_inertia([ 0.5 ]);
 
-        let mut path = get_lin_move(Vec2::new(50.0, -50.0), Vec2::new(50.0, 50.0), 50.0, 100);
+        let mut path = get_lin_move(Vec2::new(50.0, 50.0), Vec2::new(50.0, -50.0), 50.0, 10);
 
-        path.generate(&comps, [ 0.0 ], [ 0.0 ]);
+        path.generate(&comps, [ 0.0 ], [ 0.0 ], 0.95);
 
         dbg!(path.omegas);
     }

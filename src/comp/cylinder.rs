@@ -1,6 +1,9 @@
+use serde::{Serialize, Deserialize};
+
 use crate::{ctrl::{Component, StepperCtrl, LimitType, LimitDest, SimpleMeas}, math::MathActor};
 
 /// Cylinder component struct
+#[derive(Serialize, Deserialize)]
 pub struct Cylinder
 {
     /// Data of the connected stepper motor
@@ -74,6 +77,10 @@ impl SimpleMeas for Cylinder
 
 impl Component for Cylinder 
 {
+    fn link(&mut self, lk : std::sync::Arc<crate::ctrl::LinkedData>) {
+        self.ctrl.link(lk);    
+    }
+
     fn drive(&mut self, dist : f32, vel : f32) -> f32 {
         let res = self.ctrl.drive(self.dist_to_ang(dist), self.vel_to_omega(vel));
         self.ang_to_dist(res)

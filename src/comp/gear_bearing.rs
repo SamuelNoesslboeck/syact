@@ -68,6 +68,10 @@ impl MathActor for GearBearing
 
 impl Component for GearBearing 
 {
+    fn link(&mut self, lk : std::sync::Arc<crate::ctrl::LinkedData>) {
+        self.ctrl.link(lk);    
+    }
+
     fn drive(&mut self, dist : f32, vel : f32) -> f32 {
         self.ctrl.drive(self.ang_for_motor(dist), self.vel_for_motor(vel))
     }

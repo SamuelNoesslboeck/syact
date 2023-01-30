@@ -10,8 +10,9 @@ use std::{
 };
 
 use gpio::{GpioIn, GpioOut, sysfs::*};
+use serde::{Serialize, Deserialize};
 
-use crate::{data::{StepperData, ServoData}, math::{torque_dyn, MathActor}};
+use crate::{data::{StepperConst, ServoData}, math::{torque_dyn, MathActor}};
 use crate::math::{start_frequency, angluar_velocity_dyn};
 
 // Use local types module
@@ -27,6 +28,9 @@ pub use meas::*;
 mod paths;
 pub use paths::*;
 
+mod servo;
+pub use servo::*;
+
 mod types;
 pub use types::*;
 
@@ -35,13 +39,18 @@ pub use types::*;
 pub struct StepperDriver 
 {
     /// Stepper data
-    pub data : StepperData,
+    pub data : StepperConst,
 
     /// The current direction of the driver, the bool value is written to the `pin_dir` GPIO pin\
     /// DO NOT WRITE TO THIS VALUE! Use the `Driver::set_dir()` function instead
     pub dir : bool,
     /// The current absolute position since set to a value
     pub pos : i64,
+
+    pub j_load : f32,
+    pub t_load : f32,
+
+    lk : Arc<LinkedData>,
 
     /// Pin for defining the direction
     sys_dir : RaspPin,
@@ -72,21 +81,20 @@ pub struct StepperCtrl
     pub pin_meas : u16, 
 }
 
-pub struct ServoDriver
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct StepperCtrlDes 
 {
-    pub pos : f32,
-    pub pin_pwm : u16,
-
-    // Thread
-    pub thr : JoinHandle<()>,
-    pub sender : Sender<f32>
+    #[serde(serialize_with = "StepperConst::to_standard", deserialize_with = "StepperConst::from_standard")]
+    pub data : StepperConst,
+    pub pin_dir : u16,
+    pub pin_step : u16
 }
 
 impl StepperDriver {
     // Init
     /// Creates a new Driver from the given stepper `StepperData` \
     /// Pin numbers are based on the BCM-Scheme, not by absolute board numbers
-    pub fn new(data : StepperData, pin_dir : u16, pin_step : u16) -> Self {
+    pub fn new(data : StepperConst, pin_dir : u16, pin_step : u16) -> Self {
         // Create pins if possible
         let sys_dir = match SysFsGpioOutput::open(pin_dir.clone()) {
             Ok(val) => RaspPin::Output(val),
@@ -102,6 +110,11 @@ impl StepperDriver {
             data, 
             dir: true, 
             pos: 0,
+
+            j_load: 0.0,
+            t_load: 0.0,
+
+            lk: Arc::new(LinkedData::EMPTY),
             
             sys_dir,
             sys_step,
@@ -117,11 +130,16 @@ impl StepperDriver {
         driver
     }
 
-    pub fn new_save(data : StepperData, pin_dir : u16, pin_step : u16) -> Result<Self, std::io::Error> {
+    pub fn new_save(data : StepperConst, pin_dir : u16, pin_step : u16) -> Result<Self, std::io::Error> {
         let mut driver = StepperDriver {
             data, 
             dir: true, 
             pos: 0,
+
+            t_load: 0.0,
+            j_load: 0.0,
+
+            lk: Arc::new(LinkedData::EMPTY),
             
             sys_dir: RaspPin::Output(SysFsGpioOutput::open(pin_dir.clone())?),
             sys_step: RaspPin::Output(SysFsGpioOutput::open(pin_step.clone())?),
@@ -137,6 +155,9 @@ impl StepperDriver {
         Ok(driver)
     }
 
+    pub fn link(&mut self, lk : Arc<LinkedData>) {
+        self.lk = lk;
+    }
 
     // Misc
         /// Helper function for measurements with a single pin
@@ -202,7 +223,7 @@ impl StepperDriver {
         }
 
         pub fn accelerate(&mut self, stepcount : u64, omega : f32, ufunc : &UpdateFunc) -> (StepResult, Vec<f32>) {
-            let t_start = self.data.sf / start_frequency(&self.data);
+            let t_start = self.lk.s_f / start_frequency(&self.data, self.t_load, self.j_load);
             let t_min = self.data.step_time(omega);
 
             let mut o_last : f32 = 0.0;
@@ -219,8 +240,8 @@ impl StepperDriver {
                     break;
                 }
 
-                o_last = angluar_velocity_dyn(&self.data, t_total, o_last);
-                time_step = self.data.step_ang() / o_last * self.data.sf;
+                o_last = angluar_velocity_dyn(&self.data, t_total, o_last, self.t_load, self.j_load, self.lk.u);
+                time_step = self.data.step_ang() / o_last * self.lk.s_f;
                 t_total += time_step;
 
                 if time_step < t_min {
@@ -397,12 +418,16 @@ impl StepperDriver {
     //
 
     // Loads
+        pub fn accel_dyn(&self, omega : f32) -> f32 {
+            self.data.alpha_max_dyn(torque_dyn(&self.data, omega, self.lk.u), self.t_load, self.j_load)
+        }
+
         pub fn apply_load_inertia(&mut self, j : f32) {
-            self.data.apply_load_j(j);
+            self.j_load = j;
         }
 
         pub fn apply_load_force(&mut self, t : f32) {
-            self.data.apply_load_t(t);
+            self.t_load = t;
         }
     // 
 
@@ -419,7 +444,7 @@ impl StepperDriver {
 
 impl StepperCtrl
 {   
-    pub fn new(data : StepperData, pin_dir : u16, pin_step : u16) -> Self {
+    pub fn new(data : StepperConst, pin_dir : u16, pin_step : u16) -> Self {
         let driver = Arc::new(Mutex::new(StepperDriver::new(data, pin_dir, pin_step)));
 
         let ctrl = StepperCtrl { 
@@ -431,7 +456,7 @@ impl StepperCtrl
                 |driver_mutex , msg| { 
                     let mut driver = driver_mutex.lock().unwrap();
 
-                    println!("Proccessing msg in thread: {} {}", msg.0, msg.1); 
+                    // println!("Proccessing msg in thread: {} {}", msg.0, msg.1); 
                     driver.drive(msg.0, msg.1, msg.2);
 
                     () 
@@ -499,13 +524,18 @@ impl SimpleMeas for StepperCtrl
 impl MathActor for StepperCtrl 
 {
     fn accel_dyn(&self, vel : f32, _ : f32) -> f32 {
-        let data = &self.driver.lock().unwrap().data;
-        data.alpha_max_dyn(torque_dyn(data, vel))
+        self.driver.lock().unwrap().accel_dyn(vel)
     }
 }
 
 impl Component for StepperCtrl 
 {
+    // Link
+        fn link(&mut self, lk : Arc<LinkedData>) {
+            self.driver.lock().unwrap().link(lk);
+        }
+    //
+
     fn drive(&mut self, distance : f32, omega : f32) -> f32 {
         self.driver.lock().unwrap().drive(distance, omega, UpdateFunc::None)
     }
@@ -570,51 +600,41 @@ impl Component for StepperCtrl
     //
 }
 
-impl ServoDriver 
-{
-    pub fn new(data : ServoData, pin_pwm : u16) -> Self {
-        let pos = data.phi_max / 2.0;
+impl From<StepperCtrlDes> for StepperCtrl {
+    fn from(des : StepperCtrlDes) -> Self {
+        StepperCtrl::new(des.data, des.pin_dir, des.pin_step)
+    }
+}
 
-        let mut sys_pwm = match SysFsGpioOutput::open(pin_pwm.clone()) {
-            Ok(val) => RaspPin::Output(val),
-            Err(_) => RaspPin::ErrPin
-        };
-
-        let (sender, recv) : (Sender<f32>, Receiver<f32>) = channel();
-
-        let thr = thread::spawn(move || {
-            let mut pos = data.default_pos();
-
-            loop {
-                match recv.try_recv() {
-                    Ok(ang) => { pos = ang; },
-                    _ => { }
-                }
-
-                ServoDriver::pulse(&data, &mut sys_pwm, pos);
-            }
-        }); 
-
-        ServoDriver {
-            pos,
-            thr,
-            sender,
-            pin_pwm
+impl Into<StepperCtrlDes> for StepperCtrl {
+    fn into(self) -> StepperCtrlDes {
+        StepperCtrlDes { 
+            data: self.driver.lock().unwrap().data.clone(), 
+            pin_dir: self.pin_dir, 
+            pin_step: self.pin_step
         }
     }
+}
 
-    pub fn pulse(data : &ServoData, sys_pwm : &mut RaspPin, pos : f32) {
-        match sys_pwm {
-            RaspPin::Output(pin) => {
-                let cycle = data.cycle_time();
-                let pulse = data.pulse_time(pos);
+// JSON_
+impl Serialize for StepperCtrl {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: serde::Serializer {
+        let raw : StepperCtrlDes = StepperCtrlDes { 
+            data: self.driver.lock().unwrap().data.clone(), 
+            pin_dir: self.pin_dir, 
+            pin_step: self.pin_step
+        };
+        raw.serialize(serializer)
+    }
+}
 
-                pin.set_high().unwrap();
-                thread::sleep(Duration::from_secs_f32(pulse));
-                pin.set_low().unwrap(); 
-                thread::sleep(Duration::from_secs_f32(cycle - pulse));
-            },
-            _ => { }
-        }
+impl<'de> Deserialize<'de> for StepperCtrl {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where
+            D: serde::Deserializer<'de> {
+        let raw = StepperCtrlDes::deserialize(deserializer)?;
+        Ok(StepperCtrl::from(raw))
     }
 }

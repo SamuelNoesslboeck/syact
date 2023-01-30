@@ -1,64 +1,41 @@
-use std::{f32::consts::{E, PI}, ops::Index};
+use std::f32::consts::{E, PI};
 
 use glam::{Vec3, Mat3};
 
-use super::data::StepperData;
+use super::data::StepperConst;
 
 /// Returns the current torque of a motor (data) at the given angluar speed (omega), returns only positive values  \
 /// Unit: [Nm]  
-pub fn torque_dyn(data : &StepperData, mut omega : f32) -> f32 {
+pub fn torque_dyn(data : &StepperConst, mut omega : f32, u : f32) -> f32 {
     omega = omega.abs();
     
     if omega == 0.0 {
-        return data.t();
+        return data.t_s;
     }
 
     let t = 2.0 * PI / (data.n_c as f32) / omega;
-    let tau = data.tau();
+    let tau = data.tau(u);
     let pow = E.powf( -t / tau );
 
-    return (1.0 - pow) / (1.0 + pow) * data.t();
+    return (1.0 - pow) / (1.0 + pow) * data.t_s;
 }
 
 /// Returns the start freqency of a motor (data)  \
 /// Unit: [Hz]
-pub fn start_frequency(data : &StepperData) -> f32 {
-    return (data.alpha_max() * (data.n_s as f32) / 4.0 / PI).powf(0.5);
+pub fn start_frequency(data : &StepperConst, t_load : f32, j_load : f32) -> f32 {
+    return (data.alpha_max(t_load, j_load) * (data.n_s as f32) / 4.0 / PI).powf(0.5);
 }
 
 /// The angluar velocity of a motor that is constantly accelerating after the time t [in s], [in s^-1]
-pub fn angluar_velocity(data : &StepperData, t : f32) -> f32 {
-    return data.alpha_max() * (t + data.tau()*E.powf(-t/data.tau()));
+pub fn angluar_velocity(data : &StepperConst, t : f32, t_load : f32, j_load : f32, u : f32) -> f32 {
+    return data.alpha_max(t_load, j_load) * (t + data.tau(u)*E.powf(-t/data.tau(u)));
 }
 
 /// The angluar velocity of a motor that is constantly accelerating after the time t [in s], [in s^-1]
-pub fn angluar_velocity_dyn(data : &StepperData, t : f32, omega_approx : f32) -> f32 {
-    torque_dyn(data, omega_approx) / data.j() * (t + data.tau()*E.powf(-t/data.tau()))
+pub fn angluar_velocity_dyn(data : &StepperConst, t : f32, omega_approx : f32, t_load : f32, j_load : f32, u : f32) -> f32 {
+    data.alpha_max_dyn(torque_dyn(data, omega_approx, u), t_load, j_load) * (t + data.tau(u)*E.powf(-t/data.tau(u)))
 }
 
-/// The angluar velocity of a motor that is constantly accelerating after the time t [in s], [in s^-1]
-pub fn angluar_velocity_dyn_rel(data : &StepperData, t_rel : f32, omega_approx : f32) -> f32 {
-    data.alpha_max_dyn(torque_dyn(data, omega_approx)) * (t_rel)
-}
-
-/// Creates the acceleration curve for the given Stepperdata _data_, the curve can be modified by modifying the stepper data or defining a minium steptime _t min_ or a maximum length of _max len_
-pub fn acc_curve(data : &StepperData, t_min : f32, max_len : u64) -> Vec<f32> {
-    let mut list : Vec<f32> = vec![
-        1.0 / start_frequency(data)
-    ];
-
-    let mut t_total = list[0];
-    for i in 1 .. max_len {
-        list.push(2.0 * PI / (data.n_s as f32) / angluar_velocity(data, t_total));
-        t_total += list.index(i as usize);
-
-        if *list.index(i as usize) < t_min {
-            return list;
-        }
-    };
-
-    return list;
-}
 
 // || Inertias ||
     pub fn inertia_point(dist : Vec3, mass : f32) -> Mat3 {
@@ -178,12 +155,20 @@ pub trait MathActor
 
     fn accel_max_node(&self, pos_0 : f32, delta_pos : f32, vel_0 : f32, vel_max : f32) -> (f32, f32) {
         // Get maximum accelerations
-        let ( _, accel_max_pos ) = self.node_from_vel(delta_pos, vel_0, vel_max.abs());
-        let ( _, accel_max_neg ) = self.node_from_vel(delta_pos, vel_0, -(vel_max.abs()));
+        let ( t_pos, mut accel_max_pos ) = self.node_from_vel(delta_pos, vel_0, vel_max.abs());
+        let ( t_neg, mut accel_max_neg ) = self.node_from_vel(delta_pos, vel_0, -(vel_max.abs()));
 
         let accel = self.accel_dyn(((vel_0 + vel_max) / 2.0).abs(), pos_0);
 
-        ( accel.min(accel_max_pos), (-accel).min(accel_max_neg) )
+        if !t_pos.is_finite() { 
+            accel_max_pos = accel;
+        }
+
+        if !t_neg.is_finite() {
+            accel_max_neg = -accel;
+        }
+
+        ( accel.min(accel_max_pos), (-accel).max(accel_max_neg) )
     }
 
     /// Returns (time, acceleration)
@@ -207,6 +192,9 @@ pub trait MathActor
         let mut t_pos = t_pos_1.min(t_pos_2);
         let mut t_neg = t_neg_1.min(t_neg_2);
 
+        let t_pos_max = t_pos; // t_pos_1.max(t_pos_2);
+        let t_neg_max = t_neg;  // t_neg_1.max(t_neg_2);
+
         if accel_pos == 0.0 {
             t_pos = correct_time(delta_pos / vel_0);
         }
@@ -216,12 +204,12 @@ pub trait MathActor
         }
 
         if t_pos <= t_neg {
-            time = [ t_pos, t_neg ];
-            vels = [ vel_0 + t_pos * accel_pos, vel_0 + t_neg * accel_neg ];
+            time = [ t_pos, t_neg_max ];
+            vels = [ vel_0 + t_pos * accel_pos, vel_0 + t_neg_max * accel_neg ];
             accel = [ accel_pos, accel_neg ];
         } else {
-            time = [ t_neg, t_pos ];
-            vels = [ vel_0 + t_neg * accel_neg, vel_0 + t_pos * accel_pos ];
+            time = [ t_neg, t_pos_max ];
+            vels = [ vel_0 + t_neg * accel_neg, vel_0 + t_pos_max * accel_pos ];
             accel = [ accel_neg, accel_pos ];
         }
         

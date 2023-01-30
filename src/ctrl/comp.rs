@@ -1,8 +1,36 @@
+use std::sync::Arc;
+
 use super::*;
+
+pub struct LinkedData 
+{
+    pub u : f32,
+    pub s_f : f32
+}
+
+impl LinkedData {
+    pub const EMPTY : Self = Self {
+        u : 0.0, 
+        s_f : 0.0
+    };
+}
+
+impl From<(f32, f32)> for LinkedData {
+    fn from(data: (f32, f32)) -> Self {
+        Self {
+            u: data.0, 
+            s_f: data.1
+        }
+    }
+}
 
 /// Trait for defining controls and components
 pub trait Component : SimpleMeas + MathActor
 {
+    // Link
+        fn link(&mut self, lk : Arc<LinkedData>);
+    // 
+
     /// Move the component to the given position as fast as possible and returns the actual distance traveled
     ///  - The distance `dist` can be either an angle (Unit radians) or a distancce (Unit mm)
     ///  - The velocity `vel` is the maximum change rate of the distance, either angular velocity (Unit radians per secoond) or linear velocity (mm per second)
@@ -53,6 +81,12 @@ pub trait ComponentGroup<const N : usize>
         fn comps(&self) -> &[Box<dyn Component>; N];
 
         fn comps_mut(&mut self) -> &mut [Box<dyn Component>; N];
+
+        fn link(&mut self, lk : Arc<LinkedData>) {
+            for i in 0 .. N {
+                self.comps_mut()[i].link(lk.clone())
+            }
+        }
     //
 
     fn drive(&mut self, dist : [f32; N], vel : [f32; N]) -> [f32; N] {

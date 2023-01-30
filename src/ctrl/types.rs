@@ -1,4 +1,4 @@
-use crate::data::StepperData;
+use crate::data::StepperConst;
 use gpio::sysfs::*;
 
 /// Constant for expressing an incorrect pin number
@@ -67,7 +67,7 @@ pub enum UpdateFunc {
     /// No updates during the process
     None,
     /// Modify the stepper data in the process
-    Data(fn (StepperData) -> StepperData, u64),
+    Data(fn (StepperConst) -> StepperConst, u64),
     /// Cause a break in the movement process while moving by returning `true` \
     /// The measurement pin of the stepper motor is accessable through the mutable reference stored in the enum
     Break(for<'a> fn (&'a mut RaspPin) -> bool, u64)
