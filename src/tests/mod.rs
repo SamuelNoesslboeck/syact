@@ -9,6 +9,8 @@ mod stepper_data
     use serde::{Serialize, Deserialize};
     use serde_json::json;
 
+    use crate::conf;
+
     use super::*;
 
     #[derive(Debug, Serialize, Deserialize)]
@@ -18,8 +20,7 @@ mod stepper_data
     }
 
     #[test]
-    fn json_io() 
-    {
+    fn json_io() {
         let json_init = json!(Test { data: StepperConst::MOT_17HE15_1504S });
         let data : Test = serde_json::from_value(json_init).unwrap();
 
@@ -27,6 +28,18 @@ mod stepper_data
 
         println!("{}", serde_json::to_string(&data).unwrap());
     }
+
+    #[test]
+    fn conf_io() {
+        let comps : [Box<dyn Component>; 2] = [ 
+            Box::new(StepperCtrl::new(StepperConst::MOT_17HE15_1504S, PIN_ERR, PIN_ERR)),
+            Box::new(StepperCtrl::new(StepperConst::MOT_17HE15_1504S, PIN_ERR, PIN_ERR))
+        ]; 
+
+        println!("{}", serde_json::to_string_pretty(
+            &conf::create_conf_elems(&comps)
+        ).unwrap())
+    }   
 }
  
 // Test Async

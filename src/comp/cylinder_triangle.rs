@@ -1,7 +1,10 @@
+use serde::{Serialize, Deserialize};
+
 use crate::{ctrl::{Component, LimitType, LimitDest, SimpleMeas}, math::MathActor};
 
 use crate::comp::Cylinder;
 
+#[derive(Serialize, Deserialize)]
 pub struct CylinderTriangle 
 {
     // Cylinder
@@ -78,9 +81,17 @@ impl SimpleMeas for CylinderTriangle
 }
 
 impl Component for CylinderTriangle {
-    fn link(&mut self, lk : std::sync::Arc<crate::ctrl::LinkedData>) {
-        self.cylinder.link(lk);
-    }
+    // Link
+        fn link(&mut self, lk : std::sync::Arc<crate::ctrl::LinkedData>) {
+            self.cylinder.link(lk);
+        }
+    //
+
+    // JSON I/O
+        fn to_json(&self) -> serde_json::Value {
+            serde_json::to_value(self).unwrap()
+        }
+    //
 
     /// See [Component::drive()](`Component::drive()`)
     /// - `dist`is the angular distance to be moved (Unit radians)

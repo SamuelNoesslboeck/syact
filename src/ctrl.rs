@@ -536,6 +536,12 @@ impl Component for StepperCtrl
         }
     //
 
+    // JSON 
+        fn to_json(&self) -> serde_json::Value {
+            serde_json::to_value(self).unwrap()
+        }
+    //
+
     fn drive(&mut self, distance : f32, omega : f32) -> f32 {
         self.driver.lock().unwrap().drive(distance, omega, UpdateFunc::None)
     }

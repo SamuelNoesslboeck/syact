@@ -77,9 +77,17 @@ impl SimpleMeas for Cylinder
 
 impl Component for Cylinder 
 {
-    fn link(&mut self, lk : std::sync::Arc<crate::ctrl::LinkedData>) {
-        self.ctrl.link(lk);    
-    }
+    // Link
+        fn link(&mut self, lk : std::sync::Arc<crate::ctrl::LinkedData>) {
+            self.ctrl.link(lk);    
+        }
+    //
+
+    // JSON I/O
+        fn to_json(&self) -> serde_json::Value {
+            serde_json::to_value(self).unwrap()
+        }
+    // 
 
     fn drive(&mut self, dist : f32, vel : f32) -> f32 {
         let res = self.ctrl.drive(self.dist_to_ang(dist), self.vel_to_omega(vel));

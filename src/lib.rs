@@ -8,6 +8,9 @@
 /// Components including stepper motors
 pub mod comp;
 
+/// I/O of configuration files to parse whole component groups out of text
+pub mod conf;
+
 /// Collection of structs and functions for controlling Stepper Motors
 pub mod ctrl;
 // Structs for storing characteristics of stepper motors and devices

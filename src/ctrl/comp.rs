@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::any::type_name;
 
 use super::*;
 
@@ -8,14 +8,16 @@ pub struct LinkedData
     pub s_f : f32
 }
 
-impl LinkedData {
+impl LinkedData 
+{
     pub const EMPTY : Self = Self {
         u : 0.0, 
         s_f : 0.0
     };
 }
 
-impl From<(f32, f32)> for LinkedData {
+impl From<(f32, f32)> for LinkedData 
+{
     fn from(data: (f32, f32)) -> Self {
         Self {
             u: data.0, 
@@ -29,6 +31,14 @@ pub trait Component : SimpleMeas + MathActor
 {
     // Link
         fn link(&mut self, lk : Arc<LinkedData>);
+    // 
+
+    // JSON I/O 
+        fn get_name(&self) -> String {
+            String::from(type_name::<Self>())
+        }
+
+        fn to_json(&self) -> serde_json::Value;
     // 
 
     /// Move the component to the given position as fast as possible and returns the actual distance traveled

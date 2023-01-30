@@ -1,6 +1,9 @@
+use serde::{Serialize, Deserialize};
+
 use crate::{Component, StepperCtrl, ctrl::{LimitType, LimitDest, SimpleMeas}, math::MathActor};
 
 /// A bearing powered by a motor with a certain gear ratio
+#[derive(Serialize, Deserialize)]
 pub struct GearBearing 
 {
     /// Steppercontrol for the motor of the bearing
@@ -68,9 +71,17 @@ impl MathActor for GearBearing
 
 impl Component for GearBearing 
 {
-    fn link(&mut self, lk : std::sync::Arc<crate::ctrl::LinkedData>) {
-        self.ctrl.link(lk);    
-    }
+    // Link
+        fn link(&mut self, lk : std::sync::Arc<crate::ctrl::LinkedData>) {
+            self.ctrl.link(lk);    
+        }
+    //
+
+    // Json I/O
+        fn to_json(&self) -> serde_json::Value {
+            serde_json::to_value(self).unwrap()
+        }
+    //
 
     fn drive(&mut self, dist : f32, vel : f32) -> f32 {
         self.ctrl.drive(self.ang_for_motor(dist), self.vel_for_motor(vel))
