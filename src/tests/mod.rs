@@ -13,7 +13,7 @@ mod stepper_data
     use serde::{Serialize, Deserialize};
     use serde_json::json;
 
-    use crate::{conf, comp::Cylinder};
+    use crate::{conf, comp::{Cylinder, CylinderTriangle, GearBearing, NoTool, PencilTool, Tool}};
 
     use super::*;
 
@@ -36,13 +36,34 @@ mod stepper_data
     #[test]
     fn conf_io() {
         let comps : [Box<dyn Component>; 2] = [ 
-            Box::new(Cylinder::new(StepperCtrl::new(StepperConst::MOT_17HE15_1504S, PIN_ERR, PIN_ERR), 1.5)),
-            Box::new(StepperCtrl::new(StepperConst::MOT_17HE15_1504S, PIN_ERR, PIN_ERR))
+            Box::new(
+                CylinderTriangle::new(
+                    Cylinder::new(
+                        StepperCtrl::new(StepperConst::MOT_17HE15_1504S, PIN_ERR, PIN_ERR), 
+                    1.5),
+                100.0, 200.0)),
+            Box::new(
+                GearBearing::new(
+                    StepperCtrl::new(StepperConst::MOT_17HE15_1504S, PIN_ERR, PIN_ERR),
+                1.5))
         ]; 
 
         println!("{}", serde_json::to_string_pretty(
             &conf::create_conf_comps(&comps)
-        ).unwrap())
+        ).unwrap());
+
+        let tools : [Box<dyn Tool>; 2] = [
+            Box::new(
+                NoTool::new()
+            ),
+            Box::new(
+                PencilTool::new(100.0, 0.25)
+            )
+        ]; 
+
+        println!("{}", serde_json::to_string_pretty(
+            &conf::create_conf_tools(&Vec::from(tools))
+        ).unwrap());
     }   
 }
  
