@@ -1,15 +1,19 @@
+use std::{f32::consts::PI, collections::HashMap, sync::Arc};
+
 use glam::{Vec2, Mat2};
 use gpio::{GpioIn, sysfs::*};
 use gcode::{Mnemonic, GCode};
-use crate::{Component, StepperCtrl, StepperConst, UpdateFunc, gcode::{Interpreter, GCodeFunc, Args}, ctrl::{PIN_ERR, CompPath, LinkedData}, ComponentGroup};
-use std::{f32::consts::PI, collections::HashMap, sync::Arc};
+
+use crate::{Component, ComponentGroup, LinkedData, StepperCtrl, StepperConst, UpdateFunc};
+use crate::ctrl::{PIN_ERR, CompPath};
+use crate::gcode::{Interpreter, GCodeFunc, Args};
 
 mod stepper_data 
 {
     use serde::{Serialize, Deserialize};
     use serde_json::json;
 
-    use crate::conf;
+    use crate::{conf, comp::Cylinder};
 
     use super::*;
 
@@ -32,12 +36,12 @@ mod stepper_data
     #[test]
     fn conf_io() {
         let comps : [Box<dyn Component>; 2] = [ 
-            Box::new(StepperCtrl::new(StepperConst::MOT_17HE15_1504S, PIN_ERR, PIN_ERR)),
+            Box::new(Cylinder::new(StepperCtrl::new(StepperConst::MOT_17HE15_1504S, PIN_ERR, PIN_ERR), 1.5)),
             Box::new(StepperCtrl::new(StepperConst::MOT_17HE15_1504S, PIN_ERR, PIN_ERR))
         ]; 
 
         println!("{}", serde_json::to_string_pretty(
-            &conf::create_conf_elems(&comps)
+            &conf::create_conf_comps(&comps)
         ).unwrap())
     }   
 }

@@ -1,42 +1,180 @@
+use std::fs::{self, OpenOptions};
 use serde::{Serialize, Deserialize};
 
+use crate::LinkedData;
+use crate::comp::{Tool, NoTool, Cylinder, CylinderTriangle};
 use super::*;
+
+// Sub-Structs
+    #[derive(Debug, Clone, Serialize, Deserialize)]
+    pub struct MeasInstance
+    {
+        pub pin : u16,
+        pub set_val : f32
+    }
+
+    #[derive(Debug, Clone, Serialize, Deserialize)]
+    pub struct LimitDecl
+    {
+        pub max : Option<f32>,
+        pub min : Option<f32>
+    }
+//
 
 #[derive(Serialize, Deserialize)]
 pub struct ConfigElement 
 {
-    pub name : String,
-    pub obj : serde_json::Value
+    pub name: Option<String>, 
+    pub type_name : String,
+
+    pub obj : serde_json::Value,
+
+    pub meas : Option<MeasInstance>,
+    pub limit : Option<LimitDecl> 
 }
 
 impl ConfigElement 
 {
-    pub fn new(comp : &Box<dyn Component>) -> Self {
-        ConfigElement {
-            name: comp.get_name(),
-            obj: comp.to_json()
+    pub fn get_comp(&self) -> Option<Box<dyn Component>> {
+        match self.type_name.as_str() {
+            "stepper_lib::ctrl::StepperCtrl" => Some(Box::new(
+                    serde_json::from_value::<StepperCtrl>(self.obj.clone()).unwrap()
+            )),
+            "stepper_lib::comp::cylinder::Cylinder" => Some(Box::new(
+                serde_json::from_value::<Cylinder>(self.obj.clone()).unwrap()
+            )),
+            "stepper_lib::comp::cylinder_triangle::CylinderTriangle" => Some(Box::new(
+                serde_json::from_value::<CylinderTriangle>(self.obj.clone()).unwrap()
+            )),
+            _ => None
+        }
+    }
+
+    pub fn get_tool(&self) -> Option<Box<dyn Tool>> {
+        match self.type_name.as_str() {
+            "stepper_lib::comp::tool::NoTool" => Some(Box::new(
+                NoTool::new()
+            )),
+            _ => None
+        }
+    }
+}
+
+impl From<&Box<dyn Component>> for ConfigElement 
+{
+    fn from(comp: &Box<dyn Component>) -> Self {
+        Self {
+            name: None,
+            type_name: comp.get_type_name(),
+
+            obj: comp.to_json(),
+
+            meas: None,
+            limit: None
+        }
+    }
+}
+
+impl From<&Box<dyn Tool>> for ConfigElement 
+{
+    fn from(tool: &Box<dyn Tool>) -> Self {
+        Self {
+            name: None,
+            type_name: tool.get_type_name(),
+
+            obj: tool.get_json(),
+
+            meas: None,
+            limit: None
         }
     }
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct Configuration<const N : usize>
+pub struct JsonConfig
 {
+    pub name : String,
 
+    pub lk : LinkedData,
+
+    pub anchor : Option<[f32; 3]>,
+    pub dim : Vec<[f32; 3]>,
+    pub axes : Option<Vec<[f32; 3]>>,
+
+    pub comps : Vec<ConfigElement>,
+    pub tools : Vec<ConfigElement>
 }
 
-pub fn create_conf_elems<const N : usize>(comps : &[Box<dyn Component>; N]) -> serde_json::Value {
-    let mut values = vec![];
+impl JsonConfig 
+{
+    pub fn new<const N : usize>(name : String, lk : LinkedData, anchor : Option<[f32; 3]>, dim : Vec<[f32; 3]>, axes : Option<Vec<[f32; 3]>>, 
+            comps : &[Box<dyn Component>; N], tools : &Vec<Box<dyn Tool>>) -> Self {
+        Self { 
+            name,
 
-    for i in 0 .. N {
-        values.push(
-            serde_json::to_value(
-                ConfigElement::new(&comps[i])
-            ).unwrap()
-        );
+            lk,
+
+            anchor,
+            dim,
+            axes,
+
+            comps: create_conf_comps(comps),
+            tools: create_conf_tools(tools)
+        }
     }
 
-    serde_json::Value::Array(values)
+    pub fn get_comps<const N : usize>(&self) -> [Box<dyn Component>; N] {
+        let mut comps = vec![];
+        for i in 0 .. N {
+            comps.push(self.comps[i].get_comp().unwrap());
+        }
+        comps.try_into().unwrap_or_else(
+            |v: Vec<Box<dyn Component>>| panic!("Wrong number of components in configuration! (Required: {}, Found: {})", N, v.len()))
+    }
+
+    pub fn get_tools<const N : usize>(&self) -> Vec<Box<dyn Tool>> {
+        let mut tools = vec![];
+        for i in 0 .. N {
+            tools.push(self.comps[i].get_tool().unwrap());
+        }
+        tools
+    }
+
+    pub fn to_string_pretty(&self) -> String {
+        serde_json::to_string_pretty(self).unwrap()
+    }
+
+    // File I/O
+        pub fn save_to_file(&self, path : &str) {
+            fs::write(path, self.to_string_pretty()).unwrap()
+        }
+
+        pub fn read_from_file(&self, path : &str) -> Self {
+            serde_json::from_str(fs::read_to_string(path).unwrap().as_str()).unwrap()
+        }
+    // 
+}
+
+pub fn create_conf_comps<const N : usize>(comps : &[Box<dyn Component>; N]) -> Vec<ConfigElement> {
+    let mut values = vec![];
+    for i in 0 .. N {
+        values.push(
+            ConfigElement::from(&comps[i])
+        );
+    }
+    values
+}
+
+pub fn create_conf_tools(tools : &Vec<Box<dyn Tool>>) -> Vec<ConfigElement> {
+    let mut values = vec![];
+    for tool in tools {
+        values.push(
+            ConfigElement::from(
+                tool
+            )
+        );
+    }
+    values
 }
 
 // pub fn read_conf<const N : usize>(comf : &serde_json::Value) -> &[Box<dyn Component>; N] {

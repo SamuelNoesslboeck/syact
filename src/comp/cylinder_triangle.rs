@@ -1,8 +1,11 @@
+use std::sync::Arc;
+
 use serde::{Serialize, Deserialize};
 
-use crate::{ctrl::{Component, LimitType, LimitDest, SimpleMeas}, math::MathActor};
-
+use crate::{Component, LinkedData};
 use crate::comp::Cylinder;
+use crate::ctrl::{LimitType, LimitDest, SimpleMeas}; 
+use crate::math::MathActor;
 
 #[derive(Serialize, Deserialize)]
 pub struct CylinderTriangle 
@@ -31,23 +34,13 @@ impl CylinderTriangle
     }
 
     // Conversions
-        /// Returns the cylinder length for the given angle gamma
-        pub fn len_for_gam(&self, gam : f32) -> f32 {
-            (self.l_a.powi(2) + self.l_b.powi(2) - 2.0 * self.l_a * self.l_b * gam.cos()).powf(0.5)
-        }
-
-        /// Returns the angle gamma for the given cylinder length _(len < (l_a + l_b))_
-        pub fn gam_for_len(&self, len : f32) -> f32 {
-            ((self.l_a.powi(2) + self.l_b.powi(2) - len.powi(2)) / 2.0 / self.l_a / self.l_b).acos()
-        }
-
         // Other angles
         pub fn alpha_for_gam(&self, gam : f32) -> f32 {
-            (self.l_a / self.len_for_gam(gam) * gam.sin()).asin()
+            (self.l_a / self.dist_for_super(gam) * gam.sin()).asin()
         }
 
         pub fn beta_for_gam(&self, gam : f32) -> f32 {
-            (self.l_b / self.len_for_gam(gam) * gam.sin()).asin()
+            (self.l_b / self.dist_for_super(gam) * gam.sin()).asin()
         }
 
         pub fn omega_for_gam(&self, vel : f32, gam : f32) -> f32 {
@@ -81,8 +74,28 @@ impl SimpleMeas for CylinderTriangle
 }
 
 impl Component for CylinderTriangle {
+    // Super 
+        fn super_comp(&self) -> Option<&dyn Component> {
+            Some(&self.cylinder)
+        }
+
+        fn super_comp_mut(&mut self) -> Option<&mut dyn Component> {
+            Some(&mut self.cylinder)
+        }
+
+        /// Returns the cylinder length for the given angle gamma
+        fn dist_for_super(&self, gam : f32) -> f32 {
+            (self.l_a.powi(2) + self.l_b.powi(2) - 2.0 * self.l_a * self.l_b * gam.cos()).powf(0.5)
+        }
+
+        /// Returns the angle gamma for the given cylinder length _(len < (l_a + l_b))_
+        fn dist_for_this(&self, len : f32) -> f32 {
+            ((self.l_a.powi(2) + self.l_b.powi(2) - len.powi(2)) / 2.0 / self.l_a / self.l_b).acos()
+        }
+    // 
+
     // Link
-        fn link(&mut self, lk : std::sync::Arc<crate::ctrl::LinkedData>) {
+        fn link(&mut self, lk : Arc<LinkedData>) {
             self.cylinder.link(lk);
         }
     //
@@ -97,14 +110,14 @@ impl Component for CylinderTriangle {
     /// - `dist`is the angular distance to be moved (Unit radians)
     /// - `vel` is the cylinders extend velocity (Unit mm per second)
     fn drive(&mut self, dist : f32, vel : f32) -> f32 {
-        self.cylinder.drive(self.len_for_gam(dist) - self.cylinder.get_dist(), vel)
+        self.cylinder.drive(self.dist_for_super(dist + self.get_dist()) - self.cylinder.get_dist(), vel)
     }
 
     /// See [Component::drive_async()](`Component::drive_async()`)
     /// - `dist`is the angular distance to be moved (Unit radians)
     /// - `vel` is the cylinders extend velocity (Unit mm per second)
     fn drive_async(&mut self, dist : f32, vel : f32) {
-        self.cylinder.drive_async(self.len_for_gam(dist) - self.cylinder.get_dist(), vel)
+        self.cylinder.drive_async(self.dist_for_super(dist + self.get_dist()) - self.cylinder.get_dist(), vel)
     }
 
     /// See [Component::measure()](`Component::measure()`)
@@ -119,40 +132,28 @@ impl Component for CylinderTriangle {
         self.cylinder.measure_async(dist, vel, accuracy)
     }
 
-    fn await_inactive(&self) {
-        self.cylinder.await_inactive();
-    }
-
     // Distance
         fn get_dist(&self) -> f32 {
-            self.gam_for_len(self.cylinder.get_dist())
+            self.dist_for_this(self.cylinder.get_dist())
         }
 
         /// See [Component::drive_abs](`Component::drive_abs()`)
         /// - `dist`is the angular distance to be moved (Unit radians)
         /// - `vel` is the cylinders extend velocity (Unit mm per second)
         fn drive_abs(&mut self, dist : f32, vel : f32) -> f32 {
-            self.cylinder.drive_abs(self.len_for_gam(dist), vel)
+            self.cylinder.drive_abs(self.dist_for_super(dist), vel)
         }
 
         fn drive_abs_async(&mut self, dist : f32, vel : f32) {
-            self.cylinder.drive_abs_async(self.len_for_gam(dist), vel)
-        }
-
-        fn write_dist(&mut self, dist : f32) {
-            self.cylinder.write_dist(self.len_for_gam(dist))
+            self.cylinder.drive_abs_async(self.dist_for_super(dist), vel)
         }
 
         fn get_limit_dest(&self, gam : f32) -> LimitDest {
-            match self.cylinder.get_limit_dest(self.len_for_gam(gam)) {
-                LimitDest::Maximum(dist) => LimitDest::Maximum(self.gam_for_len(dist)),
-                LimitDest::Minimum(dist) => LimitDest::Minimum(self.gam_for_len(dist)),
+            match self.cylinder.get_limit_dest(self.dist_for_super(gam)) {
+                LimitDest::Maximum(dist) => LimitDest::Maximum(self.dist_for_this(dist)),
+                LimitDest::Minimum(dist) => LimitDest::Minimum(self.dist_for_this(dist)),
                 other => other  
             }
-        }
-        
-        fn set_endpoint(&mut self, set_dist : f32) -> bool {
-            self.cylinder.set_endpoint(self.len_for_gam(set_dist))
         }
     // 
     

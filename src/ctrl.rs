@@ -12,15 +12,13 @@ use std::{
 use gpio::{GpioIn, GpioOut, sysfs::*};
 use serde::{Serialize, Deserialize};
 
-use crate::{data::{StepperConst, ServoData}, math::{torque_dyn, MathActor}};
-use crate::math::{start_frequency, angluar_velocity_dyn};
+use crate::{Component, LinkedData, MathActor};
+use crate::data::{StepperConst, ServoData};
+use crate::math::{start_frequency, angluar_velocity_dyn, torque_dyn};
 
 // Use local types module
 mod asynchr;
 pub use asynchr::*;
-
-mod comp;
-pub use comp::*;
 
 mod meas;
 pub use meas::*;
@@ -572,10 +570,6 @@ impl Component for StepperCtrl
     fn await_inactive(&self) {
         self.comms.await_inactive();
     }
-
-    // fn lin_move(&mut self, dist : f32, vel : f32, vel_max : f32) -> f32 {
-        
-    // }
 
     // Position
         fn get_dist(&self) -> f32 {

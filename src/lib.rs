@@ -25,9 +25,11 @@ pub mod math;
 mod tests;
 
 // Types
-
-pub use ctrl::{Component, ComponentGroup, SimpleMeas, StepperCtrl, UpdateFunc};
+pub use comp::{Component, ComponentGroup, LinkedData};
+pub use conf::JsonConfig;
+pub use ctrl::{SimpleMeas, StepperCtrl, UpdateFunc};
 pub use data::StepperConst;
+pub use math::MathActor;
 
 // Library Types
 
