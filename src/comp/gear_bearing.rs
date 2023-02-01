@@ -18,6 +18,13 @@ pub struct GearBearing
 
 impl GearBearing 
 {
+    pub fn new(ctrl : StepperCtrl, ratio : f32) -> Self {
+        Self {
+            ctrl,
+            ratio
+        }
+    }
+
     // Limits
         pub fn set_limit(&mut self, limit_min : LimitType, limit_max : LimitType) {
             self.ctrl.set_limit(

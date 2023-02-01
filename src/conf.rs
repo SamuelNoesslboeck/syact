@@ -2,7 +2,7 @@ use std::fs;
 use serde::{Serialize, Deserialize};
 
 use crate::LinkedData;
-use crate::comp::{Tool, NoTool, Cylinder, CylinderTriangle};
+use crate::comp::{Tool, NoTool, Cylinder, CylinderTriangle, GearBearing, PencilTool};
 use super::*;
 
 // Sub-Structs
@@ -48,6 +48,9 @@ impl ConfigElement
             "stepper_lib::comp::cylinder_triangle::CylinderTriangle" => Some(Box::new(
                 serde_json::from_value::<CylinderTriangle>(self.obj.clone()).unwrap()
             )),
+            "stepper_lib::comp::gear_bearing::GearBearing" => Some(Box::new(
+                serde_json::from_value::<GearBearing>(self.obj.clone()).unwrap()
+            )), 
             _ => None
         }
     }
@@ -56,6 +59,9 @@ impl ConfigElement
         match self.type_name.as_str() {
             "stepper_lib::comp::tool::NoTool" => Some(Box::new(
                 NoTool::new()
+            )),
+            "stepper_lib::comp::tool::PencilTool" => Some(Box::new(
+                serde_json::from_value::<PencilTool>(self.obj.clone()).unwrap()
             )),
             _ => None
         }
