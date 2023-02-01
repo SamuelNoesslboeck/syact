@@ -15,16 +15,19 @@ pub struct Cylinder
 
     /// Distance traveled per rad (Unit mm)   \
     /// f_rte = pitch / (2pi)
-    pub rte_ratio : f32
+    pub rte_ratio : f32,
+
+    pub offset : Option<f32>
 }
 
 impl Cylinder
 {
     /// Create a new cylinder instance
-    pub fn new(ctrl : StepperCtrl, rte_ratio : f32) -> Self {
+    pub fn new(ctrl : StepperCtrl, rte_ratio : f32, offset : Option<f32>) -> Self {
         return Cylinder {
             ctrl,
-            rte_ratio
+            rte_ratio,
+            offset
         };
     }
 
@@ -90,6 +93,14 @@ impl Component for Cylinder
     // 
 
     // Position
+        fn dist_with_offset(&self, dist : f32) -> f32 {
+            dist + self.offset.unwrap_or(0.0)   
+        }
+        
+        fn dist_without_offset(&self, dist : f32) -> f32 {
+            dist - self.offset.unwrap_or(0.0)
+        }
+
         fn get_limit_dest(&self, dist : f32) -> LimitDest {
             match self.ctrl.get_limit_dest(self.dist_for_super(dist)) {
                 LimitDest::Minimum(ang) => LimitDest::Minimum(self.dist_for_this(ang)), 

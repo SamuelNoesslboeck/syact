@@ -36,7 +36,7 @@ mod stepper_data
     #[test]
     fn conf_io() {
         let comps : [Box<dyn Component>; 2] = [ 
-            Box::new(Cylinder::new(StepperCtrl::new(StepperConst::MOT_17HE15_1504S, PIN_ERR, PIN_ERR), 1.5)),
+            Box::new(Cylinder::new(StepperCtrl::new(StepperConst::MOT_17HE15_1504S, PIN_ERR, PIN_ERR), 1.5, None)),
             Box::new(StepperCtrl::new(StepperConst::MOT_17HE15_1504S, PIN_ERR, PIN_ERR))
         ]; 
 

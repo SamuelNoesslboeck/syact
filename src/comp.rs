@@ -167,6 +167,18 @@ pub trait Component : SimpleMeas + MathActor
             self.dist_for_this(super_len)
         }
 
+        fn dist_with_offset(&self, dist : f32) -> f32 {
+            dist
+        }
+
+        fn dist_without_offset(&self, dist : f32) -> f32 {
+            dist
+        }
+
+        fn get_full_dist(&self) -> f32 {
+            self.dist_with_offset(self.get_dist())
+        }
+
         fn write_dist(&mut self, mut dist : f32) {
             dist = self.dist_for_super(dist);
 
@@ -273,6 +285,22 @@ pub trait ComponentGroup<const N : usize>
             let mut dists = [0.0; N];
             for i in 0 .. N {
                 dists[i] = self.comps()[i].get_dist();
+            }
+            dists
+        }
+
+        fn dist_with_offset(&self, dist : [f32; 4]) -> [f32; N] {
+            let mut dists = [0.0; N]; 
+            for i in 0 .. N {
+                dists[i] = self.comps()[i].dist_with_offset(dist[i]);
+            }
+            dists
+        }
+
+        fn dist_without_offset(&self, dist : [f32; 4]) -> [f32; N] {
+            let mut dists = [0.0; N]; 
+            for i in 0 .. N {
+                dists[i] = self.comps()[i].dist_without_offset(dist[i]);
             }
             dists
         }

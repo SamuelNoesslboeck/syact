@@ -1,4 +1,4 @@
-use std::fs::{self, OpenOptions};
+use std::fs;
 use serde::{Serialize, Deserialize};
 
 use crate::LinkedData;
@@ -10,14 +10,16 @@ use super::*;
     pub struct MeasInstance
     {
         pub pin : u16,
-        pub set_val : f32
+        pub set_val : f32,
+        pub dist : u16
     }
 
     #[derive(Debug, Clone, Serialize, Deserialize)]
     pub struct LimitDecl
     {
         pub max : Option<f32>,
-        pub min : Option<f32>
+        pub min : Option<f32>,
+        pub omega_max : Option<f32>
     }
 //
 
@@ -30,7 +32,7 @@ pub struct ConfigElement
     pub obj : serde_json::Value,
 
     pub meas : Option<MeasInstance>,
-    pub limit : Option<LimitDecl> 
+    pub limit : Option<LimitDecl>
 }
 
 impl ConfigElement 
@@ -50,7 +52,7 @@ impl ConfigElement
         }
     }
 
-    pub fn get_tool(&self) -> Option<Box<dyn Tool>> {
+    pub fn get_tool(&self) -> Option<Box<dyn Tool + Send>> {
         match self.type_name.as_str() {
             "stepper_lib::comp::tool::NoTool" => Some(Box::new(
                 NoTool::new()
@@ -75,9 +77,9 @@ impl From<&Box<dyn Component>> for ConfigElement
     }
 }
 
-impl From<&Box<dyn Tool>> for ConfigElement 
+impl From<&Box<dyn Tool + Send>> for ConfigElement 
 {
-    fn from(tool: &Box<dyn Tool>) -> Self {
+    fn from(tool: &Box<dyn Tool + Send>) -> Self {
         Self {
             name: None,
             type_name: tool.get_type_name(),
@@ -108,7 +110,7 @@ pub struct JsonConfig
 impl JsonConfig 
 {
     pub fn new<const N : usize>(name : String, lk : LinkedData, anchor : Option<[f32; 3]>, dim : Vec<[f32; 3]>, axes : Option<Vec<[f32; 3]>>, 
-            comps : &[Box<dyn Component>; N], tools : &Vec<Box<dyn Tool>>) -> Self {
+            comps : &[Box<dyn Component>; N], tools : &Vec<Box<dyn Tool + Send>>) -> Self {
         Self { 
             name,
 
@@ -126,16 +128,23 @@ impl JsonConfig
     pub fn get_comps<const N : usize>(&self) -> [Box<dyn Component>; N] {
         let mut comps = vec![];
         for i in 0 .. N {
-            comps.push(self.comps[i].get_comp().unwrap());
+            let mut comp = self.comps[i].get_comp().unwrap(); 
+            
+            if let Some(meas) = &self.comps[i].meas {
+                comp.init_meas(meas.pin);
+            }
+
+            comps.push(comp);
         }
         comps.try_into().unwrap_or_else(
             |v: Vec<Box<dyn Component>>| panic!("Wrong number of components in configuration! (Required: {}, Found: {})", N, v.len()))
     }
 
-    pub fn get_tools<const N : usize>(&self) -> Vec<Box<dyn Tool>> {
+    pub fn get_tools<const N : usize>(&self) -> Vec<Box<dyn Tool + Send>> {
         let mut tools = vec![];
         for i in 0 .. N {
-            tools.push(self.comps[i].get_tool().unwrap());
+            let tool = self.comps[i].get_tool().unwrap();
+            tools.push(tool);
         }
         tools
     }
@@ -165,7 +174,7 @@ pub fn create_conf_comps<const N : usize>(comps : &[Box<dyn Component>; N]) -> V
     values
 }
 
-pub fn create_conf_tools(tools : &Vec<Box<dyn Tool>>) -> Vec<ConfigElement> {
+pub fn create_conf_tools(tools : &Vec<Box<dyn Tool + Send>>) -> Vec<ConfigElement> {
     let mut values = vec![];
     for tool in tools {
         values.push(

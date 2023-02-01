@@ -15,17 +15,25 @@ pub struct CylinderTriangle
 
     // Triangle
     pub l_a : f32,
-    pub l_b : f32
+    pub l_b : f32,
+
+    // Offsets
+    pub offset_a : Option<f32>,
+    pub offset_b : Option<f32>
 }
 
 impl CylinderTriangle 
 {
-    pub fn new(cylinder : Cylinder, l_a : f32, l_b : f32) -> Self
+    pub fn new(cylinder : Cylinder, l_a : f32, l_b : f32, offset_a : Option<f32>, offset_b : Option<f32>) -> Self
     {
         let mut tri = CylinderTriangle {
             l_a, 
             l_b,
-            cylinder 
+
+            cylinder,
+
+            offset_a,
+            offset_b,
         };
 
         tri.cylinder.write_dist(l_a.max(l_b));
@@ -135,6 +143,14 @@ impl Component for CylinderTriangle {
     // Distance
         fn get_dist(&self) -> f32 {
             self.dist_for_this(self.cylinder.get_dist())
+        }
+
+        fn dist_with_offset(&self, dist : f32) -> f32 {
+            dist + self.offset_a.unwrap_or(0.0) + self.offset_b.unwrap_or(0.0)
+        }
+
+        fn dist_without_offset(&self, dist : f32) -> f32 {
+            dist - self.offset_a.unwrap_or(0.0) - self.offset_b.unwrap_or(0.0)
         }
 
         /// See [Component::drive_abs](`Component::drive_abs()`)
