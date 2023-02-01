@@ -1,4 +1,6 @@
 use std::fs;
+
+use glam::Mat3;
 use serde::{Serialize, Deserialize};
 
 use crate::LinkedData;
@@ -31,6 +33,7 @@ pub struct ConfigElement
 
     pub obj : serde_json::Value,
 
+    pub mass : Option<f32>,
     pub meas : Option<MeasInstance>,
     pub limit : Option<LimitDecl>
 }
@@ -106,7 +109,7 @@ pub struct JsonConfig
     pub lk : LinkedData,
 
     pub anchor : Option<[f32; 3]>,
-    pub dim : Vec<[f32; 3]>,
+    pub dim : Option<Vec<[f32; 3]>>,
     pub axes : Option<Vec<[f32; 3]>>,
 
     pub comps : Vec<ConfigElement>,
@@ -115,7 +118,7 @@ pub struct JsonConfig
 
 impl JsonConfig 
 {
-    pub fn new<const N : usize>(name : String, lk : LinkedData, anchor : Option<[f32; 3]>, dim : Vec<[f32; 3]>, axes : Option<Vec<[f32; 3]>>, 
+    pub fn new<const N : usize>(name : String, lk : LinkedData, anchor : Option<[f32; 3]>, dim : Option<Vec<[f32; 3]>>, axes : Option<Vec<[f32; 3]>>, 
             comps : &[Box<dyn Component>; N], tools : &Vec<Box<dyn Tool + Send>>) -> Self {
         Self { 
             name,
@@ -153,6 +156,46 @@ impl JsonConfig
             tools.push(tool);
         }
         tools
+    }
+
+    pub fn get_axes<const N : usize>(&self, angles : &[f32; N]) -> Vec<Mat3> {
+        let mut matr = vec![];
+
+        if let Some(axes) = &self.axes {
+            for i in 0 .. axes.len() {
+                let axis_vec = Vec3::from(axes[i]).normalize();
+
+                matr.push(
+                    if axis_vec == Vec3::X {
+                        Mat3::from_rotation_x(angles[i])
+                    } else if axis_vec == Vec3::Y {
+                        Mat3::from_rotation_y(angles[i])
+                    } else if axis_vec == Vec3::Z {
+                        Mat3::from_rotation_z(angles[i])
+                    } else if axis_vec == Vec3::NEG_X {
+                        Mat3::from_rotation_x(-angles[i])
+                    } else if axis_vec == Vec3::NEG_Y {
+                        Mat3::from_rotation_y(-angles[i])
+                    } else if axis_vec == Vec3::NEG_Z {
+                        Mat3::from_rotation_z(-angles[i])
+                    } else {
+                        Mat3::ZERO
+                    }
+                );
+            }
+        }
+
+        matr
+    }
+
+    pub fn get_dim(&self) -> Vec<Vec3> {
+        let mut dims = vec![];
+
+        if let Some(dims_raw) = &self.dim {
+            dims = dims_raw.iter().map(|dim_raw| { Vec3::from(*dim_raw) }).collect();
+        }
+
+        dims
     }
 
     pub fn to_string_pretty(&self) -> String {
