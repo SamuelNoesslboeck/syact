@@ -13,7 +13,7 @@ use super::*;
     {
         pub pin : u16,
         pub set_val : f32,
-        pub dist : u16
+        pub dist : f32
     }
 
     #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -21,7 +21,7 @@ use super::*;
     {
         pub max : Option<f32>,
         pub min : Option<f32>,
-        pub omega_max : Option<f32>
+        pub vel : Option<f32>
     }
 //
 
@@ -151,10 +151,10 @@ impl JsonConfig
             |v: Vec<Box<dyn Component>>| panic!("Wrong number of components in configuration! (Required: {}, Found: {})", N, v.len()))
     }
 
-    pub fn get_tools<const N : usize>(&self) -> Vec<Box<dyn Tool + Send>> {
+    pub fn get_tools(&self) -> Vec<Box<dyn Tool + Send>> {
         let mut tools = vec![];
-        for i in 0 .. N {
-            let tool = self.comps[i].get_tool().unwrap();
+        for i in 0 .. self.tools.len() {
+            let tool = self.tools[i].get_tool().unwrap();
             tools.push(tool);
         }
         tools
@@ -213,13 +213,58 @@ impl JsonConfig
         for comp in &self.comps {
             vels.push(
                 match &comp.limit {
-                    Some(limit) => limit.omega_max.unwrap_or(0.0),
+                    Some(limit) => limit.vel.unwrap_or(0.0),
                     None => 0.0
                 }
             )
         }
 
         vels
+    }
+
+    pub fn get_meas(&self) -> Vec<f32> {
+        let mut meas = vec![];
+
+        for comp in &self.comps {
+            meas.push(
+                match &comp.meas {
+                    Some(meas) => meas.set_val,
+                    None => 0.0
+                }
+            )
+        }
+
+        meas
+    }
+
+    pub fn get_meas_dist(&self) -> Vec<f32> {
+        let mut meas_dist = vec![];
+
+        for comp in &self.comps {
+            meas_dist.push(
+                match &comp.meas {
+                    Some(meas) => meas.dist,
+                    None => 0.0
+                }
+            )
+        }
+
+        meas_dist
+    }
+
+    pub fn get_mass(&self) -> Vec<f32> {
+        let mut mass = vec![];
+
+        for comp in &self.comps {
+            mass.push( 
+                match &comp.mass {
+                    Some(m) => *m,
+                    None => 0.0
+                }
+            )
+        }
+
+        mass
     }
 
     pub fn to_string_pretty(&self) -> String {
@@ -231,7 +276,7 @@ impl JsonConfig
             fs::write(path, self.to_string_pretty()).unwrap()
         }
 
-        pub fn read_from_file(&self, path : &str) -> Self {
+        pub fn read_from_file(path : &str) -> Self {
             serde_json::from_str(fs::read_to_string(path).unwrap().as_str()).unwrap()
         }
     // 
