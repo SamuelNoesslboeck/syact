@@ -22,7 +22,7 @@ mod stepper_data
 
         // Check if data is valid
         assert_eq!(data.data, StepperConst::MOT_17HE15_1504S);
-
+        
         // Check if Json is valid
         assert_eq!(serde_json::to_value(&data).unwrap(), json_init);
     }

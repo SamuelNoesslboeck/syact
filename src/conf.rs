@@ -80,6 +80,7 @@ impl From<&Box<dyn Component>> for ConfigElement
 
             obj: comp.to_json(),
 
+            mass: None,
             meas: None,
             limit: None
         }
@@ -95,6 +96,7 @@ impl From<&Box<dyn Tool + Send>> for ConfigElement
 
             obj: tool.get_json(),
 
+            mass: None,
             meas: None,
             limit: None
         }
@@ -196,6 +198,28 @@ impl JsonConfig
         }
 
         dims
+    }
+
+    pub fn get_anchor(&self) -> Vec3 {
+        match self.anchor {
+            Some(raw) => Vec3::from(raw),
+            None => Vec3::ZERO
+        }
+    }
+
+    pub fn get_velocities(&self) -> Vec<f32> {
+        let mut vels = vec![];
+
+        for comp in &self.comps {
+            vels.push(
+                match &comp.limit {
+                    Some(limit) => limit.omega_max.unwrap_or(0.0),
+                    None => 0.0
+                }
+            )
+        }
+
+        vels
     }
 
     pub fn to_string_pretty(&self) -> String {
