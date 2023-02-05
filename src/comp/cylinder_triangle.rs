@@ -7,7 +7,7 @@ use crate::comp::Cylinder;
 use crate::ctrl::{LimitType, LimitDest, SimpleMeas}; 
 use crate::math::MathActor;
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct CylinderTriangle 
 {
     // Cylinder
@@ -143,14 +143,6 @@ impl Component for CylinderTriangle {
     // Distance
         fn get_dist(&self) -> f32 {
             self.dist_for_this(self.cylinder.get_dist())
-        }
-
-        fn dist_with_offset(&self, dist : f32) -> f32 {
-            dist + self.offset_a.unwrap_or(0.0) + self.offset_b.unwrap_or(0.0)
-        }
-
-        fn dist_without_offset(&self, dist : f32) -> f32 {
-            dist - self.offset_a.unwrap_or(0.0) - self.offset_b.unwrap_or(0.0)
         }
 
         /// See [Component::drive_abs](`Component::drive_abs()`)

@@ -1,4 +1,4 @@
-use std::{any::type_name, sync::Arc};
+use std::{any::type_name, sync::Arc, fmt::Debug};
 
 use serde::{Serialize, Deserialize};
 
@@ -17,7 +17,7 @@ pub use gear_bearing::*;
 pub use tool::*;
 //
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct LinkedData 
 {
     pub u : f32,
@@ -43,7 +43,7 @@ impl From<(f32, f32)> for LinkedData
 }
 
 /// Trait for defining controls and components
-pub trait Component : SimpleMeas + MathActor
+pub trait Component : SimpleMeas + MathActor + Debug
 {
     // Super
         fn super_comp(&self) -> Option<&dyn Component> {
@@ -167,18 +167,6 @@ pub trait Component : SimpleMeas + MathActor
             self.dist_for_this(super_len)
         }
 
-        fn dist_with_offset(&self, dist : f32) -> f32 {
-            dist
-        }
-
-        fn dist_without_offset(&self, dist : f32) -> f32 {
-            dist
-        }
-
-        fn get_full_dist(&self) -> f32 {
-            self.dist_with_offset(self.get_dist())
-        }
-
         fn write_dist(&mut self, mut dist : f32) {
             dist = self.dist_for_super(dist);
 
@@ -288,23 +276,7 @@ pub trait ComponentGroup<const N : usize>
             }
             dists
         }
-
-        fn dist_with_offset(&self, dist : [f32; 4]) -> [f32; N] {
-            let mut dists = [0.0; N]; 
-            for i in 0 .. N {
-                dists[i] = self.comps()[i].dist_with_offset(dist[i]);
-            }
-            dists
-        }
-
-        fn dist_without_offset(&self, dist : [f32; 4]) -> [f32; N] {
-            let mut dists = [0.0; N]; 
-            for i in 0 .. N {
-                dists[i] = self.comps()[i].dist_without_offset(dist[i]);
-            }
-            dists
-        }
-
+        
         fn write_dist(&mut self, angles : &[f32; N]) {
             for i in 0 .. N {
                 self.comps_mut()[i].write_dist(angles[i])

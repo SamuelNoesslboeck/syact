@@ -6,7 +6,7 @@ use crate::ctrl::{LimitType, LimitDest, SimpleMeas};
 use crate::math::MathActor;
 
 /// A bearing powered by a motor with a certain gear ratio
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct GearBearing 
 {
     /// Steppercontrol for the motor of the bearing

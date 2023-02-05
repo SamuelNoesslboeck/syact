@@ -1,3 +1,5 @@
+use std::fmt::Debug;
+
 use crate::data::StepperConst;
 use gpio::sysfs::*;
 
@@ -63,6 +65,7 @@ impl LimitDest {
 
 // TODO: REWORK UPDATE FUNCTIONS
 /// Update functions for updating stepper data in 
+#[derive(Clone)]
 pub enum UpdateFunc {
     /// No updates during the process
     None,
@@ -73,7 +76,18 @@ pub enum UpdateFunc {
     Break(for<'a> fn (&'a mut RaspPin) -> bool, u64)
 }
 
+impl Debug for UpdateFunc {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            UpdateFunc::Break(_, acc) => f.write_str(format!("UpdateFunc::Data {{ acc: {} }}", acc).as_str()),
+            UpdateFunc::Data(_, acc) => f.write_str(format!("UpdateFunc::Data {{ acc: {} }}", acc).as_str()),
+            UpdateFunc::None => f.write_str("None")
+        }
+    }
+}
+
 /// Result of a stepper movement operation
+#[derive(Debug, Clone)]
 pub enum StepResult {
     /// No errors occured
     None,

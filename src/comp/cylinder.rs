@@ -7,7 +7,7 @@ use crate::ctrl::{StepperCtrl, LimitType, LimitDest, SimpleMeas};
 use crate::math::MathActor;
 
 /// Cylinder component struct
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Cylinder
 {
     /// Data of the connected stepper motor
@@ -93,14 +93,6 @@ impl Component for Cylinder
     // 
 
     // Position
-        fn dist_with_offset(&self, dist : f32) -> f32 {
-            dist + self.offset.unwrap_or(0.0)   
-        }
-        
-        fn dist_without_offset(&self, dist : f32) -> f32 {
-            dist - self.offset.unwrap_or(0.0)
-        }
-
         fn get_limit_dest(&self, dist : f32) -> LimitDest {
             match self.ctrl.get_limit_dest(self.dist_for_super(dist)) {
                 LimitDest::Minimum(ang) => LimitDest::Minimum(self.dist_for_this(ang)), 

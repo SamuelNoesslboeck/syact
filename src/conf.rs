@@ -1,4 +1,5 @@
 use std::fs;
+use std::rc::Rc;
 
 use glam::Mat3;
 use serde::{Serialize, Deserialize};
@@ -8,7 +9,7 @@ use crate::comp::{Tool, NoTool, Cylinder, CylinderTriangle, GearBearing, PencilT
 use super::*;
 
 // Sub-Structs
-    #[derive(Debug, Clone, Serialize, Deserialize)]
+    #[derive(Debug, Default, Clone, Copy, Serialize, Deserialize)]
     pub struct MeasInstance
     {
         pub pin : u16,
@@ -16,24 +17,42 @@ use super::*;
         pub dist : f32
     }
 
-    #[derive(Debug, Clone, Serialize, Deserialize)]
+    #[derive(Debug, Default, Clone, Copy, Serialize, Deserialize)]
     pub struct LimitDecl
     {
         pub max : Option<f32>,
         pub min : Option<f32>,
-        pub vel : Option<f32>
+        pub vel : f32
+    }
+
+    #[derive(Debug, Default, Clone, Copy, Serialize, Deserialize)]
+    pub struct SimData
+    {
+        pub mass : f32
+    }
+
+    #[derive(Debug, Default, Clone, Copy, Serialize, Deserialize)]
+    pub struct AngleData
+    {
+        pub offset : f32,
+        pub counter : bool
     }
 //
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ConfigElement 
 {
-    pub name: Option<String>, 
+    #[serde(default)]
+    pub name: String, 
     pub type_name : String,
 
     pub obj : serde_json::Value,
 
-    pub mass : Option<f32>,
+    #[serde(default)]
+    pub ang : AngleData,
+    #[serde(default)]
+    pub sim : SimData,
+
     pub meas : Option<MeasInstance>,
     pub limit : Option<LimitDecl>
 }
@@ -75,12 +94,13 @@ impl From<&Box<dyn Component>> for ConfigElement
 {
     fn from(comp: &Box<dyn Component>) -> Self {
         Self {
-            name: None,
+            name: String::new(),
             type_name: comp.get_type_name(),
 
             obj: comp.to_json(),
 
-            mass: None,
+            ang: Default::default(),
+            sim: Default::default(),
             meas: None,
             limit: None
         }
@@ -91,15 +111,108 @@ impl From<&Box<dyn Tool + Send>> for ConfigElement
 {
     fn from(tool: &Box<dyn Tool + Send>) -> Self {
         Self {
-            name: None,
+            name: String::new(),
             type_name: tool.get_type_name(),
 
             obj: tool.get_json(),
 
-            mass: None,
+            ang: Default::default(),
+            sim: Default::default(),
             meas: None,
             limit: None
         }
+    }
+}
+
+#[derive(Debug)]
+pub struct MachineConfig<const N : usize, const D : usize, const A : usize>
+{
+    pub name: String,
+
+    pub lk : Rc<LinkedData>,
+
+    pub anchor : Vec3,
+    pub dims : [Vec3; D],
+    pub axes : [Vec3; A],
+
+    pub tools : Vec<Box<dyn Tool + Send>>,
+
+    pub vels : [f32; N],
+    pub set_vals : [f32; N],
+    
+    pub ang : [AngleData; N],
+    pub sim : [SimData; N],
+    pub meas : [MeasInstance; N],
+    pub limit : [LimitDecl; N]
+}
+
+impl<const N : usize, const D : usize, const A : usize> Default for MachineConfig<N, D, A> 
+{
+    fn default() -> Self {
+        Self {
+            name: String::new(),
+            lk: Default::default(),
+
+            anchor: Default::default(),
+            dims: [Default::default(); D],
+            axes: [Default::default(); A], 
+
+            tools: vec![],
+
+            vels: [0.0; N],
+            set_vals: [0.0; N],
+            
+            ang: [Default::default(); N],
+            sim: [Default::default(); N],
+            meas: [Default::default(); N],
+            limit: [Default::default(); N]
+        }
+    }
+}
+
+impl<const N : usize, const D : usize, const A : usize> MachineConfig<N, D, A>
+{
+    pub fn get_axes(&self, angles : &[f32; A]) -> Vec<Mat3> {
+        let mut matr = vec![];
+
+        for i in 0 .. A {
+            let axis_vec = Vec3::from(self.axes[i]).normalize();
+
+            matr.push(
+                if axis_vec == Vec3::X {
+                    Mat3::from_rotation_x(angles[i])
+                } else if axis_vec == Vec3::Y {
+                    Mat3::from_rotation_y(angles[i])
+                } else if axis_vec == Vec3::Z {
+                    Mat3::from_rotation_z(angles[i])
+                } else {
+                    Mat3::ZERO
+                }
+            );
+        }
+
+        matr
+    }
+}
+
+impl<const N : usize, const D : usize, const A : usize> MachineConfig<N, D, A>
+{
+    pub fn convert_angles(&self, angles : [f32; N], to_comp : bool) -> [f32; N] {
+        let mut full_ang = [0.0; N];
+
+        for i in 0 .. N {
+            full_ang[i] = if self.ang[i].counter { 
+                -angles[i] 
+            } else { 
+                angles[i] 
+            } + if to_comp { 
+                -self.ang[i].offset 
+            } else {
+                self.ang[i].offset
+            };
+        }
+
+        full_ang
     }
 }
 
@@ -111,7 +224,7 @@ pub struct JsonConfig
     pub lk : LinkedData,
 
     pub anchor : Option<[f32; 3]>,
-    pub dim : Option<Vec<[f32; 3]>>,
+    pub dims : Option<Vec<[f32; 3]>>,
     pub axes : Option<Vec<[f32; 3]>>,
 
     pub comps : Vec<ConfigElement>,
@@ -120,7 +233,7 @@ pub struct JsonConfig
 
 impl JsonConfig 
 {
-    pub fn new<const N : usize>(name : String, lk : LinkedData, anchor : Option<[f32; 3]>, dim : Option<Vec<[f32; 3]>>, axes : Option<Vec<[f32; 3]>>, 
+    pub fn new<const N : usize>(name : String, lk : LinkedData, anchor : Option<[f32; 3]>, dims : Option<Vec<[f32; 3]>>, axes : Option<Vec<[f32; 3]>>, 
             comps : &[Box<dyn Component>; N], tools : &Vec<Box<dyn Tool + Send>>) -> Self {
         Self { 
             name,
@@ -128,7 +241,7 @@ impl JsonConfig
             lk,
 
             anchor,
-            dim,
+            dims,
             axes,
 
             comps: create_conf_comps(comps),
@@ -136,135 +249,79 @@ impl JsonConfig
         }
     }
 
-    pub fn get_comps<const N : usize>(&self) -> [Box<dyn Component>; N] {
+    pub fn get_machine<const N : usize, const D : usize, const A : usize>(&self) -> Result<(MachineConfig<N, D, A>, [Box<dyn Component>; N]), std::io::Error> {
+        if self.comps.len() != N {
+            return Err(std::io::Error::new(std::io::ErrorKind::InvalidData, 
+                format!("Not enough components for machine! [Required: {}, Given: {}]", N, self.comps.len())))
+        }
+
         let mut comps = vec![];
+        let mut mach : MachineConfig<N, D, A> = Default::default();
+        
+        // Init
+        mach.name = self.name.clone();
+        mach.lk = Rc::new(self.lk.clone());
+
+        mach.anchor = match self.anchor {
+            Some(anchor_raw) => Vec3::from(anchor_raw),
+            None => Default::default()
+        };
+
+        mach.dims = match &self.dims {
+            Some(dims) => match dims.iter().map(|axis_raw| Vec3::from(*axis_raw)).collect::<Vec<Vec3>>().try_into() {
+                Ok(val) => val, 
+                Err(_) => return Err(std::io::Error::new(
+                    std::io::ErrorKind::InvalidData, format!("Not enough dimensions defined for machine! [Required: {}, Given: {}]", D, dims.len())))
+            },
+            None => return Err(std::io::Error::new(
+                std::io::ErrorKind::InvalidData, format!("Not enough dimensions defined for machine! [Required: {}, Given: 0]", D)))
+        };
+
+        mach.axes = match &self.axes {
+            Some(axes) => match axes.iter().map(|axis_raw| Vec3::from(*axis_raw)).collect::<Vec<Vec3>>().try_into() {
+                Ok(val) => val, 
+                Err(_) => return Err(std::io::Error::new(
+                    std::io::ErrorKind::InvalidData, format!("Not enough axes defined for machine! [Required: {}, Given: {}]", A, axes.len())))
+            },
+            None => return Err(std::io::Error::new(
+                std::io::ErrorKind::InvalidData, format!("Not enough axes defined for machine! [Required: {}, Given: 0]", A)))
+        };
+
+        mach.tools = self.tools.iter().map(
+            |tool_raw| tool_raw.get_tool().unwrap()
+        ).collect();
+        
         for i in 0 .. N {
-            let mut comp = self.comps[i].get_comp().unwrap(); 
-            
-            if let Some(meas) = &self.comps[i].meas {
-                comp.init_meas(meas.pin);
-            }
+            let mut comp = self.comps[i].get_comp().unwrap();
+
+            mach.ang[i] = self.comps[i].ang;
+            mach.sim[i] = self.comps[i].sim;
+
+            // Collected arrays
+            match self.comps[i].limit {
+                Some(lim) => { 
+                    
+
+                    mach.vels[i] = lim.vel;
+                    mach.limit[i] = lim;
+                }, 
+                None => { }
+            };
+
+            match self.comps[i].meas {
+                Some(meas) => {
+                    comp.init_meas(meas.pin);
+
+                    mach.set_vals[i] = meas.set_val;
+                    mach.meas[i] = meas;
+                },
+                None => { }
+            }; 
 
             comps.push(comp);
         }
-        comps.try_into().unwrap_or_else(
-            |v: Vec<Box<dyn Component>>| panic!("Wrong number of components in configuration! (Required: {}, Found: {})", N, v.len()))
-    }
 
-    pub fn get_tools(&self) -> Vec<Box<dyn Tool + Send>> {
-        let mut tools = vec![];
-        for i in 0 .. self.tools.len() {
-            let tool = self.tools[i].get_tool().unwrap();
-            tools.push(tool);
-        }
-        tools
-    }
-
-    pub fn get_axes<const N : usize>(&self, angles : &[f32; N]) -> Vec<Mat3> {
-        let mut matr = vec![];
-
-        if let Some(axes) = &self.axes {
-            for i in 0 .. axes.len() {
-                let axis_vec = Vec3::from(axes[i]).normalize();
-
-                matr.push(
-                    if axis_vec == Vec3::X {
-                        Mat3::from_rotation_x(angles[i])
-                    } else if axis_vec == Vec3::Y {
-                        Mat3::from_rotation_y(angles[i])
-                    } else if axis_vec == Vec3::Z {
-                        Mat3::from_rotation_z(angles[i])
-                    } else if axis_vec == Vec3::NEG_X {
-                        Mat3::from_rotation_x(-angles[i])
-                    } else if axis_vec == Vec3::NEG_Y {
-                        Mat3::from_rotation_y(-angles[i])
-                    } else if axis_vec == Vec3::NEG_Z {
-                        Mat3::from_rotation_z(-angles[i])
-                    } else {
-                        Mat3::ZERO
-                    }
-                );
-            }
-        }
-
-        matr
-    }
-
-    pub fn get_dim(&self) -> Vec<Vec3> {
-        let mut dims = vec![];
-
-        if let Some(dims_raw) = &self.dim {
-            dims = dims_raw.iter().map(|dim_raw| { Vec3::from(*dim_raw) }).collect();
-        }
-
-        dims
-    }
-
-    pub fn get_anchor(&self) -> Vec3 {
-        match self.anchor {
-            Some(raw) => Vec3::from(raw),
-            None => Vec3::ZERO
-        }
-    }
-
-    pub fn get_velocities(&self) -> Vec<f32> {
-        let mut vels = vec![];
-
-        for comp in &self.comps {
-            vels.push(
-                match &comp.limit {
-                    Some(limit) => limit.vel.unwrap_or(0.0),
-                    None => 0.0
-                }
-            )
-        }
-
-        vels
-    }
-
-    pub fn get_meas(&self) -> Vec<f32> {
-        let mut meas = vec![];
-
-        for comp in &self.comps {
-            meas.push(
-                match &comp.meas {
-                    Some(meas) => meas.set_val,
-                    None => 0.0
-                }
-            )
-        }
-
-        meas
-    }
-
-    pub fn get_meas_dist(&self) -> Vec<f32> {
-        let mut meas_dist = vec![];
-
-        for comp in &self.comps {
-            meas_dist.push(
-                match &comp.meas {
-                    Some(meas) => meas.dist,
-                    None => 0.0
-                }
-            )
-        }
-
-        meas_dist
-    }
-
-    pub fn get_mass(&self) -> Vec<f32> {
-        let mut mass = vec![];
-
-        for comp in &self.comps {
-            mass.push( 
-                match &comp.mass {
-                    Some(m) => *m,
-                    None => 0.0
-                }
-            )
-        }
-
-        mass
+        Ok((mach, comps.try_into().unwrap()))
     }
 
     pub fn to_string_pretty(&self) -> String {

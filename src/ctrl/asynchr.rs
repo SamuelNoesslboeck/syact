@@ -28,6 +28,7 @@ type CommsFunc<Ctrl, Msg, Res> = fn (&mut Ctrl, Msg) -> Res;
 ///
 /// ctrl.comms.await_inactive();
 /// ```
+#[derive(Debug)]
 pub struct AsyncComms<Msg: Send + 'static, Res: Send + 'static>
 {
     pub thr : JoinHandle<()>,

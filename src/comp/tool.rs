@@ -1,11 +1,11 @@
-use std::any::type_name;
+use std::{any::type_name, fmt::Debug};
 
 use serde::{Serialize, Deserialize};
 
 use crate::Vec3;
 
 // Tools
-pub trait Tool
+pub trait Tool : Debug
 {
     // Actions
         fn activate(&self);
