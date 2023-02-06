@@ -1,8 +1,7 @@
-use std::sync::Arc;
 use serde::{Serialize, Deserialize};
 
-use crate::{Component, LinkedData, StepperCtrl};
-use crate::ctrl::{LimitType, LimitDest, SimpleMeas};
+use crate::{Component, StepperCtrl};
+use crate::ctrl::SimpleMeas;
 use crate::math::MathActor;
 
 /// A bearing powered by a motor with a certain gear ratio
@@ -24,28 +23,6 @@ impl GearBearing
             ratio
         }
     }
-
-    // Limits
-        pub fn set_limit(&mut self, limit_min : LimitType, limit_max : LimitType) {
-            self.ctrl.set_limit(
-                match limit_min {
-                    LimitType::Angle(ang) => LimitType::Angle(self.dist_for_super(ang)), 
-                    _ => LimitType::None
-                }, match limit_max {
-                    LimitType::Angle(ang) => LimitType::Angle(self.dist_for_super(ang)),
-                    _ => LimitType::None
-                }
-            )
-        }
-
-        pub fn get_limit_dest(&self, gam : f32) -> LimitDest {
-            match self.ctrl.get_limit_dest(self.dist_for_super(gam)) {
-                LimitDest::Maximum(dist) => LimitDest::Maximum(self.dist_for_this(dist)),
-                LimitDest::Minimum(dist) => LimitDest::Minimum(self.dist_for_this(dist)),
-                other => other  
-            }
-        }
-    //
 }
 
 impl SimpleMeas for GearBearing 
@@ -84,25 +61,9 @@ impl Component for GearBearing
         }
     //
 
-    // Link
-        fn link(&mut self, lk : Arc<LinkedData>) {
-            self.ctrl.link(lk);    
-        }
-    //
-
     // Json I/O
         fn to_json(&self) -> serde_json::Value {
             serde_json::to_value(self).unwrap()
-        }
-    //
-
-    // Position
-        fn get_limit_dest(&self, gam : f32) -> LimitDest {
-            match self.ctrl.get_limit_dest(self.dist_for_super(gam)) {
-                LimitDest::Maximum(dist) => LimitDest::Maximum(self.dist_for_this(dist)),
-                LimitDest::Minimum(dist) => LimitDest::Minimum(self.dist_for_this(dist)),
-                other => other  
-            }
         }
     //
 }

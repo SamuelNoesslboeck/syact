@@ -27,9 +27,9 @@ pub struct StepperDriver
     sys_meas : RaspPin,
 
     /// Limit for minimum angle/step count
-    limit_min : LimitType,
+    limit_min : Option<f32>,
     /// Limit for maximum angle/step count
-    limit_max : LimitType
+    limit_max : Option<f32>
 }
 
 impl StepperDriver {
@@ -62,8 +62,8 @@ impl StepperDriver {
             sys_step,
             sys_meas: RaspPin::ErrPin,
 
-            limit_min: LimitType::None,
-            limit_max: LimitType::None
+            limit_min: None,
+            limit_max: None
         };
 
         // Write initial direction to output pins
@@ -87,8 +87,8 @@ impl StepperDriver {
             sys_step: RaspPin::Output(SysFsGpioOutput::open(pin_step.clone())?),
             sys_meas: RaspPin::ErrPin,
 
-            limit_min: LimitType::None,
-            limit_max: LimitType::None
+            limit_min: None,
+            limit_max: None
         };
 
         // Write initial direction to output pins
@@ -133,7 +133,7 @@ impl StepperDriver {
                     self.pos += if self.dir { 1 } else { -1 };
         
                     match self.limit_max {
-                        LimitType::Angle(pos) => {
+                        Some(pos) => {
                             if self.get_dist() > pos {
                                 return StepResult::Break;
                             }
@@ -142,7 +142,7 @@ impl StepperDriver {
                     };
         
                     match self.limit_min {
-                        LimitType::Angle(pos) => {
+                        Some(pos) => {
                             if self.get_dist() < pos {
                                 return StepResult::Break;
                             }
@@ -296,37 +296,27 @@ impl StepperDriver {
     //
 
     // Limits
-        pub fn set_limit(&mut self, min : LimitType, max : LimitType) {
+        pub fn set_limit(&mut self, min : Option<f32>, max : Option<f32>) {
             self.limit_min = min;
             self.limit_max = max;
         }
 
-        pub fn get_limit_dest(&self, pos : f32) -> LimitDest {
-            let res_min = match self.limit_min {
-                LimitType::Angle(ang) => {
+        pub fn get_limit_dest(&self, pos : f32) -> f32 {
+            return match self.limit_min {
+                Some(ang) => {
                     if pos < ang {
-                        return LimitDest::Minimum(pos - ang);
-                    }
-
-                    LimitDest::NotReached
+                        pos - ang
+                    } else { 0.0 }
                 },
-                _ => LimitDest::NoLimitSet
-            };
-            
-            if !res_min.reached() {
-                return match self.limit_max {
-                    LimitType::Angle(ang) => {
+                None => match self.limit_max {
+                    Some(ang) => {
                         if pos > ang {
-                            return LimitDest::Maximum(pos - ang);
-                        }
-    
-                        LimitDest::NotReached
+                            pos - ang
+                        } else { 0.0 }
                     },
-                    _ => res_min
-                };
-            } else {
-                return res_min;
-            }
+                    None => 0.0
+                }
+            };
         }
 
         pub fn set_endpoint(&mut self, set_pos : f32) -> bool {
@@ -334,8 +324,8 @@ impl StepperDriver {
                 self.pos = self.ang_to_steps_dir(set_pos);
     
                 self.set_limit(
-                    if self.dir { self.limit_min.clone() } else { LimitType::Angle(set_pos) },
-                    if self.dir { LimitType::Angle(set_pos) } else { self.limit_max.clone() }
+                    if self.dir { self.limit_min } else { Some(set_pos) },
+                    if self.dir { Some(set_pos) } else { self.limit_max }
                 );
 
                 true

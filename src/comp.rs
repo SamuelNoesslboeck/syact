@@ -3,7 +3,6 @@ use std::{any::type_name, sync::Arc, fmt::Debug};
 use serde::{Serialize, Deserialize};
 
 use super::*;
-use crate::ctrl::LimitDest;
 
 // Submodules
 mod cylinder;
@@ -156,8 +155,6 @@ pub trait Component : SimpleMeas + MathActor + Debug
         } 
     }
 
-    // fn lin_move(&mut self, dist : f32, vel : f32, vel_max : f32) -> f32;
-
     // Position
         fn get_dist(&self) -> f32 {
             let super_len = if let Some(s_comp) = self.super_comp() {
@@ -175,7 +172,13 @@ pub trait Component : SimpleMeas + MathActor + Debug
             }
         }
 
-        fn get_limit_dest(&self, pos : f32) -> LimitDest;
+        fn get_limit_dest(&self, mut dist : f32) -> f32 {
+            dist = self.dist_for_super(dist);
+
+            if let Some(s_comp) = self.super_comp() {
+                s_comp.get_limit_dest(dist)
+            } else { 0.0 }
+        }
 
         fn set_endpoint(&mut self, mut set_dist : f32) -> bool {
             set_dist = self.dist_for_super(set_dist);
@@ -183,6 +186,12 @@ pub trait Component : SimpleMeas + MathActor + Debug
             if let Some(s_comp) = self.super_comp_mut() {
                 s_comp.set_endpoint(set_dist)
             } else { false }
+        }
+
+        fn set_limit(&mut self, limit_min : Option<f32>, limit_max : Option<f32>) {
+            if let Some(s_comp) = self.super_comp_mut() {
+                s_comp.set_limit(limit_min, limit_max)
+            }
         }
     // 
 
@@ -283,8 +292,8 @@ pub trait ComponentGroup<const N : usize>
             }
         }
 
-        fn get_limit_dest(&self, dist : [f32; N]) -> [LimitDest; N] {
-            let mut limits = [LimitDest::NotReached; N]; 
+        fn get_limit_dest(&self, dist : [f32; N]) -> [f32; N] {
+            let mut limits = [0.0; N]; 
             for i in 0 .. N {
                 limits[i] = self.comps()[i].get_limit_dest(dist[i]);
             }
@@ -294,7 +303,7 @@ pub trait ComponentGroup<const N : usize>
         fn valid_dist(&self, dist : [f32; N]) -> bool {
             let mut res = true;
             for i in 0 .. N {
-                res = res & ((!self.comps()[i].get_limit_dest(dist[i]).reached()) & dist[i].is_finite()); 
+                res = res & ((!self.comps()[i].get_limit_dest(dist[i]).is_normal()) & dist[i].is_finite()); 
             }
             res
         }
@@ -302,7 +311,7 @@ pub trait ComponentGroup<const N : usize>
         fn valid_dist_verb(&self, dist : [f32; N]) -> [bool; N] {
             let mut res = [true; N];
             for i in 0 .. N {
-                res[i] = (!self.comps()[i].get_limit_dest(dist[i]).reached()) & dist[i].is_finite(); 
+                res[i] = (!self.comps()[i].get_limit_dest(dist[i]).is_normal()) & dist[i].is_finite(); 
             }
             res
         }
@@ -313,6 +322,12 @@ pub trait ComponentGroup<const N : usize>
                 res[i] = self.comps_mut()[i].set_endpoint(set_dist[i]);
             }   
             res
+        }
+
+        fn set_limit(&mut self, limit_min : [Option<f32>; N], limit_max : [Option<f32>; N]) {
+            for i in 0 .. N {
+                self.comps_mut()[i].set_limit(limit_min[i], limit_max[i]);
+            }
         }
     //
 

@@ -116,12 +116,6 @@ impl StepperCtrl
         }
     //
 
-    // Limits
-        pub fn set_limit(&mut self, min : LimitType, max : LimitType) {
-            self.driver.lock().unwrap().set_limit(min, max)
-        }
-    // 
-
     // Debug 
         pub fn debug_pins(&self) {
             self.driver.lock().unwrap().debug_pins();
@@ -201,12 +195,16 @@ impl Component for StepperCtrl
             self.driver.lock().unwrap().write_dist(pos);
         }
 
-        fn get_limit_dest(&self, pos : f32) -> LimitDest {
+        fn get_limit_dest(&self, pos : f32) -> f32 {
             self.driver.lock().unwrap().get_limit_dest(pos)
         }
 
         fn set_endpoint(&mut self, set_dist : f32) -> bool {
             self.driver.lock().unwrap().set_endpoint(set_dist)
+        }
+
+        fn set_limit(&mut self, min : Option<f32>, max : Option<f32>) {
+            self.driver.lock().unwrap().set_limit(min, max)
         }
     //
 

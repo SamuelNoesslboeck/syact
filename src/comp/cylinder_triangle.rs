@@ -4,7 +4,7 @@ use serde::{Serialize, Deserialize};
 
 use crate::{Component, LinkedData};
 use crate::comp::Cylinder;
-use crate::ctrl::{LimitType, LimitDest, SimpleMeas}; 
+use crate::ctrl::SimpleMeas; 
 use crate::math::MathActor;
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -16,24 +16,17 @@ pub struct CylinderTriangle
     // Triangle
     pub l_a : f32,
     pub l_b : f32,
-
-    // Offsets
-    pub offset_a : Option<f32>,
-    pub offset_b : Option<f32>
 }
 
 impl CylinderTriangle 
 {
-    pub fn new(cylinder : Cylinder, l_a : f32, l_b : f32, offset_a : Option<f32>, offset_b : Option<f32>) -> Self
+    pub fn new(cylinder : Cylinder, l_a : f32, l_b : f32) -> Self
     {
         let mut tri = CylinderTriangle {
             l_a, 
             l_b,
 
-            cylinder,
-
-            offset_a,
-            offset_b,
+            cylinder
         };
 
         tri.cylinder.write_dist(l_a.max(l_b));
@@ -57,12 +50,6 @@ impl CylinderTriangle
 
         pub fn vel_for_gam(&self, omega : f32, gam : f32) -> f32 {
             omega * self.l_a / self.beta_for_gam(gam).sin()
-        }
-    //
-
-    // Limit
-        pub fn set_limit(&mut self, limit_min : LimitType, limit_max : LimitType) {
-            self.cylinder.set_limit(limit_max, limit_min)
         }
     //
 }
@@ -156,12 +143,8 @@ impl Component for CylinderTriangle {
             self.cylinder.drive_abs_async(self.dist_for_super(dist), vel)
         }
 
-        fn get_limit_dest(&self, gam : f32) -> LimitDest {
-            match self.cylinder.get_limit_dest(self.dist_for_super(gam)) {
-                LimitDest::Maximum(dist) => LimitDest::Maximum(self.dist_for_this(dist)),
-                LimitDest::Minimum(dist) => LimitDest::Minimum(self.dist_for_this(dist)),
-                other => other  
-            }
+        fn set_limit(&mut self, limit_min : Option<f32>, limit_max : Option<f32>) {
+            self.cylinder.set_limit(limit_min, limit_max)
         }
     // 
     

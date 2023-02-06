@@ -34,8 +34,8 @@ mod stepper_data
                 CylinderTriangle::new(
                     Cylinder::new(
                         StepperCtrl::new(StepperConst::MOT_17HE15_1504S, PIN_ERR, PIN_ERR), 
-                    1.5, None),
-                100.0, 200.0, None, None)),
+                    1.5),
+                100.0, 200.0)),
             Box::new(
                 GearBearing::new(
                     StepperCtrl::new(StepperConst::MOT_17HE15_1504S, PIN_ERR, PIN_ERR),

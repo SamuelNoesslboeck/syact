@@ -10,22 +10,18 @@ use std::f32::consts::PI;
 pub mod servo;
 pub use servo::*;
 
-/// ### `StepperData`
-/// A collection of the most relevant variables Unit stepper calculation 
-/// ```
-/// use stepper_lib::StepperData;
-/// 
-/// // Create the data from an standard motor
-/// let mut data = StepperData::mot_17he15_1504s(
-///     12.0,   // The motor is supplied with 12 Volts
-///     1.5     // Safety factor of 1.5 to assure correct movements
-/// );
-/// 
-/// data.apply_load_t(0.1);     // Apply a load torque of 0.1 Nm 
-/// assert_eq!(data.t_s - data.t_load, data.t());
-/// 
-/// ``` 
-/// Supports JSON-Serialize and Deserialize with the `serde_json` library
+/**
+### `StepperData`
+A collection of the most relevant variables Unit stepper calculation 
+```rust
+use stepper_lib::StepperConst;
+
+// Create the data from an standard motor
+let mut data = StepperConst::MOT_17HE15_1504S;
+
+``` 
+Supports JSON-Serialize and Deserialize with the `serde_json` library
+*/
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct StepperConst
 {

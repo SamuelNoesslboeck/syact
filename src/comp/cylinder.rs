@@ -3,7 +3,7 @@ use std::sync::Arc;
 use serde::{Serialize, Deserialize};
 
 use crate::{Component, LinkedData};
-use crate::ctrl::{StepperCtrl, LimitType, LimitDest, SimpleMeas};
+use crate::ctrl::{StepperCtrl, SimpleMeas};
 use crate::math::MathActor;
 
 /// Cylinder component struct
@@ -15,35 +15,18 @@ pub struct Cylinder
 
     /// Distance traveled per rad (Unit mm)   \
     /// f_rte = pitch / (2pi)
-    pub rte_ratio : f32,
-
-    pub offset : Option<f32>
+    pub rte_ratio : f32
 }
 
 impl Cylinder
 {
     /// Create a new cylinder instance
-    pub fn new(ctrl : StepperCtrl, rte_ratio : f32, offset : Option<f32>) -> Self {
+    pub fn new(ctrl : StepperCtrl, rte_ratio : f32) -> Self {
         return Cylinder {
             ctrl,
-            rte_ratio,
-            offset
+            rte_ratio
         };
     }
-
-    // Limits
-        pub fn conv_limit(&self, limit : LimitType) -> LimitType {
-            match limit {
-                LimitType::Distance(dist) => LimitType::Angle(self.dist_for_super(dist)), 
-                LimitType::Angle(_) => limit,
-                _ => LimitType::None
-            }
-        }
-
-        pub fn set_limit(&mut self, limit_max : LimitType, limit_min : LimitType) {
-            self.ctrl.set_limit(self.conv_limit(limit_min), self.conv_limit(limit_max));
-        }
-    //
 }
 
 impl MathActor for Cylinder 
@@ -91,14 +74,4 @@ impl Component for Cylinder
             serde_json::to_value(self).unwrap()
         }
     // 
-
-    // Position
-        fn get_limit_dest(&self, dist : f32) -> LimitDest {
-            match self.ctrl.get_limit_dest(self.dist_for_super(dist)) {
-                LimitDest::Minimum(ang) => LimitDest::Minimum(self.dist_for_this(ang)), 
-                LimitDest::Maximum(ang) => LimitDest::Maximum(self.dist_for_this(ang)), 
-                other => other
-            }
-        }
-    //
 }
