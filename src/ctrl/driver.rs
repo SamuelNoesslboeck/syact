@@ -300,8 +300,12 @@ impl StepperDriver {
 
     // Limits
         pub fn set_limit(&mut self, min : Option<f32>, max : Option<f32>) {
-            self.limit_min = min;
-            self.limit_max = max;
+            if min.is_some() {
+                self.limit_min = min;
+            }
+            if max.is_some() {
+                self.limit_max = max;
+            }
         }
 
         pub fn get_limit_dest(&self, pos : f32) -> f32 {

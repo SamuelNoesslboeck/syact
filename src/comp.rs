@@ -167,7 +167,17 @@ pub trait Component : SimpleMeas + MathActor + std::fmt::Debug
             } else { false }
         }
 
-        fn set_limit(&mut self, limit_min : Option<f32>, limit_max : Option<f32>) {
+        fn set_limit(&mut self, mut limit_min : Option<f32>, mut limit_max : Option<f32>) {
+            limit_min = match limit_min {
+                Some(min) => Some(self.dist_for_super(min)),
+                None => None
+            }; 
+
+            limit_max = match limit_max {
+                Some(max) => Some(self.dist_for_super(max)),
+                None => None
+            };
+
             if let Some(s_comp) = self.super_comp_mut() {
                 s_comp.set_limit(limit_min, limit_max)
             }

@@ -100,7 +100,8 @@ impl JsonConfig
                 Some(meas) => {
                     comp.init_meas(meas.pin);
 
-                    mach.set_vals[i] = meas.set_val;
+                    mach.meas_dist[i] = meas.dist;
+                    mach.home[i] = meas.set_val;
                     mach.meas[i] = meas;
                 },
                 None => { }
