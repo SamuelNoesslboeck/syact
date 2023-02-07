@@ -1,4 +1,12 @@
-use super::*; 
+use std::sync::Arc;
+use std::thread;
+
+use gpio::{GpioIn, GpioOut};
+use gpio::sysfs::SysFsGpioOutput;
+
+use crate::{StepperConst, LinkedData};
+use crate::ctrl::types::*;
+use crate::math;
 
 /// ### Driver
 /// Driver class for basic stepper motor operations
@@ -109,7 +117,7 @@ impl StepperDriver {
         /// Helper function for measurements with a single pin
         pub fn __meas_helper(pin : &mut RaspPin) -> bool {
             match pin {
-                RaspPin::Input(gpio_pin) => {
+                RaspPin::Input(gpio_pin ) => {
                     gpio_pin.read_value().unwrap() == gpio::GpioValue::High
                 },
                 _ => true
@@ -122,7 +130,7 @@ impl StepperDriver {
         pub fn step(&mut self, time : f32, ufunc : &UpdateFunc) -> StepResult {
             match &mut self.sys_step {
                 RaspPin::Output(pin) => {
-                    let step_time_half = Duration::from_secs_f32(time / 2.0);
+                    let step_time_half = std::time::Duration::from_secs_f32(time / 2.0);
 
                     pin.set_high().unwrap();
                     thread::sleep(step_time_half);
@@ -169,7 +177,7 @@ impl StepperDriver {
         }
 
         pub fn accelerate(&mut self, stepcount : u64, omega : f32, ufunc : &UpdateFunc) -> (StepResult, Vec<f32>) {
-            let t_start = self.lk.s_f / start_frequency(&self.data, self.t_load, self.j_load);
+            let t_start = self.lk.s_f / math::start_frequency(&self.data, self.t_load, self.j_load);
             let t_min = self.data.step_time(omega);
 
             let mut o_last : f32 = 0.0;
@@ -186,7 +194,7 @@ impl StepperDriver {
                     break;
                 }
 
-                o_last = angluar_velocity_dyn(&self.data, t_total, o_last, self.t_load, self.j_load, self.lk.u);
+                o_last = math::angluar_velocity_dyn(&self.data, t_total, o_last, self.t_load, self.j_load, self.lk.u);
                 time_step = self.data.step_ang() / o_last * self.lk.s_f;
                 t_total += time_step;
 
@@ -207,8 +215,6 @@ impl StepperDriver {
 
             ( StepResult::None, curve )
         }
-
-        // pub fn accelerate(&mut self, stepcount : f32, )
 
         pub fn drive_curve(&mut self, curve : &Vec<f32>) {
             for i in 0 .. curve.len() {
@@ -280,9 +286,6 @@ impl StepperDriver {
                 _ => { }
             };
         }
-
-        // pub fn lin_move(&mut self, dist : f32, vel_0 : f32, vel_max : f32) -> f32 {
-        // }
     // 
 
     // Position
@@ -355,7 +358,7 @@ impl StepperDriver {
 
     // Loads
         pub fn accel_dyn(&self, omega : f32) -> f32 {
-            self.data.alpha_max_dyn(torque_dyn(&self.data, omega, self.lk.u), self.t_load, self.j_load)
+            self.data.alpha_max_dyn(math::torque_dyn(&self.data, omega, self.lk.u), self.t_load, self.j_load)
         }
 
         pub fn apply_load_inertia(&mut self, j : f32) {

@@ -1,6 +1,5 @@
+use crate::Component;
 use crate::math::actors;
-
-use super::*;
 
 // Helper
     fn scale_array<const N : usize>(mut array : [f32; N], scalar : f32) -> [f32; N] {

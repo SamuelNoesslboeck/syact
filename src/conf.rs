@@ -1,12 +1,9 @@
-use std::fs;
 use std::rc::Rc;
 
-use glam::Mat3;
-use serde::{Serialize, Deserialize};
+use glam::{Mat3, Vec3};
 
 use crate::LinkedData;
-use crate::comp::{Tool, NoTool, Cylinder, CylinderTriangle, GearBearing, PencilTool};
-use super::*;
+use crate::comp::Tool;
 
 // Submodules
 mod elem;

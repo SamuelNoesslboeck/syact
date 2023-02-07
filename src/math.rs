@@ -2,7 +2,7 @@ use std::f32::consts::{E, PI};
 
 use glam::{Vec3, Mat3};
 
-use super::data::StepperConst;
+use crate::data::StepperConst;
 
 /// Returns the current torque of a motor (data) at the given angluar speed (omega), returns only positive values  \
 /// Unit: [Nm]  

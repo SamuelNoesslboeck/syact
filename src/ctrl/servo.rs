@@ -1,4 +1,11 @@
-use super::*; 
+use std::sync::mpsc::{Sender, Receiver, channel}; 
+use std::thread;
+use std::time::Duration;
+
+use gpio::GpioOut;
+
+use crate::ctrl::types::*;
+use crate::data::ServoData;
 
 pub struct ServoDriver
 {
@@ -6,7 +13,7 @@ pub struct ServoDriver
     pub pin_pwm : u16,
 
     // Thread
-    pub thr : JoinHandle<()>,
+    pub thr : thread::JoinHandle<()>,
     pub sender : Sender<f32>
 }
 
@@ -15,7 +22,7 @@ impl ServoDriver
     pub fn new(data : ServoData, pin_pwm : u16) -> Self {
         let pos = data.phi_max / 2.0;
 
-        let mut sys_pwm = match SysFsGpioOutput::open(pin_pwm.clone()) {
+        let mut sys_pwm = match gpio::sysfs::SysFsGpioOutput::open(pin_pwm.clone()) {
             Ok(val) => RaspPin::Output(val),
             Err(_) => RaspPin::ErrPin
         };

@@ -4,11 +4,14 @@
 //! NOTE: If any of the formulas are unclear, please have a look at \
 //! the article on stepper motors included in this create under "article/article.pdf"
 
-use serde::{Serialize, Deserialize, Deserializer, Serializer};
 use std::f32::consts::PI;
 
+use serde::{Serialize, Deserialize, Deserializer, Serializer};
+
+// Submodules
 pub mod servo;
 pub use servo::*;
+//
 
 /**
 ### `StepperData`

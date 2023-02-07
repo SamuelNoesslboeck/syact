@@ -1,20 +1,10 @@
-use std::{
-    sync::{
-        mpsc::{channel, Sender, Receiver}, 
-        Mutex, 
-        Arc
-    },
-    thread::{self, JoinHandle}, 
-    time::Duration, 
-    vec
-};
+use std::sync::{Mutex, Arc};
 
-use gpio::{GpioIn, GpioOut, sysfs::*};
+use gpio::sysfs::*;
 use serde::{Serialize, Deserialize};
 
 use crate::{Component, LinkedData, MathActor};
-use crate::data::{StepperConst, ServoData};
-use crate::math::{start_frequency, angluar_velocity_dyn, torque_dyn};
+use crate::data::StepperConst;
 
 // Use local types module
 mod asynchr;

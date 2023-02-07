@@ -1,19 +1,10 @@
-use super::*; 
+use std::sync::mpsc::{channel, Sender, Receiver};
+use std::thread;
 
-use std::{
-    sync::mpsc::{channel, Sender, Receiver},
-    thread::{self, JoinHandle}
-};
-
-type StepperMsg = (f32, f32, UpdateFunc);
+type StepperMsg = (f32, f32, crate::UpdateFunc);
 type StepperRes = ();
 
 pub type AsyncStepper = AsyncComms<StepperMsg, StepperRes>;
-
-// type ServoMsg = f32;
-// type ServoRes = ();
-
-// type AsyncServo = AsyncComms<ServoMsg, ServoRes>;
 
 type CommsFunc<Ctrl, Msg, Res> = fn (&mut Ctrl, Msg) -> Res;
 
@@ -31,7 +22,7 @@ type CommsFunc<Ctrl, Msg, Res> = fn (&mut Ctrl, Msg) -> Res;
 #[derive(Debug)]
 pub struct AsyncComms<Msg: Send + 'static, Res: Send + 'static>
 {
-    pub thr : JoinHandle<()>,
+    pub thr : thread::JoinHandle<()>,
     sender : Sender<Option<Msg>>,
     receiver : Receiver<Res>
 }
@@ -84,7 +75,7 @@ impl<Msg: Send + 'static, Res: Send + 'static> AsyncComms<Msg, Res> {
         self.receiver.recv().expect("Recv failed")  // TODO: Improve error handling
     }
 
-    pub fn kill(&self) -> &JoinHandle<()> {
+    pub fn kill(&self) -> &thread::JoinHandle<()> {
         if !self.thr.is_finished() {
             self.sender.send(None).unwrap_or(());
         }

@@ -1,3 +1,9 @@
+use glam::Vec3;
+use serde::{Serialize, Deserialize};
+
+use crate::{LinkedData, Tool, Component, MachineConfig};
+use crate::conf::ConfigElement;
+
 #[derive(Serialize, Deserialize)]
 pub struct JsonConfig
 {
@@ -42,7 +48,7 @@ impl JsonConfig
         
         // Init
         mach.name = self.name.clone();
-        mach.lk = Rc::new(self.lk.clone());
+        mach.lk = std::rc::Rc::new(self.lk.clone());
 
         mach.anchor = match self.anchor {
             Some(anchor_raw) => Vec3::from(anchor_raw),
@@ -112,11 +118,11 @@ impl JsonConfig
 
     // File I/O
         pub fn save_to_file(&self, path : &str) {
-            fs::write(path, self.to_string_pretty()).unwrap()
+            std::fs::write(path, self.to_string_pretty()).unwrap()
         }
 
         pub fn read_from_file(path : &str) -> Self {
-            serde_json::from_str(fs::read_to_string(path).unwrap().as_str()).unwrap()
+            serde_json::from_str(std::fs::read_to_string(path).unwrap().as_str()).unwrap()
         }
     // 
 }
