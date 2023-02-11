@@ -1,15 +1,14 @@
-use std::{f32::consts::PI, collections::HashMap, sync::Arc};
+use std::{f32::consts::PI, sync::Arc};
 
 use glam::{Vec2, Mat2};
 use gpio::{GpioIn, sysfs::*};
-use gcode::{Mnemonic, GCode};
 
 use crate::{Component, ComponentGroup, LinkedData, StepperCtrl, StepperConst, UpdateFunc};
 use crate::ctrl::{PIN_ERR, CompPath};
-use crate::gcode::{Interpreter, GCodeFunc, Args};
 
 // Submodules
 mod data;
+mod movements;
  
 // Test Async
     #[test]
@@ -48,42 +47,6 @@ mod data;
         }
     }
 //
-
-// Test step
-    #[test]
-    fn test_step() {
-        let mut ctrl = StepperCtrl::new(StepperConst::MOT_17HE15_1504S, 27, 19);
-        ctrl.link(Arc::new(LinkedData { u: 12.0, s_f: 1.5 })); 
-
-        ctrl.apply_load_inertia(0.000_1);
-
-        // Test
-        println!("Doing single step ... ");
-        ctrl.step(0.01, &crate::UpdateFunc::None);
-        println!("Step done ... ");
-        // 
-    }
-//
-
-// Test steps
-    // Parameters
-        const STEPS : u64 = 200;
-        const OMEGA : f32 = 10.0;
-    // 
-
-    #[test]
-    fn test_steps() {
-        let mut ctrl = StepperCtrl::new(StepperConst::MOT_17HE15_1504S, 27, 19);
-        ctrl.link(Arc::new(LinkedData { u: 12.0, s_f: 1.5 })); 
-
-        ctrl.apply_load_inertia(0.1);
-        ctrl.apply_load_force(0.1);
-
-        println!("Staring to move");
-        ctrl.steps(STEPS, OMEGA, crate::ctrl::UpdateFunc::None);
-        println!("{} with max speed {}rad/s done", STEPS, OMEGA);
-    }
-// 
 
 // Test G1
 mod test_g1 

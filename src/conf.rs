@@ -1,11 +1,9 @@
-use std::fs;
 use std::rc::Rc;
 
 use glam::Mat3;
-use serde::{Serialize, Deserialize};
 
 use crate::LinkedData;
-use crate::comp::{Tool, NoTool, Cylinder, CylinderTriangle, GearBearing, PencilTool};
+use crate::comp::Tool;
 use super::*;
 
 // Submodules
@@ -107,8 +105,3 @@ impl<const N : usize, const D : usize, const A : usize> MachineConfig<N, D, A>
         full_ang
     }
 }
-
-
-// pub fn read_conf<const N : usize>(comf : &serde_json::Value) -> &[Box<dyn Component>; N] {
-
-// }
