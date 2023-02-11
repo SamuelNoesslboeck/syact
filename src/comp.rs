@@ -1,48 +1,27 @@
-use std::{any::type_name, sync::Arc, fmt::Debug};
+use std::any::type_name;
+use std::sync::Arc;
 
-use serde::{Serialize, Deserialize};
-
-use super::*;
+use crate::{SimpleMeas, MathActor};
 
 // Submodules
 mod cylinder;
-mod cylinder_triangle;
-mod gear_bearing;
-mod tool;
-
 pub use cylinder::*;
+
+mod cylinder_triangle;
 pub use cylinder_triangle::*;
+
+mod gear_bearing;
 pub use gear_bearing::*;
+
+mod lk;
+pub use lk::*;
+
+mod tool;
 pub use tool::*;
 //
 
-#[derive(Debug, Default, Clone, Serialize, Deserialize)]
-pub struct LinkedData 
-{
-    pub u : f32,
-    pub s_f : f32
-}
-
-impl LinkedData 
-{
-    pub const EMPTY : Self = Self {
-        u : 0.0, 
-        s_f : 0.0
-    };
-}
-
-impl From<(f32, f32)> for LinkedData 
-{
-    fn from(data: (f32, f32)) -> Self {
-        Self {
-            u: data.0, 
-            s_f: data.1
-        }
-    }
-}
-
 /// Trait for defining controls and components
-pub trait Component : SimpleMeas + MathActor + Debug
+pub trait Component : SimpleMeas + MathActor + std::fmt::Debug
 {
     // Super
         fn super_comp(&self) -> Option<&dyn Component> {
@@ -188,7 +167,17 @@ pub trait Component : SimpleMeas + MathActor + Debug
             } else { false }
         }
 
-        fn set_limit(&mut self, limit_min : Option<f32>, limit_max : Option<f32>) {
+        fn set_limit(&mut self, mut limit_min : Option<f32>, mut limit_max : Option<f32>) {
+            limit_min = match limit_min {
+                Some(min) => Some(self.dist_for_super(min)),
+                None => None
+            }; 
+
+            limit_max = match limit_max {
+                Some(max) => Some(self.dist_for_super(max)),
+                None => None
+            };
+
             if let Some(s_comp) = self.super_comp_mut() {
                 s_comp.set_limit(limit_min, limit_max)
             }

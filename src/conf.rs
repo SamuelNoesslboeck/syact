@@ -1,10 +1,9 @@
 use std::rc::Rc;
 
-use glam::Mat3;
+use glam::{Mat3, Vec3};
 
 use crate::LinkedData;
 use crate::comp::Tool;
-use super::*;
 
 // Submodules
 mod elem;
@@ -28,7 +27,8 @@ pub struct MachineConfig<const N : usize, const D : usize, const A : usize>
     pub tools : Vec<Box<dyn Tool + Send>>,
 
     pub vels : [f32; N],
-    pub set_vals : [f32; N],
+    pub home : [f32; N],
+    pub meas_dist : [f32; N],
     
     pub ang : [AngleData; N],
     pub sim : [SimData; N],
@@ -50,7 +50,8 @@ impl<const N : usize, const D : usize, const A : usize> Default for MachineConfi
             tools: vec![],
 
             vels: [0.0; N],
-            set_vals: [0.0; N],
+            home: [0.0; N],
+            meas_dist: [0.0; N],
             
             ang: [Default::default(); N],
             sim: [Default::default(); N],

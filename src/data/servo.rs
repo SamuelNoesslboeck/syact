@@ -1,5 +1,3 @@
-use super::*; 
-
 pub struct ServoData
 {
     /// Maximum torque of servo motor [Unit Nm]
@@ -26,7 +24,7 @@ impl ServoData
         ServoData {
             t_max: 1.08,
             omega_max: 8.5,
-            phi_max: PI,
+            phi_max: std::f32::consts::PI,
 
             pwm_min: 0.001,
             pwm_max: 0.002,

@@ -115,38 +115,30 @@ impl Component for CylinderTriangle {
         self.cylinder.drive_async(self.dist_for_super(dist + self.get_dist()) - self.cylinder.get_dist(), vel)
     }
 
+    /// See [Component::drive_abs](`Component::drive_abs()`)
+    /// - `dist`is the angular distance to be moved (Unit radians)
+    /// - `vel` is the cylinders extend velocity (Unit mm per second)
+    fn drive_abs(&mut self, dist : f32, vel : f32) -> f32 {
+        self.cylinder.drive_abs(self.dist_for_super(dist), vel)
+    }
+
+    fn drive_abs_async(&mut self, dist : f32, vel : f32) {
+        self.cylinder.drive_abs_async(self.dist_for_super(dist), vel)
+    }
+
     /// See [Component::measure()](`Component::measure()`)
     /// - `dist` is the maximum distance for the cylinder in mm
     /// - `vel` is the maximum linear velocity for the cylinder in mm per second
     /// - `set_dist` is the set distance for the cylinder in mm
     fn measure(&mut self, dist : f32, vel : f32, set_dist : f32, accuracy : u64) -> bool {
-        self.cylinder.measure(dist, vel, set_dist, accuracy)
+        self.cylinder.measure(
+            dist, vel, self.dist_for_super(set_dist), accuracy)
     }
 
     fn measure_async(&mut self, dist : f32, vel : f32, accuracy : u64) {
-        self.cylinder.measure_async(dist, vel, accuracy)
+        self.cylinder.measure_async(
+            dist, vel, accuracy)
     }
-
-    // Distance
-        fn get_dist(&self) -> f32 {
-            self.dist_for_this(self.cylinder.get_dist())
-        }
-
-        /// See [Component::drive_abs](`Component::drive_abs()`)
-        /// - `dist`is the angular distance to be moved (Unit radians)
-        /// - `vel` is the cylinders extend velocity (Unit mm per second)
-        fn drive_abs(&mut self, dist : f32, vel : f32) -> f32 {
-            self.cylinder.drive_abs(self.dist_for_super(dist), vel)
-        }
-
-        fn drive_abs_async(&mut self, dist : f32, vel : f32) {
-            self.cylinder.drive_abs_async(self.dist_for_super(dist), vel)
-        }
-
-        fn set_limit(&mut self, limit_min : Option<f32>, limit_max : Option<f32>) {
-            self.cylinder.set_limit(limit_min, limit_max)
-        }
-    // 
     
     // Forces
         fn apply_load_force(&mut self, force : f32) {

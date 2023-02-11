@@ -1,9 +1,7 @@
-use std::rc::Rc;
-
 use glam::Vec3;
 use serde::{Serialize, Deserialize};
 
-use crate::{LinkedData, Component, Tool, MachineConfig};
+use crate::{LinkedData, Tool, Component, MachineConfig};
 use crate::conf::ConfigElement;
 
 #[derive(Serialize, Deserialize)]
@@ -50,7 +48,7 @@ impl JsonConfig
         
         // Init
         mach.name = self.name.clone();
-        mach.lk = Rc::new(self.lk.clone());
+        mach.lk = std::rc::Rc::new(self.lk.clone());
 
         mach.anchor = match self.anchor {
             Some(anchor_raw) => Vec3::from(anchor_raw),
@@ -102,7 +100,8 @@ impl JsonConfig
                 Some(meas) => {
                     comp.init_meas(meas.pin);
 
-                    mach.set_vals[i] = meas.set_val;
+                    mach.meas_dist[i] = meas.dist;
+                    mach.home[i] = meas.set_val;
                     mach.meas[i] = meas;
                 },
                 None => { }

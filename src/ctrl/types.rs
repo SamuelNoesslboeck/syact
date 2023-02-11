@@ -1,7 +1,8 @@
 use std::fmt::Debug;
 
-use crate::data::StepperConst;
 use gpio::sysfs::*;
+
+use crate::data::StepperConst;
 
 /// Constant for expressing an incorrect pin number
 pub const PIN_ERR : u16 = 0xFF;
@@ -33,7 +34,7 @@ pub enum UpdateFunc {
 impl Debug for UpdateFunc {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            UpdateFunc::Break(_, acc) => f.write_str(format!("UpdateFunc::Data {{ acc: {} }}", acc).as_str()),
+            UpdateFunc::Break(_, acc) => f.write_str(format!("UpdateFunc::Break {{ acc: {} }}", acc).as_str()),
             UpdateFunc::Data(_, acc) => f.write_str(format!("UpdateFunc::Data {{ acc: {} }}", acc).as_str()),
             UpdateFunc::None => f.write_str("None")
         }
