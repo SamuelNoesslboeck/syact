@@ -11,6 +11,9 @@ use serde::{Serialize, Deserialize, Deserializer, Serializer};
 // Submodules
 pub mod servo;
 pub use servo::*;
+
+pub mod var;
+pub use var::*;
 //
 
 /**
@@ -85,13 +88,13 @@ impl StepperConst
     }
 
     /// The maximum angular acceleration of the motor (in stall) [Unit s^-2]
-    pub fn alpha_max(&self, t_load : f32, j_load : f32) -> f32 {
-        self.t(t_load) / self.j(j_load)
+    pub fn alpha_max(&self, var : &StepperVar) -> f32 {
+        self.t(var.t_load) / self.j(var.j_load)
     }
 
     /// The maximum angular acceleration of the motor, with a modified torque t_s [Unit s^-2]
-    pub fn alpha_max_dyn(&self, t_s : f32, t_load : f32, j_load : f32) -> f32 {
-        Self::t_dyn(t_s, t_load) / self.j(j_load)
+    pub fn alpha_max_dyn(&self, t_s : f32, var : &StepperVar) -> f32 {
+        Self::t_dyn(t_s, var.t_load) / self.j(var.j_load)
     }
 
     /// The inductivity constant [Unit s]

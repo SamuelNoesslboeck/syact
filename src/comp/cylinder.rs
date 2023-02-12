@@ -74,4 +74,14 @@ impl Component for Cylinder
             serde_json::to_value(self).unwrap()
         }
     // 
+
+    // Loads
+        fn apply_load_force(&mut self, force : f32) {
+            self.ctrl.apply_load_force(force * self.rte_ratio / 1000.0)
+        }
+
+        fn apply_load_inertia(&mut self, inertia : f32) {
+            self.ctrl.apply_load_inertia(inertia * self.rte_ratio * self.rte_ratio / 1000_000.0)
+        }
+    //
 }

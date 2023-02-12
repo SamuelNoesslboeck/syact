@@ -2,7 +2,7 @@ use std::f32::consts::{E, PI};
 
 use glam::{Vec3, Mat3};
 
-use crate::data::StepperConst;
+use crate::data::{StepperConst, StepperVar};
 
 /// Returns the current torque of a motor (data) at the given angluar speed (omega), returns only positive values  \
 /// Unit: [Nm]  
@@ -22,18 +22,18 @@ pub fn torque_dyn(data : &StepperConst, mut omega : f32, u : f32) -> f32 {
 
 /// Returns the start freqency of a motor (data)  \
 /// Unit: [Hz]
-pub fn start_frequency(data : &StepperConst, t_load : f32, j_load : f32) -> f32 {
-    return (data.alpha_max(t_load, j_load) * (data.n_s as f32) / 4.0 / PI).powf(0.5);
+pub fn start_frequency(data : &StepperConst, var : &StepperVar) -> f32 {
+    return (data.alpha_max(var) * (data.n_s as f32) / 4.0 / PI).powf(0.5);
 }
 
 /// The angluar velocity of a motor that is constantly accelerating after the time t [in s], [in s^-1]
-pub fn angluar_velocity(data : &StepperConst, t : f32, t_load : f32, j_load : f32, u : f32) -> f32 {
-    return data.alpha_max(t_load, j_load) * (t + data.tau(u)*E.powf(-t/data.tau(u)));
+pub fn angluar_velocity(data : &StepperConst, var : &StepperVar, t : f32, u : f32) -> f32 {
+    return data.alpha_max(var) * (t + data.tau(u)*E.powf(-t/data.tau(u)));
 }
 
 /// The angluar velocity of a motor that is constantly accelerating after the time t [in s], [in s^-1]
-pub fn angluar_velocity_dyn(data : &StepperConst, t : f32, omega_approx : f32, t_load : f32, j_load : f32, u : f32) -> f32 {
-    data.alpha_max_dyn(torque_dyn(data, omega_approx, u), t_load, j_load) * (t + data.tau(u)*E.powf(-t/data.tau(u)))
+pub fn angluar_velocity_dyn(data : &StepperConst, var : &StepperVar, t : f32, omega_approx : f32, u : f32) -> f32 {
+    data.alpha_max_dyn(torque_dyn(data, omega_approx, u), var) * (t + data.tau(u)*E.powf(-t/data.tau(u)))
 }
 
 

@@ -4,6 +4,7 @@ use std::thread;
 use gpio::{GpioIn, GpioOut};
 use gpio::sysfs::SysFsGpioOutput;
 
+use crate::data::StepperVar;
 use crate::{StepperConst, LinkedData};
 use crate::ctrl::types::*;
 use crate::math;
@@ -14,16 +15,14 @@ use crate::math;
 pub struct StepperDriver 
 {
     /// Stepper data
-    pub data : StepperConst,
+    pub consts : StepperConst,
+    pub vars : StepperVar,
 
     /// The current direction of the driver, the bool value is written to the `pin_dir` GPIO pin\
     /// DO NOT WRITE TO THIS VALUE! Use the `Driver::set_dir()` function instead
     pub dir : bool,
     /// The current absolute position since set to a value
     pub pos : i64,
-
-    pub j_load : f32,
-    pub t_load : f32,
 
     lk : Arc<LinkedData>,
 
@@ -57,12 +56,14 @@ impl StepperDriver {
         };
 
         let mut driver = StepperDriver {
-            data, 
+            consts: data, 
+            vars: StepperVar { 
+                j_load: 0.0,
+                t_load: 0.0, 
+            },
+
             dir: true, 
             pos: 0,
-
-            j_load: 0.0,
-            t_load: 0.0,
 
             lk: Arc::new(LinkedData::EMPTY),
             
@@ -82,12 +83,14 @@ impl StepperDriver {
 
     pub fn new_save(data : StepperConst, pin_dir : u16, pin_step : u16) -> Result<Self, std::io::Error> {
         let mut driver = StepperDriver {
-            data, 
+            consts: data, 
+            vars: StepperVar { 
+                j_load: 0.0,
+                t_load: 0.0, 
+            },
+
             dir: true, 
             pos: 0,
-
-            t_load: 0.0,
-            j_load: 0.0,
 
             lk: Arc::new(LinkedData::EMPTY),
             
@@ -177,8 +180,8 @@ impl StepperDriver {
         }
 
         pub fn accelerate(&mut self, stepcount : u64, omega : f32, ufunc : &UpdateFunc) -> (StepResult, Vec<f32>) {
-            let t_start = self.lk.s_f / math::start_frequency(&self.data, self.t_load, self.j_load);
-            let t_min = self.data.step_time(omega);
+            let t_start = self.lk.s_f / math::start_frequency(&self.consts, &self.vars);
+            let t_min = self.consts.step_time(omega);
 
             let mut o_last : f32 = 0.0;
             let mut t_total : f32 = t_start;
@@ -194,8 +197,8 @@ impl StepperDriver {
                     break;
                 }
 
-                o_last = math::angluar_velocity_dyn(&self.data, t_total, o_last, self.t_load, self.j_load, self.lk.u);
-                time_step = self.data.step_ang() / o_last * self.lk.s_f;
+                o_last = math::angluar_velocity_dyn(&self.consts, &self.vars, t_total, o_last, self.lk.u);
+                time_step = self.consts.step_ang() / o_last * self.lk.s_f;
                 t_total += time_step;
 
                 if time_step < t_min {
@@ -224,7 +227,7 @@ impl StepperDriver {
 
         pub fn steps(&mut self, stepcount : u64, omega : f32, ufunc : UpdateFunc) -> StepResult {
             let ( result, mut curve ) = self.accelerate( stepcount / 2, omega, &ufunc);
-            let time_step = self.data.step_time(omega);
+            let time_step = self.consts.step_time(omega);
             let last = curve.last().unwrap_or(&time_step);
 
             match result {
@@ -264,9 +267,9 @@ impl StepperDriver {
                 self.set_dir(false);
             }
 
-            let steps : u64 = self.data.ang_to_steps_dir(dist).abs() as u64;
+            let steps : u64 = self.consts.ang_to_steps_dir(dist).abs() as u64;
             self.steps(steps, omega, ufunc);
-            return steps as f32 * self.data.step_ang();
+            return steps as f32 * self.consts.step_ang();
         }
 
         pub fn set_dir(&mut self, dir : bool) {
@@ -344,33 +347,33 @@ impl StepperDriver {
 
     // Conversions
         pub fn ang_to_steps(&self, ang : f32) -> u64 {
-            (ang.abs() / self.data.step_ang()).round() as u64
+            (ang.abs() / self.consts.step_ang()).round() as u64
         }
 
         pub fn ang_to_steps_dir(&self, ang : f32) -> i64 {
-            (ang / self.data.step_ang()).round() as i64
+            (ang / self.consts.step_ang()).round() as i64
         }
 
         pub fn steps_to_ang(&self, steps : u64) -> f32 {
-            steps as f32 * self.data.step_ang()
+            steps as f32 * self.consts.step_ang()
         }
 
         pub fn steps_to_ang_dir(&self, steps : i64) -> f32 {
-            steps as f32 * self.data.step_ang()
+            steps as f32 * self.consts.step_ang()
         }
     //
 
     // Loads
         pub fn accel_dyn(&self, omega : f32) -> f32 {
-            self.data.alpha_max_dyn(math::torque_dyn(&self.data, omega, self.lk.u), self.t_load, self.j_load)
+            self.consts.alpha_max_dyn(math::torque_dyn(&self.consts, omega, self.lk.u), &self.vars)
         }
 
         pub fn apply_load_inertia(&mut self, j : f32) {
-            self.j_load = j;
+            self.vars.j_load = j;
         }
 
         pub fn apply_load_force(&mut self, t : f32) {
-            self.t_load = t;
+            self.vars.t_load = t;
         }
     // 
 

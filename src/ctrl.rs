@@ -218,7 +218,7 @@ impl From<StepperCtrlDes> for StepperCtrl {
 impl Into<StepperCtrlDes> for StepperCtrl {
     fn into(self) -> StepperCtrlDes {
         StepperCtrlDes { 
-            data: self.driver.lock().unwrap().data.clone(), 
+            data: self.driver.lock().unwrap().consts.clone(), 
             pin_dir: self.pin_dir, 
             pin_step: self.pin_step
         }
@@ -231,7 +231,7 @@ impl Serialize for StepperCtrl {
         where
             S: serde::Serializer {
         let raw : StepperCtrlDes = StepperCtrlDes { 
-            data: self.driver.lock().unwrap().data.clone(), 
+            data: self.driver.lock().unwrap().consts.clone(), 
             pin_dir: self.pin_dir, 
             pin_step: self.pin_step
         };
