@@ -1,7 +1,7 @@
 use glam::Vec3;
 use serde::{Serialize, Deserialize};
 
-use crate::{LinkedData, Tool, Component, MachineConfig};
+use crate::{LinkedData, Tool, Component, MachineConfig, ComponentGroup};
 use crate::conf::ConfigElement;
 
 #[derive(Serialize, Deserialize)]
@@ -48,7 +48,7 @@ impl JsonConfig
         
         // Init
         mach.name = self.name.clone();
-        mach.lk = std::rc::Rc::new(self.lk.clone());
+        mach.lk = std::sync::Arc::new(self.lk.clone());
 
         mach.anchor = match self.anchor {
             Some(anchor_raw) => Vec3::from(anchor_raw),
@@ -110,7 +110,10 @@ impl JsonConfig
             comps.push(comp);
         }
 
-        Ok((mach, comps.try_into().unwrap()))
+        let mut comp_group : [Box<dyn Component>; N] = comps.try_into().unwrap();
+        comp_group.link_all(mach.lk.clone());
+
+        Ok((mach, comp_group))
     }
 
     pub fn to_string_pretty(&self) -> String {

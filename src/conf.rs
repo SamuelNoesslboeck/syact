@@ -1,4 +1,4 @@
-use std::rc::Rc;
+use std::sync::Arc;
 
 use glam::{Mat3, Vec3};
 
@@ -18,7 +18,7 @@ pub struct MachineConfig<const N : usize, const D : usize, const A : usize>
 {
     pub name: String,
 
-    pub lk : Rc<LinkedData>,
+    pub lk : Arc<LinkedData>,
 
     pub anchor : Vec3,
     pub dims : [Vec3; D],

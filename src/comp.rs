@@ -13,6 +13,9 @@ pub use cylinder_triangle::*;
 mod gear_bearing;
 pub use gear_bearing::*;
 
+mod group;
+pub use group::*;
+
 mod lk;
 pub use lk::*;
 
@@ -24,18 +27,22 @@ pub use tool::*;
 pub trait Component : SimpleMeas + MathActor + std::fmt::Debug
 {
     // Super
+        #[inline]
         fn super_comp(&self) -> Option<&dyn Component> {
             None
         }
 
+        #[inline]
         fn super_comp_mut(&mut self) -> Option<&mut dyn Component> {
             None
         }
 
+        #[inline]
         fn dist_for_super(&self, this_len : f32) -> f32 {
             this_len
         }
 
+        #[inline]
         fn dist_for_this(&self, super_len : f32) -> f32 {
             super_len
         }
@@ -201,147 +208,4 @@ pub trait Component : SimpleMeas + MathActor + std::fmt::Debug
             }
         }
     // 
-}
-
-
-pub trait ComponentGroup<const N : usize> 
-{
-    // Data
-        fn comps(&self) -> &[Box<dyn Component>; N];
-
-        fn comps_mut(&mut self) -> &mut [Box<dyn Component>; N];
-
-        fn link(&mut self, lk : Arc<LinkedData>) {
-            for i in 0 .. N {
-                self.comps_mut()[i].link(lk.clone())
-            }
-        }
-    //
-
-    fn drive(&mut self, dist : [f32; N], vel : [f32; N]) -> [f32; N] {
-        let mut res = [0.0; N];
-        for i in 0 .. N {
-            res[i] = self.comps_mut()[i].drive(dist[i], vel[i]);
-        }
-        res
-    }
-
-    fn drive_abs(&mut self, dist : [f32; N], vel : [f32; N]) -> [f32; N] {
-        let mut res = [0.0; N];
-        for i in 0 .. N {
-            res[i] = self.comps_mut()[i].drive(dist[i], vel[i]);
-        }
-        res
-    }
-
-    fn drive_async(&mut self, dist : [f32; N], vel : [f32; N]) {
-        for i in 0 .. N {
-            self.comps_mut()[i].drive_async(dist[i], vel[i]);
-        }
-    }
-
-    fn drive_async_abs(&mut self, dist : [f32; N], vel : [f32; N]) {
-        for i in 0 .. N {
-            self.comps_mut()[i].drive_abs_async(dist[i], vel[i]);
-        }
-    }
-
-    fn measure(&mut self, dist : [f32; N], vel : [f32; N], set_dist : [f32; N], accuracy : [u64; N]) -> [bool; N] {
-        let mut res = [false; N];
-        for i in 0 .. N {
-            res[i] = self.comps_mut()[i].measure(dist[i], vel[i], set_dist[i], accuracy[i])
-        }
-        res
-    }
-
-    fn measure_async(&mut self, dist : [f32; N], vel : [f32; N], accuracy : [u64; N]) {
-        for i in 0 .. N {
-            self.comps_mut()[i].measure_async(dist[i], vel[i], accuracy[i])
-        }
-    }
-
-    fn await_inactive(&self) {
-        for i in 0 .. N {
-            self.comps()[i].await_inactive();
-        }
-    }
-
-    // Position
-        fn get_dist(&self) -> [f32; N] {
-            let mut dists = [0.0; N];
-            for i in 0 .. N {
-                dists[i] = self.comps()[i].get_dist();
-            }
-            dists
-        }
-        
-        fn write_dist(&mut self, angles : &[f32; N]) {
-            for i in 0 .. N {
-                self.comps_mut()[i].write_dist(angles[i])
-            }
-        }
-
-        fn get_limit_dest(&self, dist : [f32; N]) -> [f32; N] {
-            let mut limits = [0.0; N]; 
-            for i in 0 .. N {
-                limits[i] = self.comps()[i].get_limit_dest(dist[i]);
-            }
-            limits
-        }
-
-        fn valid_dist(&self, dist : [f32; N]) -> bool {
-            let mut res = true;
-            for i in 0 .. N {
-                res = res & ((!self.comps()[i].get_limit_dest(dist[i]).is_normal()) & dist[i].is_finite()); 
-            }
-            res
-        }
-
-        fn valid_dist_verb(&self, dist : [f32; N]) -> [bool; N] {
-            let mut res = [true; N];
-            for i in 0 .. N {
-                res[i] = (!self.comps()[i].get_limit_dest(dist[i]).is_normal()) & dist[i].is_finite(); 
-            }
-            res
-        }
-
-        fn set_endpoint(&mut self, set_dist : [f32; N]) -> [bool; N] {
-            let mut res = [false; N];
-            for i in 0 .. N {
-                res[i] = self.comps_mut()[i].set_endpoint(set_dist[i]);
-            }   
-            res
-        }
-
-        fn set_limit(&mut self, limit_min : [Option<f32>; N], limit_max : [Option<f32>; N]) {
-            for i in 0 .. N {
-                self.comps_mut()[i].set_limit(limit_min[i], limit_max[i]);
-            }
-        }
-    //
-
-    // Load calculation
-        fn apply_load_inertia(&mut self, inertias : [f32; N]) {
-            for i in 0 .. N {
-                self.comps_mut()[i].apply_load_inertia(inertias[i]);
-            }
-        }
-
-        fn apply_load_force(&mut self, forces : [f32; N]) {
-            for i in 0 .. N {
-                self.comps_mut()[i].apply_load_force(forces[i]);
-            }
-        }
-    // 
-}
-
-impl<const N : usize> ComponentGroup<N> for [Box<dyn Component>; N] 
-{
-    fn comps(&self) -> &[Box<dyn Component>; N] {
-        self
-    }
-    
-    fn comps_mut(&mut self) -> &mut [Box<dyn Component>; N] {
-        self
-    }
 }

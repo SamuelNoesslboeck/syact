@@ -19,7 +19,7 @@ pub use var::*;
 /**
 ### `StepperData`
 A collection of the most relevant variables Unit stepper calculation 
-```rust
+```
 use stepper_lib::StepperConst;
 
 // Create the data from an standard motor
@@ -48,6 +48,7 @@ pub struct StepperConst
 
 impl StepperConst
 {
+    /// Error stepperdata with all zeros
     pub const ERROR : Self = Self {
         i_max: 0.0,
         l: 0.0,
@@ -147,10 +148,12 @@ impl StepperConst
     //
 }
 
+/// A collection of standard stepper motors
 pub static STANDARD_STEPPER_CONST : [(&str, StepperConst); 2] = [
     ("ERROR", StepperConst::ERROR),
     ("MOT_17HE15_1504S", StepperConst::MOT_17HE15_1504S)
 ];
+
 
 fn get_standard_mot(name : &str) -> &StepperConst {
     for (k, v) in &STANDARD_STEPPER_CONST {
