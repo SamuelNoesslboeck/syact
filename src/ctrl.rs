@@ -145,11 +145,11 @@ impl Component for StepperCtrl
         }
     //
 
-    fn drive(&mut self, distance : f32, omega : f32) -> f32 {
+    fn drive_rel(&mut self, distance : f32, omega : f32) -> f32 {
         self.driver.lock().unwrap().drive(distance, omega, UpdateFunc::None)
     }
 
-    fn drive_async(&mut self, dist : f32, omega : f32) {
+    fn drive_rel_async(&mut self, dist : f32, omega : f32) {
         self.comms.send_msg((dist, omega, UpdateFunc::None));
     }
 

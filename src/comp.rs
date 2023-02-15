@@ -69,12 +69,12 @@ pub trait Component : SimpleMeas + MathActor + std::fmt::Debug
     /// Move the component to the given position as fast as possible and returns the actual distance traveled
     ///  - The distance `dist` can be either an angle (Unit radians) or a distancce (Unit mm)
     ///  - The velocity `vel` is the maximum change rate of the distance, either angular velocity (Unit radians per secoond) or linear velocity (mm per second)
-    fn drive(&mut self, mut dist : f32, mut vel : f32) -> f32 {
+    fn drive_rel(&mut self, mut dist : f32, mut vel : f32) -> f32 {
         dist = self.dist_for_super(dist);
         vel = self.dist_for_super(vel);
 
         let res = if let Some(s_comp) = self.super_comp_mut() {
-            s_comp.drive(dist, vel)
+            s_comp.drive_rel(dist, vel)
         } else { 0.0 }; 
 
         self.dist_for_this(res)
@@ -84,12 +84,12 @@ pub trait Component : SimpleMeas + MathActor + std::fmt::Debug
     ///  - The distance `dist` can be either an angle (Unit radians) or a distancce (Unit mm)
     ///  - The velocity `vel` is the maximum change rate of the distance, either angular velocity (Unit radians per secoond) or linear velocity (mm per second) \
     /// To wait unti the movement operation is completed, use the `await inactive` function
-    fn drive_async(&mut self, mut dist : f32, mut vel : f32) {
+    fn drive_rel_async(&mut self, mut dist : f32, mut vel : f32) {
         dist = self.dist_for_super(dist);
         vel = self.dist_for_super(vel);
 
         if let Some(s_comp) = self.super_comp_mut() {
-            s_comp.drive_async(dist, vel);
+            s_comp.drive_rel_async(dist, vel);
         }
     }
 

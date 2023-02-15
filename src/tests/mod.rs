@@ -158,7 +158,7 @@ mod test_g1
         ]; 
 
         comps.link_all(Arc::new(LinkedData { u: U, s_f: SF }));
-        comps.apply_load_inertias([0.05, 0.05]);
+        comps.apply_load_inertias(&[0.05, 0.05]);
 
         // dbg!(comps[0].accel_max_node(0.0, 0.0, 0.5, 10.0));
         // dbg!(comps[0].compl_times(0.0, 0.0, 0.5, 10.0));
@@ -267,7 +267,7 @@ mod test_simple_g1
         ]; 
 
         comps.link_all(Arc::new(LinkedData { u: U, s_f: SF }));
-        comps.apply_load_inertias([ 0.5 ]);
+        comps.apply_load_inertias(&[ 0.5 ]);
 
         let mut path = get_lin_move(Vec2::new(50.0, 50.0), Vec2::new(50.0, -50.0), 50.0, 10);
 

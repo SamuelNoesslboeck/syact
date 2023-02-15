@@ -21,7 +21,7 @@ pub trait ComponentGroup<const N : usize> : IndexMut<usize, Output = Box<dyn Com
     fn drive_rel(&mut self, dist : [f32; N], vel : Omegas<N>) -> [f32; N] {
         let mut res = [0.0; N];
         for i in 0 .. N {
-            res[i] = self[i].drive(dist[i], vel[i]);
+            res[i] = self[i].drive_rel(dist[i], vel[i]);
         }
         res
     }
@@ -29,14 +29,14 @@ pub trait ComponentGroup<const N : usize> : IndexMut<usize, Output = Box<dyn Com
     fn drive_abs(&mut self, dist : Gammas<N>, vel : Omegas<N>) -> [f32; N] {
         let mut res = [0.0; N];
         for i in 0 .. N {
-            res[i] = self[i].drive(dist[i], vel[i]);
+            res[i] = self[i].drive_rel(dist[i], vel[i]);
         }
         res
     }
 
     fn drive_rel_async(&mut self, dist : [f32; N], vel : Omegas<N>) {
         for i in 0 .. N {
-            self[i].drive_async(dist[i], vel[i]);
+            self[i].drive_rel_async(dist[i], vel[i]);
         }
     }
 

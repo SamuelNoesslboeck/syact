@@ -104,15 +104,15 @@ impl Component for CylinderTriangle {
     /// See [Component::drive()](`Component::drive()`)
     /// - `dist`is the angular distance to be moved (Unit radians)
     /// - `vel` is the cylinders extend velocity (Unit mm per second)
-    fn drive(&mut self, dist : f32, vel : f32) -> f32 {
-        self.cylinder.drive(self.dist_for_super(dist + self.get_dist()) - self.cylinder.get_dist(), vel)
+    fn drive_rel(&mut self, dist : f32, vel : f32) -> f32 {
+        self.cylinder.drive_rel(self.dist_for_super(dist + self.get_dist()) - self.cylinder.get_dist(), vel)
     }
 
     /// See [Component::drive_async()](`Component::drive_async()`)
     /// - `dist`is the angular distance to be moved (Unit radians)
     /// - `vel` is the cylinders extend velocity (Unit mm per second)
-    fn drive_async(&mut self, dist : f32, vel : f32) {
-        self.cylinder.drive_async(self.dist_for_super(dist + self.get_dist()) - self.cylinder.get_dist(), vel)
+    fn drive_rel_async(&mut self, dist : f32, vel : f32) {
+        self.cylinder.drive_rel_async(self.dist_for_super(dist + self.get_dist()) - self.cylinder.get_dist(), vel)
     }
 
     /// See [Component::drive_abs](`Component::drive_abs()`)
