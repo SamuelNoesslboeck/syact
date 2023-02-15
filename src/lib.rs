@@ -25,7 +25,7 @@ pub mod math;
 mod tests;
 
 // Types
-pub use comp::{Component, ComponentGroup, LinkedData, Tool};
+pub use comp::{Component, ComponentGroup, LinkedData, Tool, Gammas, Inertias, Forces};
 pub use conf::{JsonConfig, MachineConfig};
 pub use ctrl::{SimpleMeas, StepperCtrl, UpdateFunc};
 pub use data::StepperConst;
