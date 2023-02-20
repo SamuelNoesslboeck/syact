@@ -108,16 +108,19 @@ impl StepperDriver {
         Ok(driver)
     }
 
+    #[inline]
     pub fn link(&mut self, lk : Arc<LinkedData>) {
         self.lk = lk;
-    }
+    }  
 
+    #[inline]
     pub fn set_meas(&mut self, sys_meas : RaspPin) {
         self.sys_meas = sys_meas;
     }
 
     // Misc
         /// Helper function for measurements with a single pin
+        #[inline]
         pub fn __meas_helper(pin : &mut RaspPin) -> bool {
             match pin {
                 RaspPin::Input(gpio_pin ) => {
@@ -292,16 +295,19 @@ impl StepperDriver {
     // 
 
     // Position
+        #[inline]
         pub fn get_dist(&self) -> f32 {
             self.steps_to_ang_dir(self.pos)
-        }
+        }   
 
+        #[inline]
         pub fn write_dist(&mut self, pos : f32) {
             self.pos = self.ang_to_steps_dir(pos);
         }
     //
 
     // Limits
+        #[inline]
         pub fn set_limit(&mut self, min : Option<f32>, max : Option<f32>) {
             if min.is_some() {
                 self.limit_min = min;
@@ -346,32 +352,39 @@ impl StepperDriver {
     //
 
     // Conversions
+        #[inline]
         pub fn ang_to_steps(&self, ang : f32) -> u64 {
             (ang.abs() / self.consts.step_ang()).round() as u64
         }
 
+        #[inline]
         pub fn ang_to_steps_dir(&self, ang : f32) -> i64 {
             (ang / self.consts.step_ang()).round() as i64
-        }
+        }   
 
+        #[inline]
         pub fn steps_to_ang(&self, steps : u64) -> f32 {
             steps as f32 * self.consts.step_ang()
         }
 
+        #[inline]
         pub fn steps_to_ang_dir(&self, steps : i64) -> f32 {
             steps as f32 * self.consts.step_ang()
         }
     //
 
     // Loads
+        #[inline]
         pub fn accel_dyn(&self, omega : f32) -> f32 {
             self.consts.alpha_max_dyn(math::torque_dyn(&self.consts, omega, self.lk.u), &self.vars)
         }
 
+        #[inline]
         pub fn apply_load_inertia(&mut self, j : f32) {
             self.vars.j_load = j;
         }
 
+        #[inline]
         pub fn apply_load_force(&mut self, t : f32) {
             self.vars.t_load = t;
         }

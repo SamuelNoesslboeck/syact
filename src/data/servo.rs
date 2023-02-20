@@ -32,7 +32,7 @@ impl ServoData
         }
     }
 
-    pub fn default(&self) -> f32 {
+    pub fn default_pulse(&self) -> f32 {
         (self.pwm_min + self.phi_max) / 2.0
     }
 

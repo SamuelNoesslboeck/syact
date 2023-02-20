@@ -7,8 +7,7 @@ use crate::{Component, LinkedData, MathActor};
 use crate::data::StepperConst;
 
 // Use local types module
-mod asynchr;
-pub use asynchr::*;
+pub mod asynchr;
 
 mod driver;
 pub use driver::*;
@@ -19,8 +18,9 @@ pub use meas::*;
 mod paths;
 pub use paths::*;
 
-mod servo;
-pub use servo::*;
+pub mod pwm;
+
+pub mod servo;
 
 mod types;
 pub use types::*;
@@ -32,7 +32,7 @@ pub struct StepperCtrl
     /// Motor driver
     pub driver : Arc<Mutex<StepperDriver>>,
     /// Async comms
-    pub comms : AsyncStepper,
+    pub comms : asynchr::AsyncStepper,
 
     /// Pin for controlling direction
     pub pin_dir : u16,
@@ -61,7 +61,7 @@ impl StepperCtrl
             pin_step: pin_step, 
             pin_meas: PIN_ERR, 
 
-            comms: AsyncStepper::new(Arc::clone(&driver), 
+            comms: asynchr::AsyncStepper::new(Arc::clone(&driver), 
                 |driver_mutex , msg| { 
                     let mut driver = driver_mutex.lock().unwrap();
 
