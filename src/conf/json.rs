@@ -8,6 +8,7 @@ use crate::conf::ConfigElement;
 pub struct JsonConfig
 {
     pub name : String,
+    pub conf_version : String, 
 
     pub lk : LinkedData,
 
@@ -21,21 +22,21 @@ pub struct JsonConfig
 
 impl JsonConfig 
 {
-    pub fn new<const N : usize>(name : String, lk : LinkedData, anchor : Option<[f32; 3]>, dims : Option<Vec<[f32; 3]>>, axes : Option<Vec<[f32; 3]>>, 
-            comps : &[Box<dyn Component>; N], tools : &Vec<Box<dyn Tool + Send>>) -> Self {
-        Self { 
-            name,
+    // pub fn new<const N : usize>(name : String, lk : LinkedData, anchor : Option<[f32; 3]>, dims : Option<Vec<[f32; 3]>>, axes : Option<Vec<[f32; 3]>>, 
+    //         comps : &[Box<dyn Component>; N], tools : &Vec<Box<dyn Tool + Send>>) -> Self {
+    //     Self { 
+    //         name,
 
-            lk,
+    //         lk,
 
-            anchor,
-            dims,
-            axes,
+    //         anchor,
+    //         dims,
+    //         axes,
 
-            comps: create_conf_comps(comps),
-            tools: create_conf_tools(tools)
-        }
-    }
+    //         comps: create_conf_comps(comps),
+    //         tools: create_conf_tools(tools)
+    //     }
+    // }
 
     pub fn get_machine<const N : usize, const D : usize, const A : usize>(&self) -> Result<(MachineConfig<N, D, A>, [Box<dyn Component>; N]), std::io::Error> {
         if self.comps.len() != N {
