@@ -4,6 +4,7 @@ use std::sync::Arc;
 use crate::{SimpleMeas, MathActor};
 
 // Submodules
+/// Module for
 pub mod asynchr;
 
 mod cylinder;
@@ -25,32 +26,43 @@ mod tool;
 pub use tool::*;
 //
 
-/// Trait for defining controls and components
+/// Trait for defining controls and components of synchronous actuators
+/// 
+/// Components can have multiple layers, for example take a stepper motor with a geaerbox attached to it. The stepper motor and both combined will be a component, the later having 
+/// the stepper motor component defined as it's super component. (See [GearBearing])
 pub trait Component : SimpleMeas + MathActor + std::fmt::Debug
 {
     // Super
-        #[inline]
+        /// Returns a readonly reference to the super [Component](self) if it exists, returns `None` otherwise
+        /// 
+        /// A super component would for example be the stepper motor for a cylinder (See [Cylinder])
+        #[inline(always)]
         fn super_comp(&self) -> Option<&dyn Component> {
             None
         }
 
-        #[inline]
+        /// Returns a mutable reference to the super [Component](self) if it exists, returns `None` otherwise
+        /// 
+        /// A super component would for example be the stepper motor for a cylinder (See [Cylinder])
+        #[inline(always)]
         fn super_comp_mut(&mut self) -> Option<&mut dyn Component> {
             None
         }
 
-        #[inline]
+        /// Converts the given **absolute** distance to 
+        #[inline(always)]
         fn dist_for_super(&self, this_len : f32) -> f32 {
             this_len
         }
 
-        #[inline]
+        #[inline(always)]
         fn dist_for_this(&self, super_len : f32) -> f32 {
             super_len
         }
     // 
 
     // Link
+        #[inline]
         fn link(&mut self, lk : Arc<LinkedData>) {
             if let Some(s_comp) = self.super_comp_mut() {
                 s_comp.link(lk);
@@ -61,6 +73,7 @@ pub trait Component : SimpleMeas + MathActor + std::fmt::Debug
     // 
 
     // JSON I/O 
+        #[inline(always)]
         fn get_type_name(&self) -> String {
             String::from(type_name::<Self>())
         }
