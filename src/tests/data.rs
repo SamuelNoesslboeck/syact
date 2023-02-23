@@ -38,9 +38,10 @@ mod stepper_data
                     1.5),
                 100.0, 200.0)),
             Box::new(
-                crate::comp::GearBearing::new(
-                    StepperCtrl::new(StepperConst::MOT_17HE15_1504S, PIN_ERR, PIN_ERR),
-                1.5))
+                crate::comp::GearBearing {
+                    ctrl: StepperCtrl::new(StepperConst::MOT_17HE15_1504S, PIN_ERR, PIN_ERR),
+                    ratio: 1.5
+                })
         ]; 
 
         println!("{}", serde_json::to_string_pretty(

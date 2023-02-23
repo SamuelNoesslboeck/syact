@@ -1,9 +1,10 @@
-use std::sync::Arc;
+extern crate alloc;
+use alloc::sync::Arc;
 
 use serde::{Serialize, Deserialize};
 
 use crate::{Component, LinkedData};
-use crate::ctrl::{StepperCtrl, SimpleMeas};
+use crate::ctrl::{SimpleMeas, StepperCtrl};
 use crate::math::MathActor;
 
 /// Cylinder component struct
@@ -70,8 +71,8 @@ impl Component for Cylinder
     //
 
     // JSON I/O
-        fn to_json(&self) -> serde_json::Value {
-            serde_json::to_value(self).unwrap()
+        fn to_json(&self) -> Result<serde_json::Value, serde_json::Error> {
+            serde_json::to_value(self)
         }
     // 
 

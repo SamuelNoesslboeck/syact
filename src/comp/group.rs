@@ -1,4 +1,9 @@
-use std::ops::IndexMut;
+extern crate alloc;
+use alloc::boxed::Box;
+use alloc::sync::Arc;
+use alloc::vec::Vec;
+
+use core::ops::IndexMut;
 
 use crate::Component;
 
@@ -11,7 +16,7 @@ pub type Forces<const N : usize> = [f32; N];
 pub trait ComponentGroup<const N : usize> : IndexMut<usize, Output = Box<dyn Component>>
 {
     // Data
-        fn link_all(&mut self, lk : std::sync::Arc<crate::LinkedData>) {
+        fn link_all(&mut self, lk : Arc<crate::LinkedData>) {
             for i in 0 .. N {
                 self[i].link(lk.clone())
             }

@@ -140,8 +140,8 @@ impl Component for StepperCtrl
     //
 
     // JSON 
-        fn to_json(&self) -> serde_json::Value {
-            serde_json::to_value(self).unwrap()
+        fn to_json(&self) -> Result<serde_json::Value, serde_json::Error> {
+            serde_json::to_value(self)
         }
     //
 

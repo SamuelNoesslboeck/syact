@@ -1,4 +1,4 @@
-pub trait AsyncComp
-{
-    fn drive(dir : bool, speed : f32);
-}
+// pub trait AsyncComp
+// {
+//     fn drive(dir : bool, speed : f32);
+// }
