@@ -1,8 +1,9 @@
-use std::{any::type_name, fmt::Debug};
+use core::any::type_name;
+use core::fmt::Debug;
 
 use serde::{Serialize, Deserialize};
 
-use crate::Vec3;
+use glam::Vec3;
 
 // Tools
 pub trait Tool : Debug
@@ -14,8 +15,8 @@ pub trait Tool : Debug
     // 
 
     // Stats
-        fn get_type_name(&self) -> String {
-            String::from(type_name::<Self>())
+        fn get_type_name(&self) -> &str {
+            type_name::<Self>()
         }
 
         fn get_json(&self) -> serde_json::Value;

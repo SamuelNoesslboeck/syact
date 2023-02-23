@@ -15,16 +15,6 @@ pub struct GearBearing
     pub ratio : f32
 }
 
-impl GearBearing 
-{
-    pub fn new(ctrl : StepperCtrl, ratio : f32) -> Self {
-        Self {
-            ctrl,
-            ratio
-        }
-    }
-}
-
 impl SimpleMeas for GearBearing 
 {
     fn init_meas(&mut self, pin_meas : u16) {
@@ -62,8 +52,8 @@ impl Component for GearBearing
     //
 
     // Json I/O
-        fn to_json(&self) -> serde_json::Value {
-            serde_json::to_value(self).unwrap()
+        fn to_json(&self) -> Result<serde_json::Value, serde_json::Error> {
+            serde_json::to_value(self)
         }
     //
 }

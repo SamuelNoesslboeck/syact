@@ -1,6 +1,10 @@
 #![doc = r"File"]
 //! 
 
+extern crate alloc;
+use alloc::string::String;
+use alloc::boxed::Box;
+
 use serde::{Serialize, Deserialize};
 
 use crate::{Component, comp::Tool};
@@ -96,9 +100,9 @@ impl From<&Box<dyn Component>> for ConfigElement
     fn from(comp: &Box<dyn Component>) -> Self {
         Self {
             name: String::new(),
-            type_name: comp.get_type_name(),
+            type_name: String::from(comp.get_type_name()),
 
-            obj: comp.to_json(),
+            obj: comp.to_json().unwrap(),
 
             ang: Default::default(),
             sim: Default::default(),
@@ -113,7 +117,7 @@ impl From<&Box<dyn Tool + Send>> for ConfigElement
     fn from(tool: &Box<dyn Tool + Send>) -> Self {
         Self {
             name: String::new(),
-            type_name: tool.get_type_name(),
+            type_name: String::from(tool.get_type_name()),
 
             obj: tool.get_json(),
 

@@ -330,7 +330,7 @@ impl StepperDriver {
                             pos - ang
                         } else { 0.0 }
                     },
-                    None => 0.0
+                    None => f32::NAN
                 }
             };
         }

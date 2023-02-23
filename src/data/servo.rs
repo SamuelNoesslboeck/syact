@@ -24,7 +24,7 @@ impl ServoData
         ServoData {
             t_max: 1.08,
             omega_max: 8.5,
-            phi_max: std::f32::consts::PI,
+            phi_max: core::f32::consts::PI,
 
             pwm_min: 0.001,
             pwm_max: 0.002,

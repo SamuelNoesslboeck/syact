@@ -1,4 +1,7 @@
-use std::f32::consts::{E, PI};
+extern crate alloc;
+use alloc::vec::Vec;
+
+use core::f32::consts::{E, PI};
 
 use glam::{Vec3, Mat3};
 
@@ -69,17 +72,17 @@ pub fn angluar_velocity_dyn(data : &StepperConst, var : &StepperVar, t : f32, om
     }
 
     pub fn inertia_rod_constr(constr : &Vec<Rod>) -> Mat3 {
-        let mut x_list : Vec<RodCoord> = vec![];
+        let mut x_list : Vec<RodCoord> = alloc::vec![];
         for rod in constr {
             x_list.push((rod.0, rod.1.x));
         }
 
-        let mut y_list : Vec<RodCoord> = vec![];
+        let mut y_list : Vec<RodCoord> = alloc::vec![];
         for rod in constr {
             y_list.push((rod.0, rod.1.y));
         }
 
-        let mut z_list : Vec<RodCoord> = vec![];
+        let mut z_list : Vec<RodCoord> = alloc::vec![];
         for rod in constr {
             z_list.push((rod.0, rod.1.z));
         }
@@ -217,9 +220,13 @@ pub trait MathActor
     }
 }
 
+#[cfg(feature = "std")]
 pub mod actors 
 {
-    use std::f32::INFINITY;
+    extern crate alloc;
+    use alloc::boxed::Box;
+
+    use core::f32::INFINITY;
 
     use crate::Component;
 

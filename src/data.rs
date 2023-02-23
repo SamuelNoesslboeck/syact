@@ -4,14 +4,16 @@
 //! NOTE: If any of the formulas are unclear, please have a look at \
 //! the article on stepper motors included in this create under "article/article.pdf"
 
-use std::f32::consts::PI;
+use core::f32::consts::PI;
 
 use serde::{Serialize, Deserialize, Deserializer, Serializer};
 
 // Submodules
+/// Crate for servo motor data
 pub mod servo;
 pub use servo::*;
 
+/// Crate for variables read and written during runtime
 pub mod var;
 pub use var::*;
 //
@@ -73,8 +75,8 @@ impl StepperConst
     pub fn from_standard<'de, D>(deserializer: D) -> Result<Self, D::Error> 
     where 
         D: Deserializer<'de> {
-        let s: String = Deserialize::deserialize(deserializer)?;
-        Ok(get_standard_mot(s.as_str()).clone()) 
+        let s: &str = Deserialize::deserialize(deserializer)?;
+        Ok(get_standard_mot(s).clone()) 
     }
 
     pub fn to_standard<S>(&self, serializer: S) -> Result<S::Ok, S::Error>

@@ -1,25 +1,42 @@
-use std::sync::Arc;
+extern crate alloc;
+use alloc::sync::Arc;
 
 use serde::{Serialize, Deserialize};
 
 use crate::{Component, LinkedData};
-use crate::comp::Cylinder;
-use crate::ctrl::SimpleMeas; 
+use crate::comp::{Cylinder, SimpleMeas};
 use crate::math::MathActor;
 
+/// A component representing a cylinder connected to two segments with constant lengths, forming a triangular shape
+/// 
+/// # Super Component
+/// 
+/// Uses a [Cylinder] as super component and as the triangular shape makes a constant angular velocity
+/// very calculation expensive, all maximum velocites are referencing the cylinder
+/// 
+/// # Angles and lengths
+/// 
+/// The struct uses the default labeling of a mathematical triangles with the sides a, b and c. Here, a and b are the 
+/// constant lengths and c being the variable cylinder length. All angles used are alpha, beta and gamma, all depending 
+/// on the variable length c, making them also variable. The most relevant angle being gamma, as it is the opposing angle to 
+/// the length c, representing the 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CylinderTriangle 
 {
-    // Cylinder
+    /// The cylinder of the triangle, being the *super component* for this one
     pub cylinder : Cylinder,
 
     // Triangle
+    /// The constant length of the first triangle component in millimeters
     pub l_a : f32,
+    /// The constant length of the second triangle component in millimeters
     pub l_b : f32,
 }
 
 impl CylinderTriangle 
 {
+    /// Creates a new instance of a [CylinderTriangle], 
+    /// writing an initial length of the longer segments the cylinder, preventing initial calculation errors
     pub fn new(cylinder : Cylinder, l_a : f32, l_b : f32) -> Self
     {
         let mut tri = CylinderTriangle {
@@ -35,19 +52,22 @@ impl CylinderTriangle
     }
 
     // Conversions
-        // Other angles
+        /// Returns the alpha angle (opposing to the a-segment) for a given gamma angle `gam`
         pub fn alpha_for_gam(&self, gam : f32) -> f32 {
             (self.l_a / self.dist_for_super(gam) * gam.sin()).asin()
         }
 
+        /// Returns the beta angle (opposing to the b-segment) for a given gamma angle `gam`
         pub fn beta_for_gam(&self, gam : f32) -> f32 {
             (self.l_b / self.dist_for_super(gam) * gam.sin()).asin()
-        }
+        }  
 
+        /// Converts the given linear velocity `vel` to the angluar velocity for the given gamma angle `gam`
         pub fn omega_for_gam(&self, vel : f32, gam : f32) -> f32 {
             vel / self.l_a * self.beta_for_gam(gam).sin()
         }
 
+        /// Converts the given angular velocity `vel` to the linear velocity for the given gamma angle `gam`
         pub fn vel_for_gam(&self, omega : f32, gam : f32) -> f32 {
             omega * self.l_a / self.beta_for_gam(gam).sin()
         }
@@ -96,8 +116,8 @@ impl Component for CylinderTriangle {
     //
 
     // JSON I/O
-        fn to_json(&self) -> serde_json::Value {
-            serde_json::to_value(self).unwrap()
+        fn to_json(&self) -> Result<serde_json::Value, serde_json::Error> {
+            serde_json::to_value(self)
         }
     //
 
