@@ -33,7 +33,7 @@ impl Cylinder
 impl MathActor for Cylinder 
 {
     fn accel_dyn(&self, vel : f32, pos : f32) -> f32 {
-        self.dist_for_this(self.ctrl.accel_dyn(self.dist_for_super(vel), pos))
+        self.gamma_for_this(self.ctrl.accel_dyn(self.gamma_for_super(vel), pos))
     }
 }
 
@@ -55,11 +55,11 @@ impl Component for Cylinder
             Some(&mut self.ctrl)
         }
         
-        fn dist_for_super(&self, this_len : f32) -> f32 {
+        fn gamma_for_super(&self, this_len : f32) -> f32 {
             this_len / self.rte_ratio
         }
 
-        fn dist_for_this(&self, super_len : f32) -> f32 {
+        fn gamma_for_this(&self, super_len : f32) -> f32 {
             super_len * self.rte_ratio
         }
     // 

@@ -75,14 +75,14 @@ pub trait ComponentGroup<const N : usize> : IndexMut<usize, Output = Box<dyn Com
         fn get_dist(&self) -> Gammas<N> {
             let mut dists = [0.0; N];
             for i in 0 .. N {
-                dists[i] = self[i].get_dist();
+                dists[i] = self[i].get_gamma();
             }
             dists
         }
         
         fn write_dist(&mut self, angles : &Gammas<N>) {
             for i in 0 .. N {
-                self[i].write_dist(angles[i])
+                self[i].write_gamma(angles[i])
             }
         }
 

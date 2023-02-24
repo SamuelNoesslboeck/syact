@@ -3,7 +3,7 @@ use std::sync::{Mutex, Arc};
 use gpio::sysfs::*;
 use serde::{Serialize, Deserialize};
 
-use crate::{Component, LinkedData, MathActor};
+use crate::{Component, LinkedData, MathActor, Delta, Gamma, Omega, Alpha};
 use crate::data::StepperConst;
 
 // Use local types module
@@ -126,8 +126,8 @@ impl SimpleMeas for StepperCtrl
 
 impl MathActor for StepperCtrl 
 {
-    fn accel_dyn(&self, vel : f32, _ : f32) -> f32 {
-        self.driver.lock().unwrap().accel_dyn(vel)
+    fn accel_dyn(&self, omega : Omega, _ : Gamma) -> Alpha {
+        self.driver.lock().unwrap().accel_dyn(omega)
     }
 }
 
@@ -145,20 +145,20 @@ impl Component for StepperCtrl
         }
     //
 
-    fn drive_rel(&mut self, distance : f32, omega : f32) -> f32 {
-        self.driver.lock().unwrap().drive(distance, omega, UpdateFunc::None)
+    fn drive_rel(&mut self, delta : Delta, omega : Omega) -> Gamma {
+        self.driver.lock().unwrap().drive(delta, omega, UpdateFunc::None)
     }
 
-    fn drive_rel_async(&mut self, dist : f32, omega : f32) {
+    fn drive_rel_async(&mut self, dist : Delta, omega : Omega) {
         self.comms.send_msg((dist, omega, UpdateFunc::None));
     }
 
-    fn drive_abs(&mut self, dist : f32, vel : f32) -> f32 {
-        self.driver.lock().unwrap().drive(dist - self.get_dist(), vel, UpdateFunc::None)
+    fn drive_abs(&mut self, dist : f32, vel : f32) -> Gamma {
+        self.driver.lock().unwrap().drive(dist - self.get_gamma(), vel, UpdateFunc::None)
     }
 
     fn drive_abs_async(&mut self, dist : f32, vel : f32) {
-        self.comms.send_msg((dist - self.get_dist(), vel, UpdateFunc::None))
+        self.comms.send_msg((dist - self.get_gamma(), vel, UpdateFunc::None))
     }
 
     fn measure(&mut self, max_pos : f32, omega : f32, set_pos : f32, accuracy : u64) -> bool {
@@ -177,11 +177,11 @@ impl Component for StepperCtrl
     }
 
     // Position
-        fn get_dist(&self) -> f32 {
+        fn get_gamma(&self) -> f32 {
             self.driver.lock().unwrap().get_dist()
         }
 
-        fn write_dist(&mut self, pos : f32) {
+        fn write_gamma(&mut self, pos : f32) {
             self.driver.lock().unwrap().write_dist(pos);
         }
 
@@ -198,13 +198,13 @@ impl Component for StepperCtrl
         }
     //
 
-    // Loads
-        fn apply_load_inertia(&mut self, inertia : f32) {
-            self.driver.lock().unwrap().apply_load_inertia(inertia);
+    fn apply_load_force(&mut self, force : f32) {
+            self.driver.lock().unwrap().apply_load_force(force);
         }
 
-        fn apply_load_force(&mut self, force : f32) {
-            self.driver.lock().unwrap().apply_load_force(force);
+        // Loads
+        fn apply_load_inertia(&mut self, inertia : f32) {
+            self.driver.lock().unwrap().apply_load_inertia(inertia);
         }
     //
 }

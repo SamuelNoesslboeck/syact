@@ -16,6 +16,8 @@ pub use servo::*;
 /// Crate for variables read and written during runtime
 pub mod var;
 pub use var::*;
+
+use crate::{Force, Inertia, Alpha, Time};
 //
 
 /**
@@ -43,9 +45,9 @@ pub struct StepperConst
     /// Coil pair count (n_s / 2) Unit many cases [Unit (1)]
     pub n_c : u64,
     /// Stall torque [Unit Nm]
-    pub t_s : f32,
+    pub t_s : Force,
     /// Inhertia moment [Unit kg*m^2]
-    pub j_s : f32,
+    pub j_s : Inertia
 }
 
 impl StepperConst
@@ -90,28 +92,28 @@ impl StepperConst
         self.serialize(serializer)
     }
 
-    /// The maximum angular acceleration of the motor (in stall) [Unit s^-2]
-    pub fn alpha_max(&self, var : &StepperVar) -> f32 {
+    /// The maximum angular acceleration of the motor (in stall)
+    pub fn alpha_max(&self, var : &StepperVar) -> Alpha {
         self.t(var.t_load) / self.j(var.j_load)
     }
 
-    /// The maximum angular acceleration of the motor, with a modified torque t_s [Unit s^-2]
-    pub fn alpha_max_dyn(&self, t_s : f32, var : &StepperVar) -> f32 {
+    /// The maximum angular acceleration of the motor, with a modified torque t_s
+    pub fn alpha_max_dyn(&self, t_s : Force, var : &StepperVar) -> Alpha {
         Self::t_dyn(t_s, var.t_load) / self.j(var.j_load)
     }
 
     /// The inductivity constant [Unit s]
-    pub fn tau(&self, u : f32) -> f32 {
-        self.i_max * self.l / u
+    pub fn tau(&self, u : f32) -> Time {
+        Time(self.i_max * self.l / u)
     }
 
     /// Time per step for the given omega [Unit s]
-    pub fn step_time(&self, omega : f32) -> f32 {
-        2.0 * PI / (self.n_s as f32) / omega
+    pub fn step_time(&self, omega : f32) -> Time {
+        Time(2.0 * PI / (self.n_s as f32) / omega)
     }
 
     /// Omega for time per step [Unit 1/s]
-    pub fn omega(&self, step_time : f32) -> f32 {
+    pub fn omega(&self, step_time : f32) -> Omega {
         (self.n_s as f32) / 2.0 / PI / step_time
     }
 
@@ -122,17 +124,17 @@ impl StepperConst
 
     // Load calculations
         /// Max motor torque when having a load [Unit Nm]
-        pub fn t(&self, t_load : f32) -> f32 {
+        pub fn t(&self, t_load : f32) -> Force {
             (self.t_s - t_load).clamp(0.0, self.t_s)
         }
 
         /// Max motor torque when having a load, using a modified base torque t_s [Unit Nm]
-        pub fn t_dyn(t_s : f32, t_load : f32) -> f32 {
+        pub fn t_dyn(t_s : f32, t_load : f32) -> Force {
             (t_s - t_load).clamp(0.0, t_s)
         }
 
         /// Motor inertia when having a load [Unit kg*m^2]
-        pub fn j(&self, j_load : f32) -> f32 {
+        pub fn j(&self, j_load : f32) -> Inertia {
             self.j_s + j_load
         }
     //

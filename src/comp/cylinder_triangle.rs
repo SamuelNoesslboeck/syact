@@ -46,7 +46,7 @@ impl CylinderTriangle
             cylinder
         };
 
-        tri.cylinder.write_dist(l_a.max(l_b));
+        tri.cylinder.write_gamma(l_a.max(l_b));
 
         return tri;
     }
@@ -54,12 +54,12 @@ impl CylinderTriangle
     // Conversions
         /// Returns the alpha angle (opposing to the a-segment) for a given gamma angle `gam`
         pub fn alpha_for_gam(&self, gam : f32) -> f32 {
-            (self.l_a / self.dist_for_super(gam) * gam.sin()).asin()
+            (self.l_a / self.gamma_for_super(gam) * gam.sin()).asin()
         }
 
         /// Returns the beta angle (opposing to the b-segment) for a given gamma angle `gam`
         pub fn beta_for_gam(&self, gam : f32) -> f32 {
-            (self.l_b / self.dist_for_super(gam) * gam.sin()).asin()
+            (self.l_b / self.gamma_for_super(gam) * gam.sin()).asin()
         }  
 
         /// Converts the given linear velocity `vel` to the angluar velocity for the given gamma angle `gam`
@@ -99,12 +99,12 @@ impl Component for CylinderTriangle {
         }
 
         /// Returns the cylinder length for the given angle gamma
-        fn dist_for_super(&self, gam : f32) -> f32 {
+        fn gamma_for_super(&self, gam : f32) -> f32 {
             (self.l_a.powi(2) + self.l_b.powi(2) - 2.0 * self.l_a * self.l_b * gam.cos()).powf(0.5)
         }
 
         /// Returns the angle gamma for the given cylinder length _(len < (l_a + l_b))_
-        fn dist_for_this(&self, len : f32) -> f32 {
+        fn gamma_for_this(&self, len : f32) -> f32 {
             ((self.l_a.powi(2) + self.l_b.powi(2) - len.powi(2)) / 2.0 / self.l_a / self.l_b).acos()
         }
     // 
@@ -125,25 +125,25 @@ impl Component for CylinderTriangle {
     /// - `dist`is the angular distance to be moved (Unit radians)
     /// - `vel` is the cylinders extend velocity (Unit mm per second)
     fn drive_rel(&mut self, dist : f32, vel : f32) -> f32 {
-        self.cylinder.drive_rel(self.dist_for_super(dist + self.get_dist()) - self.cylinder.get_dist(), vel)
+        self.cylinder.drive_rel(self.gamma_for_super(dist + self.get_gamma()) - self.cylinder.get_gamma(), vel)
     }
 
     /// See [Component::drive_async()](`Component::drive_async()`)
     /// - `dist`is the angular distance to be moved (Unit radians)
     /// - `vel` is the cylinders extend velocity (Unit mm per second)
     fn drive_rel_async(&mut self, dist : f32, vel : f32) {
-        self.cylinder.drive_rel_async(self.dist_for_super(dist + self.get_dist()) - self.cylinder.get_dist(), vel)
+        self.cylinder.drive_rel_async(self.gamma_for_super(dist + self.get_gamma()) - self.cylinder.get_gamma(), vel)
     }
 
     /// See [Component::drive_abs](`Component::drive_abs()`)
     /// - `dist`is the angular distance to be moved (Unit radians)
     /// - `vel` is the cylinders extend velocity (Unit mm per second)
     fn drive_abs(&mut self, dist : f32, vel : f32) -> f32 {
-        self.cylinder.drive_abs(self.dist_for_super(dist), vel)
+        self.cylinder.drive_abs(self.gamma_for_super(dist), vel)
     }
 
     fn drive_abs_async(&mut self, dist : f32, vel : f32) {
-        self.cylinder.drive_abs_async(self.dist_for_super(dist), vel)
+        self.cylinder.drive_abs_async(self.gamma_for_super(dist), vel)
     }
 
     /// See [Component::measure()](`Component::measure()`)
@@ -152,7 +152,7 @@ impl Component for CylinderTriangle {
     /// - `set_dist` is the set distance for the cylinder in mm
     fn measure(&mut self, dist : f32, vel : f32, set_dist : f32, accuracy : u64) -> bool {
         self.cylinder.measure(
-            dist, vel, self.dist_for_super(set_dist), accuracy)
+            dist, vel, self.gamma_for_super(set_dist), accuracy)
     }
 
     fn measure_async(&mut self, dist : f32, vel : f32, accuracy : u64) {

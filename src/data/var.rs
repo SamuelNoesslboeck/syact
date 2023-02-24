@@ -1,6 +1,13 @@
+use crate::{Force, Inertia};
+
 #[derive(Clone, Debug)]
 pub struct StepperVar
 {
-    pub t_load : f32,
-    pub j_load : f32
+    pub t_load : Force,
+    pub j_load : Inertia
+}
+
+impl StepperVar 
+{
+    pub const ZERO : Self = Self { t_load: Force::ZERO, j_load: Inertia::ZERO };
 }

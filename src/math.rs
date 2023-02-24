@@ -5,7 +5,7 @@ use core::f32::consts::{E, PI};
 
 use glam::{Vec3, Mat3};
 
-use crate::data::{StepperConst, StepperVar};
+use crate::{data::{StepperConst, StepperVar}, Omega, Gamma, Alpha, Delta};
 
 /// Returns the current torque of a motor (data) at the given angluar speed (omega), returns only positive values  \
 /// Unit: [Nm]  
@@ -154,9 +154,9 @@ fn correct_times(times : (f32, f32)) -> (f32, f32) {
 /// Trait for advanced calculations of mechanical actors
 pub trait MathActor
 {
-    fn accel_dyn(&self, vel : f32, pos : f32) -> f32;
+    fn accel_dyn(&self, omega : Omega, gamma : Gamma) -> Alpha;
 
-    fn accel_max_node(&self, pos_0 : f32, delta_pos : f32, vel_0 : f32, vel_max : f32) -> (f32, f32) {
+    fn accel_max_node(&self, gamma_0 : Gamma, delta_pos : Delta, omega_0 : Omega, vel_max : Omega) -> (f32, f32) {
         // Get maximum accelerations
         let ( t_pos, mut accel_max_pos ) = self.node_from_vel(delta_pos, vel_0, vel_max.abs());
         let ( t_neg, mut accel_max_neg ) = self.node_from_vel(delta_pos, vel_0, -(vel_max.abs()));
@@ -175,10 +175,10 @@ pub trait MathActor
     }
 
     /// Returns (time, acceleration)
-    fn node_from_vel(&self, delta_pos : f32, vel_0 : f32, vel : f32) -> (f32, f32) {
-        let time = correct_time(2.0 * delta_pos / (vel_0 + vel));
+    fn node_from_vel(&self, delta_pos : Delta, omega_0 : Omega, omega : Omega) -> (f32, f32) {
+        let time = correct_time(2.0 * delta_pos / (omega_0 + omega));
         // println!("{} {} | {} {} ", time, (vel - vel_0) / time, vel_0, vel );
-        ( time, (vel - vel_0) / time )
+        ( time, (omega - omega_0) / time )
     }
 
     /// Returns ([t_min, t_max], [vel exit case min, vel exit case max], [accel exit case min, accel exit case max])  

@@ -5,7 +5,7 @@ use gpio::{GpioIn, GpioOut};
 use gpio::sysfs::SysFsGpioOutput;
 
 use crate::data::StepperVar;
-use crate::{StepperConst, LinkedData};
+use crate::{StepperConst, LinkedData, Gamma, Inertia, Force};
 use crate::ctrl::types::*;
 use crate::math;
 
@@ -34,9 +34,9 @@ pub struct StepperDriver
     sys_meas : RaspPin,
 
     /// Limit for minimum angle/step count
-    limit_min : Option<f32>,
+    limit_min : Option<Gamma>,
     /// Limit for maximum angle/step count
-    limit_max : Option<f32>
+    limit_max : Option<Gamma>
 }
 
 impl StepperDriver {
@@ -57,10 +57,7 @@ impl StepperDriver {
 
         let mut driver = StepperDriver {
             consts: data, 
-            vars: StepperVar { 
-                j_load: 0.0,
-                t_load: 0.0, 
-            },
+            vars: StepperVar::ZERO, 
 
             dir: true, 
             pos: 0,
@@ -84,10 +81,7 @@ impl StepperDriver {
     pub fn new_save(data : StepperConst, pin_dir : u16, pin_step : u16) -> Result<Self, std::io::Error> {
         let mut driver = StepperDriver {
             consts: data, 
-            vars: StepperVar { 
-                j_load: 0.0,
-                t_load: 0.0, 
-            },
+            vars: StepperVar::ZERO,
 
             dir: true, 
             pos: 0,
