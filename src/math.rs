@@ -1,18 +1,20 @@
 extern crate alloc;
+use alloc::boxed::Box;
 use alloc::vec::Vec;
 
 use core::f32::consts::{E, PI};
 
 use glam::{Vec3, Mat3};
 
-use crate::{data::{StepperConst, StepperVar}, Omega, Gamma, Alpha, Delta};
+use crate::{Component, Omega, Gamma, Alpha, Delta, Force, Time, Inertia};
+use crate::data::{StepperConst, StepperVar};
 
 /// Returns the current torque of a motor (data) at the given angluar speed (omega), returns only positive values  \
 /// Unit: [Nm]  
-pub fn torque_dyn(data : &StepperConst, mut omega : f32, u : f32) -> f32 {
+pub fn torque_dyn(data : &StepperConst, mut omega : Omega, u : f32) -> Force {
     omega = omega.abs();
     
-    if omega == 0.0 {
+    if omega == Omega::ZERO {
         return data.t_s;
     }
 
@@ -26,16 +28,16 @@ pub fn torque_dyn(data : &StepperConst, mut omega : f32, u : f32) -> f32 {
 /// Returns the start freqency of a motor (data)  \
 /// Unit: [Hz]
 pub fn start_frequency(data : &StepperConst, var : &StepperVar) -> f32 {
-    return (data.alpha_max(var) * (data.n_s as f32) / 4.0 / PI).powf(0.5);
+    (data.alpha_max(var) * (data.n_s as f32) / 4.0 / PI).0.powf(0.5)
 }
 
-/// The angluar velocity of a motor that is constantly accelerating after the time t [in s], [in s^-1]
-pub fn angluar_velocity(data : &StepperConst, var : &StepperVar, t : f32, u : f32) -> f32 {
+/// The angluar velocity of a motor that is constantly accelerating after the time `t`
+pub fn angluar_velocity(data : &StepperConst, var : &StepperVar, t : Time, u : f32) -> Omega {
     return data.alpha_max(var) * (t + data.tau(u)*E.powf(-t/data.tau(u)));
 }
 
 /// The angluar velocity of a motor that is constantly accelerating after the time t [in s], [in s^-1]
-pub fn angluar_velocity_dyn(data : &StepperConst, var : &StepperVar, t : f32, omega_approx : f32, u : f32) -> f32 {
+pub fn angluar_velocity_dyn(data : &StepperConst, var : &StepperVar, t : Time, omega_approx : Omega, u : f32) -> Omega {
     data.alpha_max_dyn(torque_dyn(data, omega_approx, u), var) * (t + data.tau(u)*E.powf(-t/data.tau(u)))
 }
 
@@ -55,7 +57,7 @@ pub fn angluar_velocity_dyn(data : &StepperConst, var : &StepperVar, t : f32, om
     /// Rod helper type for coords, consists of (mass : f32, coord : f32)
     pub type RodCoord = (f32, f32); 
 
-    pub fn inertia_rod_constr_coord(constr : &Vec<RodCoord>) -> f32 {
+    pub fn inertia_rod_constr_coord(constr : &Vec<RodCoord>) -> Inertia {
         let mut inertia = 0.0;
 
         for i in 0 .. constr.len() {
@@ -68,7 +70,7 @@ pub fn angluar_velocity_dyn(data : &StepperConst, var : &StepperVar, t : f32, om
             inertia += constr[i].0 * (constr[i].1.powi(2) / 12.0 + (len_sum + constr[i].1 / 2.0).powi(2));
         }
 
-        inertia
+        Inertia(inertia)
     }
 
     pub fn inertia_rod_constr(constr : &Vec<Rod>) -> Mat3 {
@@ -87,9 +89,9 @@ pub fn angluar_velocity_dyn(data : &StepperConst, var : &StepperVar, t : f32, om
             z_list.push((rod.0, rod.1.z));
         }
 
-        let j_x = inertia_rod_constr_coord(&x_list);
-        let j_y = inertia_rod_constr_coord(&y_list);
-        let j_z = inertia_rod_constr_coord(&z_list);
+        let j_x : f32 = inertia_rod_constr_coord(&x_list).into();
+        let j_y : f32 = inertia_rod_constr_coord(&y_list).into();
+        let j_z : f32 = inertia_rod_constr_coord(&z_list).into();
 
         Mat3 { 
             x_axis: Vec3 { x: (j_y + j_z), y: 0.0, z: 0.0 }, 
@@ -98,12 +100,12 @@ pub fn angluar_velocity_dyn(data : &StepperConst, var : &StepperVar, t : f32, om
         }
     }
 
-    pub fn inertia_to_mass(inertia : Mat3, radius : Vec3, mut a_hat : Vec3) -> f32 {
+    pub fn inertia_to_mass(inertia : Mat3, radius : Vec3, mut a_hat : Vec3) -> Inertia {
         a_hat = a_hat.normalize();
 
         let eta = radius.cross(a_hat);
         
-        (inertia * (eta/eta.length().powi(3))).length()
+        Inertia((inertia * (eta/eta.length().powi(3))).length())
     }
 //
 
@@ -138,15 +140,16 @@ pub fn angluar_velocity_dyn(data : &StepperConst, var : &StepperVar, t : f32, om
 //
 
 // Helper
-fn pq_formula(p : f32, q : f32) -> (f32, f32) {
-    ( -p/2.0 + ((p/2.0).powi(2) - q).sqrt(), -p/2.0 - ((p/2.0).powi(2) - q).sqrt() )
+fn pq_formula_times(p : f32, q : f32) -> (Time, Time) {
+    ( Time(-p/2.0 + ((p/2.0).powi(2) - q).sqrt()), Time(-p/2.0 - ((p/2.0).powi(2) - q).sqrt() ))
 }
 
-fn correct_time(t : f32) -> f32 {
-    if t.is_nan() { f32::INFINITY } else { if t <= 0.0 { f32::INFINITY } else { t } } 
+#[inline]
+fn correct_time(t : Time) -> Time {
+    if t.0.is_nan() { Time(f32::INFINITY) } else { if t <= Time::ZERO { Time(f32::INFINITY) } else { t } } 
 }
 
-fn correct_times(times : (f32, f32)) -> (f32, f32) {
+fn correct_times(times : (Time, Time)) -> (Time, Time) {
     ( correct_time(times.0), correct_time(times.1) )
 }
 // 
@@ -156,37 +159,35 @@ pub trait MathActor
 {
     fn accel_dyn(&self, omega : Omega, gamma : Gamma) -> Alpha;
 
-    fn accel_max_node(&self, gamma_0 : Gamma, delta_pos : Delta, omega_0 : Omega, vel_max : Omega) -> (f32, f32) {
+    fn accel_max_node(&self, gamma_0 : Gamma, delta_pos : Delta, omega_0 : Omega, vel_max : Omega) -> (Alpha, Alpha) {
         // Get maximum accelerations
-        let ( t_pos, mut accel_max_pos ) = self.node_from_vel(delta_pos, vel_0, vel_max.abs());
-        let ( t_neg, mut accel_max_neg ) = self.node_from_vel(delta_pos, vel_0, -(vel_max.abs()));
+        let ( t_pos, mut accel_max_pos ) = self.node_from_vel(delta_pos, omega_0, vel_max.abs());
+        let ( t_neg, mut accel_max_neg ) = self.node_from_vel(delta_pos, omega_0, -(vel_max.abs()));
 
-        let accel = self.accel_dyn(((vel_0 + vel_max) / 2.0).abs(), pos_0);
+        let accel = self.accel_dyn(((omega_0 + vel_max) / 2.0).abs(), gamma_0);
 
-        if !t_pos.is_finite() { 
+        if !t_pos.0.is_finite() { 
             accel_max_pos = accel;
         }
 
-        if !t_neg.is_finite() {
+        if !t_neg.0.is_finite() {
             accel_max_neg = -accel;
         }
 
         ( accel.min(accel_max_pos), (-accel).max(accel_max_neg) )
     }
 
-    /// Returns (time, acceleration)
-    fn node_from_vel(&self, delta_pos : Delta, omega_0 : Omega, omega : Omega) -> (f32, f32) {
+    fn node_from_vel(&self, delta_pos : Delta, omega_0 : Omega, omega : Omega) -> (Time, Alpha) {
         let time = correct_time(2.0 * delta_pos / (omega_0 + omega));
-        // println!("{} {} | {} {} ", time, (vel - vel_0) / time, vel_0, vel );
         ( time, (omega - omega_0) / time )
     }
 
     /// Returns ([t_min, t_max], [vel exit case min, vel exit case max], [accel exit case min, accel exit case max])  
-    fn compl_times(&self, pos_0 : f32, delta_pos : f32, vel_0 : f32, vel_max : f32) -> [[f32; 2]; 3] {
-        let ( accel_pos, accel_neg ) = self.accel_max_node(pos_0, delta_pos, vel_0, vel_max); 
+    fn compl_times(&self, gamma_0 : Gamma, delta_pos : Delta, omega_0 : Omega, omega_max : Omega) -> ([Time; 2], [Omega; 2], [Alpha; 2]) {
+        let ( accel_pos, accel_neg ) = self.accel_max_node(gamma_0, delta_pos, omega_0, omega_max); 
 
-        let ( t_pos_1, t_pos_2 ) = correct_times(pq_formula(2.0 * vel_0 / accel_pos, -2.0 * delta_pos / accel_pos));
-        let ( t_neg_1, t_neg_2 ) = correct_times(pq_formula(2.0 * vel_0 / accel_neg, -2.0 * delta_pos / accel_neg));
+        let ( t_pos_1, t_pos_2 ) = correct_times(pq_formula_times(2.0 * omega_0.0 / accel_pos.0, -2.0 * delta_pos.0 / accel_pos.0));
+        let ( t_neg_1, t_neg_2 ) = correct_times(pq_formula_times(2.0 * omega_0.0 / accel_neg.0, -2.0 * delta_pos.0 / accel_neg.0));
 
         let time;
         let vels;
@@ -198,49 +199,43 @@ pub trait MathActor
         let t_pos_max = t_pos; // t_pos_1.max(t_pos_2);
         let t_neg_max = t_neg;  // t_neg_1.max(t_neg_2);
 
-        if accel_pos == 0.0 {
-            t_pos = correct_time(delta_pos / vel_0);
+        if accel_pos == Alpha::ZERO {
+            t_pos = correct_time(delta_pos / omega_0);
         }
 
-        if accel_neg == 0.0 {
-            t_neg = correct_time(delta_pos / vel_0);
+        if accel_neg == Alpha::ZERO {
+            t_neg = correct_time(delta_pos / omega_0);
         }
 
         if t_pos <= t_neg {
             time = [ t_pos, t_neg_max ];
-            vels = [ vel_0 + t_pos * accel_pos, vel_0 + t_neg_max * accel_neg ];
+            vels = [ omega_0 + t_pos * accel_pos, omega_0 + t_neg_max * accel_neg ];
             accel = [ accel_pos, accel_neg ];
         } else {
             time = [ t_neg, t_pos_max ];
-            vels = [ vel_0 + t_neg * accel_neg, vel_0 + t_pos_max * accel_pos ];
+            vels = [ omega_0 + t_neg * accel_neg, omega_0 + t_pos_max * accel_pos ];
             accel = [ accel_neg, accel_pos ];
         }
         
-        [ time, vels, accel ]
+        ( time, vels, accel )
     }
 }
 
-#[cfg(feature = "std")]
 pub mod actors 
 {
-    extern crate alloc;
-    use alloc::boxed::Box;
+    use super::*;
 
-    use core::f32::INFINITY;
-
-    use crate::Component;
-
-    pub fn delta_phis<const N : usize>(pos_0 : [f32; N], pos : [f32; N]) -> [f32; N] {
-        let mut delta_phis = [0.0; N];
+    pub fn deltas<const N : usize>(pos_0 : [Gamma; N], pos : [Gamma; N]) -> [Delta; N] {
+        let mut deltas = [Delta::ZERO; N];
         for i in 0 .. N {
-            delta_phis[i] = pos[i] - pos_0[i];
+            deltas[i] = Delta::diff(pos_0[i], pos[i]);
         }
-        delta_phis
+        deltas
     }
 
     /// Returns an array of [ [ t_min, t_max ], [vel exit case min]]
-    pub fn compl_times<const N : usize>(comps : &[Box<dyn Component>; N], pos_0 : [f32; N], pos : [f32; N], vel_0 : [f32; N], vel_max : [f32; N]) -> [[[f32; 2]; 3]; N] {
-        let mut res = [[[0.0; 2]; 3]; N]; 
+    pub fn compl_times<const N : usize>(comps : &[Box<dyn Component>; N], pos_0 : [Gamma; N], pos : [Gamma; N], vel_0 : [Omega; N], vel_max : [Omega; N]) -> [([Time; 2], [Omega; 2], [Alpha; 2]); N] {
+        let mut res = [([Time::ZERO; 2], [Omega::ZERO; 2], [Alpha::ZERO; 2]); N]; 
         for i in 0 .. N {
             res[i] = comps[i].compl_times(pos_0[i], pos[i] - pos_0[i], vel_0[i], vel_max[i]);
         }
@@ -248,17 +243,17 @@ pub mod actors
     }
 
     /// Returns [ f_s, index max of t_min, index min of t_max ]
-    pub fn f_s<const N : usize>(res : &[[[f32; 2]; 3]; N]) -> (f32, usize, usize) {
+    pub fn f_s<const N : usize>(res : &[([Time; 2], [Omega; 2], [Alpha; 2]); N]) -> (f32, usize, usize) {
         // Highest of all minimum required times
-        let mut t_min_max = 0.0;
+        let mut t_min_max = Time::ZERO;
         // Lowest of all maximum allowed times
-        let mut t_max_min = INFINITY;
+        let mut t_max_min = Time::INFINITY;
 
         let mut t_min_max_index : usize = 0;
         let mut t_max_min_index : usize = 0;
 
         for i in 0 .. N {
-            let [ t_min, t_max ] = res[i][0];
+            let [ t_min, t_max ] = res[i].0;
 
             if (t_min > t_min_max) & t_min.is_finite() {
                 t_min_max = t_min;

@@ -1,6 +1,6 @@
 use serde::{Serialize, Deserialize};
 
-use crate::{Component, StepperCtrl};
+use crate::{Component, StepperCtrl, Gamma, Alpha, Omega};
 use crate::ctrl::SimpleMeas;
 use crate::math::MathActor;
 
@@ -24,8 +24,8 @@ impl SimpleMeas for GearBearing
 
 impl MathActor for GearBearing
 {
-    fn accel_dyn(&self, vel : f32, pos : f32) -> f32 {
-        self.gamma_for_this(self.ctrl.accel_dyn(self.gamma_for_super(vel), pos))
+    fn accel_dyn(&self, omega : Omega, gamma : Gamma) -> Alpha {
+        self.alpha_for_this(self.ctrl.accel_dyn(self.omega_for_super(omega, gamma), self.gamma_for_super(gamma)), self.gamma_for_super(gamma))
     }
 }
 
@@ -41,13 +41,13 @@ impl Component for GearBearing
         }  
 
         /// Returns the angle for the motor from a given bearing angle
-        fn gamma_for_super(&self, this_len : f32) -> f32 {
-            this_len / self.ratio
+        fn gamma_for_super(&self, this_gamma : Gamma) -> Gamma {
+            this_gamma / self.ratio
         }   
 
         /// Returns the angle for the motor from a given bearing angle
-        fn gamma_for_this(&self, super_len : f32) -> f32 {
-            super_len * self.ratio
+        fn gamma_for_this(&self, super_gamma : Gamma) -> Gamma {
+            super_gamma * self.ratio
         }
     //
 

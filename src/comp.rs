@@ -3,7 +3,7 @@ use alloc::sync::Arc;
 
 use core::any::type_name;
 
-use crate::{MathActor, Delta, Gamma, Omega, Force, Inertia};
+use crate::{MathActor, Delta, Gamma, Omega, Force, Inertia, Alpha};
 use crate::ctrl::SimpleMeas;
 
 // Submodules
@@ -80,19 +80,38 @@ pub trait Component : SimpleMeas + MathActor + core::fmt::Debug
         }   
 
         #[inline(always)]
-        fn delta_for_super(&self, this_delta : Delta) -> Delta {
-            Delta::diff(self.gamma_for_super(self.get_gamma()), self.gamma_for_super(self.get_gamma() + this_delta))
+        fn delta_for_super(&self, this_delta : Delta, this_gamma : Gamma) -> Delta {
+            Delta::diff(self.gamma_for_super(this_gamma), self.gamma_for_super(this_gamma + this_delta))
         }
 
-        // #[inline(always)]
-        // fn delta_for_super(&self, super_delta : Delta) -> Delta {
-        //     Delta::diff(self.gamma_for_this(self.get_gamma()), self.gamma_for_super(self.get_gamma() + super_delta))
-        // }    
+        #[inline(always)]
+        fn delta_for_this(&self, super_delta : Delta, super_gamma : Gamma) -> Delta {
+            Delta::diff(self.gamma_for_this(super_gamma), self.gamma_for_this(super_gamma + super_delta))
+        }    
 
         /// Converts the given velocity into the velocity for the super component
         #[inline(always)]
-        fn omega_for_super(&self, this_omega : Omega) -> Omega {
-            Omega(self.gamma_for_super(Gamma(this_omega.0)).0)
+        #[allow(unused_variables)]
+        fn omega_for_super(&self, this_omega : Omega, this_gamma : Gamma) -> Omega {
+            Omega(self.gamma_for_super(Gamma(this_omega.into())).into())
+        }
+
+        #[inline(always)]
+        #[allow(unused_variables)]
+        fn omega_for_this(&self, super_omega : Omega, this_gamma : Gamma) -> Omega {
+            Omega(self.gamma_for_this(Gamma(super_omega.into())).into())
+        }
+
+        #[inline(always)]
+        #[allow(unused_variables)]
+        fn alpha_for_super(&self, this_alpha : Alpha, this_gamma : Gamma) -> Alpha {
+            Alpha(self.gamma_for_super(Gamma(this_alpha.into())).into())
+        }
+
+        #[inline(always)]
+        #[allow(unused_variables)]
+        fn alpha_for_this(&self, super_alpha : Alpha, super_gamma : Gamma) -> Alpha {
+            Alpha(self.gamma_for_this(Gamma(super_alpha.into())).into())
         }
     // 
 
@@ -121,8 +140,8 @@ pub trait Component : SimpleMeas + MathActor + core::fmt::Debug
 
     /// Moves the component by the relative distance as fast as possible, halts the script until the movement is finshed and returns the actual **absolute** distance traveled
     fn drive_rel(&mut self, mut delta : Delta, mut vel : Omega) -> Gamma {
-        delta = self.delta_for_super(delta);
-        vel = self.omega_for_super(vel);
+        delta = self.delta_for_super(delta, self.get_gamma());
+        vel = self.omega_for_super(vel, self.get_gamma());
 
         let res = if let Some(s_comp) = self.super_comp_mut() {
             s_comp.drive_rel(delta, vel)
@@ -135,8 +154,8 @@ pub trait Component : SimpleMeas + MathActor + core::fmt::Debug
     /// To wait unti the movement operation is completed, use the [await_inactive](Component::await_inactive()) function
     #[cfg(feature = "simple_async")]
     fn drive_rel_async(&mut self, mut delta : Delta, mut vel : Omega) {
-        delta = self.delta_for_super(delta);
-        vel = self.omega_for_super(vel);
+        delta = self.delta_for_super(delta, self.get_gamma());
+        vel = self.omega_for_super(vel, self.get_gamma());
 
         if let Some(s_comp) = self.super_comp_mut() {
             s_comp.drive_rel_async(delta, vel);
@@ -146,7 +165,7 @@ pub trait Component : SimpleMeas + MathActor + core::fmt::Debug
     /// Moves the component to the given position as fast as possible, halts the script until the movement is finished and returns the actual **abolute** distance traveled to. 
     fn drive_abs(&mut self, mut gamma : Gamma, mut omega : Omega) -> Gamma {
         gamma = self.gamma_for_super(gamma);
-        omega = self.omega_for_super(omega);
+        omega = self.omega_for_super(omega, self.get_gamma());
 
         let res = if let Some(s_comp) = self.super_comp_mut() {
             s_comp.drive_abs(gamma, omega)
@@ -160,7 +179,7 @@ pub trait Component : SimpleMeas + MathActor + core::fmt::Debug
     #[cfg(feature = "simple_async")]
     fn drive_abs_async(&mut self, mut gamma : Gamma, mut omega : Omega) {
         gamma = self.gamma_for_super(gamma);
-        omega = self.omega_for_super(omega);
+        omega = self.omega_for_super(omega, self.get_gamma());
 
         if let Some(s_comp) = self.super_comp_mut() {
             s_comp.drive_abs_async(gamma, omega);
@@ -175,8 +194,8 @@ pub trait Component : SimpleMeas + MathActor + core::fmt::Debug
     /// 
     /// The thread is halted until the measurement is finished
     fn measure(&mut self, mut delta : Delta, mut omega : Omega, mut set_gamma : Gamma, accuracy : u64) -> bool {
-        delta = self.delta_for_super(delta);
-        omega = self.omega_for_super(omega);
+        delta = self.delta_for_super(delta, self.get_gamma());
+        omega = self.omega_for_super(omega, self.get_gamma());
         set_gamma = self.gamma_for_super(set_gamma);
 
         if let Some(s_comp) = self.super_comp_mut() {
@@ -188,8 +207,8 @@ pub trait Component : SimpleMeas + MathActor + core::fmt::Debug
     /// is reached. The lower the `accuracy`, the higher are the computational difficulties, as the function checks more often if the measure pin has a HIGH signal
     #[cfg(feature = "simple_async")]
     fn measure_async(&mut self, mut delta : Delta, mut omega : Omega, accuracy : u64) {
-        delta = self.delta_for_super(delta);
-        omega = self.omega_for_super(omega);
+        delta = self.delta_for_super(delta, self.get_gamma());
+        omega = self.omega_for_super(omega, self.get_gamma());
 
         if let Some(s_comp) = self.super_comp_mut() {
             s_comp.measure_async(delta, omega, accuracy)
@@ -241,12 +260,12 @@ pub trait Component : SimpleMeas + MathActor + core::fmt::Debug
         /// - is smaller than 0, the minimum has been reached by the returned amount
         /// - equal to 0, no limit has been reached
         /// - NaN, no limit has been set yet
-        fn get_limit_dest(&self, mut gamma : Gamma) -> f32 {
+        fn get_limit_dest(&self, mut gamma : Gamma) -> Delta {
             gamma = self.gamma_for_super(gamma);
 
             if let Some(s_comp) = self.super_comp() {
                 s_comp.get_limit_dest(gamma)
-            } else { 0.0 }
+            } else { Delta::ZERO }
         }
 
         fn set_endpoint(&mut self, mut set_gamma : Gamma) -> bool {
@@ -257,19 +276,19 @@ pub trait Component : SimpleMeas + MathActor + core::fmt::Debug
             } else { false }
         }
 
-        fn set_limit(&mut self, mut limit_min : Option<Gamma>, mut limit_max : Option<Gamma>) {
-            limit_min = match limit_min {
+        fn set_limit(&mut self, mut min : Option<Gamma>, mut max : Option<Gamma>) {
+            min = match min {
                 Some(min) => Some(self.gamma_for_super(min)),
                 None => None
             }; 
 
-            limit_max = match limit_max {
+            max = match max {
                 Some(max) => Some(self.gamma_for_super(max)),
                 None => None
             };
 
             if let Some(s_comp) = self.super_comp_mut() {
-                s_comp.set_limit(limit_min, limit_max)
+                s_comp.set_limit(min, max)
             }
         }
     // 

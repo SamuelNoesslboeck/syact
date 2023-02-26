@@ -1,3 +1,4 @@
+use core::time::Duration;
 use std::sync::Arc;
 use std::thread;
 
@@ -5,7 +6,7 @@ use gpio::{GpioIn, GpioOut};
 use gpio::sysfs::SysFsGpioOutput;
 
 use crate::data::StepperVar;
-use crate::{StepperConst, LinkedData, Gamma, Inertia, Force};
+use crate::{StepperConst, LinkedData, Gamma, Time, Omega, Delta, Alpha, Inertia, Force};
 use crate::ctrl::types::*;
 use crate::math;
 
@@ -127,10 +128,10 @@ impl StepperDriver {
 
     // Movements
         /// Move a single step into the previously set direction. Uses `thread::sleep()` for step times, so the function takes `time` in seconds to process
-        pub fn step(&mut self, time : f32, ufunc : &UpdateFunc) -> StepResult {
+        pub fn step(&mut self, time : Time, ufunc : &UpdateFunc) -> StepResult {
             match &mut self.sys_step {
                 RaspPin::Output(pin) => {
-                    let step_time_half = std::time::Duration::from_secs_f32(time / 2.0);
+                    let step_time_half : Duration = (time / 2.0).into();
 
                     pin.set_high().unwrap();
                     thread::sleep(step_time_half);
@@ -142,7 +143,7 @@ impl StepperDriver {
         
                     match self.limit_max {
                         Some(pos) => {
-                            if self.get_dist() > pos {
+                            if self.get_gamma() > pos {
                                 return StepResult::Break;
                             }
                         }, 
@@ -151,7 +152,7 @@ impl StepperDriver {
         
                     match self.limit_min {
                         Some(pos) => {
-                            if self.get_dist() < pos {
+                            if self.get_gamma() < pos {
                                 return StepResult::Break;
                             }
                         }, 
@@ -176,13 +177,13 @@ impl StepperDriver {
             }
         }
 
-        pub fn accelerate(&mut self, stepcount : u64, omega : f32, ufunc : &UpdateFunc) -> (StepResult, Vec<f32>) {
-            let t_start = self.lk.s_f / math::start_frequency(&self.consts, &self.vars);
+        pub fn accelerate(&mut self, stepcount : u64, omega : Omega, ufunc : &UpdateFunc) -> (StepResult, Vec<Time>) {
+            let t_start = Time(self.lk.s_f / math::start_frequency(&self.consts, &self.vars));
             let t_min = self.consts.step_time(omega);
 
-            let mut o_last : f32 = 0.0;
-            let mut t_total : f32 = t_start;
-            let mut time_step : f32 = t_start;          // Time per step
+            let mut o_last = Omega::ZERO;
+            let mut t_total = t_start;
+            let mut time_step = t_start;          // Time per step
             let mut i: u64 = 1;                         // Step count
             let mut curve = vec![];
 
@@ -216,13 +217,13 @@ impl StepperDriver {
             ( StepResult::None, curve )
         }
 
-        pub fn drive_curve(&mut self, curve : &Vec<f32>) {
+        pub fn drive_curve(&mut self, curve : &Vec<Time>) {
             for i in 0 .. curve.len() {
                 self.step(curve[i], &UpdateFunc::None);
             }
         }
 
-        pub fn steps(&mut self, stepcount : u64, omega : f32, ufunc : UpdateFunc) -> StepResult {
+        pub fn steps(&mut self, stepcount : u64, omega : Omega, ufunc : UpdateFunc) -> StepResult {
             let ( result, mut curve ) = self.accelerate( stepcount / 2, omega, &ufunc);
             let time_step = self.consts.step_time(omega);
             let last = curve.last().unwrap_or(&time_step);
@@ -255,18 +256,19 @@ impl StepperDriver {
             StepResult::None
         }
 
-        pub fn drive(&mut self, dist : f32, omega : f32, ufunc : UpdateFunc) -> f32 {
-            if dist == 0.0 {
-                return 0.0;
-            } else if dist > 0.0 {
+        pub fn drive(&mut self, dist : Delta, omega : Omega, ufunc : UpdateFunc) -> Gamma {
+            if dist == Delta::ZERO {
+                return Gamma::ZERO;
+            } else if dist > Delta::ZERO {
                 self.set_dir(true);
-            } else if dist < 0.0 {
+            } else if dist < Delta::ZERO {
                 self.set_dir(false);
             }
 
-            let steps : u64 = self.consts.ang_to_steps_dir(dist).abs() as u64;
+            let steps : u64 = self.consts.ang_to_steps_dir(dist.into()).abs() as u64;
             self.steps(steps, omega, ufunc);
-            return steps as f32 * self.consts.step_ang();
+
+            self.get_gamma()
         }
 
         pub fn set_dir(&mut self, dir : bool) {
@@ -290,19 +292,19 @@ impl StepperDriver {
 
     // Position
         #[inline]
-        pub fn get_dist(&self) -> f32 {
-            self.steps_to_ang_dir(self.pos)
+        pub fn get_gamma(&self) -> Gamma {
+            Gamma(self.steps_to_ang_dir(self.pos))
         }   
 
         #[inline]
-        pub fn write_dist(&mut self, pos : f32) {
-            self.pos = self.ang_to_steps_dir(pos);
+        pub fn write_gamma(&mut self, pos : Gamma) {
+            self.pos = self.ang_to_steps_dir(pos.into());
         }
     //
 
     // Limits
         #[inline]
-        pub fn set_limit(&mut self, min : Option<f32>, max : Option<f32>) {
+        pub fn set_limit(&mut self, min : Option<Gamma>, max : Option<Gamma>) {
             if min.is_some() {
                 self.limit_min = min;
             }
@@ -311,31 +313,31 @@ impl StepperDriver {
             }
         }
 
-        pub fn get_limit_dest(&self, pos : f32) -> f32 {
+        pub fn get_limit_dest(&self, gamma : Gamma) -> Delta {
             return match self.limit_min {
                 Some(ang) => {
-                    if pos < ang {
-                        pos - ang
-                    } else { 0.0 }
+                    if gamma < ang {
+                        gamma - ang
+                    } else { Delta::ZERO }
                 },
                 None => match self.limit_max {
                     Some(ang) => {
-                        if pos > ang {
-                            pos - ang
-                        } else { 0.0 }
+                        if gamma > ang {
+                            gamma - ang
+                        } else { Delta::ZERO }
                     },
-                    None => f32::NAN
+                    None => Delta::NAN
                 }
             };
         }
 
-        pub fn set_endpoint(&mut self, set_pos : f32) -> bool {
+        pub fn set_endpoint(&mut self, set_gamma : Gamma) -> bool {
             if Self::__meas_helper(&mut self.sys_meas) {
-                self.pos = self.ang_to_steps_dir(set_pos);
+                self.pos = self.ang_to_steps_dir(set_gamma.0);
     
                 self.set_limit(
-                    if self.dir { self.limit_min } else { Some(set_pos) },
-                    if self.dir { Some(set_pos) } else { self.limit_max }
+                    if self.dir { self.limit_min } else { Some(set_gamma) },
+                    if self.dir { Some(set_gamma) } else { self.limit_max }
                 );
 
                 true
@@ -369,17 +371,17 @@ impl StepperDriver {
 
     // Loads
         #[inline]
-        pub fn accel_dyn(&self, omega : f32) -> f32 {
+        pub fn accel_dyn(&self, omega : Omega) -> Alpha {
             self.consts.alpha_max_dyn(math::torque_dyn(&self.consts, omega, self.lk.u), &self.vars)
         }
 
         #[inline]
-        pub fn apply_load_inertia(&mut self, j : f32) {
+        pub fn apply_load_inertia(&mut self, j : Inertia) {
             self.vars.j_load = j;
         }
 
         #[inline]
-        pub fn apply_load_force(&mut self, t : f32) {
+        pub fn apply_load_force(&mut self, t : Force) {
             self.vars.t_load = t;
         }
     // 

@@ -3,7 +3,7 @@ use std::sync::{Mutex, Arc};
 use gpio::sysfs::*;
 use serde::{Serialize, Deserialize};
 
-use crate::{Component, LinkedData, MathActor, Delta, Gamma, Omega, Alpha};
+use crate::{Component, LinkedData, MathActor, Delta, Gamma, Omega, Alpha, Time, Force, Inertia};
 use crate::data::StepperConst;
 
 // Use local types module
@@ -15,8 +15,8 @@ pub use driver::*;
 mod meas;
 pub use meas::*;
 
-mod paths;
-pub use paths::*;
+// mod paths;
+// pub use paths::*;
 
 pub mod pwm;
 
@@ -77,21 +77,21 @@ impl StepperCtrl
     }
 
     // Movements
-        pub fn step(&mut self, time : f32, ufunc : &UpdateFunc) -> StepResult {
+        pub fn step(&mut self, time : Time, ufunc : &UpdateFunc) -> StepResult {
             self.driver.lock().unwrap().step(time, ufunc)
         }
 
-        pub fn accelerate(&mut self, stepcount : u64, omega : f32, ufunc : &UpdateFunc) -> (StepResult, Vec<f32>) {
+        pub fn accelerate(&mut self, stepcount : u64, omega : Omega, ufunc : &UpdateFunc) -> (StepResult, Vec<Time>) {
             self.driver.lock().unwrap().accelerate(stepcount, omega, ufunc)
         }
 
-        pub fn drive_curve(&mut self, curve : &Vec<f32>) {
+        pub fn drive_curve(&mut self, curve : &Vec<Time>) {
             for i in 0 .. curve.len() {
                 self.step(curve[i], &UpdateFunc::None);
             }
         }
 
-        pub fn steps(&mut self, stepcount : u64, omega : f32, ufunc : UpdateFunc) -> StepResult {
+        pub fn steps(&mut self, stepcount : u64, omega : Omega, ufunc : UpdateFunc) -> StepResult {
             self.driver.lock().unwrap().steps(stepcount, omega, ufunc)
         }
     //
@@ -149,27 +149,27 @@ impl Component for StepperCtrl
         self.driver.lock().unwrap().drive(delta, omega, UpdateFunc::None)
     }
 
-    fn drive_rel_async(&mut self, dist : Delta, omega : Omega) {
-        self.comms.send_msg((dist, omega, UpdateFunc::None));
+    fn drive_rel_async(&mut self, delta : Delta, omega : Omega) {
+        self.comms.send_msg((delta, omega, UpdateFunc::None));
     }
 
-    fn drive_abs(&mut self, dist : f32, vel : f32) -> Gamma {
-        self.driver.lock().unwrap().drive(dist - self.get_gamma(), vel, UpdateFunc::None)
+    fn drive_abs(&mut self, gamma : Gamma, omega : Omega) -> Gamma {
+        self.driver.lock().unwrap().drive(gamma - self.get_gamma(), omega, UpdateFunc::None)
     }
 
-    fn drive_abs_async(&mut self, dist : f32, vel : f32) {
-        self.comms.send_msg((dist - self.get_gamma(), vel, UpdateFunc::None))
+    fn drive_abs_async(&mut self, gamma : Gamma, omega : Omega) {
+        self.comms.send_msg((gamma - self.get_gamma(), omega, UpdateFunc::None))
     }
 
-    fn measure(&mut self, max_pos : f32, omega : f32, set_pos : f32, accuracy : u64) -> bool {
+    fn measure(&mut self, max_delta : Delta, omega : Omega, set_gamma : Gamma, accuracy : u64) -> bool {
         let mut driver = self.driver.lock().unwrap();
 
-        driver.drive(max_pos, omega, UpdateFunc::Break(StepperDriver::__meas_helper, accuracy));
-        driver.set_endpoint(set_pos)
+        driver.drive(max_delta, omega, UpdateFunc::Break(StepperDriver::__meas_helper, accuracy));
+        driver.set_endpoint(set_gamma)
     }
 
-    fn measure_async(&mut self, max_dist : f32, omega : f32, accuracy : u64) {
-        self.comms.send_msg((max_dist, omega, UpdateFunc::Break(StepperDriver::__meas_helper, accuracy)));
+    fn measure_async(&mut self, max_delta : Delta, omega : Omega, accuracy : u64) {
+        self.comms.send_msg((max_delta, omega, UpdateFunc::Break(StepperDriver::__meas_helper, accuracy)));
     }
 
     fn await_inactive(&self) {
@@ -177,33 +177,33 @@ impl Component for StepperCtrl
     }
 
     // Position
-        fn get_gamma(&self) -> f32 {
-            self.driver.lock().unwrap().get_dist()
+        fn get_gamma(&self) -> Gamma {
+            self.driver.lock().unwrap().get_gamma()
         }
 
-        fn write_gamma(&mut self, pos : f32) {
-            self.driver.lock().unwrap().write_dist(pos);
+        fn write_gamma(&mut self, pos : Gamma) {
+            self.driver.lock().unwrap().write_gamma(pos);
         }
 
-        fn get_limit_dest(&self, pos : f32) -> f32 {
+        fn get_limit_dest(&self, pos : Gamma) -> Delta {
             self.driver.lock().unwrap().get_limit_dest(pos)
         }
 
-        fn set_endpoint(&mut self, set_dist : f32) -> bool {
-            self.driver.lock().unwrap().set_endpoint(set_dist)
+        fn set_endpoint(&mut self, set_gamma : Gamma) -> bool {
+            self.driver.lock().unwrap().set_endpoint(set_gamma)
         }
 
-        fn set_limit(&mut self, min : Option<f32>, max : Option<f32>) {
+        fn set_limit(&mut self, min : Option<Gamma>, max : Option<Gamma>) {
             self.driver.lock().unwrap().set_limit(min, max)
         }
     //
 
-    fn apply_load_force(&mut self, force : f32) {
+    fn apply_load_force(&mut self, force : Force) {
             self.driver.lock().unwrap().apply_load_force(force);
         }
 
         // Loads
-        fn apply_load_inertia(&mut self, inertia : f32) {
+        fn apply_load_inertia(&mut self, inertia : Inertia) {
             self.driver.lock().unwrap().apply_load_inertia(inertia);
         }
     //

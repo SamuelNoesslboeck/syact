@@ -5,13 +5,7 @@ use alloc::vec::Vec;
 
 use core::ops::IndexMut;
 
-use crate::Component;
-
-pub type Gammas<const N : usize> = [f32; N]; 
-pub type Omegas<const N : usize> = [f32; N];
-
-pub type Inertias<const N : usize> = [f32; N];
-pub type Forces<const N : usize> = [f32; N]; 
+use crate::{Component, Gamma, Delta, Omega, Inertia, Force};
 
 pub trait ComponentGroup<const N : usize> : IndexMut<usize, Output = Box<dyn Component>>
 {
@@ -23,45 +17,45 @@ pub trait ComponentGroup<const N : usize> : IndexMut<usize, Output = Box<dyn Com
         }
     //
 
-    fn drive_rel(&mut self, dist : [f32; N], vel : Omegas<N>) -> [f32; N] {
-        let mut res = [0.0; N];
+    fn drive_rel(&mut self, deltas : [Delta; N], omegas : [Omega; N]) -> [Gamma; N] {
+        let mut res = [Gamma::ZERO; N];
         for i in 0 .. N {
-            res[i] = self[i].drive_rel(dist[i], vel[i]);
+            res[i] = self[i].drive_rel(deltas[i], omegas[i]);
         }
         res
     }
 
-    fn drive_abs(&mut self, dist : Gammas<N>, vel : Omegas<N>) -> [f32; N] {
-        let mut res = [0.0; N];
+    fn drive_abs(&mut self, gamma : [Gamma; N], omegas : [Omega; N]) -> [Gamma; N] {
+        let mut res = [Gamma::ZERO; N];
         for i in 0 .. N {
-            res[i] = self[i].drive_rel(dist[i], vel[i]);
+            res[i] = self[i].drive_abs(gamma[i], omegas[i]);
         }
         res
     }
 
-    fn drive_rel_async(&mut self, dist : [f32; N], vel : Omegas<N>) {
+    fn drive_rel_async(&mut self, deltas : [Delta; N], omegas : [Omega; N]) {
         for i in 0 .. N {
-            self[i].drive_rel_async(dist[i], vel[i]);
+            self[i].drive_rel_async(deltas[i], omegas[i]);
         }
     }
 
-    fn drive_abs_async(&mut self, dist : Gammas<N>, vel : Omegas<N>) {
+    fn drive_abs_async(&mut self, gammas : [Gamma; N], omegas : [Omega; N]) {
         for i in 0 .. N {
-            self[i].drive_abs_async(dist[i], vel[i]);
+            self[i].drive_abs_async(gammas[i], omegas[i]);
         }
     }
 
-    fn measure(&mut self, dist : [f32; N], vel : [f32; N], set_dist : Gammas<N>, accuracy : [u64; N]) -> [bool; N] {
+    fn measure(&mut self, deltas : [Delta; N], omegas : [Omega; N], set_dist : [Gamma; N], accuracy : [u64; N]) -> [bool; N] {
         let mut res = [false; N];
         for i in 0 .. N {
-            res[i] = self[i].measure(dist[i], vel[i], set_dist[i], accuracy[i])
+            res[i] = self[i].measure(deltas[i], omegas[i], set_dist[i], accuracy[i])
         }
         res
     }
 
-    fn measure_async(&mut self, dist : [f32; N], vel : Omegas<N>, accuracy : [u64; N]) {
+    fn measure_async(&mut self, deltas : [Delta; N], omegas : [Omega; N], accuracy : [u64; N]) {
         for i in 0 .. N {
-            self[i].measure_async(dist[i], vel[i], accuracy[i])
+            self[i].measure_async(deltas[i], omegas[i], accuracy[i])
         }
     }
 
@@ -72,45 +66,45 @@ pub trait ComponentGroup<const N : usize> : IndexMut<usize, Output = Box<dyn Com
     }
 
     // Position
-        fn get_dist(&self) -> Gammas<N> {
-            let mut dists = [0.0; N];
+        fn get_gammas(&self) -> [Gamma; N] {
+            let mut dists = [Gamma::ZERO; N];
             for i in 0 .. N {
                 dists[i] = self[i].get_gamma();
             }
             dists
         }
         
-        fn write_dist(&mut self, angles : &Gammas<N>) {
+        fn write_gammas(&mut self, gammas : &[Gamma; N]) {
             for i in 0 .. N {
-                self[i].write_gamma(angles[i])
+                self[i].write_gamma(gammas[i])
             }
         }
 
-        fn get_limit_dest(&self, dist : [f32; N]) -> [f32; N] {
-            let mut limits = [0.0; N]; 
+        fn get_limit_dest(&self, gammas : [Gamma; N]) -> [Delta; N] {
+            let mut limits = [Delta::ZERO; N]; 
             for i in 0 .. N {
-                limits[i] = self[i].get_limit_dest(dist[i]);
+                limits[i] = self[i].get_limit_dest(gammas[i]);
             }
             limits
         }
 
-        fn valid_dist(&self, dist : &Gammas<N>) -> bool {
+        fn valid_gammas(&self, gammas : &[Gamma; N]) -> bool {
             let mut res = true;
             for i in 0 .. N {
-                res = res & ((!self[i].get_limit_dest(dist[i]).is_normal()) & dist[i].is_finite()); 
+                res = res & ((!self[i].get_limit_dest(gammas[i]).is_normal()) & gammas[i].is_finite()); 
             }
             res
         }
 
-        fn valid_dist_verb(&self, dist : &Gammas<N>) -> [bool; N] {
+        fn valid_gammas_verb(&self, gammas : &[Gamma; N]) -> [bool; N] {
             let mut res = [true; N];
             for i in 0 .. N {
-                res[i] = (!self[i].get_limit_dest(dist[i]).is_normal()) & dist[i].is_finite(); 
+                res[i] = (!self[i].get_limit_dest(gammas[i]).is_normal()) & gammas[i].is_finite(); 
             }
             res
         }
 
-        fn set_endpoint(&mut self, set_dist : &Gammas<N>) -> [bool; N] {
+        fn set_endpoint(&mut self, set_dist : &[Gamma; N]) -> [bool; N] {
             let mut res = [false; N];
             for i in 0 .. N {
                 res[i] = self[i].set_endpoint(set_dist[i]);
@@ -118,21 +112,21 @@ pub trait ComponentGroup<const N : usize> : IndexMut<usize, Output = Box<dyn Com
             res
         }
 
-        fn set_limit(&mut self, limit_min : &[Option<f32>; N], limit_max : &[Option<f32>; N]) {
+        fn set_limit(&mut self, min : &[Option<Gamma>; N], max : &[Option<Gamma>; N]) {
             for i in 0 .. N {
-                self[i].set_limit(limit_min[i], limit_max[i]);
+                self[i].set_limit(min[i], max[i]);
             }
         }
     //
 
     // Load calculation
-        fn apply_load_inertias(&mut self, inertias : &Inertias<N>) {
+        fn apply_load_inertias(&mut self, inertias : &[Inertia; N]) {
             for i in 0 .. N {
                 self[i].apply_load_inertia(inertias[i]);
             }
         }
 
-        fn apply_load_forces(&mut self, forces : &Forces<N>) {
+        fn apply_load_forces(&mut self, forces : &[Force; N]) {
             for i in 0 .. N {
                 self[i].apply_load_force(forces[i]);
             }
