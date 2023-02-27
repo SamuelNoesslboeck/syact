@@ -50,10 +50,10 @@ mod stepper_data
 
         let tools : [Box<dyn crate::Tool + Send>; 2] = [
             Box::new(
-                crate::comp::NoTool::new()
+                crate::comp::tool::NoTool::new()
             ),
             Box::new(
-                crate::comp::PencilTool::new(100.0, 0.25)
+                crate::comp::tool::PencilTool::new(100.0, 0.25)
             )
         ]; 
 

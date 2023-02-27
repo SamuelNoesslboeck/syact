@@ -11,30 +11,26 @@ use crate::{Component, comp::Tool, Gamma, Delta, Omega};
 
 // Sub-Structs
     #[derive(Debug, Default, Clone, Copy, Serialize, Deserialize)]
-    pub struct MeasInstance
-    {
+    pub struct MeasInstance {
         pub pin : u16,
         pub set_val : Gamma,
         pub dist : Delta
     }
 
     #[derive(Debug, Default, Clone, Copy, Serialize, Deserialize)]
-    pub struct LimitDecl
-    {
+    pub struct LimitDecl {
         pub max : Option<Gamma>,
         pub min : Option<Gamma>,
         pub vel : Omega
     }
 
     #[derive(Debug, Default, Clone, Copy, Serialize, Deserialize)]
-    pub struct SimData
-    {
+    pub struct SimData {
         pub mass : f32
     }
 
     #[derive(Debug, Default, Clone, Copy, Serialize, Deserialize)]
-    pub struct AngleData
-    {
+    pub struct AngleData {
         #[serde(default)]
         pub offset : Delta,
         #[serde(default)]
@@ -43,8 +39,7 @@ use crate::{Component, comp::Tool, Gamma, Delta, Omega};
 //
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ConfigElement 
-{
+pub struct ConfigElement {
     #[serde(default)]
     pub name: String, 
     pub type_name : String,
@@ -60,8 +55,7 @@ pub struct ConfigElement
     pub limit : Option<LimitDecl>
 }
 
-impl ConfigElement 
-{
+impl ConfigElement {
     pub fn get_comp(&self) -> Option<Box<dyn Component>> {
         match self.type_name.as_str() {
             "stepper_lib::ctrl::StepperCtrl" => Some(Box::new(
@@ -82,11 +76,11 @@ impl ConfigElement
 
     pub fn get_tool(&self) -> Result<Box<dyn Tool + Send>, std::io::Error> {
         match self.type_name.as_str() {
-            "stepper_lib::comp::tool::NoTool" => Ok(Box::new(
-                crate::comp::NoTool::new()
+            "stepper_lib::comp::tool::no_tool::NoTool" => Ok(Box::new(
+                crate::comp::tool::NoTool::new()
             )),
-            "stepper_lib::comp::tool::PencilTool" => Ok(Box::new(
-                serde_json::from_value::<crate::comp::PencilTool>(self.obj.clone()).unwrap()
+            "stepper_lib::comp::tool::pencil_tool::PencilTool" => Ok(Box::new(
+                serde_json::from_value::<crate::comp::tool::PencilTool>(self.obj.clone()).unwrap()
             )),
             _ => Err(
                 std::io::Error::new(std::io::ErrorKind::InvalidData, format!("The type name {:?} does not match any known type to the software", self.type_name))
@@ -95,8 +89,7 @@ impl ConfigElement
     }
 }
 
-impl From<&Box<dyn Component>> for ConfigElement 
-{
+impl From<&Box<dyn Component>> for ConfigElement {
     fn from(comp: &Box<dyn Component>) -> Self {
         Self {
             name: String::new(),
@@ -112,8 +105,7 @@ impl From<&Box<dyn Component>> for ConfigElement
     }
 }
 
-impl From<&Box<dyn Tool + Send>> for ConfigElement 
-{
+impl From<&Box<dyn Tool + Send>> for ConfigElement {
     fn from(tool: &Box<dyn Tool + Send>) -> Self {
         Self {
             name: String::new(),
