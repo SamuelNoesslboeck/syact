@@ -75,7 +75,7 @@ impl ServoConst
     }
 
     pub fn pulse_for_perc(&self, perc : f32) -> Time {
-        self.pwm_min + (self.pwm_max - self.pwm_min) / perc
+        self.pwm_min + (self.pwm_max - self.pwm_min) * perc
     }
 
     pub fn pulse_for_angle(&self, gamma : Gamma) -> Time {
