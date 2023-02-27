@@ -3,7 +3,7 @@ use alloc::sync::Arc;
 
 use serde::{Serialize, Deserialize};
 
-use crate::{Component, LinkedData};
+use crate::{Component, LinkedData, Gamma, Omega, Delta, Alpha, Force, Inertia};
 use crate::comp::{Cylinder, SimpleMeas};
 use crate::math::MathActor;
 
@@ -46,29 +46,29 @@ impl CylinderTriangle
             cylinder
         };
 
-        tri.cylinder.write_dist(l_a.max(l_b));
+        tri.cylinder.write_gamma(Gamma(l_a.max(l_b)));
 
         return tri;
     }
 
     // Conversions
         /// Returns the alpha angle (opposing to the a-segment) for a given gamma angle `gam`
-        pub fn alpha_for_gam(&self, gam : f32) -> f32 {
-            (self.l_a / self.dist_for_super(gam) * gam.sin()).asin()
+        pub fn alpha_for_gam(&self, gam : Gamma) -> f32 {
+            (self.l_a / self.gamma_for_super(gam).0 * gam.sin()).asin()
         }
 
         /// Returns the beta angle (opposing to the b-segment) for a given gamma angle `gam`
-        pub fn beta_for_gam(&self, gam : f32) -> f32 {
-            (self.l_b / self.dist_for_super(gam) * gam.sin()).asin()
+        pub fn beta_for_gam(&self, gam : Gamma) -> f32 {
+            (self.l_b / self.gamma_for_super(gam).0 * gam.sin()).asin()
         }  
 
         /// Converts the given linear velocity `vel` to the angluar velocity for the given gamma angle `gam`
-        pub fn omega_for_gam(&self, vel : f32, gam : f32) -> f32 {
-            vel / self.l_a * self.beta_for_gam(gam).sin()
+        pub fn omega_for_gam(&self, omega : Omega, gam : Gamma) -> Omega {
+            omega / self.l_a * self.beta_for_gam(gam).sin()
         }
 
         /// Converts the given angular velocity `vel` to the linear velocity for the given gamma angle `gam`
-        pub fn vel_for_gam(&self, omega : f32, gam : f32) -> f32 {
+        pub fn vel_for_gam(&self, omega : Omega, gam : Gamma) -> Omega {
             omega * self.l_a / self.beta_for_gam(gam).sin()
         }
     //
@@ -76,8 +76,8 @@ impl CylinderTriangle
 
 impl MathActor for CylinderTriangle
 {
-    fn accel_dyn(&self, vel : f32, pos : f32) -> f32 {
-        self.omega_for_gam(self.cylinder.accel_dyn(self.vel_for_gam(vel, pos), pos), pos)
+    fn accel_dyn(&self, omega : Omega, gamma : Gamma) -> Alpha {
+        self.alpha_for_this(self.cylinder.accel_dyn(self.omega_for_super(omega, gamma), self.gamma_for_super(gamma)), self.gamma_for_super(gamma))
     }
 }
 
@@ -99,13 +99,17 @@ impl Component for CylinderTriangle {
         }
 
         /// Returns the cylinder length for the given angle gamma
-        fn dist_for_super(&self, gam : f32) -> f32 {
-            (self.l_a.powi(2) + self.l_b.powi(2) - 2.0 * self.l_a * self.l_b * gam.cos()).powf(0.5)
+        fn gamma_for_super(&self, gam : Gamma) -> Gamma {
+            Gamma((self.l_a.powi(2) + self.l_b.powi(2) - 2.0 * self.l_a * self.l_b * gam.0.cos()).powf(0.5))
         }
 
         /// Returns the angle gamma for the given cylinder length _(len < (l_a + l_b))_
-        fn dist_for_this(&self, len : f32) -> f32 {
-            ((self.l_a.powi(2) + self.l_b.powi(2) - len.powi(2)) / 2.0 / self.l_a / self.l_b).acos()
+        fn gamma_for_this(&self, len : Gamma) -> Gamma {
+            Gamma(((self.l_a.powi(2) + self.l_b.powi(2) - len.0.powi(2)) / 2.0 / self.l_a / self.l_b).acos())
+        }
+
+        fn omega_for_this(&self, super_omega : Omega, this_gamma : Gamma) -> Omega {
+            super_omega / self.l_a * self.beta_for_gam(this_gamma).sin()
         }
     // 
 
@@ -124,48 +128,48 @@ impl Component for CylinderTriangle {
     /// See [Component::drive()](`Component::drive()`)
     /// - `dist`is the angular distance to be moved (Unit radians)
     /// - `vel` is the cylinders extend velocity (Unit mm per second)
-    fn drive_rel(&mut self, dist : f32, vel : f32) -> f32 {
-        self.cylinder.drive_rel(self.dist_for_super(dist + self.get_dist()) - self.cylinder.get_dist(), vel)
+    fn drive_rel(&mut self, delta : Delta, omega : Omega) -> Gamma {
+        self.cylinder.drive_rel(self.gamma_for_super(delta + self.get_gamma()) - self.cylinder.get_gamma(), omega)
     }
 
     /// See [Component::drive_async()](`Component::drive_async()`)
     /// - `dist`is the angular distance to be moved (Unit radians)
     /// - `vel` is the cylinders extend velocity (Unit mm per second)
-    fn drive_rel_async(&mut self, dist : f32, vel : f32) {
-        self.cylinder.drive_rel_async(self.dist_for_super(dist + self.get_dist()) - self.cylinder.get_dist(), vel)
+    fn drive_rel_async(&mut self, delta : Delta, omega : Omega) {
+        self.cylinder.drive_rel_async(self.gamma_for_super(delta + self.get_gamma()) - self.cylinder.get_gamma(), omega)
     }
 
     /// See [Component::drive_abs](`Component::drive_abs()`)
     /// - `dist`is the angular distance to be moved (Unit radians)
     /// - `vel` is the cylinders extend velocity (Unit mm per second)
-    fn drive_abs(&mut self, dist : f32, vel : f32) -> f32 {
-        self.cylinder.drive_abs(self.dist_for_super(dist), vel)
+    fn drive_abs(&mut self, gamma : Gamma, omega : Omega) -> Gamma {
+        self.cylinder.drive_abs(self.gamma_for_super(gamma), omega)
     }
 
-    fn drive_abs_async(&mut self, dist : f32, vel : f32) {
-        self.cylinder.drive_abs_async(self.dist_for_super(dist), vel)
+    fn drive_abs_async(&mut self, gamma : Gamma, omega : Omega) {
+        self.cylinder.drive_abs_async(self.gamma_for_super(gamma), omega)
     }
 
     /// See [Component::measure()](`Component::measure()`)
     /// - `dist` is the maximum distance for the cylinder in mm
     /// - `vel` is the maximum linear velocity for the cylinder in mm per second
     /// - `set_dist` is the set distance for the cylinder in mm
-    fn measure(&mut self, dist : f32, vel : f32, set_dist : f32, accuracy : u64) -> bool {
+    fn measure(&mut self, delta : Delta, omega : Omega, set_gamma : Gamma, accuracy : u64) -> bool {
         self.cylinder.measure(
-            dist, vel, self.dist_for_super(set_dist), accuracy)
+            delta, omega, self.gamma_for_super(set_gamma), accuracy)
     }
 
-    fn measure_async(&mut self, dist : f32, vel : f32, accuracy : u64) {
+    fn measure_async(&mut self, delta : Delta, omega : Omega, accuracy : u64) {
         self.cylinder.measure_async(
-            dist, vel, accuracy)
+            delta, omega, accuracy)
     }
     
     // Forces
-        fn apply_load_force(&mut self, force : f32) {
+        fn apply_load_force(&mut self, force : Force) {
             self.cylinder.apply_load_force(force)
         }
 
-        fn apply_load_inertia(&mut self, inertia : f32) {
+        fn apply_load_inertia(&mut self, inertia : Inertia) {
             self.cylinder.apply_load_inertia(inertia)
         }
     // 

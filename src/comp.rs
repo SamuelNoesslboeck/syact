@@ -3,7 +3,7 @@ use alloc::sync::Arc;
 
 use core::any::type_name;
 
-use crate::MathActor;
+use crate::{MathActor, Delta, Gamma, Omega, Force, Inertia, Alpha};
 use crate::ctrl::SimpleMeas;
 
 // Submodules
@@ -64,8 +64,8 @@ pub trait Component : SimpleMeas + MathActor + core::fmt::Debug
         /// When using a gearmotor with a ratio of four (motor movement speed will be reduced to a quater), 
         /// this function will return a super distance *four times higher* than the input distance
         #[inline(always)]
-        fn dist_for_super(&self, this_len : f32) -> f32 {
-            this_len
+        fn gamma_for_super(&self, this_gamma : Gamma) -> Gamma {
+            this_gamma
         }
 
         /// Converts the given **absolute** distance for the super component to the **absolute** distance for this component
@@ -75,8 +75,43 @@ pub trait Component : SimpleMeas + MathActor + core::fmt::Debug
         /// When using a gearmotor with a ratio of four (motor movement speed will be reduced to a quater), 
         /// this function will return a distance *four times higher* than the input super distance
         #[inline(always)]
-        fn dist_for_this(&self, super_len : f32) -> f32 {
-            super_len
+        fn gamma_for_this(&self, super_gamma : Gamma) -> Gamma {
+            super_gamma
+        }   
+
+        #[inline(always)]
+        fn delta_for_super(&self, this_delta : Delta, this_gamma : Gamma) -> Delta {
+            Delta::diff(self.gamma_for_super(this_gamma), self.gamma_for_super(this_gamma + this_delta))
+        }
+
+        #[inline(always)]
+        fn delta_for_this(&self, super_delta : Delta, super_gamma : Gamma) -> Delta {
+            Delta::diff(self.gamma_for_this(super_gamma), self.gamma_for_this(super_gamma + super_delta))
+        }    
+
+        /// Converts the given velocity into the velocity for the super component
+        #[inline(always)]
+        #[allow(unused_variables)]
+        fn omega_for_super(&self, this_omega : Omega, this_gamma : Gamma) -> Omega {
+            Omega(self.gamma_for_super(Gamma(this_omega.into())).into())
+        }
+
+        #[inline(always)]
+        #[allow(unused_variables)]
+        fn omega_for_this(&self, super_omega : Omega, this_gamma : Gamma) -> Omega {
+            Omega(self.gamma_for_this(Gamma(super_omega.into())).into())
+        }
+
+        #[inline(always)]
+        #[allow(unused_variables)]
+        fn alpha_for_super(&self, this_alpha : Alpha, this_gamma : Gamma) -> Alpha {
+            Alpha(self.gamma_for_super(Gamma(this_alpha.into())).into())
+        }
+
+        #[inline(always)]
+        #[allow(unused_variables)]
+        fn alpha_for_this(&self, super_alpha : Alpha, super_gamma : Gamma) -> Alpha {
+            Alpha(self.gamma_for_this(Gamma(super_alpha.into())).into())
         }
     // 
 
@@ -103,104 +138,86 @@ pub trait Component : SimpleMeas + MathActor + core::fmt::Debug
         fn to_json(&self) -> Result<serde_json::Value, serde_json::Error>;
     // 
 
-    /// Moves the component by the relative distance as fast as possible, halts the script until the movement is finshed and returns the actual distance traveled
-    /// 
-    /// # Units
-    /// 
-    ///  - The distance `dist` can be either an angle (Unit radians) or a distancce (Unit mm)
-    ///  - The velocity `vel` is the maximum change rate of the distance, either angular velocity (Unit radians per secoond) or linear velocity (Unit mm per second)
-    fn drive_rel(&mut self, mut dist : f32, mut vel : f32) -> f32 {
-        dist = self.dist_for_super(dist);
-        vel = self.dist_for_super(vel);
+    /// Moves the component by the relative distance as fast as possible, halts the script until the movement is finshed and returns the actual **absolute** distance traveled
+    fn drive_rel(&mut self, mut delta : Delta, mut vel : Omega) -> Gamma {
+        delta = self.delta_for_super(delta, self.get_gamma());
+        vel = self.omega_for_super(vel, self.get_gamma());
 
         let res = if let Some(s_comp) = self.super_comp_mut() {
-            s_comp.drive_rel(dist, vel)
-        } else { 0.0 }; 
+            s_comp.drive_rel(delta, vel)
+        } else { Gamma(0.0) }; 
         
-        self.dist_for_this(res)
+        self.gamma_for_this(res)
     }
 
-    /// Moves the component by the relative distance as fast as possible
-    /// 
-    /// # Units
-    /// 
-    ///  - The distance `dist` can be either an angle (Unit radians) or a distancce (Unit mm)
-    ///  - The velocity `vel` is the maximum change rate of the distance, either angular velocity (Unit radians per secoond) or linear velocity (Unit mm per second)
+    /// Moves the component by the relative distance as fast as possible. \
     /// To wait unti the movement operation is completed, use the [await_inactive](Component::await_inactive()) function
-    fn drive_rel_async(&mut self, mut dist : f32, mut vel : f32) {
-        dist = self.dist_for_super(dist);
-        vel = self.dist_for_super(vel);
+    #[cfg(feature = "simple_async")]
+    fn drive_rel_async(&mut self, mut delta : Delta, mut vel : Omega) {
+        delta = self.delta_for_super(delta, self.get_gamma());
+        vel = self.omega_for_super(vel, self.get_gamma());
 
         if let Some(s_comp) = self.super_comp_mut() {
-            s_comp.drive_rel_async(dist, vel);
+            s_comp.drive_rel_async(delta, vel);
         }
     }
 
-    /// Moves the component to the given position as fast as possible, halts the script until the movement is finished and returns the actual distance traveled
-    /// 
-    /// # Units
-    /// 
-    ///  - The distance `dist` can be either an angle (Unit radians) or a distancce (Unit mm), the value should represent the **absolute position**
-    ///  - The velocity `vel` is the maximum change rate of the distance, either angular velocity (Unit radians per secoond) or linear velocity (Unit mm per second)
-    fn drive_abs(&mut self, mut dist : f32, mut vel : f32) -> f32 {
-        dist = self.dist_for_super(dist);
-        vel = self.dist_for_super(vel);
+    /// Moves the component to the given position as fast as possible, halts the script until the movement is finished and returns the actual **abolute** distance traveled to. 
+    fn drive_abs(&mut self, mut gamma : Gamma, mut omega : Omega) -> Gamma {
+        gamma = self.gamma_for_super(gamma);
+        omega = self.omega_for_super(omega, self.get_gamma());
 
         let res = if let Some(s_comp) = self.super_comp_mut() {
-            s_comp.drive_abs(dist, vel)
-        } else { 0.0 }; 
+            s_comp.drive_abs(gamma, omega)
+        } else { Gamma(0.0) }; 
 
-        self.dist_for_this(res)
+        self.gamma_for_this(res)
     }
 
-    /// Moves the component to the given position as fast as possible
-    /// 
-    /// # Units
-    /// 
-    ///  - The distance `dist` can be either an angle (Unit radians) or a distancce (Unit mm), the value should represent the **absolute position**
-    ///  - The velocity `vel` is the maximum change rate of the distance, either angular velocity (Unit radians per secoond) or linear velocity (Unit mm per second)
+    /// Moves the component to the given position as fast as possible. \
     /// To wait unti the movement operation is completed, use the [await_inactive](Component::await_inactive()) function
-    fn drive_abs_async(&mut self, mut dist : f32, mut vel : f32) {
-        dist = self.dist_for_super(dist);
-        vel = self.dist_for_super (vel);
+    #[cfg(feature = "simple_async")]
+    fn drive_abs_async(&mut self, mut gamma : Gamma, mut omega : Omega) {
+        gamma = self.gamma_for_super(gamma);
+        omega = self.omega_for_super(omega, self.get_gamma());
 
         if let Some(s_comp) = self.super_comp_mut() {
-            s_comp.drive_abs_async(dist, vel);
+            s_comp.drive_abs_async(gamma, omega);
         }
     }
 
-    /// Measure the component by driving the component with the velocity `vel` until either the measurement condition is true or the maximum distance `dist` 
+    /// Measure the component by driving the component with the velocity `omega` until either the measurement condition is true or the maximum distance `delta` 
     /// is reached. When the endpoint is reached, the controls will set the distance to `set_dist`. The lower the `accuracy`, the higher 
     /// are the computational difficulties, as the function checks more often if the measure pin has a HIGH signal
     /// 
-    /// ### Sync
+    /// # Sync
     /// 
     /// The thread is halted until the measurement is finished
-    fn measure(&mut self, mut dist : f32, mut vel : f32, mut set_dist : f32, accuracy : u64) -> bool {
-        dist = self.dist_for_super(dist);
-        vel = self.dist_for_super(vel);
-        set_dist = self.dist_for_super(set_dist);
+    fn measure(&mut self, mut delta : Delta, mut omega : Omega, mut set_gamma : Gamma, accuracy : u64) -> bool {
+        delta = self.delta_for_super(delta, self.get_gamma());
+        omega = self.omega_for_super(omega, self.get_gamma());
+        set_gamma = self.gamma_for_super(set_gamma);
 
         if let Some(s_comp) = self.super_comp_mut() {
-            s_comp.measure(dist, vel, set_dist, accuracy)
+            s_comp.measure(delta, omega, set_gamma, accuracy)
         } else { false }
     }   
 
-    /// Measure the component by driving the component with the velocity `vel` until either the measurement condition is true or the maximum distance `dist` 
+    /// Measure the component by driving the component with the velocity `omega` until either the measurement condition is true or the maximum distance `delta` 
     /// is reached. The lower the `accuracy`, the higher are the computational difficulties, as the function checks more often if the measure pin has a HIGH signal
     #[cfg(feature = "simple_async")]
-    fn measure_async(&mut self, mut dist : f32, mut vel : f32, accuracy : u64) {
-        dist = self.dist_for_super(dist);
-        vel = self.dist_for_super(vel);
+    fn measure_async(&mut self, mut delta : Delta, mut omega : Omega, accuracy : u64) {
+        delta = self.delta_for_super(delta, self.get_gamma());
+        omega = self.omega_for_super(omega, self.get_gamma());
 
         if let Some(s_comp) = self.super_comp_mut() {
-            s_comp.measure_async(dist, vel, accuracy)
+            s_comp.measure_async(delta, omega, accuracy)
         } 
     }
 
     /// Halts the thread until the movement of the component has finished. \
     /// Do only use it after an async movement has been triggered before!
-    #[cfg(feature = "std")] 
+    #[cfg(feature = "simple_async")] 
     fn await_inactive(&self) {
         if let Some(s_comp) = self.super_comp() {
             s_comp.await_inactive();
@@ -213,12 +230,12 @@ pub trait Component : SimpleMeas + MathActor + core::fmt::Debug
         /// # Units
         ///
         /// - Returns either radians or millimeter
-        fn get_dist(&self) -> f32 {
+        fn get_gamma(&self) -> Gamma {
             let super_len = if let Some(s_comp) = self.super_comp() {
-                s_comp.get_dist()
-            } else { 0.0 };
+                s_comp.get_gamma()
+            } else { Gamma::ZERO };
 
-            self.dist_for_this(super_len)
+            self.gamma_for_this(super_len)
         }
 
         /// Overwrite the current **absolute** position of the component without triggering actual movements
@@ -226,11 +243,11 @@ pub trait Component : SimpleMeas + MathActor + core::fmt::Debug
         /// # Units
         /// 
         ///  - `dist` Either radians or millimeters
-        fn write_dist(&mut self, mut dist : f32) {
-            dist = self.dist_for_super(dist);
+        fn write_gamma(&mut self, mut dist : Gamma) {
+            dist = self.gamma_for_super(dist);
 
             if let Some(s_comp) = self.super_comp_mut() {
-                s_comp.write_dist(dist);
+                s_comp.write_gamma(dist);
             }
         }
 
@@ -243,49 +260,43 @@ pub trait Component : SimpleMeas + MathActor + core::fmt::Debug
         /// - is smaller than 0, the minimum has been reached by the returned amount
         /// - equal to 0, no limit has been reached
         /// - NaN, no limit has been set yet
-        fn get_limit_dest(&self, mut dist : f32) -> f32 {
-            dist = self.dist_for_super(dist);
+        fn get_limit_dest(&self, mut gamma : Gamma) -> Delta {
+            gamma = self.gamma_for_super(gamma);
 
             if let Some(s_comp) = self.super_comp() {
-                s_comp.get_limit_dest(dist)
-            } else { 0.0 }
+                s_comp.get_limit_dest(gamma)
+            } else { Delta::ZERO }
         }
 
-        ///
-        fn set_endpoint(&mut self, mut set_dist : f32) -> bool {
-            set_dist = self.dist_for_super(set_dist);
+        fn set_endpoint(&mut self, mut set_gamma : Gamma) -> bool {
+            set_gamma = self.gamma_for_super(set_gamma);
 
             if let Some(s_comp) = self.super_comp_mut() {
-                s_comp.set_endpoint(set_dist)
+                s_comp.set_endpoint(set_gamma)
             } else { false }
         }
 
-        ///
-        fn set_limit(&mut self, mut limit_min : Option<f32>, mut limit_max : Option<f32>) {
-            limit_min = match limit_min {
-                Some(min) => Some(self.dist_for_super(min)),
+        fn set_limit(&mut self, mut min : Option<Gamma>, mut max : Option<Gamma>) {
+            min = match min {
+                Some(min) => Some(self.gamma_for_super(min)),
                 None => None
             }; 
 
-            limit_max = match limit_max {
-                Some(max) => Some(self.dist_for_super(max)),
+            max = match max {
+                Some(max) => Some(self.gamma_for_super(max)),
                 None => None
             };
 
             if let Some(s_comp) = self.super_comp_mut() {
-                s_comp.set_limit(limit_min, limit_max)
+                s_comp.set_limit(min, max)
             }
         }
     // 
 
     // Load calculation
         /// Apply a load force to the component, slowing down movements 
-        /// 
-        /// # Units
-        /// 
-        /// The unit of the `force` can either be *Newton* or *Newtonmeters*, depending on the component
-        fn apply_load_force(&mut self, mut force : f32) { // TODO: Add overload protection
-            force = self.dist_for_this(force);
+        fn apply_load_force(&mut self, mut force : Force) { // TODO: Add overload protection
+            force = Force(self.gamma_for_this(Gamma(force.0)).0);
 
             if let Some(s_comp) = self.super_comp_mut() {
                 s_comp.apply_load_force(force);
@@ -293,12 +304,8 @@ pub trait Component : SimpleMeas + MathActor + core::fmt::Debug
         }
         
         /// Apply a load inertia to the component, slowing down movements
-        /// 
-        /// # Units
-        /// 
-        /// The unit of the `inertia` can either be *kilogramm* or *kilogramm-meter^2*
-        fn apply_load_inertia(&mut self, mut inertia : f32) {
-            inertia = self.dist_for_this(self.dist_for_this(inertia));
+        fn apply_load_inertia(&mut self, mut inertia : Inertia) {
+            inertia = Inertia(self.gamma_for_this(self.gamma_for_this(Gamma(inertia.0))).0);
 
             if let Some(s_comp) = self.super_comp_mut() {
                 s_comp.apply_load_inertia(inertia);

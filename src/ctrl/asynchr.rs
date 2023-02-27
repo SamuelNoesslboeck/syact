@@ -1,7 +1,9 @@
 use std::sync::mpsc::{channel, Sender, Receiver};
 use std::thread;
 
-type StepperMsg = (f32, f32, crate::UpdateFunc);
+use crate::{Delta, Omega};
+
+type StepperMsg = (Delta, Omega, crate::UpdateFunc);
 type StepperRes = ();
 
 pub type AsyncStepper = AsyncComms<StepperMsg, StepperRes>;

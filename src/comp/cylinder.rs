@@ -3,7 +3,7 @@ use alloc::sync::Arc;
 
 use serde::{Serialize, Deserialize};
 
-use crate::{Component, LinkedData};
+use crate::{Component, LinkedData, Omega, Gamma, Alpha, Force, Inertia};
 use crate::ctrl::{SimpleMeas, StepperCtrl};
 use crate::math::MathActor;
 
@@ -32,8 +32,8 @@ impl Cylinder
 
 impl MathActor for Cylinder 
 {
-    fn accel_dyn(&self, vel : f32, pos : f32) -> f32 {
-        self.dist_for_this(self.ctrl.accel_dyn(self.dist_for_super(vel), pos))
+    fn accel_dyn(&self, omega : Omega, gamma : Gamma) -> Alpha {
+        self.alpha_for_this(self.ctrl.accel_dyn(self.omega_for_super(omega, gamma), self.gamma_for_super(gamma)), self.gamma_for_super(gamma))
     }
 }
 
@@ -55,12 +55,12 @@ impl Component for Cylinder
             Some(&mut self.ctrl)
         }
         
-        fn dist_for_super(&self, this_len : f32) -> f32 {
-            this_len / self.rte_ratio
+        fn gamma_for_super(&self, this_gamma : Gamma) -> Gamma {
+            this_gamma / self.rte_ratio
         }
 
-        fn dist_for_this(&self, super_len : f32) -> f32 {
-            super_len * self.rte_ratio
+        fn gamma_for_this(&self, super_gamma : Gamma) -> Gamma {
+            super_gamma * self.rte_ratio
         }
     // 
 
@@ -77,11 +77,11 @@ impl Component for Cylinder
     // 
 
     // Loads
-        fn apply_load_force(&mut self, force : f32) {
+        fn apply_load_force(&mut self, force : Force) {
             self.ctrl.apply_load_force(force * self.rte_ratio / 1000.0)
         }
 
-        fn apply_load_inertia(&mut self, inertia : f32) {
+        fn apply_load_inertia(&mut self, inertia : Inertia) {
             self.ctrl.apply_load_inertia(inertia * self.rte_ratio * self.rte_ratio / 1000_000.0)
         }
     //
