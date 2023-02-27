@@ -42,11 +42,17 @@ impl ServoDriver
         self.gamma = gamma
     }
 
-    pub fn endpoint_min(&mut self) {
-        self.set_perc(0.0)
-    }
+    // Positions
+        pub fn default_pos(&mut self) {
+            self.set_perc(0.5)
+        }
 
-    pub fn endpoint_max(&mut self) {
-        self.set_perc(1.0)
-    }
+        pub fn endpoint_min(&mut self) {
+            self.set_perc(0.0)
+        }
+
+        pub fn endpoint_max(&mut self) {
+            self.set_perc(1.0)
+        }
+    // 
 }
