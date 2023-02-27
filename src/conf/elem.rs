@@ -7,23 +7,23 @@ use alloc::boxed::Box;
 
 use serde::{Serialize, Deserialize};
 
-use crate::{Component, comp::Tool};
+use crate::{Component, comp::Tool, Gamma, Delta, Omega};
 
 // Sub-Structs
     #[derive(Debug, Default, Clone, Copy, Serialize, Deserialize)]
     pub struct MeasInstance
     {
         pub pin : u16,
-        pub set_val : f32,
-        pub dist : f32
+        pub set_val : Gamma,
+        pub dist : Delta
     }
 
     #[derive(Debug, Default, Clone, Copy, Serialize, Deserialize)]
     pub struct LimitDecl
     {
-        pub max : Option<f32>,
-        pub min : Option<f32>,
-        pub vel : f32
+        pub max : Option<Gamma>,
+        pub min : Option<Gamma>,
+        pub vel : Omega
     }
 
     #[derive(Debug, Default, Clone, Copy, Serialize, Deserialize)]
@@ -36,7 +36,7 @@ use crate::{Component, comp::Tool};
     pub struct AngleData
     {
         #[serde(default)]
-        pub offset : f32,
+        pub offset : Delta,
         #[serde(default)]
         pub counter : bool
     }

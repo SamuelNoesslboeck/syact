@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use glam::{Mat3, Vec3};
 
-use crate::LinkedData;
+use crate::{LinkedData, Omega, Gamma, Delta, Phi};
 use crate::comp::Tool;
 
 // Submodules
@@ -26,9 +26,9 @@ pub struct MachineConfig<const N : usize, const D : usize, const A : usize>
 
     pub tools : Vec<Box<dyn Tool + Send>>,
 
-    pub vels : [f32; N],
-    pub home : [f32; N],
-    pub meas_dist : [f32; N],
+    pub vels : [Omega; N],
+    pub home : [Gamma; N],
+    pub meas_dist : [Delta; N],
     
     pub ang : [AngleData; N],
     pub sim : [SimData; N],
@@ -49,9 +49,9 @@ impl<const N : usize, const D : usize, const A : usize> Default for MachineConfi
 
             tools: vec![],
 
-            vels: [0.0; N],
-            home: [0.0; N],
-            meas_dist: [0.0; N],
+            vels: [Omega::ZERO; N],
+            home: [Gamma::ZERO; N],
+            meas_dist: [Delta::ZERO; N],
             
             ang: [Default::default(); N],
             sim: [Default::default(); N],
@@ -63,7 +63,7 @@ impl<const N : usize, const D : usize, const A : usize> Default for MachineConfi
 
 impl<const N : usize, const D : usize, const A : usize> MachineConfig<N, D, A>
 {
-    pub fn get_axes(&self, angles : &[f32; A]) -> Vec<Mat3> {
+    pub fn get_axes(&self, angles : &[Phi; A]) -> Vec<Mat3> {
         let mut matr = vec![];
 
         for i in 0 .. A {
@@ -71,11 +71,11 @@ impl<const N : usize, const D : usize, const A : usize> MachineConfig<N, D, A>
 
             matr.push(
                 if axis_vec == Vec3::X {
-                    Mat3::from_rotation_x(angles[i])
+                    Mat3::from_rotation_x(angles[i].0)
                 } else if axis_vec == Vec3::Y {
-                    Mat3::from_rotation_y(angles[i])
+                    Mat3::from_rotation_y(angles[i].0)
                 } else if axis_vec == Vec3::Z {
-                    Mat3::from_rotation_z(angles[i])
+                    Mat3::from_rotation_z(angles[i].0)
                 } else {
                     Mat3::ZERO
                 }
@@ -88,21 +88,31 @@ impl<const N : usize, const D : usize, const A : usize> MachineConfig<N, D, A>
 
 impl<const N : usize, const D : usize, const A : usize> MachineConfig<N, D, A>
 {
-    pub fn convert_angles(&self, angles : [f32; N], to_comp : bool) -> [f32; N] {
-        let mut full_ang = [0.0; N];
+    pub fn gammas_from_phis(&self, phis : [Phi; N]) -> [Gamma; N] {
+        let mut gammas = [Gamma::ZERO; N];
 
         for i in 0 .. N {
-            full_ang[i] = if self.ang[i].counter { 
-                -angles[i] 
+            gammas[i] = if self.ang[i].counter { 
+                -phis[i].force_to_gamma() 
             } else { 
-                angles[i] 
-            } + if to_comp { 
-                -self.ang[i].offset 
-            } else {
-                self.ang[i].offset
-            };
+                phis[i].force_to_gamma()
+            } - self.ang[i].offset;
         }
 
-        full_ang
+        gammas
+    }
+
+    pub fn phis_from_gammas(&self, gammas : [Gamma; N]) -> [Phi; N] {
+        let mut phis = [Phi::ZERO; N];
+
+        for i in 0 .. N {
+            phis[i] = (if self.ang[i].counter { 
+                -gammas[i]
+            } else { 
+                gammas[i]
+            } - self.ang[i].offset).force_to_phi();
+        }
+
+        phis
     }
 }

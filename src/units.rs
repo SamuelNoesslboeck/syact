@@ -204,6 +204,12 @@ impl Div<Time> for f32 {
 pub struct Gamma(pub f32);
 basic_unit!(Gamma);
 
+impl Gamma {
+    pub fn force_to_phi(self) -> Phi {
+        Phi(self.0)
+    }
+}
+
 impl Sub<Gamma> for Gamma {
     type Output = Delta;
     
@@ -222,6 +228,33 @@ impl Add<Delta> for Gamma {
     }
 }
 
+impl Sub<Delta> for Gamma {
+    type Output = Gamma;
+
+    #[inline(always)]
+    fn sub(self, rhs: Delta) -> Self::Output {
+        Self(self.0 - rhs.0)
+    }
+}
+
+#[inline]
+pub fn force_phis_from_gammas<const N : usize>(gammas : [Gamma; N]) -> [Phi; N] {
+    let mut phis = [Phi::ZERO; N];
+    for i in 0 .. N {
+        phis[i] = gammas[i].force_to_phi();
+    }
+    phis
+}
+
+#[inline]
+pub fn force_gammas_from_phis<const N : usize>(phis : [Phi; N]) -> [Gamma; N] {
+    let mut gammas = [Gamma::ZERO; N];
+    for i in 0 .. N {
+        gammas[i] = phis[i].force_to_gamma();
+    }
+    gammas
+}
+
 /// The phi distance represents the mathematical distance used for calculations
 /// 
 /// # Unit
@@ -230,6 +263,12 @@ impl Add<Delta> for Gamma {
 #[derive(Clone, Copy, Debug, Default, Serialize, Deserialize, PartialEq, PartialOrd)]
 pub struct Phi(pub f32);
 basic_unit!(Phi);
+
+impl Phi {
+    pub fn force_to_gamma(self) -> Gamma {
+        Gamma(self.0)
+    }
+}
 
 /// The delta distance represents a relative distance traveled by the 
 /// 
