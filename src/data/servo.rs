@@ -39,8 +39,8 @@ impl ServoConst
         omega_max: Omega(8.5),
         gamma_max: Gamma(core::f32::consts::PI),
 
-        pwm_min: Time(0.001),
-        pwm_max: Time(0.002),
+        pwm_min: Time(0.002),
+        pwm_max: Time(0.003),
         f_pwm: Omega(50.0)
     };
 
@@ -75,7 +75,7 @@ impl ServoConst
     }
 
     pub fn pulse_for_perc(&self, perc : f32) -> Time {
-        self.pwm_min + (self.pwm_max - self.pwm_min) * perc
+        self.pwm_min + (self.pwm_max - self.pwm_min) / perc
     }
 
     pub fn pulse_for_angle(&self, gamma : Gamma) -> Time {
