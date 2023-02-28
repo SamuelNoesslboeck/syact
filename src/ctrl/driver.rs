@@ -178,7 +178,7 @@ impl StepperDriver {
         }
 
         pub fn accelerate(&mut self, stepcount : u64, omega : Omega, ufunc : &UpdateFunc) -> (StepResult, Vec<Time>) {
-            let t_start = Time(self.lk.s_f / math::start_frequency(&self.consts, &self.vars));
+            let t_start = self.lk.s_f / math::start_frequency(&self.consts, &self.vars);
             let t_min = self.consts.step_time(omega);
 
             let mut o_last = Omega::ZERO;

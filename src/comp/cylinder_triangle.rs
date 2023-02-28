@@ -125,32 +125,35 @@ impl Component for CylinderTriangle {
         }
     //
 
-    /// See [Component::drive()](`Component::drive()`)
+    /// See [Component::drive_rel()]
     /// - `dist`is the angular distance to be moved (Unit radians)
     /// - `vel` is the cylinders extend velocity (Unit mm per second)
     fn drive_rel(&mut self, delta : Delta, omega : Omega) -> Gamma {
         self.cylinder.drive_rel(self.gamma_for_super(delta + self.get_gamma()) - self.cylinder.get_gamma(), omega)
     }
 
-    /// See [Component::drive_async()](`Component::drive_async()`)
+    /// See [Component::drive_rel_async()]
     /// - `dist`is the angular distance to be moved (Unit radians)
     /// - `vel` is the cylinders extend velocity (Unit mm per second)
     fn drive_rel_async(&mut self, delta : Delta, omega : Omega) {
         self.cylinder.drive_rel_async(self.gamma_for_super(delta + self.get_gamma()) - self.cylinder.get_gamma(), omega)
     }
 
-    /// See [Component::drive_abs](`Component::drive_abs()`)
+    /// See [Component::drive_abs]
     /// - `dist`is the angular distance to be moved (Unit radians)
     /// - `vel` is the cylinders extend velocity (Unit mm per second)
     fn drive_abs(&mut self, gamma : Gamma, omega : Omega) -> Gamma {
         self.cylinder.drive_abs(self.gamma_for_super(gamma), omega)
     }
 
+    /// See [Component::drive_abs_async()]
+    /// - `dist`is the angular distance to be moved (Unit radians)
+    /// - `vel` is the cylinders extend velocity (Unit mm per second)
     fn drive_abs_async(&mut self, gamma : Gamma, omega : Omega) {
         self.cylinder.drive_abs_async(self.gamma_for_super(gamma), omega)
     }
 
-    /// See [Component::measure()](`Component::measure()`)
+    /// See [Component::measure()]
     /// - `dist` is the maximum distance for the cylinder in mm
     /// - `vel` is the maximum linear velocity for the cylinder in mm per second
     /// - `set_dist` is the set distance for the cylinder in mm

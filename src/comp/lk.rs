@@ -13,6 +13,11 @@ impl LinkedData
         u : 0.0, 
         s_f : 0.0
     };
+
+    pub const GEN : Self = Self {
+        u: 12.0,
+        s_f: 1.5
+    };
 }
 
 impl From<(f32, f32)> for LinkedData 

@@ -32,26 +32,63 @@ pub use tool::*;
 /// Trait for defining controls and components of synchronous actuators
 /// 
 /// # Super components
+/// 
 /// Components can have multiple layers, for example take a stepper motor with a geaerbox attached to it. The stepper motor and both combined will be a component, the later having 
 /// the stepper motor component defined as it's super component. (See [GearBearing])
 pub trait Component : SimpleMeas + MathActor + core::fmt::Debug
 {
     // Super
-        /// Returns a readonly reference to the super [Component](self) if it exists, returns `None` otherwise
+        /// Returns a readonly reference to the super [Component] if it exists, returns `None` otherwise. If not overwritten by the 
+        /// trait implementation, this function returns always `None`.
         /// 
         /// # Example
         /// 
         /// A super component would for example be the stepper motor for a cylinder (See [Cylinder])
+        /// 
+        /// ```rust
+        /// use std::sync::Arc;
+        /// 
+        /// use stepper_lib::{Component, LinkedData, StepperCtrl, StepperConst, Gamma};
+        /// use stepper_lib::comp::Cylinder;
+        /// 
+        /// // Create a new cylinder
+        /// let mut cylinder = Cylinder::new(
+        ///     // Stepper Motor as subcomponent
+        ///     StepperCtrl::new_sim(StepperConst::GEN), 
+        /// 1.0);    
+        /// 
+        /// cylinder.write_gamma(Gamma(1.0));
+        /// 
+        /// assert!((cylinder.super_comp().unwrap().get_gamma() - Gamma(1.0)).abs().0 <= StepperConst::GEN.step_ang());
+        /// ```
         #[inline(always)]
         fn super_comp(&self) -> Option<&dyn Component> {
             None
         }
 
-        /// Returns a mutable reference to the super [Component](self) if it exists, returns `None` otherwise
+        /// Returns a mutable reference to the super [Component] if it exists, returns `None` otherwise
         /// 
         /// # Example
         /// 
         /// A super component would for example be the stepper motor for a cylinder (See [Cylinder])
+        /// 
+        /// ```rust
+        /// use std::sync::Arc;
+        /// 
+        /// use stepper_lib::{Component, LinkedData, StepperCtrl, StepperConst, Delta, Omega};
+        /// use stepper_lib::comp::Cylinder;
+        /// 
+        /// // Create a new cylinder
+        /// let mut cylinder = Cylinder::new(
+        ///     // Stepper Motor as subcomponent
+        ///     StepperCtrl::new_sim(StepperConst::GEN), 
+        /// 1.0);    
+        /// cylinder.link(Arc::new(LinkedData::GEN));
+        /// 
+        /// cylinder.super_comp_mut().unwrap().drive_rel(Delta(-1.0), Omega(1.0));
+        /// 
+        /// assert!(!cylinder.ctrl.get_dir());
+        /// ```
         #[inline(always)]
         fn super_comp_mut(&mut self) -> Option<&mut dyn Component> {
             None

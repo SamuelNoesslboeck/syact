@@ -1,8 +1,10 @@
+#[cfg(target_os = "linux")]
 use std::{f32::consts::PI, sync::Arc};
 
-
+#[cfg(target_os = "linux")]
 use gpio::{GpioIn, sysfs::*};
 
+#[cfg(target_os = "linux")]
 use crate::{Component, LinkedData, StepperCtrl, StepperConst, UpdateFunc, Delta, Omega};
 
 // Submodules
@@ -11,6 +13,7 @@ mod movements;
  
 // Test Async
     #[test]
+    #[cfg(target_os = "linux")]
     fn test_async() {
         let mut ctrl = StepperCtrl::new(StepperConst::MOT_17HE15_1504S, 27, 19);
         ctrl.link(Arc::new(LinkedData { u: 12.0, s_f: 1.5 })); 
@@ -26,6 +29,7 @@ mod movements;
 
 // Test Input
     #[test]
+    #[cfg(target_os = "linux")]
     fn test_input() {
         let mut pin = SysFsGpioInput::open(25).expect("Could not open pin");
         
