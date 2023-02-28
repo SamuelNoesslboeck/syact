@@ -92,7 +92,7 @@ mod gcode
             ]) )
         ]);
 
-        let mut intpr = crate::gcode::Interpreter::new(Data { pos: 0.0 }, map);
+        let mut intpr = crate::gcode::Interpreter::new(Data { pos: 0.0 }, None, map);
 
         let res = intpr.interpret("G0\nG1", |_| { Some(0.0) });
                 

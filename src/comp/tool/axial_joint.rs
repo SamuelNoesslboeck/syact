@@ -38,7 +38,7 @@ impl Tool for AxialJoint {
 }
 
 impl AxisTool for AxialJoint {
-    fn rotate_abs(&mut self, gamma : Gamma) {
+    fn rotate_abs(&mut self, _ : Gamma) {
         todo!()
     }
 

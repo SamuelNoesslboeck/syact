@@ -40,6 +40,14 @@ pub trait Tool : Debug {
         fn axis_tool_mut(&mut self) -> Option<&mut dyn AxisTool> {
             None
         }
+
+        fn spindle_tool(&self) -> Option<&dyn SpindleTool> {
+            None
+        }
+
+        fn spindle_tool_mut(&mut self) -> Option<&mut dyn SpindleTool> {
+            None
+        }
     //
 
     // Stats
@@ -60,22 +68,46 @@ pub trait Tool : Debug {
     //
 }
 
-pub trait SimpleTool : Tool {
-    // Actions
-        fn activate(&mut self);
-    // 
+// Subtools
+    pub trait AxisTool : Tool {
+        // Actions
+            fn rotate_abs(&mut self, gamma : Gamma);
+        //
 
-    // State 
-        fn is_active(&self) -> bool;
-    // 
-}
+        // State
+            fn gamma(&self) -> Gamma;
+        // 
+    }
 
-pub trait AxisTool : Tool {
-    // Actions
-        fn rotate_abs(&mut self, gamma : Gamma);
-    //
+    pub trait SimpleTool : Tool {
+        // Actions
+            fn activate(&mut self);
 
-    // State
-        fn gamma(&self) -> Gamma;
-    // 
-}
+            fn deactivate(&mut self);
+
+            fn toggle(&mut self) {
+                if self.is_active() {
+                    self.deactivate()
+                } else {
+                    self.activate()
+                }
+            }
+        // 
+
+        // State 
+            fn is_active(&self) -> bool;
+        // 
+    }
+
+    pub trait SpindleTool : Tool {
+        // Actions
+            fn activate(&mut self, cw : bool);
+
+            fn deactivate(&mut self);
+        //
+
+        // State
+            fn is_active(&self) -> Option<bool>;
+        //
+    }
+//

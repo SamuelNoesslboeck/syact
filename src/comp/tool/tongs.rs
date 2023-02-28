@@ -43,6 +43,10 @@ impl SimpleTool for Tongs {
         todo!()
     }
 
+    fn deactivate(&mut self) {
+        todo!()
+    }
+
     fn is_active(&self) -> bool {
         todo!()
     }
