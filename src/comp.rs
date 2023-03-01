@@ -38,6 +38,7 @@ pub use tool::Tool;
 pub trait Component : SimpleMeas + MathActor + core::fmt::Debug
 {
     // Data
+        /// Returns a copy of the stepper constants used by the [stepper driver](crate::ctrl::StepperDriver)
         fn consts(&self) -> StepperConst;
     // 
 
@@ -50,19 +51,19 @@ pub trait Component : SimpleMeas + MathActor + core::fmt::Debug
         /// A super component would for example be the stepper motor for a cylinder (See [Cylinder])
         /// 
         /// ```rust
-        /// use std::sync::Arc;
-        /// 
-        /// use stepper_lib::{Component, LinkedData, StepperCtrl, StepperConst, Gamma};
+        /// use stepper_lib::{Component, StepperCtrl, StepperConst, Gamma};
         /// use stepper_lib::comp::Cylinder;
         /// 
-        /// // Create a new cylinder
+        /// // Create a new cylinder (implements Component)
         /// let mut cylinder = Cylinder::new(
-        ///     // Stepper Motor as subcomponent
+        ///     // Stepper Motor as subcomponent (also implements Component)
         ///     StepperCtrl::new_sim(StepperConst::GEN), 
-        /// 1.0);    
+        /// 1.0);     
         /// 
+        /// // Overwrite the cylinder position
         /// cylinder.write_gamma(Gamma(1.0));
         /// 
+        /// // Checks position of super component (The position of the super component won't be exactly 1.0, as the stepper motor can only move whole steps)
         /// assert!((cylinder.super_comp().unwrap().get_gamma() - Gamma(1.0)).abs().0 <= StepperConst::GEN.step_ang());
         /// ```
         #[inline(always)]
@@ -77,21 +78,20 @@ pub trait Component : SimpleMeas + MathActor + core::fmt::Debug
         /// A super component would for example be the stepper motor for a cylinder (See [Cylinder])
         /// 
         /// ```rust
-        /// use std::sync::Arc;
-        /// 
-        /// use stepper_lib::{Component, LinkedData, StepperCtrl, StepperConst, Delta, Omega};
+        /// use stepper_lib::{Component, StepperCtrl, StepperConst, Gamma};
         /// use stepper_lib::comp::Cylinder;
         /// 
-        /// // Create a new cylinder
+        /// // Create a new cylinder (implements Component)
         /// let mut cylinder = Cylinder::new(
-        ///     // Stepper Motor as subcomponent
+        ///     // Stepper Motor as subcomponent (also implements Component)
         ///     StepperCtrl::new_sim(StepperConst::GEN), 
         /// 1.0);    
-        /// cylinder.link(Arc::new(LinkedData::GEN));
         /// 
-        /// cylinder.super_comp_mut().unwrap().drive_rel(Delta(-1.0), Omega(1.0));
+        /// // Overwrite position in super component
+        /// cylinder.super_comp_mut().unwrap().write_gamma(Gamma(1.0));
         /// 
-        /// assert!(!cylinder.ctrl.get_dir());
+        /// // Check own position (The position of the component won't be exactly 1.0, as the stepper motor can only move whole steps)
+        /// assert!((cylinder.super_comp().unwrap().get_gamma() - Gamma(1.0)).abs().0 <= StepperConst::GEN.step_ang());
         /// ```
         #[inline(always)]
         fn super_comp_mut(&mut self) -> Option<&mut dyn Component> {
@@ -103,7 +103,20 @@ pub trait Component : SimpleMeas + MathActor + core::fmt::Debug
         /// # Example
         /// 
         /// When using a gearmotor with a ratio of four (motor movement speed will be reduced to a quater), 
-        /// this function will return a super distance *four times higher* than the input distance
+        /// this function will return a super distance *four times higher* than the input distance.
+        /// 
+        /// ```rust
+        /// use stepper_lib::{Component, StepperCtrl, StepperConst, Gamma};
+        /// use stepper_lib::comp::Cylinder;
+        /// 
+        /// // Create a new cylinder (implements Component)
+        /// let mut cylinder = Cylinder::new(
+        ///     // Stepper Motor as subcomponent (also implements Component)
+        ///     StepperCtrl::new_sim(StepperConst::GEN), 
+        /// 2.0);    // Ratio is set to 2.0, which means for each radian the motor moves, the cylinder moves for 2.0 mm
+        /// 
+        /// assert_eq!(Gamma(1.0), cylinder.gamma_for_super(Gamma(2.0)));
+        /// ```
         #[inline(always)]
         fn gamma_for_super(&self, this_gamma : Gamma) -> Gamma {
             this_gamma
@@ -115,6 +128,19 @@ pub trait Component : SimpleMeas + MathActor + core::fmt::Debug
         /// 
         /// When using a gearmotor with a ratio of four (motor movement speed will be reduced to a quater), 
         /// this function will return a distance *four times higher* than the input super distance
+        /// 
+        /// ```rust
+        /// use stepper_lib::{Component, StepperCtrl, StepperConst, Gamma};
+        /// use stepper_lib::comp::Cylinder;
+        /// 
+        /// // Create a new cylinder (implements Component)
+        /// let mut cylinder = Cylinder::new(
+        ///     // Stepper Motor as subcomponent (also implements Component)
+        ///     StepperCtrl::new_sim(StepperConst::GEN), 
+        /// 2.0);    // Ratio is set to 2.0, which means for each radian the motor moves, the cylinder moves for 2.0 mm
+        /// 
+        /// assert_eq!(Gamma(2.0), cylinder.gamma_for_this(Gamma(1.0)));
+        /// ```
         #[inline(always)]
         fn gamma_for_this(&self, super_gamma : Gamma) -> Gamma {
             super_gamma
