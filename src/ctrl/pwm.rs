@@ -25,7 +25,10 @@ impl PWMOutput
     pub fn spawn(pin : u16) -> Self {
         let mut sys_pwm = match gpio::sysfs::SysFsGpioOutput::open(pin.clone()) {
             Ok(val) => RaspPin::Output(val),
-            Err(_) => RaspPin::ErrPin
+            Err(_) => {
+                println!("Failed to open pin! {} ", pin);    // TODO: Remove dirty stuff
+                RaspPin::ErrPin
+            }
         };
 
         let (sender, recv) : (Sender<[Time; 2]>, Receiver<[Time; 2]>) = channel();

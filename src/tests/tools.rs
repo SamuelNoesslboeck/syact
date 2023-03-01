@@ -3,8 +3,8 @@ use crate::comp::tool::{Tongs, SimpleTool, AxialJoint, AxisTool};
 use crate::ctrl::servo::ServoDriver;
 use crate::data::ServoConst;
 
-const TONGS_PIN : u16 = 13;
-const AXIAL_JOINT_PIN : u16 = 12;
+const TONGS_PIN : u16 = 23;
+const AXIAL_JOINT_PIN : u16 = 13;
 
 #[test]
 fn tongs() {

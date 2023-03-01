@@ -81,3 +81,29 @@ pub fn get_arg_letter(args : &Args, letter : char) -> Option<f32> {
 
     None
 }
+
+pub fn get_arg_letters(args : &Args, letter : char) -> Vec<f32> {
+    let mut letters = Vec::new();
+
+    for i in 0 .. args.len() {
+        if args[i].letter == letter {
+            letters.push(args[i].value);
+        }
+    }
+
+    letters
+}
+
+pub fn get_arg_letters_fixed<const N : usize>(args : &Args, letter : char) -> [Option<f32>; N] {
+    let mut letters = [None; N]; 
+    let mut l_index : usize = 0;
+
+    for i in 0 .. args.len() {
+        if args[i].letter == letter {
+            letters[l_index] = Some(args[i].value);
+            l_index += 1;
+        }
+    }   
+
+    letters
+}

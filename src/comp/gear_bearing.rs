@@ -15,6 +15,15 @@ pub struct GearBearing
     pub ratio : f32
 }
 
+impl GearBearing {
+    pub fn new(ctrl : StepperCtrl, ratio : f32) -> Self {
+        Self {
+            ctrl,
+            ratio
+        }
+    }
+}
+
 impl SimpleMeas for GearBearing 
 {
     fn init_meas(&mut self, pin_meas : u16) {

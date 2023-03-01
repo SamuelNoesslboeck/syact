@@ -8,12 +8,18 @@ use gpio::{GpioIn, sysfs::*};
 use crate::{Component, LinkedData, StepperCtrl, StepperConst, UpdateFunc, Delta, Omega};
 
 // Submodules
+#[cfg(target_os = "linux")]
+mod comp;
+
 mod data;
 
-mod movements;
-
+#[cfg(target_os = "linux")]
 mod servo;
- 
+
+#[cfg(target_os = "linux")]
+mod stepper;
+
+#[cfg(target_os = "linux")]
 mod tools;
 
 // Test Async

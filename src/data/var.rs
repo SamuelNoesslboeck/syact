@@ -1,6 +1,6 @@
 use crate::{Force, Inertia};
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct StepperVar
 {
     pub t_load : Force,
