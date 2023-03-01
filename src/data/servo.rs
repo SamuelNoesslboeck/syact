@@ -83,7 +83,6 @@ impl ServoConst
     }
 }
 
-// TODO: Servos
 /// A collection of standard stepper motors
 pub static STANDARD_SERVO_CONST : [(&str, ServoConst); 2] = [
     ("ERROR", ServoConst::ERROR),

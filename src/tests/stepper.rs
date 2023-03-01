@@ -1,4 +1,3 @@
-#[cfg(target_os = "linux")]
 mod single_motor 
 {
     use std::sync::Arc;
