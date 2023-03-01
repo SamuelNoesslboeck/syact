@@ -1,6 +1,6 @@
 [package]
 name = "stepper_lib"
-version = "0.10.2"
+version = "0.10.3"
 edition = "2021"
 repository = "https://github.com/SamuelNoesslboeck/stepper_lib"
 
