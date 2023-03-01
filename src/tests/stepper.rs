@@ -5,8 +5,6 @@ mod single_motor
     use crate::{Inertia, Time, Force, Omega};
     use crate::{StepperCtrl, LinkedData, StepperConst, Component};
 
-    use super::*;
-
     const PIN_DIR : u16 = 27;
     const PIN_STEP : u16 = 19;
 
