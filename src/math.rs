@@ -9,8 +9,7 @@ use glam::{Vec3, Mat3};
 use crate::{Component, Omega, Gamma, Alpha, Delta, Force, Time, Inertia};
 use crate::data::{StepperConst, StepperVar};
 
-/// Returns the current torque of a motor (data) at the given angluar speed (omega), returns only positive values  \
-/// Unit: [Nm]  
+/// Returns the current torque of a motor (data) at the given angluar speed (omega), returns only positive values
 pub fn torque_dyn(data : &StepperConst, mut omega : Omega, u : f32) -> Force {
     omega = omega.abs();
     
@@ -26,9 +25,12 @@ pub fn torque_dyn(data : &StepperConst, mut omega : Omega, u : f32) -> Force {
 }
 
 /// Returns the start freqency of a motor (data)  \
-/// Unit: [Hz]
-pub fn start_frequency(data : &StepperConst, var : &StepperVar) -> f32 {
-    (data.alpha_max(var) * (data.n_s as f32) / 4.0 / PI).0.powf(0.5)
+/// 
+/// # Units
+/// 
+///  - Returns Hertz
+pub fn start_frequency(data : &StepperConst, var : &StepperVar) -> Omega {
+    Omega((data.alpha_max(var) * (data.n_s as f32) / 4.0 / PI).0.powf(0.5))
 }
 
 /// The angluar velocity of a motor that is constantly accelerating after the time `t`

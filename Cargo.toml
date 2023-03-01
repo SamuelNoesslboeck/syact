@@ -1,7 +1,9 @@
 [package]
 name = "stepper_lib"
-version = "0.10.0"
+version = "0.10.1"
 edition = "2021"
+licence-file = "LICENCE"
+repository = "https://github.com/SamuelNoesslboeck/stepper_lib"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

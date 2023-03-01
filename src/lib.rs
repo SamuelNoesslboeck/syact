@@ -1,6 +1,7 @@
 //! # Stepper Library
 //! 
-//! A library for controlling stepper motors with a raspberry pi
+//! A library for all types of components used in robots, including controlls for stepper motors, servo motors and more complex assemblies using them. 
+//! Current implementations are made for the raspberry pi controller, using a basic GPIO library that will be replaced in future releases.
 #![crate_name = "stepper_lib"]
 #![cfg_attr(not(feature = "std"), no_std)]
 // #![deny(missing_docs)]

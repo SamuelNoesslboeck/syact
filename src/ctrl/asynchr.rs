@@ -12,12 +12,15 @@ type CommsFunc<Ctrl, Msg, Res> = fn (&mut Ctrl, Msg) -> Res;
 
 /// ### `AsyncComms`
 /// Struct for managing async movements
+/// 
 /// ```rust
-/// use stepper_lib::{StepperCtrl, StepperData, UpdateFunc};
+/// use stepper_lib::{Component, StepperCtrl, StepperConst, UpdateFunc, Delta, Omega};
 /// use std::f32::consts::PI;
 /// 
-/// let ctrl = StepperCtrl::new(StepperData::mot_17he15_1504s(12.0, 1.5), 27, 19);
-/// ctrl.comms.send_msg((4.0 * PI, 2.0 * PI, UpdateFunc::None));
+/// let mut ctrl = StepperCtrl::new_sim(StepperConst::GEN);
+/// ctrl.link(std::sync::Arc::new(stepper_lib::LinkedData { u: 12.0, s_f: 1.5 }));
+/// 
+/// ctrl.comms.send_msg((Delta(4.0 * PI), Omega(2.0 * PI), UpdateFunc::None));
 ///
 /// ctrl.comms.await_inactive();
 /// ```
