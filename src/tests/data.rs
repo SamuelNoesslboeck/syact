@@ -50,10 +50,10 @@ mod stepper_data
 
         let tools : [Box<dyn crate::Tool + Send>; 2] = [
             Box::new(
-                crate::comp::NoTool::new()
+                crate::comp::tool::NoTool::new()
             ),
             Box::new(
-                crate::comp::PencilTool::new(100.0, 0.25)
+                crate::comp::tool::PencilTool::new(100.0, 0.25)
             )
         ]; 
 
@@ -92,7 +92,7 @@ mod gcode
             ]) )
         ]);
 
-        let mut intpr = crate::gcode::Interpreter::new(Data { pos: 0.0 }, map);
+        let mut intpr = crate::gcode::Interpreter::new(Data { pos: 0.0 }, None, map);
 
         let res = intpr.interpret("G0\nG1", |_| { Some(0.0) });
                 

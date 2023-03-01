@@ -46,6 +46,12 @@ impl SimpleMeas for Cylinder
 
 impl Component for Cylinder 
 {
+    // Data
+        fn consts(&self) -> crate::StepperConst {
+            self.ctrl.consts()
+        }
+    // 
+
     // Super
         fn super_comp(&self) -> Option<&dyn Component> {
             Some(&self.ctrl)

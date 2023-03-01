@@ -3,7 +3,7 @@ use alloc::sync::Arc;
 
 use core::any::type_name;
 
-use crate::{MathActor, Delta, Gamma, Omega, Force, Inertia, Alpha};
+use crate::{MathActor, Delta, Gamma, Omega, Force, Inertia, Alpha, StepperConst};
 use crate::ctrl::SimpleMeas;
 
 // Submodules
@@ -25,8 +25,8 @@ pub use group::*;
 mod lk;
 pub use lk::LinkedData;
 
-mod tool;
-pub use tool::*;
+pub mod tool;
+pub use tool::Tool;
 //
 
 /// Trait for defining controls and components of synchronous actuators
@@ -37,6 +37,10 @@ pub use tool::*;
 /// the stepper motor component defined as it's super component. (See [GearBearing])
 pub trait Component : SimpleMeas + MathActor + core::fmt::Debug
 {
+    // Data
+        fn consts(&self) -> StepperConst;
+    // 
+
     // Super
         /// Returns a readonly reference to the super [Component] if it exists, returns `None` otherwise. If not overwritten by the 
         /// trait implementation, this function returns always `None`.

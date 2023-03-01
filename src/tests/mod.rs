@@ -9,8 +9,13 @@ use crate::{Component, LinkedData, StepperCtrl, StepperConst, UpdateFunc, Delta,
 
 // Submodules
 mod data;
+
 mod movements;
+
+mod servo;
  
+mod tools;
+
 // Test Async
     #[test]
     #[cfg(target_os = "linux")]

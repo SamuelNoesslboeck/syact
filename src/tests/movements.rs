@@ -38,5 +38,4 @@ mod single_motor
         ctrl.steps(STEPS, OMEGA, crate::ctrl::UpdateFunc::None);
         println!("{} with max speed {:?}rad/s done", STEPS, OMEGA);
     }
-    // 
 }

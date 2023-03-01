@@ -137,6 +137,12 @@ impl MathActor for StepperCtrl
 
 impl Component for StepperCtrl 
 {
+    // Data
+        fn consts(&self) -> StepperConst {
+            self.driver.lock().unwrap().consts.clone()
+        }
+    // 
+
     // Link
         fn link(&mut self, lk : Arc<LinkedData>) {
             self.driver.lock().unwrap().link(lk);

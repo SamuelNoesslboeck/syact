@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::fs;
 
 pub type GCodeFunc<T, E> = fn (&mut T, &GCode, &Args) -> E;
+pub type ToolChangeFunc<T, E> = fn (&mut T, usize) -> E;
 
 pub type Letter = gcode::Mnemonic;
 pub type GCode = gcode::GCode;
@@ -15,24 +16,36 @@ pub type NotFoundFunc<R> = fn (GCode) -> R;
 pub struct Interpreter<T, R>
 {
     pub funcs : LetterEntries<T, R>,
+    pub tool_change : Option<ToolChangeFunc<T, R>>,
+
     pub mach : T
 }
 
 impl<T, R> Interpreter<T, R>
 {   
-    pub fn new(mach : T, funcs : LetterEntries<T, R>) -> Self {
+    pub fn new(mach : T, tool_change : Option<ToolChangeFunc<T, R>>, funcs : LetterEntries<T, R>) -> Self {
         return Interpreter {
             funcs,
+            tool_change,
+
             mach
         }
     }
     
     pub fn interpret(&mut self, gc_str : &str, not_found : NotFoundFunc<R>) -> Vec<R> {
-        let mut res = vec![];
+        let mut res = vec![]; 
 
         for gc_str_line in gc_str.split('\n') {
             for gc_line in gcode::parse(gc_str_line) {
-                // dbg!(gc_line.major_number(), gc_line.arguments());
+                if gc_line.mnemonic() == Letter::ToolChange {
+                    res.push(match self.tool_change {
+                        Some(func) => func(&mut self.mach, gc_line.major_number() as usize),
+                        None => not_found(gc_line)
+                    });
+
+                    continue;
+                }
+
                 let func_res = get_func(&self.funcs, &gc_line);
 
                 res.push(match func_res {

@@ -1,18 +1,54 @@
 use core::any::type_name;
 use core::fmt::Debug;
 
-use serde::{Serialize, Deserialize};
-
 use glam::Vec3;
 
 // Tools
-pub trait Tool : Debug
-{
-    // Actions
-        fn activate(&self);
+mod axial_joint;
+pub use axial_joint::AxialJoint;
 
-        fn rotate(&self);
-    // 
+mod axis_tongs;
+pub use axis_tongs::AxisTongs;
+
+mod no_tool;
+pub use no_tool::NoTool;
+
+mod pencil_tool;
+pub use pencil_tool::PencilTool;
+
+mod tongs;
+pub use tongs::Tongs;
+//
+
+use crate::Gamma;
+
+// Tools
+pub trait Tool : Debug {
+    // Upgrade
+        fn simple_tool(&self) -> Option<&dyn SimpleTool> {
+            None
+        }
+
+        fn simple_tool_mut(&mut self) -> Option<&mut dyn SimpleTool> {
+            None
+        }
+
+        fn axis_tool(&self) -> Option<&dyn AxisTool> {
+            None
+        }
+
+        fn axis_tool_mut(&mut self) -> Option<&mut dyn AxisTool> {
+            None
+        }
+
+        fn spindle_tool(&self) -> Option<&dyn SpindleTool> {
+            None
+        }
+
+        fn spindle_tool_mut(&mut self) -> Option<&mut dyn SpindleTool> {
+            None
+        }
+    //
 
     // Stats
         fn get_type_name(&self) -> &str {
@@ -32,130 +68,46 @@ pub trait Tool : Debug
     //
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct NoTool { } // Empty struct
+// Subtools
+    pub trait AxisTool : Tool {
+        // Actions
+            fn rotate_abs(&mut self, gamma : Gamma);
+        //
 
-impl NoTool 
-{
-    pub fn new() -> Self {
-        Self { }
+        // State
+            fn gamma(&self) -> Gamma;
+        // 
     }
-}
 
-impl Tool for NoTool
-{
-    // Actions
-        fn activate(&self) { }
+    pub trait SimpleTool : Tool {
+        // Actions
+            fn activate(&mut self);
 
-        fn rotate(&self) { }
-    //
+            fn deactivate(&mut self);
 
-    // Stats
-        fn get_json(&self) -> serde_json::Value {
-            serde_json::to_value(self).unwrap() 
-        }
+            fn toggle(&mut self) {
+                if self.is_active() {
+                    self.deactivate()
+                } else {
+                    self.activate()
+                }
+            }
+        // 
 
-        fn get_vec(&self) -> Vec3 {
-            Vec3::new(0.0, 0.0, 0.0)
-        }
-
-        fn get_inertia(&self) -> f32 {
-            0.0
-        }
-
-        fn get_mass(&self) -> f32 {
-            0.0
-        }
-    // 
-}
-
-// // Tools
-// #[derive(Serialize, Deserialize)]
-// pub struct AxialBearing
-// {
-//     #[serde(skip)]
-//     pub servo : ServoDriver,
-//     pub length : f32,
-//     pub mass : f32
-// }
-
-// impl AxialBearing {
-//     pub fn new(pin_servo : u16, length : f32, mass : f32) -> Self {
-//         AxialBearing {
-//             servo: ServoDriver::new(ServoData::mg996r(), pin_servo),
-//             length,
-//             mass
-//         }
-//     }
-// }
-
-// impl Tool for AxialBearing
-// {
-//     // Actions
-//         fn activate(&self) { }
-
-//         fn rotate(&self) { }
-//     //
-
-//     // Stats
-//         fn get_json(&self) -> serde_json::Value {
-//             serde_json::to_value(self).unwrap()
-//         }
-
-//         fn get_vec(&self) -> Vec3 {
-//             Vec3::new(0.0, self.length, 0.0)
-//         }
-
-//         fn get_inertia(&self) -> f32 {
-//             self.mass * self.length.powi(2) / 12.0
-//         }
-
-//         fn get_mass(&self) -> f32 {
-//             self.mass
-//         }
-//     // 
-// }
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PencilTool
-{
-    pub length : f32,
-    pub mass : f32
-}
-
-impl PencilTool {
-    pub fn new(length : f32, mass : f32) -> Self {
-        PencilTool {
-            length,
-            mass
-        }
+        // State 
+            fn is_active(&self) -> bool;
+        // 
     }
-}
 
-impl Tool for PencilTool
-{
-    // Actions
-        fn activate(&self) { }
+    pub trait SpindleTool : Tool {
+        // Actions
+            fn activate(&mut self, cw : bool);
 
-        fn rotate(&self) { }
-    // 
+            fn deactivate(&mut self);
+        //
 
-    // Stats
-        fn get_json(&self) -> serde_json::Value {
-            serde_json::to_value(self).unwrap()
-        }
-
-        fn get_vec(&self) -> Vec3 {
-            Vec3::new(0.0, self.length, 0.0)
-        }
-
-        fn get_inertia(&self) -> f32 {
-            self.mass * self.length.powi(2) / 12.0
-        }
-
-        fn get_mass(&self) -> f32 {
-            self.mass
-        }
-    // 
-}
+        // State
+            fn is_active(&self) -> Option<bool>;
+        //
+    }
 //
