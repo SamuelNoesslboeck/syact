@@ -53,6 +53,10 @@ macro_rules! basic_unit {
                 self.0.is_normal()
             }
 
+            pub fn is_nan(self) -> bool {
+                self.0.is_nan()
+            }
+
             pub fn sin(self) -> f32 {
                 self.0.sin()
             }

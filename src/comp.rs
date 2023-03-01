@@ -25,8 +25,8 @@ pub use group::*;
 mod lk;
 pub use lk::LinkedData;
 
-mod tool;
-pub use tool::*;
+pub mod tool;
+pub use tool::Tool;
 //
 
 /// Trait for defining controls and components of synchronous actuators

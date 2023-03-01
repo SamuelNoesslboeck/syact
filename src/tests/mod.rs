@@ -1,14 +1,17 @@
 use std::{f32::consts::PI, sync::Arc};
-
-
 use gpio::{GpioIn, sysfs::*};
 
 use crate::{Component, LinkedData, StepperCtrl, StepperConst, UpdateFunc, Delta, Omega};
 
 // Submodules
 mod data;
+
 mod movements;
+
+mod servo;
  
+mod tools;
+
 // Test Async
     #[test]
     fn test_async() {
