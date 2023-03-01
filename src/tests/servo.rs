@@ -4,7 +4,7 @@ use crate::Time;
 use crate::ctrl::pwm::PWMOutput;
 
 const PIN_1 : u16 = 13;
-const PIN_2 : u16 = 24;
+const PIN_2 : u16 = 23;
 
 #[test]
 fn pwm_servo() {
