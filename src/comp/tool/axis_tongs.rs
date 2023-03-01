@@ -9,17 +9,17 @@ use super::AxialJoint;
 #[derive(Debug, Serialize, Deserialize)]
 pub struct AxisTongs {
     pub axis : AxialJoint,
-    pub tong : Tongs
+    pub tongs : Tongs
 }
 
 impl Tool for AxisTongs {
     // Upgrades
         fn simple_tool(&self) -> Option<&dyn SimpleTool> {
-            Some(&self.tong)
+            Some(&self.tongs)
         }
 
         fn simple_tool_mut(&mut self) -> Option<&mut dyn SimpleTool> {
-            Some(&mut self.tong)
+            Some(&mut self.tongs)
         }
 
         fn axis_tool(&self) -> Option<&dyn AxisTool> {
@@ -36,14 +36,14 @@ impl Tool for AxisTongs {
     }
 
     fn get_vec(&self) -> glam::Vec3 {
-        todo!()
+        self.axis.get_vec() + self.tongs.get_vec()
     }
 
     fn get_inertia(&self) -> f32 {
-        todo!()
+        self.axis.get_inertia() + self.tongs.get_inertia()
     }
 
     fn get_mass(&self) -> f32 {
-        todo!()
+        self.axis.get_mass() + self.tongs.get_inertia()
     }
 }

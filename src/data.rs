@@ -62,9 +62,11 @@ impl StepperConst
         j_s: Inertia::ZERO
     }; 
 
+    pub const GEN : Self = Self::MOT_17HE15_1504S;
+
     /// ### Stepper motor 17HE15-1504S
     /// Values for standard stepper motor \
-    /// Link: https://www.omc-stepperonline.com/de/e-serie-nema-17-bipolar-42ncm-59-49oz-in-1-5a-42x42x38mm-4-draehte-w-1m-kabel-verbinder-17he15-1504s
+    /// Link: <https://www.omc-stepperonline.com/de/e-serie-nema-17-bipolar-42ncm-59-49oz-in-1-5a-42x42x38mm-4-draehte-w-1m-kabel-verbinder-17he15-1504s>
     pub const MOT_17HE15_1504S : Self = Self {
         i_max: 1.5, 
         l: 0.004, 

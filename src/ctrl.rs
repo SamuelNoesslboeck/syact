@@ -76,6 +76,10 @@ impl StepperCtrl
         ctrl
     }
 
+    pub fn new_sim(data : StepperConst) -> Self {
+        Self::new(data, PIN_ERR, PIN_ERR)
+    }
+
     // Movements
         pub fn step(&mut self, time : Time, ufunc : &UpdateFunc) -> StepResult {
             self.driver.lock().unwrap().step(time, ufunc)
@@ -133,6 +137,12 @@ impl MathActor for StepperCtrl
 
 impl Component for StepperCtrl 
 {
+    // Data
+        fn consts(&self) -> StepperConst {
+            self.driver.lock().unwrap().consts.clone()
+        }
+    // 
+
     // Link
         fn link(&mut self, lk : Arc<LinkedData>) {
             self.driver.lock().unwrap().link(lk);

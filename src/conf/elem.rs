@@ -76,11 +76,20 @@ impl ConfigElement {
 
     pub fn get_tool(&self) -> Result<Box<dyn Tool + Send>, std::io::Error> {
         match self.type_name.as_str() {
+            "stepper_lib::comp::tool::axial_joint::AxialJoint" => Ok(Box::new(
+                serde_json::from_value::<crate::comp::tool::AxialJoint>(self.obj.clone()).unwrap()
+            )),
+            "stepper_lib::comp::tool::axis_tongs::AxisTongs" => Ok(Box::new(
+                serde_json::from_value::<crate::comp::tool::AxisTongs>(self.obj.clone()).unwrap()
+            )),
             "stepper_lib::comp::tool::no_tool::NoTool" => Ok(Box::new(
                 crate::comp::tool::NoTool::new()
             )),
             "stepper_lib::comp::tool::pencil_tool::PencilTool" => Ok(Box::new(
                 serde_json::from_value::<crate::comp::tool::PencilTool>(self.obj.clone()).unwrap()
+            )),
+            "stepper_lib::comp::tool::tongs::Tongs" => Ok(Box::new(
+                serde_json::from_value::<crate::comp::tool::Tongs>(self.obj.clone()).unwrap()
             )),
             _ => Err(
                 std::io::Error::new(std::io::ErrorKind::InvalidData, format!("The type name {:?} does not match any known type to the software", self.type_name))

@@ -1,6 +1,6 @@
 use serde::{Serialize, Deserialize};
 
-use crate::{Component, StepperCtrl, Gamma, Alpha, Omega};
+use crate::{Component, StepperCtrl, Gamma, Alpha, Omega, StepperConst};
 use crate::ctrl::SimpleMeas;
 use crate::math::MathActor;
 
@@ -31,6 +31,12 @@ impl MathActor for GearBearing
 
 impl Component for GearBearing 
 {
+    // Data
+        fn consts(&self) -> StepperConst {
+            self.ctrl.consts()
+        }
+    // 
+
     // Super
         fn super_comp(&self) -> Option<&dyn Component> {
             Some(&self.ctrl)

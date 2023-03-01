@@ -7,7 +7,7 @@ use crate::comp::Tool;
 
 // Submodules
 mod elem;
-pub use elem::*;
+use elem::*;
 
 mod json;
 pub use json::*;

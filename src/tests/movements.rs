@@ -1,10 +1,10 @@
-use crate::{StepperCtrl, LinkedData, StepperConst, Component};
-
+#[cfg(target_os = "linux")]
 mod single_motor 
 {
     use std::sync::Arc;
 
     use crate::{Inertia, Time, Force, Omega};
+    use crate::{StepperCtrl, LinkedData, StepperConst, Component};
 
     use super::*;
 
