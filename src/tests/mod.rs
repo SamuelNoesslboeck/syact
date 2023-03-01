@@ -10,6 +10,8 @@ mod movements;
 
 mod servo;
  
+mod tools;
+
 // Test Async
     #[test]
     fn test_async() {

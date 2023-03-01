@@ -7,7 +7,7 @@ use crate::data::ServoConst;
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ServoDriver
 {
-    #[serde(default)]
+    #[serde(skip)]
     gamma : Gamma,
     pub data : ServoConst,
 
@@ -28,18 +28,22 @@ impl ServoDriver
         }
     }
 
-    pub fn get_gamma(&self) -> Gamma {
+    pub fn gamma(&self) -> Gamma {
         self.gamma
+    }
+
+    pub fn set_gamma(&mut self, gamma : Gamma) {
+        self.pwm.set_period(self.data.pulse_for_angle(gamma), self.data.period_time());
+        self.gamma = gamma
+    }
+
+    pub fn perc(&self) -> f32 {
+        self.gamma / self.data.gamma_max
     }
 
     pub fn set_perc(&mut self, perc : f32) {
         self.pwm.set_period(self.data.pulse_for_perc(perc), self.data.period_time());
         self.gamma = self.data.gamma_max * perc
-    }
-
-    pub fn set_angle(&mut self, gamma : Gamma) {
-        self.pwm.set_period(self.data.pulse_for_angle(gamma), self.data.period_time());
-        self.gamma = gamma
     }
 
     // Positions
