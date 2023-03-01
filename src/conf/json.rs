@@ -121,6 +121,26 @@ impl JsonConfig
         serde_json::to_string_pretty(self).unwrap()
     }
 
+    pub fn comp_id_by_name(&self, name : &str) -> Option<usize> {
+        for i in 0 .. self.comps.len() {
+            if self.comps[i].name == name {
+                return Some(i)
+            }
+        }
+
+        None
+    }
+
+    pub fn tool_id_by_name(&self, name : &str) -> Option<usize> {
+        for i in 0 .. self.tools.len() {
+            if self.comps[i].name == name {
+                return Some(i)
+            }
+        }
+
+        None
+    }
+
     // File I/O
         pub fn save_to_file(&self, path : &str) {
             std::fs::write(path, self.to_string_pretty()).unwrap()
