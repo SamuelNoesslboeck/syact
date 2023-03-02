@@ -155,7 +155,7 @@ impl Component for StepperCtrl
         }
     //
 
-    fn drive_rel(&mut self, delta : Delta, omega : Omega) -> Gamma {
+    fn drive_rel(&mut self, delta : Delta, omega : Omega) -> Delta {
         self.driver.lock().unwrap().drive(delta, omega, UpdateFunc::None)
     }
 
@@ -163,12 +163,15 @@ impl Component for StepperCtrl
         self.comms.send_msg((delta, omega, UpdateFunc::None));
     }
 
-    fn drive_abs(&mut self, gamma : Gamma, omega : Omega) -> Gamma {
-        self.driver.lock().unwrap().drive(gamma - self.get_gamma(), omega, UpdateFunc::None)
+    fn drive_abs(&mut self, gamma : Gamma, omega : Omega) -> Delta {
+        // TODO: Replace Mutex with RW Lock
+        let delta = gamma - self.get_gamma();
+        self.driver.lock().unwrap().drive(delta, omega, UpdateFunc::None)
     }
 
     fn drive_abs_async(&mut self, gamma : Gamma, omega : Omega) {
-        self.comms.send_msg((gamma - self.get_gamma(), omega, UpdateFunc::None))
+        let delta = gamma - self.get_gamma();
+        self.comms.send_msg((delta, omega, UpdateFunc::None))
     }
 
     fn measure(&mut self, max_delta : Delta, omega : Omega, set_gamma : Gamma, accuracy : u64) -> bool {

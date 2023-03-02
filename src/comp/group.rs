@@ -17,18 +17,10 @@ pub trait ComponentGroup<const N : usize> : IndexMut<usize, Output = Box<dyn Com
         }
     //
 
-    fn drive_rel(&mut self, deltas : [Delta; N], omegas : [Omega; N]) -> [Gamma; N] {
-        let mut res = [Gamma::ZERO; N];
+    fn drive_rel(&mut self, deltas : [Delta; N], omegas : [Omega; N]) -> [Delta; N] {
+        let mut res = [Delta::ZERO; N];
         for i in 0 .. N {
             res[i] = self[i].drive_rel(deltas[i], omegas[i]);
-        }
-        res
-    }
-
-    fn drive_abs(&mut self, gamma : [Gamma; N], omegas : [Omega; N]) -> [Gamma; N] {
-        let mut res = [Gamma::ZERO; N];
-        for i in 0 .. N {
-            res[i] = self[i].drive_abs(gamma[i], omegas[i]);
         }
         res
     }
@@ -37,6 +29,14 @@ pub trait ComponentGroup<const N : usize> : IndexMut<usize, Output = Box<dyn Com
         for i in 0 .. N {
             self[i].drive_rel_async(deltas[i], omegas[i]);
         }
+    }
+
+    fn drive_abs(&mut self, gamma : [Gamma; N], omegas : [Omega; N]) -> [Delta; N] {
+        let mut res = [Delta::ZERO; N];
+        for i in 0 .. N {
+            res[i] = self[i].drive_abs(gamma[i], omegas[i]);
+        }
+        res
     }
 
     fn drive_abs_async(&mut self, gammas : [Gamma; N], omegas : [Omega; N]) {
@@ -80,7 +80,7 @@ pub trait ComponentGroup<const N : usize> : IndexMut<usize, Output = Box<dyn Com
             }
         }
 
-        fn get_limit_dest(&self, gammas : [Gamma; N]) -> [Delta; N] {
+        fn get_limit_dest(&self, gammas : &[Gamma; N]) -> [Delta; N] {
             let mut limits = [Delta::ZERO; N]; 
             for i in 0 .. N {
                 limits[i] = self[i].get_limit_dest(gammas[i]);

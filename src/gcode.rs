@@ -72,7 +72,8 @@ pub fn get_func<'a, T, E>(funcs : &'a LetterEntries<T, E>, gc : &'a GCode) -> Op
     })
 }
 
-pub fn get_arg_letter(args : &Args, letter : char) -> Option<f32> {
+// Argument parsing
+pub fn arg_by_letter(args : &Args, letter : char) -> Option<f32> {
     for i in 0 .. args.len() {
         if args[i].letter == letter {
             return Some(args[i].value);
@@ -82,7 +83,7 @@ pub fn get_arg_letter(args : &Args, letter : char) -> Option<f32> {
     None
 }
 
-pub fn get_arg_letters(args : &Args, letter : char) -> Vec<f32> {
+pub fn args_by_letter(args : &Args, letter : char) -> Vec<f32> {
     let mut letters = Vec::new();
 
     for i in 0 .. args.len() {
@@ -94,7 +95,7 @@ pub fn get_arg_letters(args : &Args, letter : char) -> Vec<f32> {
     letters
 }
 
-pub fn get_arg_letters_fixed<const N : usize>(args : &Args, letter : char) -> [Option<f32>; N] {
+pub fn args_by_letter_fixed<const N : usize>(args : &Args, letter : char) -> [Option<f32>; N] {
     let mut letters = [None; N]; 
     let mut l_index : usize = 0;
 
@@ -104,6 +105,16 @@ pub fn get_arg_letters_fixed<const N : usize>(args : &Args, letter : char) -> [O
             l_index += 1;
         }
     }   
+
+    letters
+}
+
+pub fn args_by_iterate_fixed<const N : usize>(args : &Args, base_letter : char) -> [Option<f32>; N] {
+    let mut letters = [None; N];
+    
+    for i in 0 .. N {
+        letters[i] = arg_by_letter(args, (base_letter as u8 + i as u8) as char);
+    }
 
     letters
 }

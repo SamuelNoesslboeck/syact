@@ -256,9 +256,9 @@ impl StepperDriver {
             StepResult::None
         }
 
-        pub fn drive(&mut self, dist : Delta, omega : Omega, ufunc : UpdateFunc) -> Gamma {
-            if dist == Delta::ZERO {
-                return Gamma::ZERO;
+        pub fn drive(&mut self, dist : Delta, omega : Omega, ufunc : UpdateFunc) -> Delta {
+            if !dist.is_normal() {
+                return Delta::ZERO;
             } else if dist > Delta::ZERO {
                 self.set_dir(true);
             } else if dist < Delta::ZERO {
@@ -268,7 +268,7 @@ impl StepperDriver {
             let steps : u64 = self.consts.ang_to_steps_dir(dist.into()).abs() as u64;
             self.steps(steps, omega, ufunc);
 
-            self.get_gamma()
+            Delta((steps as f32) * self.consts.step_ang())
         }
 
         pub fn set_dir(&mut self, dir : bool) {

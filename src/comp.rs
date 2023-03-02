@@ -206,15 +206,17 @@ pub trait Component : SimpleMeas + MathActor + core::fmt::Debug
     // 
 
     /// Moves the component by the relative distance as fast as possible, halts the script until the movement is finshed and returns the actual **absolute** distance traveled
-    fn drive_rel(&mut self, mut delta : Delta, mut vel : Omega) -> Gamma {
-        delta = self.delta_for_super(delta, self.get_gamma());
-        vel = self.omega_for_super(vel, self.get_gamma());
+    fn drive_rel(&mut self, mut delta : Delta, mut vel : Omega) -> Delta {
+        let gamma = self.get_gamma(); 
+
+        delta = self.delta_for_super(delta, gamma);
+        vel = self.omega_for_super(vel, gamma);
 
         let res = if let Some(s_comp) = self.super_comp_mut() {
             s_comp.drive_rel(delta, vel)
-        } else { Gamma(0.0) }; 
+        } else { Delta::ZERO }; 
         
-        self.gamma_for_this(res)
+        self.delta_for_this(res, self.gamma_for_super(gamma))
     }
 
     /// Moves the component by the relative distance as fast as possible. \
@@ -230,15 +232,15 @@ pub trait Component : SimpleMeas + MathActor + core::fmt::Debug
     }
 
     /// Moves the component to the given position as fast as possible, halts the script until the movement is finished and returns the actual **abolute** distance traveled to. 
-    fn drive_abs(&mut self, mut gamma : Gamma, mut omega : Omega) -> Gamma {
+    fn drive_abs(&mut self, mut gamma : Gamma, mut omega : Omega) -> Delta {
+        omega = self.omega_for_super(omega, gamma);
         gamma = self.gamma_for_super(gamma);
-        omega = self.omega_for_super(omega, self.get_gamma());
 
         let res = if let Some(s_comp) = self.super_comp_mut() {
             s_comp.drive_abs(gamma, omega)
-        } else { Gamma(0.0) }; 
+        } else { Delta::ZERO }; 
 
-        self.gamma_for_this(res)
+        self.delta_for_this(res, gamma)
     }
 
     /// Moves the component to the given position as fast as possible. \
@@ -330,9 +332,11 @@ pub trait Component : SimpleMeas + MathActor + core::fmt::Debug
         fn get_limit_dest(&self, mut gamma : Gamma) -> Delta {
             gamma = self.gamma_for_super(gamma);
 
-            if let Some(s_comp) = self.super_comp() {
+            let delta = if let Some(s_comp) = self.super_comp() {
                 s_comp.get_limit_dest(gamma)
-            } else { Delta::ZERO }
+            } else { Delta::ZERO };
+
+            self.delta_for_this(delta, gamma)
         }
 
         fn set_endpoint(&mut self, mut set_gamma : Gamma) -> bool {

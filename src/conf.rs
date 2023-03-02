@@ -93,10 +93,10 @@ impl<const N : usize, const D : usize, const A : usize> MachineConfig<N, D, A>
 
         for i in 0 .. N {
             gammas[i] = if self.ang[i].counter { 
-                -phis[i].force_to_gamma() 
+                -phis[i].force_to_gamma() + self.ang[i].offset
             } else { 
-                phis[i].force_to_gamma()
-            } - self.ang[i].offset;
+                phis[i].force_to_gamma() - self.ang[i].offset
+            };
         }
 
         gammas
@@ -110,7 +110,7 @@ impl<const N : usize, const D : usize, const A : usize> MachineConfig<N, D, A>
                 -gammas[i]
             } else { 
                 gammas[i]
-            } - self.ang[i].offset).force_to_phi();
+            } + self.ang[i].offset).force_to_phi();
         }
 
         phis
