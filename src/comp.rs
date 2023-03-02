@@ -146,6 +146,30 @@ pub trait Component : SimpleMeas + MathActor + core::fmt::Debug
             super_gamma
         }   
 
+        /// Converts the given **relative** distance [Delta] for this component into the **relative** distance for the super component
+        /// 
+        /// # Example
+        /// 
+        /// When using a cylinder with a ratio of one half (movement speed will be halfed), 
+        /// this function will return a [Delta] *twice as high* than the input [Delta]
+        /// 
+        /// ```rust
+        /// use stepper_lib::{Component, StepperCtrl, StepperConst, Gamma, Delta};
+        /// use stepper_lib::comp::Cylinder;
+        /// 
+        /// // Position of components
+        /// const POS : Gamma = Gamma(10.0);
+        /// 
+        /// // Create a new cylinder (implements Component)
+        /// let mut cylinder = Cylinder::new(
+        ///     // Stepper Motor as subcomponent (also implements Component)
+        ///     StepperCtrl::new_sim(StepperConst::GEN), 
+        /// 0.5);    // Ratio is set to 2.0, which means for each radian the motor moves, the cylinder moves for 2.0 mm
+        /// 
+        /// cylinder.write_gamma(POS);
+        /// 
+        /// assert_eq!(Delta(2.0), cylinder.delta_for_super(Delta(1.0), POS));
+        /// ```
         #[inline(always)]
         fn delta_for_super(&self, this_delta : Delta, this_gamma : Gamma) -> Delta {
             Delta::diff(self.gamma_for_super(this_gamma), self.gamma_for_super(this_gamma + this_delta))
@@ -312,11 +336,11 @@ pub trait Component : SimpleMeas + MathActor + core::fmt::Debug
         /// # Units
         /// 
         ///  - `dist` Either radians or millimeters
-        fn write_gamma(&mut self, mut dist : Gamma) {
-            dist = self.gamma_for_super(dist);
+        fn write_gamma(&mut self, mut gamma : Gamma) {
+            gamma = self.gamma_for_super(gamma);
 
             if let Some(s_comp) = self.super_comp_mut() {
-                s_comp.write_gamma(dist);
+                s_comp.write_gamma(gamma);
             }
         }
 

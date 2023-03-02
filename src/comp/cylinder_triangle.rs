@@ -134,9 +134,13 @@ impl Component for CylinderTriangle {
     /// See [Component::drive_rel()]
     /// - `dist`is the angular distance to be moved (Unit radians)
     /// - `vel` is the cylinders extend velocity (Unit mm per second)
-    fn drive_rel(&mut self, delta : Delta, omega : Omega) -> Delta {
-        self.cylinder.drive_rel(self.gamma_for_super(delta + self.get_gamma()) - self.cylinder.get_gamma(), omega)
-        // TODO: Fix returned delta angle
+    fn drive_rel(&mut self, mut delta : Delta, omega : Omega) -> Delta {
+        let gamma = self.get_gamma();
+        
+        delta = self.delta_for_super(delta, gamma);
+        delta = self.cylinder.drive_rel(delta, omega);
+
+        self.delta_for_this(delta, self.gamma_for_super(gamma))
     }
 
     /// See [Component::drive_rel_async()]
@@ -149,8 +153,12 @@ impl Component for CylinderTriangle {
     /// See [Component::drive_abs]
     /// - `dist`is the angular distance to be moved (Unit radians)
     /// - `vel` is the cylinders extend velocity (Unit mm per second)
-    fn drive_abs(&mut self, gamma : Gamma, omega : Omega) -> Delta {
-        self.cylinder.drive_abs(self.gamma_for_super(gamma), omega) // TODO: Fix returned delta angle
+    fn drive_abs(&mut self, mut gamma : Gamma, omega : Omega) -> Delta {
+        gamma = self.gamma_for_super(gamma);
+
+        let delta = self.cylinder.drive_abs(gamma, omega);
+
+        self.delta_for_this(delta, gamma)
     }
 
     /// See [Component::drive_abs_async()]
