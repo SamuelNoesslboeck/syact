@@ -176,7 +176,7 @@ impl Component for StepperCtrl
 
     fn measure(&mut self, max_delta : Delta, omega : Omega, set_gamma : Gamma, accuracy : u64) -> bool {
         let mut driver = self.driver.lock().unwrap();
-
+        println!("Max dist: {:?}", max_delta);
         driver.drive(max_delta, omega, UpdateFunc::Break(StepperDriver::__meas_helper, accuracy));
         driver.set_endpoint(set_gamma)
     }

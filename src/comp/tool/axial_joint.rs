@@ -57,6 +57,6 @@ impl AxisTool for AxialJoint {
     }
 
     fn gamma(&self) -> Gamma {
-        self.servo.gamma()
+        Gamma(self.servo.gamma().0 - self.servo.data.gamma_max.0 / 2.0)
     }
 }
