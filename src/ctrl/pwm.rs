@@ -26,7 +26,7 @@ impl PWMOutput
         let mut sys_pwm = match gpio::sysfs::SysFsGpioOutput::open(pin.clone()) {
             Ok(val) => RaspPin::Output(val),
             Err(_) => {
-                println!("Failed to open pin! {} ", pin);    // TODO: Remove dirty stuff
+                // println!("Failed to open pin! {} ", pin);    // TODO: Remove dirty stuff
                 RaspPin::ErrPin
             }
         };

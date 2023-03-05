@@ -9,6 +9,7 @@ pub struct JsonConfig
 {
     pub name : String,
     pub conf_version : String, 
+    pub author : Option<String>, 
 
     pub lk : LinkedData,
 
@@ -22,22 +23,6 @@ pub struct JsonConfig
 
 impl JsonConfig 
 {
-    // pub fn new<const N : usize>(name : String, lk : LinkedData, anchor : Option<[f32; 3]>, dims : Option<Vec<[f32; 3]>>, axes : Option<Vec<[f32; 3]>>, 
-    //         comps : &[Box<dyn Component>; N], tools : &Vec<Box<dyn Tool + Send>>) -> Self {
-    //     Self { 
-    //         name,
-
-    //         lk,
-
-    //         anchor,
-    //         dims,
-    //         axes,
-
-    //         comps: create_conf_comps(comps),
-    //         tools: create_conf_tools(tools)
-    //     }
-    // }
-
     pub fn get_machine<const N : usize, const D : usize, const A : usize>(&self) -> Result<(MachineConfig<N, D, A>, [Box<dyn Component>; N]), std::io::Error> {
         if self.comps.len() != N {
             return Err(std::io::Error::new(std::io::ErrorKind::InvalidData, 
@@ -149,6 +134,10 @@ impl JsonConfig
         pub fn read_from_file(path : &str) -> Self {
             serde_json::from_str(std::fs::read_to_string(path).unwrap().as_str()).unwrap()
         }
+    // 
+
+    // Debug
+        
     // 
 }
 
