@@ -1,11 +1,11 @@
-extern crate alloc;
-use alloc::sync::Arc;
-
 use serde::{Serialize, Deserialize};
 
-use crate::{Component, LinkedData, Gamma, Omega, Delta, Alpha, Force, Inertia};
-use crate::comp::{Cylinder, SimpleMeas};
+use crate::Component;
+use crate::comp::Cylinder;
+use crate::data::LinkedData;
 use crate::math::MathActor;
+use crate::meas::SimpleMeas;
+use crate::units::*;
 
 /// A component representing a cylinder connected to two segments with constant lengths, forming a triangular shape
 /// 
@@ -77,7 +77,8 @@ impl CylinderTriangle
 impl MathActor for CylinderTriangle
 {
     fn accel_dyn(&self, omega : Omega, gamma : Gamma) -> Alpha {
-        self.alpha_for_this(self.cylinder.accel_dyn(self.omega_for_super(omega, gamma), self.gamma_for_super(gamma)), self.gamma_for_super(gamma))
+        self.alpha_for_this(self.cylinder.accel_dyn(
+            self.omega_for_super(omega, gamma), self.gamma_for_super(gamma)), self.gamma_for_super(gamma))
     }
 }
 
@@ -120,7 +121,7 @@ impl Component for CylinderTriangle {
     // 
 
     // Link
-        fn link(&mut self, lk : Arc<LinkedData>) {
+        fn link(&mut self, lk : LinkedData) {
             self.cylinder.link(lk);
         }
     //
@@ -143,13 +144,6 @@ impl Component for CylinderTriangle {
         self.delta_for_this(delta, self.gamma_for_super(gamma))
     }
 
-    /// See [Component::drive_rel_async()]
-    /// - `dist`is the angular distance to be moved (Unit radians)
-    /// - `vel` is the cylinders extend velocity (Unit mm per second)
-    fn drive_rel_async(&mut self, delta : Delta, omega : Omega) {
-        self.cylinder.drive_rel_async(self.gamma_for_super(delta + self.get_gamma()) - self.cylinder.get_gamma(), omega)
-    }
-
     /// See [Component::drive_abs]
     /// - `dist`is the angular distance to be moved (Unit radians)
     /// - `vel` is the cylinders extend velocity (Unit mm per second)
@@ -161,13 +155,6 @@ impl Component for CylinderTriangle {
         self.delta_for_this(delta, gamma)
     }
 
-    /// See [Component::drive_abs_async()]
-    /// - `dist`is the angular distance to be moved (Unit radians)
-    /// - `vel` is the cylinders extend velocity (Unit mm per second)
-    fn drive_abs_async(&mut self, gamma : Gamma, omega : Omega) {
-        self.cylinder.drive_abs_async(self.gamma_for_super(gamma), omega)
-    }
-
     /// See [Component::measure()]
     /// - `dist` is the maximum distance for the cylinder in mm
     /// - `vel` is the maximum linear velocity for the cylinder in mm per second
@@ -175,11 +162,6 @@ impl Component for CylinderTriangle {
     fn measure(&mut self, delta : Delta, omega : Omega, set_gamma : Gamma, accuracy : u64) -> bool {
         self.cylinder.measure(
             delta, omega, self.gamma_for_super(set_gamma), accuracy)
-    }
-
-    fn measure_async(&mut self, delta : Delta, omega : Omega, accuracy : u64) {
-        self.cylinder.measure_async(
-            delta, omega, accuracy)
     }
     
     // Forces

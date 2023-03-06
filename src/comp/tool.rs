@@ -3,6 +3,8 @@ use core::fmt::Debug;
 
 use glam::Vec3;
 
+use crate::units::*;
+
 // Tools
 mod axial_joint;
 pub use axial_joint::AxialJoint;
@@ -19,8 +21,6 @@ pub use pencil_tool::PencilTool;
 mod tongs;
 pub use tongs::Tongs;
 //
-
-use crate::Gamma;
 
 // Tools
 pub trait Tool : Debug {

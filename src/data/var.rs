@@ -1,4 +1,4 @@
-use crate::{Force, Inertia};
+use crate::units::*;
 
 #[derive(Clone, Debug, Default)]
 pub struct StepperVar

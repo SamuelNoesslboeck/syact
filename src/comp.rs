@@ -1,14 +1,11 @@
-extern crate alloc;
-use alloc::sync::Arc;
-
 use core::any::type_name;
 
-use crate::{MathActor, Delta, Gamma, Omega, Force, Inertia, Alpha, StepperConst};
-use crate::ctrl::SimpleMeas;
+use crate::StepperConst;
+use crate::units::*;
 
 // Submodules
-/// Module for asynchronous DC-Motors
-pub mod asynchr;
+#[cfg(feature = "simple_async")] 
+pub mod asyn;
 
 mod cylinder;
 pub use cylinder::Cylinder;
@@ -19,11 +16,8 @@ pub use cylinder_triangle::CylinderTriangle;
 mod gear_bearing;
 pub use gear_bearing::GearBearing;
 
-mod group;
-pub use group::*;
-
-mod lk;
-pub use lk::LinkedData;
+pub mod group;
+pub use group::ComponentGroup;
 
 pub mod tool;
 pub use tool::Tool;
@@ -35,7 +29,7 @@ pub use tool::Tool;
 /// 
 /// Components can have multiple layers, for example take a stepper motor with a geaerbox attached to it. The stepper motor and both combined will be a component, the later having 
 /// the stepper motor component defined as it's super component. (See [GearBearing])
-pub trait Component : SimpleMeas + MathActor + core::fmt::Debug
+pub trait Component : crate::meas::SimpleMeas + crate::math::MathActor + core::fmt::Debug
 {
     // Data
         /// Returns a copy of the stepper constants used by the [stepper driver](crate::ctrl::StepperDriver)
@@ -51,8 +45,9 @@ pub trait Component : SimpleMeas + MathActor + core::fmt::Debug
         /// A super component would for example be the stepper motor for a cylinder (See [Cylinder])
         /// 
         /// ```rust
-        /// use stepper_lib::{Component, StepperCtrl, StepperConst, Gamma};
+        /// use stepper_lib::{Component, StepperCtrl, StepperConst};
         /// use stepper_lib::comp::Cylinder;
+        /// use stepper_lib::units::*;
         /// 
         /// // Create a new cylinder (implements Component)
         /// let mut cylinder = Cylinder::new(
@@ -78,8 +73,9 @@ pub trait Component : SimpleMeas + MathActor + core::fmt::Debug
         /// A super component would for example be the stepper motor for a cylinder (See [Cylinder])
         /// 
         /// ```rust
-        /// use stepper_lib::{Component, StepperCtrl, StepperConst, Gamma};
+        /// use stepper_lib::{Component, StepperCtrl, StepperConst};
         /// use stepper_lib::comp::Cylinder;
+        /// use stepper_lib::units::*;
         /// 
         /// // Create a new cylinder (implements Component)
         /// let mut cylinder = Cylinder::new(
@@ -106,8 +102,10 @@ pub trait Component : SimpleMeas + MathActor + core::fmt::Debug
         /// this function will return a super distance *four times higher* than the input distance.
         /// 
         /// ```rust
-        /// use stepper_lib::{Component, StepperCtrl, StepperConst, Gamma};
+        /// use stepper_lib::{Component, StepperCtrl, StepperConst};
         /// use stepper_lib::comp::Cylinder;
+        /// use stepper_lib::units::*;
+        /// 
         /// 
         /// // Create a new cylinder (implements Component)
         /// let mut cylinder = Cylinder::new(
@@ -130,8 +128,9 @@ pub trait Component : SimpleMeas + MathActor + core::fmt::Debug
         /// this function will return a distance *four times higher* than the input super distance
         /// 
         /// ```rust
-        /// use stepper_lib::{Component, StepperCtrl, StepperConst, Gamma};
+        /// use stepper_lib::{Component, StepperCtrl, StepperConst};
         /// use stepper_lib::comp::Cylinder;
+        /// use stepper_lib::units::*;
         /// 
         /// // Create a new cylinder (implements Component)
         /// let mut cylinder = Cylinder::new(
@@ -154,8 +153,9 @@ pub trait Component : SimpleMeas + MathActor + core::fmt::Debug
         /// this function will return a [Delta] *twice as high* than the input [Delta]
         /// 
         /// ```rust
-        /// use stepper_lib::{Component, StepperCtrl, StepperConst, Gamma, Delta};
+        /// use stepper_lib::{Component, StepperCtrl, StepperConst};
         /// use stepper_lib::comp::Cylinder;
+        /// use stepper_lib::units::*;
         /// 
         /// // Position of components
         /// const POS : Gamma = Gamma(10.0);
@@ -210,7 +210,7 @@ pub trait Component : SimpleMeas + MathActor + core::fmt::Debug
         /// Links this component to other components in the group, sharing data that is often relevant for multiple components in a group such as *voltage*
         /// (See [LinkedData])
         #[inline]
-        fn link(&mut self, lk : Arc<LinkedData>) {
+        fn link(&mut self, lk : crate::data::LinkedData) {
             if let Some(s_comp) = self.super_comp_mut() {
                 s_comp.link(lk);
             }
@@ -230,29 +230,17 @@ pub trait Component : SimpleMeas + MathActor + core::fmt::Debug
     // 
 
     /// Moves the component by the relative distance as fast as possible, halts the script until the movement is finshed and returns the actual **absolute** distance traveled
-    fn drive_rel(&mut self, mut delta : Delta, mut vel : Omega) -> Delta {
+    fn drive_rel(&mut self, mut delta : Delta, mut omega : Omega) -> Delta {
         let gamma = self.get_gamma(); 
 
         delta = self.delta_for_super(delta, gamma);
-        vel = self.omega_for_super(vel, gamma);
+        omega = self.omega_for_super(omega, gamma);
 
         let res = if let Some(s_comp) = self.super_comp_mut() {
-            s_comp.drive_rel(delta, vel)
+            s_comp.drive_rel(delta, omega)
         } else { Delta::ZERO }; 
         
         self.delta_for_this(res, self.gamma_for_super(gamma))
-    }
-
-    /// Moves the component by the relative distance as fast as possible. \
-    /// To wait unti the movement operation is completed, use the [await_inactive](Component::await_inactive()) function
-    #[cfg(feature = "simple_async")]
-    fn drive_rel_async(&mut self, mut delta : Delta, mut vel : Omega) {
-        delta = self.delta_for_super(delta, self.get_gamma());
-        vel = self.omega_for_super(vel, self.get_gamma());
-
-        if let Some(s_comp) = self.super_comp_mut() {
-            s_comp.drive_rel_async(delta, vel);
-        }
     }
 
     /// Moves the component to the given position as fast as possible, halts the script until the movement is finished and returns the actual **abolute** distance traveled to. 
@@ -265,18 +253,6 @@ pub trait Component : SimpleMeas + MathActor + core::fmt::Debug
         } else { Delta::ZERO }; 
 
         self.delta_for_this(res, gamma)
-    }
-
-    /// Moves the component to the given position as fast as possible. \
-    /// To wait unti the movement operation is completed, use the [await_inactive](Component::await_inactive()) function
-    #[cfg(feature = "simple_async")]
-    fn drive_abs_async(&mut self, mut gamma : Gamma, mut omega : Omega) {
-        gamma = self.gamma_for_super(gamma);
-        omega = self.omega_for_super(omega, self.get_gamma());
-
-        if let Some(s_comp) = self.super_comp_mut() {
-            s_comp.drive_abs_async(gamma, omega);
-        }
     }
 
     /// Measure the component by driving the component with the velocity `omega` until either the measurement condition is true or the maximum distance `delta` 
@@ -295,27 +271,6 @@ pub trait Component : SimpleMeas + MathActor + core::fmt::Debug
             s_comp.measure(delta, omega, set_gamma, accuracy)
         } else { false }
     }   
-
-    /// Measure the component by driving the component with the velocity `omega` until either the measurement condition is true or the maximum distance `delta` 
-    /// is reached. The lower the `accuracy`, the higher are the computational difficulties, as the function checks more often if the measure pin has a HIGH signal
-    #[cfg(feature = "simple_async")]
-    fn measure_async(&mut self, mut delta : Delta, mut omega : Omega, accuracy : u64) {
-        delta = self.delta_for_super(delta, self.get_gamma());
-        omega = self.omega_for_super(omega, self.get_gamma());
-
-        if let Some(s_comp) = self.super_comp_mut() {
-            s_comp.measure_async(delta, omega, accuracy)
-        } 
-    }
-
-    /// Halts the thread until the movement of the component has finished. \
-    /// Do only use it after an async movement has been triggered before!
-    #[cfg(feature = "simple_async")] 
-    fn await_inactive(&self) {
-        if let Some(s_comp) = self.super_comp() {
-            s_comp.await_inactive();
-        } 
-    }
 
     // Position
         /// Returns the **absolute** position of the component

@@ -207,7 +207,7 @@ impl Div<Time> for f32 {
 /// 
 //// # Operations
 /// ```rust
-/// use stepper_lib::{Delta, Gamma};
+/// use stepper_lib::units::{Gamma, Delta};
 /// 
 /// // Subtract two absolute distances to get once relative
 /// assert_eq!(Gamma(2.0) - Gamma(1.0), Delta(1.0));

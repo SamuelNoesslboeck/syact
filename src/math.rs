@@ -6,8 +6,10 @@ use core::f32::consts::{E, PI};
 
 use glam::{Vec3, Mat3};
 
-use crate::{Component, Omega, Gamma, Alpha, Delta, Force, Time, Inertia};
+use crate::Component;
 use crate::data::{StepperConst, StepperVar};
+
+use crate::units::*;
 
 /// Returns the current torque of a motor (data) at the given angluar speed (omega), returns only positive values
 pub fn torque_dyn(data : &StepperConst, mut omega : Omega, u : f32) -> Force {
