@@ -9,15 +9,17 @@ use core::f32::consts::PI;
 use serde::{Serialize, Deserialize, Deserializer, Serializer};
 
 // Submodules
+mod lk;
+pub use lk::LinkedData;
+
 /// Crate for servo motor data
 pub mod servo;
-pub use servo::*;
 
 /// Crate for variables read and written during runtime
-pub mod var;
-pub use var::*;
+mod var;
+pub use var::StepperVar;
 
-use crate::{Force, Inertia, Alpha, Time, Omega};
+use crate::units::*;
 //
 
 /**

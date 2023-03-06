@@ -11,8 +11,6 @@ use crate::{Component, LinkedData, StepperCtrl, StepperConst, UpdateFunc, Delta,
 #[cfg(target_os = "linux")]
 mod comp;
 
-mod data;
-
 #[cfg(target_os = "linux")]
 mod servo;
 

@@ -1,8 +1,8 @@
 use serde::{Serialize, Deserialize};
 
-use crate::Gamma;
 use crate::ctrl::pwm::PWMOutput;
-use crate::data::ServoConst;
+use crate::data::servo::ServoConst;
+use crate::units::Gamma;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ServoDriver

@@ -1,38 +1,44 @@
 use std::sync::mpsc::{channel, Sender, Receiver};
 use std::thread;
 
-use crate::{Delta, Omega};
-
-type StepperMsg = (Delta, Omega, crate::UpdateFunc);
-type StepperRes = ();
-
-pub type AsyncStepper = AsyncComms<StepperMsg, StepperRes>;
-
 type CommsFunc<Ctrl, Msg, Res> = fn (&mut Ctrl, Msg) -> Res;
+
+// Submodule
+mod stepper;
+pub use stepper::AsyncCtrl;
+//
 
 /// ### `AsyncComms`
 /// Struct for managing async movements
 /// 
-/// ```rust
-/// use stepper_lib::{Component, StepperCtrl, StepperConst, UpdateFunc, Delta, Omega};
-/// use std::f32::consts::PI;
+/// ``
+/// 
+/// extern crate alloc;
+/// use alloc::sync::Arc;
+/// 
+/// use core::f32::consts::PI;
+/// 
+/// use stepper_lib::{Component, StepperCtrl, StepperConst, UpdateFunc};
+/// use stepper_lib::comp::asynchr::AsyncComp;
+/// use stepper_lib::data::LinkedData;
+/// use stepper_lib::units::*;
 /// 
 /// let mut ctrl = StepperCtrl::new_sim(StepperConst::GEN);
-/// ctrl.link(std::sync::Arc::new(stepper_lib::LinkedData { u: 12.0, s_f: 1.5 }));
+/// ctrl.link(Arc::new(LinkedData { u: 12.0, s_f: 1.5 }));
 /// 
-/// ctrl.comms.send_msg((Delta(4.0 * PI), Omega(2.0 * PI), UpdateFunc::None));
+/// ctrl.drive_rel_async(Delta(4.0 * PI), Omega(2.0 * PI));
 ///
-/// ctrl.comms.await_inactive();
+/// ctrl.await_inactive();
 /// ```
 #[derive(Debug)]
-pub struct AsyncComms<Msg: Send + 'static, Res: Send + 'static>
+pub struct AsyncHandler<Msg: Send + 'static, Res: Send + 'static>
 {
     pub thr : thread::JoinHandle<()>,
     sender : Sender<Option<Msg>>,
     receiver : Receiver<Res>
 }
 
-impl<Msg: Send + 'static, Res: Send + 'static> AsyncComms<Msg, Res> {
+impl<Msg: Send + 'static, Res: Send + 'static> AsyncHandler<Msg, Res> {
     pub fn new<Ctrl: Send + 'static>(mut ctrl : Ctrl, comms_func : CommsFunc<Ctrl, Msg, Res>) -> Self {
         let (sender_com, receiver_thr) : (Sender<Option<Msg>>, Receiver<Option<Msg>>) = channel();
         let (sender_thr, receiver_com) : (Sender<Res>, Receiver<Res>) = channel();
@@ -89,7 +95,7 @@ impl<Msg: Send + 'static, Res: Send + 'static> AsyncComms<Msg, Res> {
     }
 }
 
-impl<Msg: Send + 'static, Res: Send + 'static> Drop for AsyncComms<Msg, Res> {
+impl<Msg: Send + 'static, Res: Send + 'static> Drop for AsyncHandler<Msg, Res> {
     fn drop(&mut self) {
         self.kill();
     }

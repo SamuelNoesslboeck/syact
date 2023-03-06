@@ -204,6 +204,19 @@ impl Div<Time> for f32 {
 /// # Unit
 /// 
 /// - Can be either radians or millimeters
+/// 
+//// # Operations
+/// ```rust
+/// use stepper_lib::units::{Gamma, Delta};
+/// 
+/// // Subtract two absolute distances to get once relative
+/// assert_eq!(Gamma(2.0) - Gamma(1.0), Delta(1.0));
+/// 
+/// // Add relative distance to absolute one
+/// assert_eq!(Gamma(2.0) + Delta(1.0), Gamma(3.0));
+/// 
+/// assert_eq!(Gamma(2.0) - Delta(1.0), Gamma(1.0));
+/// ```
 #[derive(Clone, Copy, Debug, Default, Serialize, Deserialize, PartialEq, PartialOrd)]
 pub struct Gamma(pub f32);
 basic_unit!(Gamma);
@@ -219,7 +232,7 @@ impl Sub<Gamma> for Gamma {
     
     #[inline(always)]
     fn sub(self, rhs: Gamma) -> Self::Output {
-        Delta(rhs.0 - self.0)
+        Delta(self.0 - rhs.0)
     }
 }
 
