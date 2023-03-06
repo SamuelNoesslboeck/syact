@@ -1,7 +1,9 @@
 use glam::Vec3;
 use serde::{Serialize, Deserialize};
 
-use crate::{Tool, ctrl::servo::ServoDriver, Gamma};
+use crate::Tool;
+use crate::ctrl::servo::ServoDriver;
+use crate::units::*;
 
 use super::AxisTool;
 

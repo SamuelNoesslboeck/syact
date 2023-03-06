@@ -1,6 +1,6 @@
 use serde::{Deserializer, Deserialize, Serializer, Serialize};
 
-use crate::{Force, Omega, Gamma, Time};
+use crate::units::*;
 
 #[derive(Debug, Default, Clone, PartialEq, PartialOrd, Serialize, Deserialize)]
 pub struct ServoConst

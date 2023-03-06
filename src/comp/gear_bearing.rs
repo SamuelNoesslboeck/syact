@@ -1,8 +1,9 @@
 use serde::{Serialize, Deserialize};
 
-use crate::{Component, StepperCtrl, Gamma, Alpha, Omega, StepperConst};
-use crate::ctrl::SimpleMeas;
+use crate::{Component, StepperCtrl, StepperConst};
 use crate::math::MathActor;
+use crate::meas::SimpleMeas;
+use crate::units::*;
 
 /// A bearing powered by a motor with a certain gear ratio
 #[derive(Debug, Serialize, Deserialize)]

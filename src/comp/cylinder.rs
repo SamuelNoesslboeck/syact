@@ -1,11 +1,12 @@
 extern crate alloc;
-use alloc::sync::Arc;
+use alloc::rc::Rc;
 
 use serde::{Serialize, Deserialize};
 
-use crate::{Component, LinkedData, Omega, Gamma, Alpha, Force, Inertia};
-use crate::ctrl::{SimpleMeas, StepperCtrl};
-use crate::math::MathActor;
+use crate::Component;
+use crate::ctrl::StepperCtrl;
+
+use crate::units::*;
 
 /// Cylinder component struct
 #[derive(Debug, Serialize, Deserialize)]
@@ -30,14 +31,15 @@ impl Cylinder
     }
 }
 
-impl MathActor for Cylinder 
+impl crate::math::MathActor for Cylinder 
 {
     fn accel_dyn(&self, omega : Omega, gamma : Gamma) -> Alpha {
-        self.alpha_for_this(self.ctrl.accel_dyn(self.omega_for_super(omega, gamma), self.gamma_for_super(gamma)), self.gamma_for_super(gamma))
+        self.alpha_for_this(
+            self.ctrl.accel_dyn(self.omega_for_super(omega, gamma), self.gamma_for_super(gamma)), self.gamma_for_super(gamma))
     }
 }
 
-impl SimpleMeas for Cylinder 
+impl crate::meas::SimpleMeas for Cylinder 
 {
     fn init_meas(&mut self, pin_meas : u16) {
         self.ctrl.init_meas(pin_meas)
@@ -71,7 +73,7 @@ impl Component for Cylinder
     // 
 
     // Link
-        fn link(&mut self, lk : Arc<LinkedData>) {
+        fn link(&mut self, lk : Rc<crate::data::LinkedData>) {
             self.ctrl.link(lk);    
         }
     //

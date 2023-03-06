@@ -4,8 +4,8 @@ use std::thread;
 use gpio::GpioOut;
 use serde::{Serialize, Deserialize};
 
-use crate::{Time, Omega};
 use crate::ctrl::types::RaspPin;
+use crate::units::*;
 
 #[derive(Debug)]
 pub struct PWMOutput
