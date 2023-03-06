@@ -1,6 +1,3 @@
-extern crate alloc;
-use alloc::rc::Rc;
-
 use core::time::Duration;
 
 use std::thread; // TODO: Remove std thread delay use
@@ -15,7 +12,7 @@ use crate::math;
 use crate::units::*;
 
 // Use local types module
-pub mod asynchr;
+pub mod asyn;
 
 pub mod pwm;
 
@@ -45,7 +42,7 @@ pub struct StepperCtrl
     /// The current absolute position since set to a value
     pos : i64,
 
-    lk : Rc<LinkedData>,
+    lk : LinkedData,
 
     /// Pin for defining the direction
     sys_dir : RaspPin,
@@ -94,7 +91,7 @@ impl StepperCtrl
             dir: true, 
             pos: 0,
 
-            lk: Rc::new(LinkedData::EMPTY),
+            lk: LinkedData::EMPTY,
             
             sys_dir,
             sys_step,
@@ -121,7 +118,7 @@ impl StepperCtrl
             dir: true, 
             pos: 0,
 
-            lk: Rc::new(LinkedData::EMPTY),
+            lk: LinkedData::EMPTY,
             
             sys_dir: RaspPin::Output(SysFsGpioOutput::open(pin_dir.clone())?),
             sys_step: RaspPin::Output(SysFsGpioOutput::open(pin_step.clone())?),
@@ -377,7 +374,7 @@ impl Component for StepperCtrl {
 
     // Link
         #[inline]
-        fn link(&mut self, lk : Rc<LinkedData>) {
+        fn link(&mut self, lk : LinkedData) {
             self.lk = lk;
         }  
     //

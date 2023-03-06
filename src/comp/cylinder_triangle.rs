@@ -1,6 +1,3 @@
-extern crate alloc;
-use alloc::rc::Rc;
-
 use serde::{Serialize, Deserialize};
 
 use crate::Component;
@@ -124,7 +121,7 @@ impl Component for CylinderTriangle {
     // 
 
     // Link
-        fn link(&mut self, lk : Rc<LinkedData>) {
+        fn link(&mut self, lk : LinkedData) {
             self.cylinder.link(lk);
         }
     //

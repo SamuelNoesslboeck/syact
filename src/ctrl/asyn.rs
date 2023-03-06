@@ -14,7 +14,7 @@ pub use stepper::AsyncCtrl;
 /// ``
 /// 
 /// extern crate alloc;
-/// use alloc::rc::Rc;
+/// use alloc::sync::Arc;
 /// 
 /// use core::f32::consts::PI;
 /// 
@@ -24,7 +24,7 @@ pub use stepper::AsyncCtrl;
 /// use stepper_lib::units::*;
 /// 
 /// let mut ctrl = StepperCtrl::new_sim(StepperConst::GEN);
-/// ctrl.link(Rc::new(LinkedData { u: 12.0, s_f: 1.5 }));
+/// ctrl.link(Arc::new(LinkedData { u: 12.0, s_f: 1.5 }));
 /// 
 /// ctrl.drive_rel_async(Delta(4.0 * PI), Omega(2.0 * PI));
 ///

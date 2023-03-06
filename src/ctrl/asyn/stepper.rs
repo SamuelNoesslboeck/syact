@@ -1,12 +1,11 @@
 extern crate alloc;
-use alloc::rc::Rc;
 use alloc::sync::Arc;
 
 use std::sync::Mutex;
 
-use crate::comp::asynchr::AsyncComp;
+use crate::comp::asyn::AsyncComp;
 use crate::{Component, StepperConst};
-use crate::ctrl::asynchr::AsyncHandler;
+use crate::ctrl::asyn::AsyncHandler;
 use crate::units::*;
 
 // Steppers
@@ -72,7 +71,7 @@ impl Component for AsyncCtrl {
         self.comp.lock().unwrap().to_json()
     }
 
-    fn link(&mut self, lk : Rc<crate::data::LinkedData>) {
+    fn link(&mut self, lk : crate::data::LinkedData) {
         if let Ok(mut s_comp) = self.comp.lock() {
             s_comp.link(lk);
         }

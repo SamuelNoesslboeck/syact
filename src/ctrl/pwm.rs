@@ -40,14 +40,14 @@ impl PWMOutput
             loop {
                 if t_in.is_nan() {
                     let [ n_ac, n_in ] = recv.recv().unwrap();
-                    println!("Recv msg {:?} {:?}", n_ac, n_in);
+                    // println!("Recv msg {:?} {:?}", n_ac, n_in);
                     t_ac = n_ac;
                     t_in = n_in;
                 }
 
                 match recv.try_recv() {
                     Ok([n_ac, n_in, ]) => {
-                        println!("Recv msg {:?} {:?}", n_ac, n_in); 
+                        // println!("Recv msg {:?} {:?}", n_ac, n_in); 
                         t_ac = n_ac; 
                         t_in = n_in;
                     },

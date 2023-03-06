@@ -1,6 +1,5 @@
 extern crate alloc;
 use alloc::boxed::Box;
-use alloc::rc::Rc;
 use alloc::vec::Vec;
 
 use core::ops::IndexMut;
@@ -15,10 +14,13 @@ mod async_group;
 pub use async_group::AsyncCompGroup;
 // 
 
-pub trait ComponentGroup<const N : usize> : IndexMut<usize, Output = Box<dyn Component>>
+pub trait ComponentGroup<T, const N : usize> : IndexMut<usize, Output = Box<T>> 
+    where
+        T: Component,
+        T: ?Sized
 {
     // Data
-        fn link_all(&mut self, lk : Rc<crate::data::LinkedData>) {
+        fn link_all(&mut self, lk : crate::data::LinkedData) {
             for i in 0 .. N {
                 self[i].link(lk.clone())
             }
@@ -119,5 +121,5 @@ pub trait ComponentGroup<const N : usize> : IndexMut<usize, Output = Box<dyn Com
 }
 
 // Implementations
-impl<const N : usize> ComponentGroup<N> for [Box<dyn Component>; N] { }
-impl<const N : usize> ComponentGroup<N> for Vec<Box<dyn Component>> { }
+impl<const N : usize> ComponentGroup<dyn Component, N> for [Box<dyn Component>; N] { }
+impl<const N : usize> ComponentGroup<dyn Component, N> for Vec<Box<dyn Component>> { }

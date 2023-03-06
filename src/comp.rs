@@ -1,6 +1,3 @@
-extern crate alloc;
-use alloc::rc::Rc;
-
 use core::any::type_name;
 
 use crate::StepperConst;
@@ -8,7 +5,7 @@ use crate::units::*;
 
 // Submodules
 #[cfg(feature = "simple_async")] 
-pub mod asynchr;
+pub mod asyn;
 
 mod cylinder;
 pub use cylinder::Cylinder;
@@ -19,7 +16,7 @@ pub use cylinder_triangle::CylinderTriangle;
 mod gear_bearing;
 pub use gear_bearing::GearBearing;
 
-mod group;
+pub mod group;
 pub use group::ComponentGroup;
 
 pub mod tool;
@@ -213,7 +210,7 @@ pub trait Component : crate::meas::SimpleMeas + crate::math::MathActor + core::f
         /// Links this component to other components in the group, sharing data that is often relevant for multiple components in a group such as *voltage*
         /// (See [LinkedData])
         #[inline]
-        fn link(&mut self, lk : Rc<crate::data::LinkedData>) {
+        fn link(&mut self, lk : crate::data::LinkedData) {
             if let Some(s_comp) = self.super_comp_mut() {
                 s_comp.link(lk);
             }

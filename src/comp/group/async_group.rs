@@ -1,9 +1,11 @@
-use core::ops::IndexMut;
+use crate::comp::asyn::AsyncComp;
+use crate::{units::*, ComponentGroup};
 
-use crate::comp::asynchr::AsyncComp;
-use crate::units::*;
-
-pub trait AsyncCompGroup<const N : usize> : IndexMut<usize, Output = Box<dyn AsyncComp>> {
+pub trait AsyncCompGroup<T, const N : usize> : ComponentGroup<T, N> 
+    where
+        T: AsyncComp,
+        T: ?Sized
+{
     fn drive_rel_async(&mut self, deltas : [Delta; N], omegas : [Omega; N]) {
         for i in 0 .. N {
             self[i].drive_rel_async(deltas[i], omegas[i]);
@@ -28,3 +30,9 @@ pub trait AsyncCompGroup<const N : usize> : IndexMut<usize, Output = Box<dyn Asy
         }
     }
 }
+
+impl<const N : usize> ComponentGroup<dyn AsyncComp, N> for [Box<dyn AsyncComp>; N] { }
+impl<const N : usize> ComponentGroup<dyn AsyncComp, N> for Vec<Box<dyn AsyncComp>> { }
+
+impl<const N : usize> AsyncCompGroup<dyn AsyncComp, N> for [Box<dyn AsyncComp>; N] { }
+impl<const N : usize> AsyncCompGroup<dyn AsyncComp, N> for Vec<Box<dyn AsyncComp>> { }
