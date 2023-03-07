@@ -6,7 +6,10 @@
 
 use core::f32::consts::PI;
 
-use serde::{Serialize, Deserialize, Deserializer, Serializer};
+use serde::{Serialize, Deserialize};
+
+#[cfg(feature = "std")]
+use serde::{Deserializer, Serializer};
 
 // Submodules
 mod lk;
@@ -78,6 +81,7 @@ impl StepperConst
         j_s: Inertia(0.000_005_7)
     }; 
     
+    #[cfg(feature = "std")]
     pub fn from_standard<'de, D>(deserializer: D) -> Result<Self, D::Error> 
     where 
         D: Deserializer<'de> {
@@ -85,6 +89,7 @@ impl StepperConst
         Ok(get_standard_mot(s.as_str()).clone()) 
     }
 
+    #[cfg(feature = "std")]
     pub fn to_standard<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer {
@@ -171,7 +176,7 @@ pub static STANDARD_STEPPER_CONST : [(&str, StepperConst); 2] = [
     ("MOT_17HE15_1504S", StepperConst::MOT_17HE15_1504S)
 ];
 
-
+#[cfg(feature = "std")]
 fn get_standard_mot(name : &str) -> &StepperConst {
     for (k, v) in &STANDARD_STEPPER_CONST {
         if *k == name {

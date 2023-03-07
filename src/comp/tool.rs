@@ -6,10 +6,14 @@ use glam::Vec3;
 use crate::units::*;
 
 // Tools
+#[cfg(feature = "std")]
 mod axial_joint;
+#[cfg(feature = "std")]
 pub use axial_joint::AxialJoint;
 
+#[cfg(feature = "std")]
 mod axis_tongs;
+#[cfg(feature = "std")]
 pub use axis_tongs::AxisTongs;
 
 mod no_tool;
@@ -18,7 +22,9 @@ pub use no_tool::NoTool;
 mod pencil_tool;
 pub use pencil_tool::PencilTool;
 
+#[cfg(feature = "std")]
 mod tongs;
+#[cfg(feature = "std")]
 pub use tongs::Tongs;
 //
 

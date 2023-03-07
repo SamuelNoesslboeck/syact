@@ -23,5 +23,5 @@ rppal = "0.14.1"
 
 [features]
 default = [ "std", "simple_async" ]
-std = []
+std = [ ]
 simple_async = [ "std" ]

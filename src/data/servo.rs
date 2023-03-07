@@ -1,4 +1,7 @@
-use serde::{Deserializer, Deserialize, Serializer, Serialize};
+use serde::{Deserialize, Serialize};
+
+#[cfg(feature = "std")]
+use serde::{Deserializer, Serializer};
 
 use crate::units::*;
 
@@ -44,6 +47,7 @@ impl ServoConst
         f_pwm: Omega(50.0)
     };
 
+    #[cfg(feature = "std")]
     pub fn from_standard<'de, D>(deserializer: D) -> Result<Self, D::Error> 
     where 
         D: Deserializer<'de> {
@@ -51,6 +55,7 @@ impl ServoConst
         Ok(get_standard_servo(s.as_str()).clone()) 
     }
 
+    #[cfg(feature = "std")]
     pub fn to_standard<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer {
@@ -89,7 +94,7 @@ pub static STANDARD_SERVO_CONST : [(&str, ServoConst); 2] = [
     ("MG996R", ServoConst::MG996R)
 ];
 
-
+#[cfg(feature = "std")]
 fn get_standard_servo(name : &str) -> &ServoConst {
     for (k, v) in &STANDARD_SERVO_CONST {
         if *k == name {

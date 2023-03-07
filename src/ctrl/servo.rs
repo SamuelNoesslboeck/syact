@@ -9,7 +9,7 @@ pub struct ServoDriver
 {
     #[serde(skip)]
     gamma : Gamma,
-    #[serde(serialize_with = "ServoConst::to_standard", deserialize_with = "ServoConst::from_standard")]
+    #[cfg_attr(feature = "std", serde(serialize_with = "ServoConst::to_standard", deserialize_with = "ServoConst::from_standard"))]
     pub data : ServoConst,
 
     pwm : PWMOutput

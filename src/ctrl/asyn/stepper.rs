@@ -1,4 +1,3 @@
-extern crate alloc;
 use alloc::sync::Arc;
 
 use std::sync::Mutex;

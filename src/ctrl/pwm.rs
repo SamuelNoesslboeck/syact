@@ -22,7 +22,7 @@ pub struct PWMOutput
 impl PWMOutput 
 {
     pub fn spawn(pin : u8) -> Self {
-        let mut sys_pwm = pin::SimPin::new(pin).unwrap().into_output();
+        let mut sys_pwm = pin::UniPin::new(pin).unwrap().into_output();
 
         let (sender, recv) : (Sender<[Time; 2]>, Receiver<[Time; 2]>) = channel();
 

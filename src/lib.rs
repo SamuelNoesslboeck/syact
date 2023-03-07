@@ -7,13 +7,12 @@
 // #![deny(missing_docs)]
 
 // Modules
+extern crate alloc;
 
 /// Components including stepper motors
-#[cfg(feature = "std")]
 pub mod comp;
 
 /// Collection of structs and functions for controlling Stepper Motors
-#[cfg(feature = "std")]
 pub mod ctrl;
 // Structs for storing characteristics of stepper motors and devices
 pub mod data;
@@ -27,10 +26,16 @@ pub mod units;
 
 /// Module with all the tests required to assure the library funcitons as intended
 #[cfg(test)]
-#[cfg(feature = "std")]
 mod tests;
 
-// Types
+// Wrapped types
+#[cfg(feature = "std")]
+pub type Error = std::io::Error;
+
+#[cfg(not(feature = "std"))]
+pub type Error = u8;
+
+// Relocated types
 pub use comp::{Component, ComponentGroup, Tool};
 pub use ctrl::StepperCtrl;
 pub use data::StepperConst;

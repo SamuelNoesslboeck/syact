@@ -4,7 +4,7 @@ use rppal::gpio::{Gpio, Pin, InputPin, OutputPin};
 pub const ERR_PIN : u8 = 0xFF; 
 
 #[derive(Debug)]
-pub struct SimPin {
+pub struct UniPin {
     #[cfg(unix)]
     sys_pin : Pin,
 
@@ -29,9 +29,9 @@ pub struct SimInPin {
     pub pin : u8
 }
 
-impl SimPin {
+impl UniPin {
     #[cfg(unix)]
-    pub fn new(pin : u8) -> Result<Self, std::io::Error> {
+    pub fn new(pin : u8) -> Result<Self, crate::Error> {
         let sys_pin = match Gpio::new() {
             Ok(gp) => match gp.get(pin) { 
                 Ok(pin) => pin,
@@ -47,7 +47,7 @@ impl SimPin {
     }
 
     #[cfg(windows)]
-    pub fn new(pin : u8) -> Result<Self, std::io::Error> {
+    pub fn new(pin : u8) -> Result<Self, crate::Error> {
         Ok(Self {
             pin
         })

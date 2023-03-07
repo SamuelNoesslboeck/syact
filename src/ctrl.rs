@@ -1,5 +1,10 @@
+use alloc::vec;
+use alloc::vec::Vec;
+
+#[cfg(feature = "std")]
 use core::time::Duration;
 
+#[cfg(feature = "std")]
 use std::thread; // TODO: Remove std thread delay use
 
 use serde::{Serialize, Deserialize};
@@ -10,12 +15,15 @@ use crate::math;
 use crate::units::*;
 
 // Use local types module
+#[cfg(feature = "simple_async")]
 pub mod asyn;
 
 pub mod pin;
 
+#[cfg(feature = "std")]
 pub mod pwm;
 
+#[cfg(feature = "std")]
 pub mod servo;
 
 pub mod types;
@@ -60,7 +68,7 @@ pub struct StepperCtrl
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct StepperCtrlDes 
 {
-    #[serde(serialize_with = "StepperConst::to_standard", deserialize_with = "StepperConst::from_standard")]
+    #[cfg_attr(feature = "std", serde(serialize_with = "StepperConst::to_standard", deserialize_with = "StepperConst::from_standard"))]
     pub data : StepperConst,
     pub pin_dir : u8,
     pub pin_step : u8
@@ -70,9 +78,9 @@ impl StepperCtrl
 {   
     pub fn new(data : StepperConst, pin_dir : u8, pin_step : u8) -> Self {
         // Create pins if possible
-        let sys_dir = pin::SimPin::new(pin_dir).unwrap().into_output(); // TODO: Handle errors
+        let sys_dir = pin::UniPin::new(pin_dir).unwrap().into_output(); // TODO: Handle errors
 
-        let sys_step = pin::SimPin::new(pin_step).unwrap().into_output();
+        let sys_step = pin::UniPin::new(pin_step).unwrap().into_output();
 
         let mut ctrl = StepperCtrl { 
             pin_dir: pin_dir, 
@@ -114,15 +122,21 @@ impl StepperCtrl
 
     // Movements
         /// Move a single step into the previously set direction. Uses `thread::sleep()` for step times, so the function takes `time` in seconds to process
+        #[cfg_attr(not(feature = "std"), allow(unused_variables))]
         pub fn step(&mut self, time : Time, ufunc : &UpdateFunc) -> StepResult {
+            #[cfg(feature = "std")]
             let step_time_half : Duration = (time / 2.0).into();
 
             self.sys_step.set_high();
+
+            #[cfg(feature = "std")]
             if !self.sys_step.is_sim() {
                 thread::sleep(step_time_half);      // TODO: Proper delay handler
             }
-        
+            
             self.sys_dir.set_low();
+
+            #[cfg(feature = "std")]
             if !self.sys_step.is_sim() {
                 thread::sleep(step_time_half);
             }
@@ -294,6 +308,7 @@ impl StepperCtrl
     //
 
     // Debug
+        #[cfg(feature = "std")]
         pub fn debug_pins(&self) {
             dbg!(
                 &self.sys_dir,
@@ -308,7 +323,7 @@ impl crate::meas::SimpleMeas for StepperCtrl {
     fn init_meas(&mut self, pin_mes : u8) {
         self.pin_meas = pin_mes;
         self.sys_meas = Some(
-            pin::SimPin::new(pin_mes).unwrap().into_input()     // TODO: Proper error message
+            pin::UniPin::new(pin_mes).unwrap().into_input()     // TODO: Proper error message
         )
     }
 }

@@ -1,4 +1,6 @@
-use std::fmt::Debug;
+use alloc::fmt::format;
+
+use core::fmt::Debug;
 
 use crate::data::StepperConst;
 
@@ -16,10 +18,10 @@ pub enum UpdateFunc {
 }
 
 impl Debug for UpdateFunc {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
-            UpdateFunc::Break(_, acc) => f.write_str(format!("UpdateFunc::Break {{ acc: {} }}", acc).as_str()),
-            UpdateFunc::Data(_, acc) => f.write_str(format!("UpdateFunc::Data {{ acc: {} }}", acc).as_str()),
+            UpdateFunc::Break(_, acc) => f.write_str(format(format_args!("UpdateFunc::Break {{ acc: {} }}", acc)).as_str()),
+            UpdateFunc::Data(_, acc) => f.write_str(format(format_args!("UpdateFunc::Data {{ acc: {} }}", acc)).as_str()),
             UpdateFunc::None => f.write_str("None")
         }
     }
