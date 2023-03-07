@@ -83,6 +83,18 @@ impl UniPin {
             state: false
         }
     }
+
+    // Close
+        #[cfg(unix)]
+        #[inline]
+        pub fn close(&mut self) {
+            drop(self.sys_pin)
+        }
+
+        #[cfg(windows)]
+        #[inline]
+        pub fn close(&mut self) { }
+    //
 }
 
 impl SimInPin {
@@ -128,7 +140,7 @@ impl SimInPin {
         #[cfg(unix)]
         #[inline]
         pub fn close(&mut self) {
-            drop(self.sys)
+            drop(self.sys_pin)
         }
 
         #[cfg(windows)]
