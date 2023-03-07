@@ -17,7 +17,7 @@ pub struct ServoDriver
 
 impl ServoDriver 
 {
-    pub fn new(data : ServoConst, pin_pwm : u16) -> Self {
+    pub fn new(data : ServoConst, pin_pwm : u8) -> Self {
         let mut pwm = PWMOutput::spawn(pin_pwm); 
         pwm.set_period(data.default_pulse(), data.period_time());
 

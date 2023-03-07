@@ -27,7 +27,7 @@ impl GearBearing {
 
 impl SimpleMeas for GearBearing 
 {
-    fn init_meas(&mut self, pin_meas : u16) {
+    fn init_meas(&mut self, pin_meas : u8) {
         self.ctrl.init_meas(pin_meas);
     }
 }

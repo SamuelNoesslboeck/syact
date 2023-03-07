@@ -1,16 +1,15 @@
 use std::sync::mpsc::{Sender, Receiver, channel}; 
 use std::thread;
 
-use gpio::GpioOut;
 use serde::{Serialize, Deserialize};
 
-use crate::ctrl::types::RaspPin;
+use crate::ctrl::pin;
 use crate::units::*;
 
 #[derive(Debug)]
 pub struct PWMOutput
 {
-    pub pin : u16,
+    pub pin : u8,
 
     t_ac : Time,
     t_in : Time,
@@ -22,14 +21,8 @@ pub struct PWMOutput
 
 impl PWMOutput 
 {
-    pub fn spawn(pin : u16) -> Self {
-        let mut sys_pwm = match gpio::sysfs::SysFsGpioOutput::open(pin.clone()) {
-            Ok(val) => RaspPin::Output(val),
-            Err(_) => {
-                // println!("Failed to open pin! {} ", pin);    // TODO: Remove dirty stuff
-                RaspPin::ErrPin
-            }
-        };
+    pub fn spawn(pin : u8) -> Self {
+        let mut sys_pwm = pin::SimPin::new(pin).unwrap().into_output();
 
         let (sender, recv) : (Sender<[Time; 2]>, Receiver<[Time; 2]>) = channel();
 
@@ -69,16 +62,11 @@ impl PWMOutput
         }
     }
 
-    pub fn pulse(sys_pwm : &mut RaspPin, t_ac : Time, t_in : Time) {
-        match sys_pwm {
-            RaspPin::Output(pin) => {
-                pin.set_high().unwrap();
-                thread::sleep(t_ac.into());
-                pin.set_low().unwrap(); 
-                thread::sleep(t_in.into());
-            },
-            _ => { }
-        }
+    pub fn pulse(sys_pwm : &mut pin::SimOutPin, t_ac : Time, t_in : Time) {
+        sys_pwm.set_high();
+        thread::sleep(t_ac.into());
+        sys_pwm.set_low(); 
+        thread::sleep(t_in.into());
     }
 
     #[inline]
@@ -126,7 +114,7 @@ impl Serialize for PWMOutput {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
         where
             S: serde::Serializer {
-        serializer.serialize_u16(self.pin)
+        serializer.serialize_u8(self.pin)
     }
 }
 

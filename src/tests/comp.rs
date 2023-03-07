@@ -2,8 +2,8 @@ use crate::{comp::GearBearing, StepperConst, StepperCtrl, Component, Delta, Omeg
 
 #[test]
 fn gear_bearing() {
-    const PIN_DIR : u16 = 0;
-    const PIN_STEP : u16 = 0;
+    const PIN_DIR : u8 = 0;
+    const PIN_STEP : u8 = 0;
 
     let mut gear = GearBearing::new(StepperCtrl::new(StepperConst::MOT_17HE15_1504S, PIN_DIR, PIN_STEP), 0.1);
     
