@@ -1,48 +1,46 @@
 extern crate alloc;
 use alloc::boxed::Box;
-use alloc::sync::Arc;
 use alloc::vec::Vec;
 
 use core::ops::IndexMut;
 
-use crate::{Component, Gamma, Delta, Omega, Inertia, Force};
+use crate::Component;
+use crate::units::*;
 
-pub trait ComponentGroup<const N : usize> : IndexMut<usize, Output = Box<dyn Component>>
+// Submodules
+#[cfg(feature = "simple_async")]
+mod async_group;
+#[cfg(feature = "simple_async")]
+pub use async_group::AsyncCompGroup;
+// 
+
+pub trait ComponentGroup<T, const N : usize> : IndexMut<usize, Output = Box<T>> 
+    where
+        T: Component,
+        T: ?Sized
 {
     // Data
-        fn link_all(&mut self, lk : Arc<crate::LinkedData>) {
+        fn link_all(&mut self, lk : crate::data::LinkedData) {
             for i in 0 .. N {
                 self[i].link(lk.clone())
             }
         }
     //
 
-    fn drive_rel(&mut self, deltas : [Delta; N], omegas : [Omega; N]) -> [Gamma; N] {
-        let mut res = [Gamma::ZERO; N];
+    fn drive_rel(&mut self, deltas : [Delta; N], omegas : [Omega; N]) -> [Delta; N] {
+        let mut res = [Delta::ZERO; N];
         for i in 0 .. N {
             res[i] = self[i].drive_rel(deltas[i], omegas[i]);
         }
         res
     }
 
-    fn drive_abs(&mut self, gamma : [Gamma; N], omegas : [Omega; N]) -> [Gamma; N] {
-        let mut res = [Gamma::ZERO; N];
+    fn drive_abs(&mut self, gamma : [Gamma; N], omegas : [Omega; N]) -> [Delta; N] {
+        let mut res = [Delta::ZERO; N];
         for i in 0 .. N {
             res[i] = self[i].drive_abs(gamma[i], omegas[i]);
         }
         res
-    }
-
-    fn drive_rel_async(&mut self, deltas : [Delta; N], omegas : [Omega; N]) {
-        for i in 0 .. N {
-            self[i].drive_rel_async(deltas[i], omegas[i]);
-        }
-    }
-
-    fn drive_abs_async(&mut self, gammas : [Gamma; N], omegas : [Omega; N]) {
-        for i in 0 .. N {
-            self[i].drive_abs_async(gammas[i], omegas[i]);
-        }
     }
 
     fn measure(&mut self, deltas : [Delta; N], omegas : [Omega; N], set_dist : [Gamma; N], accuracy : [u64; N]) -> [bool; N] {
@@ -51,18 +49,6 @@ pub trait ComponentGroup<const N : usize> : IndexMut<usize, Output = Box<dyn Com
             res[i] = self[i].measure(deltas[i], omegas[i], set_dist[i], accuracy[i])
         }
         res
-    }
-
-    fn measure_async(&mut self, deltas : [Delta; N], omegas : [Omega; N], accuracy : [u64; N]) {
-        for i in 0 .. N {
-            self[i].measure_async(deltas[i], omegas[i], accuracy[i])
-        }
-    }
-
-    fn await_inactive(&self) {
-        for i in 0 .. N {
-            self[i].await_inactive();
-        }
     }
 
     // Position
@@ -80,7 +66,7 @@ pub trait ComponentGroup<const N : usize> : IndexMut<usize, Output = Box<dyn Com
             }
         }
 
-        fn get_limit_dest(&self, gammas : [Gamma; N]) -> [Delta; N] {
+        fn get_limit_dest(&self, gammas : &[Gamma; N]) -> [Delta; N] {
             let mut limits = [Delta::ZERO; N]; 
             for i in 0 .. N {
                 limits[i] = self[i].get_limit_dest(gammas[i]);
@@ -135,5 +121,5 @@ pub trait ComponentGroup<const N : usize> : IndexMut<usize, Output = Box<dyn Com
 }
 
 // Implementations
-impl<const N : usize> ComponentGroup<N> for [Box<dyn Component>; N] { }
-impl<const N : usize> ComponentGroup<N> for Vec<Box<dyn Component>> { }
+impl<const N : usize> ComponentGroup<dyn Component, N> for [Box<dyn Component>; N] { }
+impl<const N : usize> ComponentGroup<dyn Component, N> for Vec<Box<dyn Component>> { }

@@ -12,20 +12,15 @@
 #[cfg(feature = "std")]
 pub mod comp;
 
-/// I/O of configuration files to parse whole component groups out of text
-#[cfg(feature = "std")]
-pub mod conf;
-
 /// Collection of structs and functions for controlling Stepper Motors
 #[cfg(feature = "std")]
 pub mod ctrl;
 // Structs for storing characteristics of stepper motors and devices
 pub mod data;
-/// Resources required to process and generate G-Code
-#[cfg(feature = "gcode")]
-pub mod gcode;
 /// Functions and Structs for calculating Stepper Motor procedures and operations
 pub mod math;
+
+pub mod meas;
 
 /// Self defined units for mathematical operations
 pub mod units;
@@ -36,15 +31,9 @@ pub mod units;
 mod tests;
 
 // Types
-#[cfg(feature = "std")]
-pub use comp::{Component, ComponentGroup, LinkedData, Tool};
-#[cfg(feature = "std")]
-pub use conf::{JsonConfig, MachineConfig};
-#[cfg(feature = "std")]
-pub use ctrl::{SimpleMeas, StepperCtrl, UpdateFunc};
+pub use comp::{Component, ComponentGroup, Tool};
+pub use ctrl::StepperCtrl;
 pub use data::StepperConst;
-pub use math::MathActor;
-pub use units::*;
 
 // Library Types
 pub use glam::{Vec3, Mat3};

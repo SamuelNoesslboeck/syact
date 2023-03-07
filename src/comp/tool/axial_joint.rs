@@ -1,7 +1,9 @@
 use glam::Vec3;
 use serde::{Serialize, Deserialize};
 
-use crate::{Tool, ctrl::servo::ServoDriver, Gamma};
+use crate::Tool;
+use crate::ctrl::servo::ServoDriver;
+use crate::units::*;
 
 use super::AxisTool;
 
@@ -57,6 +59,6 @@ impl AxisTool for AxialJoint {
     }
 
     fn gamma(&self) -> Gamma {
-        self.servo.gamma()
+        Gamma(self.servo.gamma().0 - self.servo.data.gamma_max.0 / 2.0)
     }
 }
