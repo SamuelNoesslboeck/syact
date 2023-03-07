@@ -1,22 +1,6 @@
 use std::fmt::Debug;
 
-use gpio::sysfs::*;
-
 use crate::data::StepperConst;
-
-/// Constant for expressing an incorrect pin number
-pub const PIN_ERR : u16 = 0xFF;
-
-/// Pin helper enum for safe use in debug enviroments
-#[derive(Debug)]
-pub enum RaspPin {
-    /// Pin could not be created / Is not initialized yet
-    ErrPin,
-    /// Pin used for output
-    Output(SysFsGpioOutput),
-    /// Pin used for input
-    Input(SysFsGpioInput)
-}
 
 // TODO: REWORK UPDATE FUNCTIONS
 /// Update functions for updating stepper data in 
@@ -28,7 +12,7 @@ pub enum UpdateFunc {
     Data(fn (StepperConst) -> StepperConst, u64),
     /// Cause a break in the movement process while moving by returning `true` \
     /// The measurement pin of the stepper motor is accessable through the mutable reference stored in the enum
-    Break(for<'a> fn (&'a mut RaspPin) -> bool, u64)
+    Break(for<'a> fn (&'a mut crate::ctrl::pin::SimInPin) -> bool, u64)
 }
 
 impl Debug for UpdateFunc {

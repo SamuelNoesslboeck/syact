@@ -2,8 +2,6 @@ use core::time::Duration;
 
 use std::thread; // TODO: Remove std thread delay use
 
-use gpio::{GpioIn, GpioOut};
-use gpio::sysfs::*;
 use serde::{Serialize, Deserialize};
 
 use crate::Component;
@@ -13,6 +11,8 @@ use crate::units::*;
 
 // Use local types module
 pub mod asyn;
+
+pub mod pin;
 
 pub mod pwm;
 
@@ -26,11 +26,11 @@ use types::*;
 pub struct StepperCtrl
 {
     /// Pin for controlling direction
-    pub pin_dir : u16,
+    pub pin_dir : u8,
     /// Pin for controlling steps
-    pub pin_step : u16,
+    pub pin_step : u8,
     /// Pin for messuring distances
-    pub pin_meas : u16, 
+    pub pin_meas : u8, 
 
     /// Stepper data
     consts : StepperConst,
@@ -45,11 +45,11 @@ pub struct StepperCtrl
     lk : LinkedData,
 
     /// Pin for defining the direction
-    sys_dir : RaspPin,
+    sys_dir : pin::SimOutPin,
     /// Pin for PWM Step pulses
-    sys_step : RaspPin,
+    sys_step : pin::SimOutPin,
     /// Measurement pin
-    sys_meas : RaspPin,
+    sys_meas : Option<pin::SimInPin>,
 
     /// Limit for minimum angle/step count
     limit_min : Option<Gamma>,
@@ -62,28 +62,22 @@ struct StepperCtrlDes
 {
     #[serde(serialize_with = "StepperConst::to_standard", deserialize_with = "StepperConst::from_standard")]
     pub data : StepperConst,
-    pub pin_dir : u16,
-    pub pin_step : u16
+    pub pin_dir : u8,
+    pub pin_step : u8
 }
 
 impl StepperCtrl
 {   
-    pub fn new(data : StepperConst, pin_dir : u16, pin_step : u16) -> Self {
+    pub fn new(data : StepperConst, pin_dir : u8, pin_step : u8) -> Self {
         // Create pins if possible
-        let sys_dir = match SysFsGpioOutput::open(pin_dir.clone()) {
-            Ok(val) => RaspPin::Output(val),
-            Err(_) => RaspPin::ErrPin
-        };
+        let sys_dir = pin::SimPin::new(pin_dir).unwrap().into_output(); // TODO: Handle errors
 
-        let sys_step = match SysFsGpioOutput::open(pin_step.clone()) {
-            Ok(val) => RaspPin::Output(val),
-            Err(_) => RaspPin::ErrPin
-        };
+        let sys_step = pin::SimPin::new(pin_step).unwrap().into_output();
 
         let mut ctrl = StepperCtrl { 
             pin_dir: pin_dir, 
             pin_step: pin_step, 
-            pin_meas: PIN_ERR, 
+            pin_meas: pin::ERR_PIN, 
 
             consts: data, 
             vars: StepperVar::ZERO, 
@@ -95,7 +89,7 @@ impl StepperCtrl
             
             sys_dir,
             sys_step,
-            sys_meas: RaspPin::ErrPin,
+            sys_meas: None,
 
             limit_min: None,
             limit_max: None
@@ -106,99 +100,69 @@ impl StepperCtrl
         ctrl
     }
 
-    pub fn new_save(data : StepperConst, pin_dir : u16, pin_step : u16) -> Result<Self, std::io::Error> {
-        let mut ctrl = Self {
-            pin_dir: pin_dir, 
-            pin_step: pin_step, 
-            pin_meas: PIN_ERR, 
-
-            consts: data, 
-            vars: StepperVar::ZERO,
-
-            dir: true, 
-            pos: 0,
-
-            lk: LinkedData::EMPTY,
-            
-            sys_dir: RaspPin::Output(SysFsGpioOutput::open(pin_dir.clone())?),
-            sys_step: RaspPin::Output(SysFsGpioOutput::open(pin_step.clone())?),
-            sys_meas: RaspPin::ErrPin,
-
-            limit_min: None,
-            limit_max: None
-        };
-
-        // Write initial direction to output pins
-        ctrl.set_dir(ctrl.dir);
-
-        Ok(ctrl)
-    }
-
     pub fn new_sim(data : StepperConst) -> Self {
-        Self::new(data, PIN_ERR, PIN_ERR)
+        Self::new(data, pin::ERR_PIN, pin::ERR_PIN)
     }
 
     // Misc
         /// Helper function for measurements with a single pin
         #[inline]
-        pub fn __meas_helper(pin : &mut RaspPin) -> bool {
-            match pin {
-                RaspPin::Input(gpio_pin ) => {
-                    gpio_pin.read_value().unwrap() == gpio::GpioValue::High
-                },
-                _ => true
-            }
+        pub fn __meas_helper(pin : &mut pin::SimInPin) -> bool {
+           pin.is_high()
         }
     //
 
     // Movements
         /// Move a single step into the previously set direction. Uses `thread::sleep()` for step times, so the function takes `time` in seconds to process
         pub fn step(&mut self, time : Time, ufunc : &UpdateFunc) -> StepResult {
-            match &mut self.sys_step {
-                RaspPin::Output(pin) => {
-                    let step_time_half : Duration = (time / 2.0).into();
+            let step_time_half : Duration = (time / 2.0).into();
 
-                    pin.set_high().unwrap();
-                    thread::sleep(step_time_half);      // TODO: Proper delay handler
-                    pin.set_low().unwrap();
-                    thread::sleep(step_time_half);
-                    
-            
-                    self.pos += if self.dir { 1 } else { -1 };
+            self.sys_step.set_high();
+            if !self.sys_step.is_sim() {
+                thread::sleep(step_time_half);      // TODO: Proper delay handler
+            }
         
-                    match self.limit_max {
-                        Some(pos) => {
-                            if self.get_gamma() > pos {
-                                return StepResult::Break;
-                            }
-                        }, 
-                        _ => { }
-                    };
-        
-                    match self.limit_min {
-                        Some(pos) => {
-                            if self.get_gamma() < pos {
-                                return StepResult::Break;
-                            }
-                        }, 
-                        _ => { }
-                    };
-        
-                    return match ufunc {
-                        UpdateFunc::Break(func, steps) => {
-                            if (self.pos % (*steps as i64)) == 0 {
-                                if func(&mut self.sys_meas) {
-                                    println!("Meas conducted!");
+            self.sys_dir.set_low();
+            if !self.sys_step.is_sim() {
+                thread::sleep(step_time_half);
+            }
+    
+            self.pos += if self.dir { 1 } else { -1 };
+
+            match self.limit_max {
+                Some(pos) => {
+                    if self.get_gamma() > pos {
+                        return StepResult::Break;
+                    }
+                }, 
+                _ => { }
+            };
+
+            match self.limit_min {
+                Some(pos) => {
+                    if self.get_gamma() < pos {
+                        return StepResult::Break;
+                    }
+                }, 
+                _ => { }
+            };
+
+            return match ufunc {
+                UpdateFunc::Break(func, steps) => {
+                    if (self.pos % (*steps as i64)) == 0 {
+                        match &mut self.sys_meas {
+                            Some(pin) => {
+                                if func(pin) {
                                     return StepResult::Break
                                 } 
-                            }
-        
-                            StepResult::None
-                        },
-                        _ => StepResult::None
+                            },
+                            None => { }
+                        }
                     }
+
+                    StepResult::None
                 },
-                _ => StepResult::Error
+                _ => StepResult::None
             }
         }
 
@@ -297,21 +261,13 @@ impl StepperCtrl
         }
 
         pub fn set_dir(&mut self, dir : bool) {
-            // Added dir assignment for debug purposes
             self.dir = dir;
 
-            match &mut self.sys_dir {
-                RaspPin::Output(pin) => {
-                    // Removed dir assignment from here
-                    
-                    if self.dir {
-                        pin.set_high().unwrap();
-                    } else {
-                        pin.set_low().unwrap();
-                    }
-                },
-                _ => { }
-            };
+            if self.dir {
+                self.sys_dir.set_high();
+            } else {
+                self.sys_dir.set_low();
+            }
         }
     // 
 
@@ -349,12 +305,11 @@ impl StepperCtrl
 }
 
 impl crate::meas::SimpleMeas for StepperCtrl {
-    fn init_meas(&mut self, pin_mes : u16) {
+    fn init_meas(&mut self, pin_mes : u8) {
         self.pin_meas = pin_mes;
-        self.sys_meas = match SysFsGpioInput::open(pin_mes) {
-            Ok(val) => RaspPin::Input(val),
-            Err(_) => RaspPin::ErrPin
-        }
+        self.sys_meas = Some(
+            pin::SimPin::new(pin_mes).unwrap().into_input()     // TODO: Proper error message
+        )
     }
 }
 
@@ -440,17 +395,22 @@ impl Component for StepperCtrl {
         }
 
         fn set_endpoint(&mut self, set_gamma : Gamma) -> bool {
-            if Self::__meas_helper(&mut self.sys_meas) {
-                self.pos = self.ang_to_steps_dir(set_gamma.0);
-    
-                self.set_limit(
-                    if self.dir { self.limit_min } else { Some(set_gamma) },
-                    if self.dir { Some(set_gamma) } else { self.limit_max }
-                );
-
-                true
-            } else {
-                false
+            match &mut self.sys_meas {
+                Some(pin) => {
+                    if Self::__meas_helper(pin) {       // TODO: Proper error message
+                        self.pos = self.ang_to_steps_dir(set_gamma.0);
+            
+                        self.set_limit(
+                            if self.dir { self.limit_min } else { Some(set_gamma) },
+                            if self.dir { Some(set_gamma) } else { self.limit_max }
+                        );
+        
+                        true
+                    } else {
+                        false
+                    }
+                }, 
+                None => true
             }
         }
     //

@@ -51,7 +51,7 @@ impl AsyncCtrl {
 }
 
 impl crate::meas::SimpleMeas for AsyncCtrl {
-    fn init_meas(&mut self, pin_meas : u16) {
+    fn init_meas(&mut self, pin_meas : u8) {
         self.comp.lock().unwrap().init_meas(pin_meas);
     }
 }
