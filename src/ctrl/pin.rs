@@ -35,9 +35,9 @@ impl UniPin {
         let sys_pin = match Gpio::new() {
             Ok(gp) => match gp.get(pin) { 
                 Ok(pin) => pin,
-                Err(err) => return Err(std::io::Error::other(err))
+                Err(err) => return Err(std::io::Error::new(std::io::ErrorKind::Other, format!("{:?}", err)))
             },
-            Err(err) => return Err(std::io::Error::other(err))
+            Err(err) => return Err(std::io::Error::new(std::io::ErrorKind::Other, format!("{:?}", err)))
         };
 
         Ok(Self {
@@ -156,7 +156,7 @@ impl SimOutPin {
 
     #[cfg(unix)]
     #[inline]
-    pub fn is_set_low(&self) {
+    pub fn is_set_low(&self) -> bool {
         self.sys_pin.is_set_low()
     }
 
