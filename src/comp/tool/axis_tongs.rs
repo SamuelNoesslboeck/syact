@@ -13,6 +13,18 @@ pub struct AxisTongs {
 }
 
 impl Tool for AxisTongs {
+    // Setup / Shutdown
+        fn mount(&mut self) {
+            self.axis.mount();
+            self.tongs.mount();
+        }
+
+        fn dismount(&mut self) {
+            self.axis.dismount();
+            self.tongs.dismount();
+        }
+    // 
+
     // Upgrades
         fn simple_tool(&self) -> Option<&dyn SimpleTool> {
             Some(&self.tongs)

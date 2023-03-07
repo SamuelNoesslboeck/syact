@@ -21,6 +21,12 @@ impl PencilTool {
 }
 
 impl Tool for PencilTool {
+    // Setup / Shutdown
+        fn mount(&mut self) { }
+
+        fn dismount(&mut self) { }
+    // 
+
     // Stats
         fn get_json(&self) -> serde_json::Value {
             serde_json::to_value(self).unwrap()

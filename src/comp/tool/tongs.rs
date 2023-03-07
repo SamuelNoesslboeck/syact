@@ -34,6 +34,16 @@ impl Tongs {
 }
 
 impl Tool for Tongs {
+    // Setup / Shutdown
+        fn mount(&mut self) {
+            self.servo.start();
+        }
+
+        fn dismount(&mut self) {
+            self.servo.stop();
+        }
+    // 
+
     // Upgrades
         fn simple_tool(&self) -> Option<&dyn SimpleTool> {
             Some(self)

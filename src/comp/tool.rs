@@ -30,6 +30,12 @@ pub use tongs::Tongs;
 
 // Tools
 pub trait Tool : Debug {
+    // Setup / Shutdown
+        fn mount(&mut self);
+
+        fn dismount(&mut self);
+    // 
+
     // Upgrade
         fn simple_tool(&self) -> Option<&dyn SimpleTool> {
             None

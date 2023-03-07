@@ -86,17 +86,19 @@ impl UniPin {
 }
 
 impl SimInPin {
-    #[cfg(unix)]
-    #[inline]
-    pub fn is_sim(&self) -> bool {
-        false
-    }
+    // Status
+        #[cfg(unix)]
+        #[inline]
+        pub fn is_sim(&self) -> bool {
+            false
+        }
 
-    #[cfg(windows)]
-    #[inline]
-    pub fn is_sim(&self) -> bool {
-        true
-    }
+        #[cfg(windows)]
+        #[inline]
+        pub fn is_sim(&self) -> bool {
+            true
+        }
+    // 
 
     #[cfg(windows)]
     #[inline]
@@ -121,6 +123,18 @@ impl SimInPin {
     pub fn is_low(&self) -> bool {
         self.sys_pin.is_low()
     }
+
+    // Close
+        #[cfg(unix)]
+        #[inline]
+        pub fn close(&mut self) {
+            drop(self.sys)
+        }
+
+        #[cfg(windows)]
+        #[inline]
+        pub fn close(&mut self) { }
+    //
 }
 
 impl SimOutPin {
@@ -183,4 +197,16 @@ impl SimOutPin {
     pub fn set_low(&mut self) {
         self.sys_pin.set_low();
     }
+
+    // Close
+        #[cfg(unix)]
+        #[inline]
+        pub fn close(&mut self) {
+            drop(self.sys_pin)
+        }
+
+        #[cfg(windows)]
+        #[inline]
+        pub fn close(&mut self) { }
+    // 
 }

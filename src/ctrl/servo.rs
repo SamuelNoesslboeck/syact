@@ -18,15 +18,17 @@ pub struct ServoDriver
 impl ServoDriver 
 {
     pub fn new(data : ServoConst, pin_pwm : u8) -> Self {
-        let mut pwm = PWMOutput::spawn(pin_pwm); 
-        pwm.set_period(data.default_pulse(), data.period_time());
-
-        ServoDriver {
+        Self {
             gamma: data.default_pos(),
             data,
 
-            pwm: pwm
+            pwm: PWMOutput::new(pin_pwm)
         }
+    }
+
+    pub fn start(&mut self) {
+        self.pwm.start();
+        self.pwm.set_period(self.data.default_pulse(), self.data.period_time());
     }
 
     pub fn gamma(&self) -> Gamma {
@@ -59,5 +61,11 @@ impl ServoDriver
         pub fn endpoint_max(&mut self) {
             self.set_perc(1.0)
         }
-    // 
+    //
+
+    // Drop
+        pub fn stop(&mut self) {
+            self.pwm.stop();
+        }
+    //  
 }

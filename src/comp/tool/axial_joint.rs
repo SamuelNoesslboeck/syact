@@ -26,6 +26,16 @@ impl AxialJoint {
 }
 
 impl Tool for AxialJoint {
+    // Setup / Shutdown
+        fn mount(&mut self) {
+            self.servo.start();
+        }
+
+        fn dismount(&mut self) {
+            self.servo.stop();
+        }
+    // 
+
     // Upgrades
         fn axis_tool(&self) -> Option<&dyn AxisTool> {
             Some(self)

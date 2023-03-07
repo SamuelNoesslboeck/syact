@@ -15,14 +15,26 @@ pub struct PWMOutput
     t_in : Time,
 
     // Thread
-    pub thr : thread::JoinHandle<()>,
-    pub sender : Sender<[Time; 2]>
+    thr : Option<thread::JoinHandle<()>>,
+    pub sender : Option<Sender<[Time; 2]>>
 }
 
 impl PWMOutput 
 {
-    pub fn spawn(pin : u8) -> Self {
-        let mut sys_pwm = pin::UniPin::new(pin).unwrap().into_output();
+    pub fn new(pin : u8) -> Self {
+        Self {
+            pin: pin,
+
+            t_ac: Time::NAN,
+            t_in: Time::NAN,
+
+            thr: None,
+            sender: None
+        }
+    }
+
+    pub fn start(&mut self) {
+        let mut sys_pwm = pin::UniPin::new(self.pin).unwrap().into_output();
 
         let (sender, recv) : (Sender<[Time; 2]>, Receiver<[Time; 2]>) = channel();
 
@@ -33,14 +45,22 @@ impl PWMOutput
             loop {
                 if t_in.is_nan() {
                     let [ n_ac, n_in ] = recv.recv().unwrap();
-                    // println!("Recv msg {:?} {:?}", n_ac, n_in);
+
+                    if (n_ac.is_nan()) & (n_in.is_nan()) {
+                        break;
+                    }
+
                     t_ac = n_ac;
                     t_in = n_in;
                 }
 
                 match recv.try_recv() {
                     Ok([n_ac, n_in, ]) => {
-                        // println!("Recv msg {:?} {:?}", n_ac, n_in); 
+
+                        if (n_ac.is_nan()) & (n_in.is_nan()) {
+                            break;
+                        }
+
                         t_ac = n_ac; 
                         t_in = n_in;
                     },
@@ -51,15 +71,8 @@ impl PWMOutput
             }
         }); 
 
-        PWMOutput {
-            thr,
-
-            t_ac: Time::NAN,
-            t_in: Time::NAN,
-
-            sender,
-            pin
-        }
+        self.thr = Some(thr);
+        self.sender = Some(sender);
     }
 
     pub fn pulse(sys_pwm : &mut pin::SimOutPin, t_ac : Time, t_in : Time) {
@@ -79,7 +92,9 @@ impl PWMOutput
         self.t_ac = t_ac.max(Time::ZERO);
         self.t_in = t_in.max(Time::ZERO);
         
-        self.sender.send([ self.t_ac, self.t_in ]).unwrap();
+        if let Some(sender) = &mut self.sender {
+            sender.send([ self.t_ac, self.t_in ]).unwrap();
+        }
     }
 
     #[inline]
@@ -108,6 +123,15 @@ impl PWMOutput
             1.0 / freq
         )
     }
+
+    pub fn stop(&mut self) {
+        if let Some(sender) = &mut self.sender {
+            sender.send([ Time::NAN, Time::NAN ]).unwrap();
+        }
+
+        self.thr = None;
+        self.sender = None;
+    }
 }
 
 impl Serialize for PWMOutput {
@@ -122,7 +146,7 @@ impl<'de> Deserialize<'de> for PWMOutput {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
         where
             D: serde::Deserializer<'de> {
-        Ok(PWMOutput::spawn(
+        Ok(PWMOutput::new(
             Deserialize::deserialize(deserializer)?
         ))
     }
