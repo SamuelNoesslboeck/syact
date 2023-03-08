@@ -45,6 +45,10 @@ impl Component for GearBearing
         fn consts(&self) -> StepperConst {
             self.ctrl.consts()
         }
+
+        fn vars<'a>(&'a self) -> &'a crate::data::StepperVars {
+            self.ctrl.vars()
+        }
     // 
 
     // Super

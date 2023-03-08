@@ -49,6 +49,10 @@ impl Component for Cylinder
         fn consts(&self) -> crate::StepperConst {
             self.ctrl.consts()
         }
+
+        fn vars<'a>(&'a self) -> &'a crate::data::StepperVars {
+            self.ctrl.vars()
+        }
     // 
 
     // Super

@@ -20,7 +20,7 @@ pub mod servo;
 
 /// Crate for variables read and written during runtime
 mod var;
-pub use var::StepperVar;
+pub use var::StepperVars;
 
 use crate::units::*;
 //
@@ -103,13 +103,13 @@ impl StepperConst
 
     /// The maximum angular acceleration of the motor (in stall) in consideration of the current loads
     #[inline(always)]
-    pub fn alpha_max(&self, var : &StepperVar) -> Alpha {
+    pub fn alpha_max(&self, var : &StepperVars) -> Alpha {
         self.t(var.t_load) / self.j(var.j_load)
     }
 
     /// The maximum angular acceleration of the motor, with a modified torque t_s
     #[inline(always)]
-    pub fn alpha_max_dyn(&self, t_s : Force, var : &StepperVar) -> Alpha {
+    pub fn alpha_max_dyn(&self, t_s : Force, var : &StepperVars) -> Alpha {
         Self::t_dyn(t_s, var.t_load) / self.j(var.j_load)
     }
 

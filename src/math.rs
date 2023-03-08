@@ -6,7 +6,7 @@ use core::f32::consts::{E, PI};
 use glam::{Vec3, Mat3};
 
 use crate::Component;
-use crate::data::{StepperConst, StepperVar};
+use crate::data::{StepperConst, StepperVars};
 
 use crate::units::*;
 
@@ -30,17 +30,17 @@ pub fn torque_dyn(data : &StepperConst, mut omega : Omega, u : f32) -> Force {
 /// # Units
 /// 
 ///  - Returns Hertz
-pub fn start_frequency(data : &StepperConst, var : &StepperVar) -> Omega {
+pub fn start_frequency(data : &StepperConst, var : &StepperVars) -> Omega {
     Omega((data.alpha_max(var) * (data.n_s as f32) / 4.0 / PI).0.powf(0.5))
 }
 
 /// The angluar velocity of a motor that is constantly accelerating after the time `t`
-pub fn angluar_velocity(data : &StepperConst, var : &StepperVar, t : Time, u : f32) -> Omega {
+pub fn angluar_velocity(data : &StepperConst, var : &StepperVars, t : Time, u : f32) -> Omega {
     return data.alpha_max(var) * (t + data.tau(u)*E.powf(-t/data.tau(u)));
 }
 
 /// The angluar velocity of a motor that is constantly accelerating after the time t [in s], [in s^-1]
-pub fn angluar_velocity_dyn(data : &StepperConst, var : &StepperVar, t : Time, omega_approx : Omega, u : f32) -> Omega {
+pub fn angluar_velocity_dyn(data : &StepperConst, var : &StepperVars, t : Time, omega_approx : Omega, u : f32) -> Omega {
     data.alpha_max_dyn(torque_dyn(data, omega_approx, u), var) * (t + data.tau(u)*E.powf(-t/data.tau(u)))
 }
 

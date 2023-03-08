@@ -7,7 +7,7 @@ use core::time::Duration;
 use serde::{Serialize, Deserialize};
 
 use crate::Component;
-use crate::data::{LinkedData, StepperConst, StepperVar}; 
+use crate::data::{LinkedData, StepperConst, StepperVars}; 
 use crate::math;
 use crate::units::*;
 
@@ -39,7 +39,7 @@ pub struct StepperCtrl
 
     /// Stepper data
     consts : StepperConst,
-    vars : StepperVar,
+    vars : StepperVars,
 
     /// The current direction of the driver, the bool value is written to the `pin_dir` GPIO pin\
     /// DO NOT WRITE TO THIS VALUE! Use the `Driver::set_dir()` function instead
@@ -85,7 +85,7 @@ impl StepperCtrl
             pin_meas: pin::ERR_PIN, 
 
             consts: data, 
-            vars: StepperVar::ZERO, 
+            vars: StepperVars::ZERO, 
 
             dir: true, 
             pos: 0,
@@ -328,6 +328,10 @@ impl Component for StepperCtrl {
     // Data
         fn consts(&self) -> StepperConst {
             self.consts.clone()
+        }
+
+        fn vars<'a>(&'a self) -> &'a StepperVars {
+            &self.vars
         }
     // 
 

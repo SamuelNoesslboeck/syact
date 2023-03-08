@@ -1,6 +1,7 @@
 use core::any::type_name;
 
 use crate::StepperConst;
+use crate::data::StepperVars;
 use crate::units::*;
 
 // Submodules
@@ -34,6 +35,8 @@ pub trait Component : crate::meas::SimpleMeas + crate::math::MathActor + core::f
     // Data
         /// Returns a copy of the stepper constants used by the [stepper driver](crate::ctrl::StepperDriver)
         fn consts(&self) -> StepperConst;
+
+        fn vars<'a>(&'a self) -> &'a StepperVars;
     // 
 
     // Super
@@ -164,7 +167,7 @@ pub trait Component : crate::meas::SimpleMeas + crate::math::MathActor + core::f
         /// let mut cylinder = Cylinder::new(
         ///     // Stepper Motor as subcomponent (also implements Component)
         ///     StepperCtrl::new_sim(StepperConst::GEN), 
-        /// 0.5);    // Ratio is set to 2.0, which means for each radian the motor moves, the cylinder moves for 2.0 mm
+        /// 0.5);    // Ratio is set to 0.5, which means for each radian the motor moves, the cylinder moves for 0.5 mm
         /// 
         /// cylinder.write_gamma(POS);
         /// 
@@ -354,6 +357,25 @@ pub trait Component : crate::meas::SimpleMeas + crate::math::MathActor + core::f
         }
         
         /// Apply a load inertia to the component, slowing down movements
+        /// 
+        /// ```rust
+        /// use stepper_lib::{Component, StepperCtrl, StepperConst};
+        /// use stepper_lib::comp::GearBearing;
+        /// use stepper_lib::units::*;
+        /// 
+        /// // Position of components
+        /// const INERTIA : Inertia = Inertia(1.0);
+        /// 
+        /// // Create a new gear bearing (implements Component)
+        /// let mut gear = GearBearing::new(
+        ///     // Stepper Motor as subcomponent (also implements Component)
+        ///     StepperCtrl::new_sim(StepperConst::GEN), 
+        /// 0.5);    // Ratio is set to 0.5, which means for each radian the motor moves, the bearing moves for half a radian
+        /// 
+        /// gear.apply_load_inertia(INERTIA);
+        /// 
+        /// assert_eq!(Inertia(4.0), gear.super_comp().unwrap().vars().j_load);
+        /// ```
         fn apply_load_inertia(&mut self, mut inertia : Inertia) {
             inertia = Inertia(self.gamma_for_this(self.gamma_for_this(Gamma(inertia.0))).0);
 

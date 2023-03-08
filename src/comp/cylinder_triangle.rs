@@ -94,6 +94,10 @@ impl Component for CylinderTriangle {
         fn consts(&self) -> crate::StepperConst {
             self.cylinder.consts()
         }
+
+        fn vars<'a>(&'a self) -> &'a crate::data::StepperVars {
+            self.cylinder.vars()
+        }
     // 
 
     // Super 
