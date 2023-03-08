@@ -27,8 +27,8 @@ mod single_motor
         let mut ctrl = StepperCtrl::new(StepperConst::MOT_17HE15_1504S, PIN_DIR, PIN_STEP);
         ctrl.link(LinkedData::GEN); 
     
-        ctrl.apply_load_inertia(Inertia(0.000_1));
-        ctrl.apply_load_force(Force(0.01));
+        ctrl.apply_load_inertia(Inertia(0.4));
+        ctrl.apply_load_force(Force(0.10));
     
         println!("Staring to move");
         ctrl.steps(STEPS, OMEGA, crate::ctrl::types::UpdateFunc::None);
