@@ -39,7 +39,8 @@ impl UniPin {
             },
             Err(err) => return Err(std::io::Error::new(std::io::ErrorKind::Other, format!("{:?}", err)))
         };
-
+        
+        println!(" -> Pin successfully setup! [Pin: {}]", pin);
         Ok(Self {
             pin,
             sys_pin
