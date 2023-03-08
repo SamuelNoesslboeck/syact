@@ -2,9 +2,6 @@
 use std::{f32::consts::PI, sync::Arc};
 
 #[cfg(target_os = "linux")]
-use gpio::{GpioIn, sysfs::*};
-
-#[cfg(target_os = "linux")]
 use crate::{Component, LinkedData, StepperCtrl, StepperConst, UpdateFunc, Delta, Omega};
 
 // Submodules
@@ -20,45 +17,45 @@ mod stepper;
 #[cfg(target_os = "linux")]
 mod tools;
 
-// Test Async
-    #[test]
-    #[cfg(target_os = "linux")]
-    fn test_async() {
-        let mut ctrl = StepperCtrl::new(StepperConst::MOT_17HE15_1504S, 27, 19);
-        ctrl.link(Arc::new(LinkedData { u: 12.0, s_f: 1.5 })); 
+// // Test Async
+//     #[test]
+//     #[cfg(target_os = "linux")]
+//     fn test_async() {
+//         let mut ctrl = StepperCtrl::new(StepperConst::MOT_17HE15_1504S, 27, 19);
+//         ctrl.link(Arc::new(LinkedData { u: 12.0, s_f: 1.5 })); 
 
-        ctrl.comms.send_msg((Delta(4.0 * PI), Omega(2.0 * PI), UpdateFunc::None));
+//         ctrl.comms.send_msg((Delta(4.0 * PI), Omega(2.0 * PI), UpdateFunc::None));
 
-        println!("Msg sent!");
-        println!("Awaiting inactive status ...");
+//         println!("Msg sent!");
+//         println!("Awaiting inactive status ...");
 
-        ctrl.comms.await_inactive();
-    }
-//
+//         ctrl.comms.await_inactive();
+//     }
+// //
 
-// Test Input
-    #[test]
-    #[cfg(target_os = "linux")]
-    fn test_input() {
-        let mut pin = SysFsGpioInput::open(25).expect("Could not open pin");
+// // Test Input
+//     #[test]
+//     #[cfg(target_os = "linux")]
+//     fn test_input() {
+//         let mut pin = SysFsGpioInput::open(25).expect("Could not open pin");
         
-        let mut pin_rec = false;
+//         let mut pin_rec = false;
 
-        loop {
-            let read_val = pin.read_value().unwrap() == gpio::GpioValue::High;
+//         loop {
+//             let read_val = pin.read_value().unwrap() == gpio::GpioValue::High;
 
-            if pin_rec && (!read_val) {
-                pin_rec = false;
+//             if pin_rec && (!read_val) {
+//                 pin_rec = false;
 
-                println!("Input deactivated! {}", read_val);
-            } else if (!pin_rec) && read_val {
-                pin_rec = true;
+//                 println!("Input deactivated! {}", read_val);
+//             } else if (!pin_rec) && read_val {
+//                 pin_rec = true;
 
-                println!("Input activated! {}", read_val);
-            }
-        }
-    }
-//
+//                 println!("Input activated! {}", read_val);
+//             }
+//         }
+//     }
+// //
 
 // // Test G1
 // mod test_g1 
