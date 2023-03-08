@@ -124,6 +124,7 @@ impl StepperCtrl
         /// Move a single step into the previously set direction. Uses `thread::sleep()` for step times, so the function takes `time` in seconds to process
         pub fn step(&mut self, time : Time, ufunc : &UpdateFunc) -> StepResult {
             let step_time_half : Duration = (time / 2.0).into();
+            println!("{}", time);
 
             self.sys_step.set_high();
             thread::sleep(step_time_half);

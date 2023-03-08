@@ -1,3 +1,4 @@
+use core::fmt::Display;
 // Units
 use core::ops::{Add, Sub, Div, Mul, Neg, AddAssign};
 use core::time::Duration;
@@ -59,6 +60,12 @@ macro_rules! basic_unit {
 
             pub fn sin(self) -> f32 {
                 self.0.sin()
+            }
+        }
+
+        impl Display for $a {
+            fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+                self.0.fmt(f)
             }
         }
 
