@@ -33,5 +33,5 @@ fn cylinder_bearing() {
     let mut cyl_tri = CylinderTriangle::new(Cylinder::new(StepperCtrl::new(StepperConst::MOT_17HE15_1504S, PIN_DIR, PIN_STEP), 1.27), 200.0, 200.0);
     cyl_tri.link(LinkedData::GEN);
 
-    cyl_tri.drive_rel(Delta(0.5), Omega(0.5));
+    cyl_tri.drive_rel(Delta(0.5), Omega(50.0));
 }
