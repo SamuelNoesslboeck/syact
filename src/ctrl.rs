@@ -122,24 +122,14 @@ impl StepperCtrl
 
     // Movements
         /// Move a single step into the previously set direction. Uses `thread::sleep()` for step times, so the function takes `time` in seconds to process
-        #[cfg_attr(not(feature = "std"), allow(unused_variables))]
         pub fn step(&mut self, time : Time, ufunc : &UpdateFunc) -> StepResult {
-            #[cfg(feature = "std")]
             let step_time_half : Duration = (time / 2.0).into();
 
             self.sys_step.set_high();
-
-            #[cfg(feature = "std")]
-            if !self.sys_step.is_sim() {
-                thread::sleep(step_time_half);      // TODO: Proper delay handler
-            }
+            thread::sleep(step_time_half);
             
             self.sys_dir.set_low();
-
-            #[cfg(feature = "std")]
-            if !self.sys_step.is_sim() {
-                thread::sleep(step_time_half);
-            }
+            thread::sleep(step_time_half);
     
             self.pos += if self.dir { 1 } else { -1 };
 
