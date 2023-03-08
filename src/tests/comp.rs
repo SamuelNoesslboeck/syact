@@ -1,4 +1,6 @@
-use crate::{comp::GearBearing, StepperConst, StepperCtrl, Component, Delta, Omega};
+use crate::{StepperConst, StepperCtrl, Component};
+use crate::comp::GearBearing;
+use crate::units::*;
 
 #[test]
 fn gear_bearing() {

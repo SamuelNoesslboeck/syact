@@ -1,7 +1,7 @@
-use crate::Gamma;
 use crate::comp::tool::{Tongs, SimpleTool, AxialJoint, AxisTool};
 use crate::ctrl::servo::ServoDriver;
-use crate::data::ServoConst;
+use crate::data::servo::ServoConst;
+use crate::units::*;
 
 const TONGS_PIN : u8 = 23;
 const AXIAL_JOINT_PIN : u8 = 13;

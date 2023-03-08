@@ -1,14 +1,15 @@
 use std::io;
 
-use crate::Time;
 use crate::ctrl::pwm::PWMOutput;
+use crate::units::*;
 
 const PIN_1 : u8 = 13;
 const PIN_2 : u8 = 23;
 
 #[test]
 fn pwm_servo() {
-    let mut pwm = PWMOutput::spawn(PIN_1);
+    let mut pwm = PWMOutput::new(PIN_1);
+    pwm.start();
 
     loop {
         println!("Input for Servo:// ");
@@ -27,8 +28,11 @@ fn pwm_servo() {
 
 #[test]
 fn pwm_servo_2() {
-    let mut pwm_1 = PWMOutput::spawn(PIN_1);
-    let mut pwm_2 = PWMOutput::spawn(PIN_2);
+    let mut pwm_1 = PWMOutput::new(PIN_1);
+    let mut pwm_2 = PWMOutput::new(PIN_2);
+
+    pwm_1.start();
+    pwm_2.start();
 
     loop {
         println!("Input for Servo_1:// ");
