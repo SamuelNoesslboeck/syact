@@ -246,16 +246,18 @@ impl StepperCtrl
             StepResult::None
         }
 
-        pub fn drive(&mut self, dist : Delta, omega : Omega, ufunc : UpdateFunc) -> Delta {
-            if !dist.is_normal() {
+        pub fn drive(&mut self, delta : Delta, omega : Omega, ufunc : UpdateFunc) -> Delta {
+            println!("{:?}", delta);
+
+            if !delta.is_normal() {
                 return Delta::ZERO;
-            } else if dist > Delta::ZERO {
+            } else if delta > Delta::ZERO {
                 self.set_dir(true);
-            } else if dist < Delta::ZERO {
+            } else if delta < Delta::ZERO {
                 self.set_dir(false);
             }
 
-            let steps : u64 = self.consts.ang_to_steps_dir(dist.into()).abs() as u64;
+            let steps : u64 = self.consts.ang_to_steps_dir(delta.into()).abs() as u64;
             self.steps(steps, omega, ufunc);
 
             Delta((steps as f32) * self.consts.step_ang())

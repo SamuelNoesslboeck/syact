@@ -221,7 +221,7 @@ pub trait Component : crate::meas::SimpleMeas + crate::math::MathActor + core::f
         //     if let Some(s_comp) = self.super_comp() {
         //         s_comp.get_link()
         //     } 
-        // }
+    // }
     // 
 
     // JSON I/O 
@@ -268,7 +268,7 @@ pub trait Component : crate::meas::SimpleMeas + crate::math::MathActor + core::f
         set_gamma = self.gamma_for_super(set_gamma);
 
         if let Some(s_comp) = self.super_comp_mut() {
-            s_comp.measure(delta, omega, set_gamma, accuracy)
+        s_comp.measure(delta, omega, set_gamma, accuracy)
         } else { false }
     }   
 

@@ -70,41 +70,67 @@ impl Component for AsyncCtrl {
         self.comp.lock().unwrap().to_json()
     }
 
+    // Conversions
+        #[inline(always)]
+        fn gamma_for_super(&self, this_gamma : Gamma) -> Gamma {
+            this_gamma
+        }
+
+        #[inline(always)]
+        fn gamma_for_this(&self, super_gamma : Gamma) -> Gamma {
+            super_gamma
+        }
+
+        #[inline(always)]
+        fn delta_for_super(&self, this_delta : Delta, _ : Gamma) -> Delta {
+            this_delta
+        }
+
+        #[inline(always)]
+        fn delta_for_this(&self, super_delta : Delta, _ : Gamma) -> Delta {
+            super_delta
+        }
+
+        #[inline(always)]
+        fn omega_for_super(&self, this_omega : Omega, _ : Gamma) -> Omega {
+            this_omega
+        }
+
+        #[inline(always)]
+        fn omega_for_this(&self, super_omega : Omega, _ : Gamma) -> Omega {
+            super_omega
+        }
+
+        #[inline(always)]
+        fn alpha_for_super(&self, this_alpha : Alpha, _ : Gamma) -> Alpha {
+            this_alpha
+        }
+
+        #[inline(always)]
+        fn alpha_for_this(&self, super_alpha : Alpha, _ : Gamma) -> Alpha {
+            super_alpha
+        }
+    //
+
     fn link(&mut self, lk : crate::data::LinkedData) {
         if let Ok(mut s_comp) = self.comp.lock() {
             s_comp.link(lk);
         }
     }
 
-    fn drive_rel(&mut self, mut delta : Delta, mut omega : Omega) -> Delta {
-        let gamma = self.get_gamma(); 
-
-        delta = self.delta_for_super(delta, gamma);
-        omega = self.omega_for_super(omega, gamma);
-
-        let res = if let Ok(mut s_comp) = self.comp.lock() {
+    fn drive_rel(&mut self, delta : Delta, omega : Omega) -> Delta {
+        if let Ok(mut s_comp) = self.comp.lock() {
             s_comp.drive_rel(delta, omega)
-        } else { Delta::ZERO }; 
-        
-        self.delta_for_this(res, self.gamma_for_super(gamma))
+        } else { Delta::ZERO }
     }
 
-    fn drive_abs(&mut self, mut gamma : Gamma, mut omega : Omega) -> Delta {
-        omega = self.omega_for_super(omega, gamma);
-        gamma = self.gamma_for_super(gamma);
-
-        let res = if let Ok(mut s_comp) = self.comp.lock() {
+    fn drive_abs(&mut self, gamma : Gamma, omega : Omega) -> Delta {
+        if let Ok(mut s_comp) = self.comp.lock() {
             s_comp.drive_abs(gamma, omega)
-        } else { Delta::ZERO }; 
-
-        self.delta_for_this(res, gamma)
+        } else { Delta::ZERO }
     }
 
-    fn measure(&mut self, mut delta : Delta, mut omega : Omega, mut set_gamma : Gamma, accuracy : u64) -> bool {
-        delta = self.delta_for_super(delta, self.get_gamma());
-        omega = self.omega_for_super(omega, self.get_gamma());
-        set_gamma = self.gamma_for_super(set_gamma);
-
+    fn measure(&mut self, delta : Delta, omega : Omega, set_gamma : Gamma, accuracy : u64) -> bool {
         if let Ok(mut s_comp) = self.comp.lock() {
             s_comp.measure(delta, omega, set_gamma, accuracy)
         } else { false }
@@ -118,59 +144,37 @@ impl Component for AsyncCtrl {
         self.gamma_for_this(super_len)
     }
 
-    fn write_gamma(&mut self, mut gamma : Gamma) {
-        gamma = self.gamma_for_super(gamma);
-
+    fn write_gamma(&mut self, gamma : Gamma) {
         if let Ok(mut s_comp) = self.comp.lock() {
             s_comp.write_gamma(gamma);
         }
     }
 
-    fn get_limit_dest(&self, mut gamma : Gamma) -> Delta {
-        gamma = self.gamma_for_super(gamma);
-
-        let delta = if let Ok(s_comp) = self.comp.lock() {
+    fn get_limit_dest(&self, gamma : Gamma) -> Delta {
+        if let Ok(s_comp) = self.comp.lock() {
             s_comp.get_limit_dest(gamma)
-        } else { Delta::ZERO };
-
-        self.delta_for_this(delta, gamma)
+        } else { Delta::ZERO }
     }
 
-    fn set_endpoint(&mut self, mut set_gamma : Gamma) -> bool {
-        set_gamma = self.gamma_for_super(set_gamma);
-
+    fn set_endpoint(&mut self, set_gamma : Gamma) -> bool {
         if let Ok(mut s_comp) = self.comp.lock() {
             s_comp.set_endpoint(set_gamma)
         } else { false }
     }
 
-    fn set_limit(&mut self, mut min : Option<Gamma>, mut max : Option<Gamma>) {
-        min = match min {
-            Some(min) => Some(self.gamma_for_super(min)),
-            None => None
-        }; 
-
-        max = match max {
-            Some(max) => Some(self.gamma_for_super(max)),
-            None => None
-        };
-
+    fn set_limit(&mut self, min : Option<Gamma>, max : Option<Gamma>) {
         if let Ok(mut s_comp) = self.comp.lock() {
             s_comp.set_limit(min, max)
         }
     }
 
-    fn apply_load_force(&mut self, mut force : Force) { // TODO: Add overload protection
-        force = Force(self.gamma_for_this(Gamma(force.0)).0);
-
+    fn apply_load_force(&mut self, force : Force) { // TODO: Add overload protection
         if let Ok(mut s_comp) = self.comp.lock() {
             s_comp.apply_load_force(force);
         }
     }
 
-    fn apply_load_inertia(&mut self, mut inertia : Inertia) {
-        inertia = Inertia(self.gamma_for_this(self.gamma_for_this(Gamma(inertia.0))).0);
-
+    fn apply_load_inertia(&mut self, inertia : Inertia) {
         if let Ok(mut s_comp) = self.comp.lock() {
             s_comp.apply_load_inertia(inertia);
         }
