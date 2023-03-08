@@ -16,7 +16,8 @@ pub struct PWMOutput
 
     // Thread
     thr : Option<thread::JoinHandle<()>>,
-    pub sender : Option<Sender<[Time; 2]>>
+    sender : Option<Sender<[Time; 2]>>,
+    murder: Option<Receiver<()>>,
 }
 
 impl PWMOutput 
@@ -29,7 +30,8 @@ impl PWMOutput
             t_in: Time::NAN,
 
             thr: None,
-            sender: None
+            sender: None,
+            murder: None
         }
     }
 
@@ -37,6 +39,7 @@ impl PWMOutput
         let mut sys_pwm = pin::UniPin::new(self.pin).unwrap().into_output();
 
         let (sender, recv) : (Sender<[Time; 2]>, Receiver<[Time; 2]>) = channel();
+        let (victim, murder) : (Sender<()>, Receiver<()>) = channel();
 
         let thr = thread::spawn(move || {
             let mut t_ac = Time::NAN;
@@ -69,10 +72,13 @@ impl PWMOutput
 
                 PWMOutput::pulse(&mut sys_pwm, t_ac, t_in);
             }
+
+            victim.send(()).unwrap();
         }); 
 
         self.thr = Some(thr);
         self.sender = Some(sender);
+        self.murder = Some(murder);
     }
 
     pub fn pulse(sys_pwm : &mut pin::SimOutPin, t_ac : Time, t_in : Time) {
@@ -131,6 +137,12 @@ impl PWMOutput
 
         self.thr = None;
         self.sender = None;
+
+        if let Some(murder) = &mut self.murder {
+            murder.recv().unwrap();
+        }
+
+        self.murder = None;
     }
 }
 
