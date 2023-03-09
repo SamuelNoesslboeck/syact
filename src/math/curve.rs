@@ -53,7 +53,7 @@ pub fn mirror_curve(cur : &mut [Time]) {
     }
 }
 
-pub fn write_simple_move(cur : &mut [Time], omega_max : Omega, data : &StepperConst, var : &CompVars, u : f32) {
+pub fn write_simple_move(cur : &mut [Time], omega_max : Omega, data : &StepperConst, var : &CompVars, lk : &LinkedData) {
     let cur_len = cur.len(); 
 
     let delta = data.step_ang();
@@ -63,7 +63,7 @@ pub fn write_simple_move(cur : &mut [Time], omega_max : Omega, data : &StepperCo
     let mut alpha : Alpha;
 
     for i in 0 .. cur_len / 2 {
-        alpha = data.alpha_max_dyn(torque_dyn(data, omega, u), var);
+        alpha = data.alpha_max_dyn(torque_dyn(data, omega, lk.u), var) / lk.s_f;
         
         (time, omega) = next_node_simple(delta, omega, alpha);
 
@@ -83,7 +83,7 @@ pub fn create_simple_curve(consts : &StepperConst, vars : &CompVars, lk : &Linke
     let steps = consts.steps_from_ang(delta);
 
     let mut cur = crate_plain_curve(consts, steps as usize, omega_max);
-    write_simple_move(cur.as_mut_slice(), omega_max, consts, vars, lk.u);
+    write_simple_move(cur.as_mut_slice(), omega_max, consts, vars, lk);
 
     cur
 }
