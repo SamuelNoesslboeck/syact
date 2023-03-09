@@ -1,13 +1,13 @@
 use serde::{Serialize, Deserialize};
 
-use crate::{Component, StepperCtrl, StepperConst};
+use crate::{SyncComp, StepperCtrl};
 use crate::math::MathActor;
 use crate::meas::SimpleMeas;
 use crate::units::*;
 
 /// A bearing powered by a motor with a certain gear ratio
 #[derive(Debug, Serialize, Deserialize)]
-pub struct GearBearing 
+pub struct GearBearing
 {
     /// Steppercontrol for the motor of the bearing
     pub ctrl : StepperCtrl,
@@ -25,7 +25,7 @@ impl GearBearing {
     }
 }
 
-impl SimpleMeas for GearBearing 
+impl SimpleMeas for GearBearing
 {
     fn init_meas(&mut self, pin_meas : u8) {
         self.ctrl.init_meas(pin_meas);
@@ -39,24 +39,32 @@ impl MathActor for GearBearing
     }
 }
 
-impl Component for GearBearing 
+impl SyncComp for GearBearing
 {
+    // Setup 
+        fn setup(&mut self) { }
+
+        fn setup_async(&mut self) {
+            self.ctrl.setup_async();
+        }
+    // 
+
     // Data
-        fn consts(&self) -> StepperConst {
-            self.ctrl.consts()
+        fn link<'a>(&'a self) -> &'a crate::data::LinkedData {
+            self.ctrl.link()
         }
 
-        fn vars<'a>(&'a self) -> &'a crate::data::StepperVars {
+        fn vars<'a>(&'a self) -> &'a crate::data::CompVars {
             self.ctrl.vars()
         }
     // 
 
     // Super
-        fn super_comp(&self) -> Option<&dyn Component> {
+        fn super_comp(&self) -> Option<&dyn SyncComp> {
             Some(&self.ctrl)
         }
 
-        fn super_comp_mut(&mut self) -> Option<&mut dyn Component> {
+        fn super_comp_mut(&mut self) -> Option<&mut dyn SyncComp> {
             Some(&mut self.ctrl)
         }  
 

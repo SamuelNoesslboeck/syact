@@ -20,7 +20,7 @@ pub mod servo;
 
 /// Crate for variables read and written during runtime
 mod var;
-pub use var::StepperVars;
+pub use var::CompVars;
 
 use crate::units::*;
 //
@@ -81,6 +81,7 @@ impl StepperConst
         j_s: Inertia(0.000_005_7)
     }; 
     
+    // TODO: Rework
     #[cfg(feature = "std")]
     pub fn from_standard<'de, D>(deserializer: D) -> Result<Self, D::Error> 
     where 
@@ -103,13 +104,13 @@ impl StepperConst
 
     /// The maximum angular acceleration of the motor (in stall) in consideration of the current loads
     #[inline(always)]
-    pub fn alpha_max(&self, var : &StepperVars) -> Alpha {
+    pub fn alpha_max(&self, var : &CompVars) -> Alpha {
         self.t(var.t_load) / self.j(var.j_load)
     }
 
     /// The maximum angular acceleration of the motor, with a modified torque t_s
     #[inline(always)]
-    pub fn alpha_max_dyn(&self, t_s : Force, var : &StepperVars) -> Alpha {
+    pub fn alpha_max_dyn(&self, t_s : Force, var : &CompVars) -> Alpha {
         Self::t_dyn(t_s, var.t_load) / self.j(var.j_load)
     }
 
@@ -119,23 +120,25 @@ impl StepperConst
         Time(self.i_max * self.l / u)
     }
 
-    /// Time per step for the given omega [Unit s]
-    #[inline(always)]
-    pub fn step_time(&self, omega : Omega) -> Time {
-        2.0 * PI / (self.n_s as f32) / omega
-    }
-
     /// Omega for time per step [Unit 1/s]
     #[inline(always)]
     pub fn omega(&self, step_time : Time) -> Omega {
         (self.n_s as f32) / 2.0 / PI / step_time
     }
 
-    /// Get the angular distance of a step Unit rad [Unit 1]
-    #[inline(always)]
-    pub fn step_ang(&self) -> f32 {
-        2.0 * PI / self.n_s as f32
-    }
+    // Steps
+        /// Get the angular distance of a step Unit rad [Unit 1]
+        #[inline(always)]
+        pub fn step_ang(&self) -> Delta {
+            Delta(2.0 * PI / self.n_s as f32)
+        }
+
+        /// Time per step for the given omega [Unit s]
+        #[inline(always)]
+        pub fn step_time(&self, omega : Omega) -> Time {
+            2.0 * PI / (self.n_s as f32) / omega
+        }
+    // 
 
     // Load calculations
         /// Max motor torque when having a load [Unit Nm]
@@ -158,13 +161,23 @@ impl StepperConst
     //
 
     // Conversions
-        /// Converts the given angle in radians `ang` into the number of steps required to come as close as possible
-        pub fn ang_to_steps_dir(&self, ang : f32) -> i64 {
-            (ang / self.step_ang()).round() as i64
+        #[inline(always)]
+        pub fn steps_from_ang(&self, ang : Delta) -> u64 {
+            (ang.abs() / self.step_ang()).round() as u64
         }
 
-        /// Converts the given amount of steps `steps` into an angle
-        pub fn steps_to_ang_dir(&self, steps : i64) -> f32 {
+        #[inline(always)]
+        pub fn steps_from_ang_dir(&self, ang : Delta) -> i64 {
+            (ang / self.step_ang()).round() as i64
+        }   
+
+        #[inline(always)]
+        pub fn ang_from_steps(&self, steps : u64) -> Delta {
+            steps as f32 * self.step_ang()
+        }
+
+        #[inline(always)]
+        pub fn ang_from_steps_dir(&self, steps : i64) -> Delta {
             steps as f32 * self.step_ang()
         }
     //

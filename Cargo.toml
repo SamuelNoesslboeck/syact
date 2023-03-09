@@ -23,6 +23,5 @@ spin_sleep = "1.1.1"
 rppal = "0.14.1"
 
 [features]
-default = [ "std", "simple_async" ]
+default = [ "std" ]
 std = [ ]
-simple_async = [ "std" ]

@@ -36,7 +36,7 @@ pub type Error = std::io::Error;
 pub type Error = u8;
 
 // Relocated types
-pub use comp::{Component, ComponentGroup, Tool};
+pub use comp::{SyncComp, ComponentGroup, Tool};
 pub use ctrl::StepperCtrl;
 pub use data::StepperConst;
 
