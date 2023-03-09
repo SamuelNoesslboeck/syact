@@ -260,7 +260,7 @@ impl StepperCtrl {
 
     fn drive_simple_int(&mut self, delta : Delta, omega_max : Omega, intr : Interrupter) -> Result<(Delta, bool), crate::Error> {
         if !delta.is_normal() {
-            return Ok((Delta::ZERO, false));
+            return Ok((Delta::ZERO, true));
         }
         
         self.setup_drive(delta)?;
@@ -513,19 +513,20 @@ impl SyncComp for StepperCtrl {
             if min.is_some() {
                 self.limit.min = min;
             }
+
             if max.is_some() {
                 self.limit.max = max;
             }
         }
 
         fn lim_for_gamma(&self, gamma : Gamma) -> Delta {
-            return match self.limit.max {
+            return match self.limit.min {
                 Some(ang) => {
                     if gamma < ang {
                         gamma - ang
                     } else { Delta::ZERO }
                 },
-                None => match self.limit.max{
+                None => match self.limit.max {
                     Some(ang) => {
                         if gamma > ang {
                             gamma - ang

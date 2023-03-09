@@ -14,7 +14,7 @@ mod gear_bearing;
 pub use gear_bearing::GearBearing;
 
 pub mod group;
-pub use group::ComponentGroup;
+pub use group::SyncCompGroup;
 
 pub mod tool;
 pub use tool::Tool;

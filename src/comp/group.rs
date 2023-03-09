@@ -6,13 +6,28 @@ use core::ops::IndexMut;
 use crate::SyncComp;
 use crate::units::*;
 
-pub trait ComponentGroup<T, const N : usize> : IndexMut<usize, Output = Box<T>> 
+pub trait SyncCompGroup<T, const N : usize> : IndexMut<usize, Output = Box<T>> 
     where
         T: SyncComp,
         T: ?Sized
 {
+    // Setup
+        fn setup(&mut self) {
+            for i in 0 .. N {
+                self[i].setup();
+            }
+        }
+
+        #[cfg(feature = "std")]
+        fn setup_async(&mut self) {
+            for i in 0 .. N {
+                self[i].setup_async();
+            }
+        }
+    // 
+
     // Data
-        fn link_all(&mut self, lk : crate::data::LinkedData) {
+        fn link(&mut self, lk : crate::data::LinkedData) {
             for i in 0 .. N {
                 self[i].write_link(lk.clone())
             }
@@ -43,6 +58,32 @@ pub trait ComponentGroup<T, const N : usize> : IndexMut<usize, Output = Box<T>>
         }
         Ok(res)
     }
+
+    // Async
+        #[cfg(feature = "std")]
+        fn drive_rel_async(&mut self, deltas : [Delta; N], omegas : [Omega; N]) -> Result<(), crate::Error> {
+            for i in 0 .. N {
+                self[i].drive_rel_async(deltas[i], omegas[i])?;
+            }
+            Ok(())
+        }
+
+        #[cfg(feature = "std")]
+        fn drive_abs_async(&mut self, gamma : [Gamma; N], omegas : [Omega; N]) -> Result<(), crate::Error> {
+            for i in 0 .. N {
+                self[i].drive_abs_async(gamma[i], omegas[i])?;
+            }
+            Ok(())
+        }
+
+        #[cfg(feature = "std")]
+        fn await_inactive(&mut self) -> Result<(), crate::Error> {
+            for i in 0 .. N {
+                self[i].await_inactive()?;
+            }
+            Ok(())
+        }
+    // 
 
     // Position
         fn gammas(&self) -> [Gamma; N] {
@@ -97,7 +138,7 @@ pub trait ComponentGroup<T, const N : usize> : IndexMut<usize, Output = Box<T>>
     //
 
     // Load calculation
-        fn apply_inertia(&mut self, inertias : &[Inertia; N]) {
+        fn apply_inertias(&mut self, inertias : &[Inertia; N]) {
             for i in 0 .. N {
                 self[i].apply_inertia(inertias[i]);
             }
@@ -112,5 +153,5 @@ pub trait ComponentGroup<T, const N : usize> : IndexMut<usize, Output = Box<T>>
 }
 
 // Implementations
-impl<const N : usize> ComponentGroup<dyn SyncComp, N> for [Box<dyn SyncComp>; N] { }
-impl<const N : usize> ComponentGroup<dyn SyncComp, N> for Vec<Box<dyn SyncComp>> { }
+impl<const N : usize> SyncCompGroup<dyn SyncComp, N> for [Box<dyn SyncComp>; N] { }
+impl<const N : usize> SyncCompGroup<dyn SyncComp, N> for Vec<Box<dyn SyncComp>> { }

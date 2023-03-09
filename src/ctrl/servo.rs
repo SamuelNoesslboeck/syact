@@ -10,17 +10,17 @@ pub struct ServoDriver
     #[serde(skip)]
     gamma : Gamma,
     #[cfg_attr(feature = "std", serde(serialize_with = "ServoConst::to_standard", deserialize_with = "ServoConst::from_standard"))]
-    pub data : ServoConst,
+    pub consts : ServoConst,
 
     pwm : PWMOutput
 }
 
 impl ServoDriver 
 {
-    pub fn new(data : ServoConst, pin_pwm : u8) -> Self {
+    pub fn new(consts : ServoConst, pin_pwm : u8) -> Self {
         Self {
-            gamma: data.default_pos(),
-            data,
+            gamma: consts.default_pos(),
+            consts,
 
             pwm: PWMOutput::new(pin_pwm)
         }
@@ -28,7 +28,7 @@ impl ServoDriver
 
     pub fn start(&mut self) {
         self.pwm.start();
-        self.pwm.set_period(self.data.default_pulse(), self.data.period_time());
+        self.pwm.set_period(self.consts.default_pulse(), self.consts.period_time());
     }
 
     pub fn gamma(&self) -> Gamma {
@@ -36,17 +36,17 @@ impl ServoDriver
     }
 
     pub fn set_gamma(&mut self, gamma : Gamma) {
-        self.pwm.set_period(self.data.pulse_for_angle(gamma), self.data.period_time());
+        self.pwm.set_period(self.consts.pulse_for_angle(gamma), self.consts.period_time());
         self.gamma = gamma
     }
 
     pub fn perc(&self) -> f32 {
-        self.gamma / self.data.gamma_max
+        self.gamma / self.consts.gamma_max
     }
 
     pub fn set_perc(&mut self, perc : f32) {
-        self.pwm.set_period(self.data.pulse_for_perc(perc), self.data.period_time());
-        self.gamma = self.data.gamma_max * perc
+        self.pwm.set_period(self.consts.pulse_for_perc(perc), self.consts.period_time());
+        self.gamma = self.consts.gamma_max * perc
     }
 
     // Positions

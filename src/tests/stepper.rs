@@ -41,3 +41,25 @@ mod single_motor
         Ok(())
     }
 }
+
+mod curves
+{
+    use crate::{StepperConst};
+    use crate::data::{CompVars, LinkedData};
+    use crate::math;
+    use crate::units::*;
+   
+    #[test]
+    fn simple() {
+        let data = StepperConst::GEN;
+        let vars = CompVars { t_load: Force(0.1), j_load: Inertia(1.0) };
+        let lk = LinkedData::GEN;
+
+        let delta = Delta(0.62);
+        let omega = Omega(10.0);
+
+        dbg!(
+            math::curve::create_simple_curve(&data, &vars, &lk, delta, omega)
+        );
+    }
+}
