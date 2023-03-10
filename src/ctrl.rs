@@ -519,12 +519,27 @@ impl SyncComp for StepperCtrl {
             }
         }
 
+        #[inline]
+        fn reset_limit(&mut self, min : Option<Gamma>, max : Option<Gamma>) {
+            self.limit.min = min;
+            self.limit.max = max;
+        }
+
         fn lim_for_gamma(&self, gamma : Gamma) -> Delta {
-            return match self.limit.min {
+            match self.limit.min {
                 Some(ang) => {
                     if gamma < ang {
                         gamma - ang
-                    } else { Delta::ZERO }
+                    } else {
+                        match self.limit.max {
+                            Some(ang) => {
+                                if gamma > ang {
+                                    gamma - ang
+                                } else { Delta::ZERO }
+                            },
+                            None => Delta::ZERO
+                        }
+                    }
                 },
                 None => match self.limit.max {
                     Some(ang) => {
@@ -534,7 +549,7 @@ impl SyncComp for StepperCtrl {
                     },
                     None => Delta::NAN
                 }
-            };
+            }
         }
 
         fn set_end(&mut self, set_gamma : Gamma) {
@@ -548,12 +563,12 @@ impl SyncComp for StepperCtrl {
     //
 
     // Loads
-        #[inline]
+        #[inline(always)]
         fn apply_inertia(&mut self, j : Inertia) {
             self.vars.j_load = j;
         }
 
-        #[inline]
+        #[inline(always)]
         fn apply_force(&mut self, t : Force) {
             self.vars.t_load = t;
         }

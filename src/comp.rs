@@ -198,6 +198,31 @@ pub trait SyncComp : crate::meas::SimpleMeas + crate::math::MathActor + core::fm
             Delta::diff(self.gamma_for_super(this_gamma), self.gamma_for_super(this_gamma + this_delta))
         }
 
+        /// Converts the given **relative** distance [Delta] of the super component into the **relative** distance for the this component
+        /// 
+        /// # Example
+        /// 
+        /// When using a cylinder with a ratio of one half (movement speed will be halfed), 
+        /// this function will return a [Delta] *half in value* than the input [Delta].
+        /// 
+        /// ```rust
+        /// use stepper_lib::{SyncComp, StepperCtrl, StepperConst};
+        /// use stepper_lib::comp::Cylinder;
+        /// use stepper_lib::units::*;
+        /// 
+        /// // Position of components
+        /// const POS : Gamma = Gamma(10.0);
+        /// 
+        /// // Create a new cylinder (implements SyncComp)
+        /// let mut cylinder = Cylinder::new(
+        ///     // Stepper Motor as subcomponent (also implements SyncComp)
+        ///     StepperCtrl::new_sim(StepperConst::GEN), 
+        /// 0.5);    // Ratio is set to 0.5, which means for each radian the motor moves, the cylinder moves for 0.5 mm
+        /// 
+        /// cylinder.write_gamma(POS);
+        /// 
+        /// assert_eq!(Delta(1.0), cylinder.delta_for_this(Delta(2.0), POS));
+        /// ```
         #[inline(always)]
         fn delta_for_this(&self, super_delta : Delta, super_gamma : Gamma) -> Delta {
             Delta::diff(self.gamma_for_this(super_gamma), self.gamma_for_this(super_gamma + super_delta))
@@ -319,11 +344,7 @@ pub trait SyncComp : crate::meas::SimpleMeas + crate::math::MathActor + core::fm
     // 
 
     // Position
-        /// Returns the **absolute** position of the component
-        /// 
-        /// # Units
-        ///
-        /// - Returns either radians or millimeter
+        /// Returns the **absolute** position of the component.
         fn gamma(&self) -> Gamma {
             let super_len = if let Some(s_comp) = self.super_comp() {
                 s_comp.gamma()
@@ -332,11 +353,7 @@ pub trait SyncComp : crate::meas::SimpleMeas + crate::math::MathActor + core::fm
             self.gamma_for_this(super_len)
         }
 
-        /// Overwrite the current **absolute** position of the component without triggering actual movements
-        /// 
-        /// # Units
-        /// 
-        ///  - `dist` Either radians or millimeters
+        /// Overwrite the current **absolute** position of the component without triggering actual movements. 
         fn write_gamma(&mut self, mut gamma : Gamma) {
             gamma = self.gamma_for_super(gamma);
 
@@ -355,6 +372,44 @@ pub trait SyncComp : crate::meas::SimpleMeas + crate::math::MathActor + core::fm
         /// - is smaller than 0, the minimum has been reached by the returned amount
         /// - equal to 0, no limit has been reached
         /// - NaN, no limit has been set yet
+        /// 
+        /// # Example 
+        /// 
+        /// ```rust
+        /// use stepper_lib::{SyncComp, StepperCtrl, StepperConst};
+        /// use stepper_lib::comp::GearBearing;
+        /// use stepper_lib::units::*;
+        /// 
+        /// // Limits
+        /// const LIM_MAX : Gamma = Gamma(1.0);
+        /// const LIM_MIN : Gamma = Gamma(-2.0);
+        /// 
+        /// const LIM_MIN_LOWER : Gamma = Gamma(-3.0);
+        /// 
+        /// // Create a new gear bearing (implements SyncComp)
+        /// let mut gear = GearBearing::new(
+        ///     // Stepper Motor as subcomponent (also implements SyncComp)
+        ///     StepperCtrl::new_sim(StepperConst::GEN), 
+        /// 0.5);    // Ratio is set to 0.5, which means for each radian the motor moves, the bearing moves for half a radian
+        /// 
+        /// gear.set_limit(Some(LIM_MIN), Some(LIM_MAX));
+        /// 
+        /// assert_eq!(gear.lim_for_gamma(Gamma(1.5)), Delta(0.5));     // Over the maximum
+        /// assert_eq!(gear.lim_for_gamma(Gamma(0.5)), Delta::ZERO);    // In range
+        /// assert_eq!(gear.lim_for_gamma(Gamma(-4.0)), Delta(-2.0));   // Under the minimum
+        /// 
+        /// gear.set_limit(Some(LIM_MIN_LOWER), None);                // Overwriting only `min` limit
+        /// 
+        /// assert_eq!(gear.lim_for_gamma(Gamma(1.5)), Delta(0.5));     // Over the maximum
+        /// assert_eq!(gear.lim_for_gamma(Gamma(0.5)), Delta::ZERO);    // In range
+        /// assert_eq!(gear.lim_for_gamma(Gamma(-4.0)), Delta(-1.0));   // Under the minimum, but less
+        /// 
+        /// gear.reset_limit(Some(LIM_MIN_LOWER), None);              // Overwriting only both limits with [reset_limit()]
+        /// 
+        /// assert_eq!(gear.lim_for_gamma(Gamma(1.5)), Delta::ZERO);    // In range, as the `max` limit has been deleted
+        /// assert_eq!(gear.lim_for_gamma(Gamma(0.5)), Delta::ZERO);    // In range
+        /// assert_eq!(gear.lim_for_gamma(Gamma(-4.0)), Delta(-1.0));   // Under the minimum, but less
+        /// ```
         fn lim_for_gamma(&self, mut gamma : Gamma) -> Delta {
             gamma = self.gamma_for_super(gamma);
 
@@ -365,6 +420,9 @@ pub trait SyncComp : crate::meas::SimpleMeas + crate::math::MathActor + core::fm
             self.delta_for_this(delta, gamma)
         }
 
+        /// Sets an endpoint in the current direction by modifying the components limits. For example, when the component is moving
+        /// in the positive direction and the endpoint is set, this function will overwrite the current maximum limit with the current
+        /// gamma value. The component is then not allowed to move in the current direction anymore. 
         fn set_end(&mut self, mut set_gamma : Gamma) {
             set_gamma = self.gamma_for_super(set_gamma);
 
@@ -373,7 +431,104 @@ pub trait SyncComp : crate::meas::SimpleMeas + crate::math::MathActor + core::fm
             }
         }
 
+        /// Set the limits for the minimum and maximum angles that the component can reach, note that the limit will 
+        /// be converted and transfered to the super component if defined. 
+        /// 
+        /// Unlike [SyncComp::reset_limit()], this function does not overwrite the current `min` or `max` limits if they
+        /// are set to `None`. 
+        /// 
+        /// ```rust
+        /// use stepper_lib::{SyncComp, StepperCtrl, StepperConst};
+        /// use stepper_lib::comp::GearBearing;
+        /// use stepper_lib::units::*;
+        /// 
+        /// // Limits
+        /// const LIM_MAX : Gamma = Gamma(1.0);
+        /// const LIM_MIN : Gamma = Gamma(-2.0);
+        /// 
+        /// const LIM_MIN_LOWER : Gamma = Gamma(-3.0);
+        /// 
+        /// // Create a new gear bearing (implements SyncComp)
+        /// let mut gear = GearBearing::new(
+        ///     // Stepper Motor as subcomponent (also implements SyncComp)
+        ///     StepperCtrl::new_sim(StepperConst::GEN), 
+        /// 0.5);    // Ratio is set to 0.5, which means for each radian the motor moves, the bearing moves for half a radian
+        /// 
+        /// gear.set_limit(Some(LIM_MIN), Some(LIM_MAX));
+        /// 
+        /// assert_eq!(gear.lim_for_gamma(Gamma(1.5)), Delta(0.5));     // Over the maximum
+        /// assert_eq!(gear.lim_for_gamma(Gamma(0.5)), Delta::ZERO);    // In range
+        /// assert_eq!(gear.lim_for_gamma(Gamma(-4.0)), Delta(-2.0));   // Under the minimum
+        /// 
+        /// gear.set_limit(Some(LIM_MIN_LOWER), None);                // Overwriting only `min` limit
+        /// 
+        /// assert_eq!(gear.lim_for_gamma(Gamma(1.5)), Delta(0.5));     // Over the maximum
+        /// assert_eq!(gear.lim_for_gamma(Gamma(0.5)), Delta::ZERO);    // In range
+        /// assert_eq!(gear.lim_for_gamma(Gamma(-4.0)), Delta(-1.0));   // Under the minimum, but less
+        /// 
+        /// gear.reset_limit(Some(LIM_MIN_LOWER), None);              // Overwriting only both limits with [reset_limit()]
+        /// 
+        /// assert_eq!(gear.lim_for_gamma(Gamma(1.5)), Delta::ZERO);    // In range, as the `max` limit has been deleted
+        /// assert_eq!(gear.lim_for_gamma(Gamma(0.5)), Delta::ZERO);    // In range
+        /// assert_eq!(gear.lim_for_gamma(Gamma(-4.0)), Delta(-1.0));   // Under the minimum, but less
+        /// ```
         fn set_limit(&mut self, mut min : Option<Gamma>, mut max : Option<Gamma>) {
+            min = match min {   // Update the value with super component gammas
+                Some(min) => Some(self.gamma_for_super(min)),
+                None => None
+            }; 
+
+            max = match max {   // Update the value with super component gammas
+                Some(max) => Some(self.gamma_for_super(max)),
+                None => None
+            };
+
+            if let Some(s_comp) = self.super_comp_mut() {
+                s_comp.set_limit(min, max)      // If the super component exists
+            }
+        }
+
+        /// Set the limits for the minimum and maximum angles that the component can reach, note that the limit will 
+        /// be converted and transfered to the super component if this component has one. 
+        /// 
+        /// The difference to [SyncComp::set_limit()] is that this function **overwrites** the current limits set.
+        /// 
+        /// ```rust
+        /// use stepper_lib::{SyncComp, StepperCtrl, StepperConst};
+        /// use stepper_lib::comp::GearBearing;
+        /// use stepper_lib::units::*;
+        /// 
+        /// // Limits
+        /// const LIM_MAX : Gamma = Gamma(1.0);
+        /// const LIM_MIN : Gamma = Gamma(-2.0);
+        /// 
+        /// const LIM_MIN_LOWER : Gamma = Gamma(-3.0);
+        /// 
+        /// // Create a new gear bearing (implements SyncComp)
+        /// let mut gear = GearBearing::new(
+        ///     // Stepper Motor as subcomponent (also implements SyncComp)
+        ///     StepperCtrl::new_sim(StepperConst::GEN), 
+        /// 0.5);    // Ratio is set to 0.5, which means for each radian the motor moves, the bearing moves for half a radian
+        /// 
+        /// gear.set_limit(Some(LIM_MIN), Some(LIM_MAX));
+        /// 
+        /// assert_eq!(gear.lim_for_gamma(Gamma(1.5)), Delta(0.5));     // Over the maximum
+        /// assert_eq!(gear.lim_for_gamma(Gamma(0.5)), Delta::ZERO);    // In range
+        /// assert_eq!(gear.lim_for_gamma(Gamma(-4.0)), Delta(-2.0));   // Under the minimum
+        /// 
+        /// gear.set_limit(Some(LIM_MIN_LOWER), None);                // Overwriting only `min` limit
+        /// 
+        /// assert_eq!(gear.lim_for_gamma(Gamma(1.5)), Delta(0.5));     // Over the maximum
+        /// assert_eq!(gear.lim_for_gamma(Gamma(0.5)), Delta::ZERO);    // In range
+        /// assert_eq!(gear.lim_for_gamma(Gamma(-4.0)), Delta(-1.0));   // Under the minimum, but less
+        /// 
+        /// gear.reset_limit(Some(LIM_MIN_LOWER), None);              // Overwriting only both limits with [reset_limit()]
+        /// 
+        /// assert_eq!(gear.lim_for_gamma(Gamma(1.5)), Delta::ZERO);    // In range, as the `max` limit has been deleted
+        /// assert_eq!(gear.lim_for_gamma(Gamma(0.5)), Delta::ZERO);    // In range
+        /// assert_eq!(gear.lim_for_gamma(Gamma(-4.0)), Delta(-1.0));   // Under the minimum, but less
+        /// ```
+        fn reset_limit(&mut self, mut min : Option<Gamma>, mut max : Option<Gamma>) {
             min = match min {
                 Some(min) => Some(self.gamma_for_super(min)),
                 None => None
@@ -385,7 +540,7 @@ pub trait SyncComp : crate::meas::SimpleMeas + crate::math::MathActor + core::fm
             };
 
             if let Some(s_comp) = self.super_comp_mut() {
-                s_comp.set_limit(min, max)
+                s_comp.reset_limit(min, max)
             }
         }
     // 
@@ -398,8 +553,8 @@ pub trait SyncComp : crate::meas::SimpleMeas + crate::math::MathActor + core::fm
         /// use stepper_lib::comp::GearBearing;
         /// use stepper_lib::units::*;
         /// 
-        /// // Position of components
-        /// const INERTIA : Inertia = Inertia(4.0);
+        /// // Force to act upon the component
+        /// const FORCE : Force = Force(2.0);
         /// 
         /// // Create a new gear bearing (implements SyncComp)
         /// let mut gear = GearBearing::new(
@@ -407,10 +562,10 @@ pub trait SyncComp : crate::meas::SimpleMeas + crate::math::MathActor + core::fm
         ///     StepperCtrl::new_sim(StepperConst::GEN), 
         /// 0.5);    // Ratio is set to 0.5, which means for each radian the motor moves, the bearing moves for half a radian
         /// 
-        /// gear.apply_inertia(INERTIA);
+        /// gear.apply_force(FORCE);
         /// 
         /// assert_eq!(Gamma(2.0), gear.gamma_for_super(Gamma(1.0)));
-        /// assert_eq!(Inertia(1.0), gear.super_comp().unwrap().vars().j_load);
+        /// assert_eq!(Force(1.0), gear.super_comp().unwrap().vars().t_load);
         /// ```
         fn apply_force(&mut self, mut force : Force) { // TODO: Add overload protection
             force = Force(self.gamma_for_this(Gamma(force.0)).0);
@@ -427,7 +582,7 @@ pub trait SyncComp : crate::meas::SimpleMeas + crate::math::MathActor + core::fm
         /// use stepper_lib::comp::GearBearing;
         /// use stepper_lib::units::*;
         /// 
-        /// // Position of components
+        /// // Inertia to act upon the component
         /// const INERTIA : Inertia = Inertia(4.0);
         /// 
         /// // Create a new gear bearing (implements SyncComp)
@@ -436,6 +591,7 @@ pub trait SyncComp : crate::meas::SimpleMeas + crate::math::MathActor + core::fm
         ///     StepperCtrl::new_sim(StepperConst::GEN), 
         /// 0.5);    // Ratio is set to 0.5, which means for each radian the motor moves, the bearing moves for half a radian
         /// 
+        /// // Applies the inertia to the gearbearing component
         /// gear.apply_inertia(INERTIA);
         /// 
         /// assert_eq!(Gamma(2.0), gear.gamma_for_super(Gamma(1.0)));
@@ -453,7 +609,7 @@ pub trait SyncComp : crate::meas::SimpleMeas + crate::math::MathActor + core::fm
 
 impl dyn SyncComp 
 {
-    /// Returns the type name of the component as [String]. Used for configuration file parsing
+    /// Returns the type name of the component as [String]. Used for configuration file parsing.
     #[inline(always)]
     pub fn get_type_name(&self) -> &str {
         type_name::<Self>()
