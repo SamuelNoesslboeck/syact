@@ -65,10 +65,10 @@ impl Tool for AxialJoint {
 
 impl AxisTool for AxialJoint {
     fn rotate_abs(&mut self, gamma : Gamma) {
-        self.servo.set_gamma(Gamma(gamma.0 + self.servo.data.gamma_max.0 / 2.0))
+        self.servo.set_gamma(Gamma(gamma.0 + self.servo.consts.gamma_max.0 / 2.0))
     }
 
     fn gamma(&self) -> Gamma {
-        Gamma(self.servo.gamma().0 - self.servo.data.gamma_max.0 / 2.0)
+        Gamma(self.servo.gamma().0 - self.servo.consts.gamma_max.0 / 2.0)
     }
 }

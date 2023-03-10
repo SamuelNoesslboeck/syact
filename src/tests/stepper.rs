@@ -1,37 +1,65 @@
 mod single_motor 
 {
-    use crate::{StepperCtrl, StepperConst, Component};
+    use core::f32::consts::PI;
+
+    use crate::{StepperCtrl, StepperConst, SyncComp};
     use crate::data::LinkedData;
     use crate::units::*;
 
     const PIN_DIR : u8 = 27;
     const PIN_STEP : u8 = 19;
 
-    const STEPS : u64 = 50;
+    const DELTA : Delta = Delta(2.0 * PI);
     const OMEGA : Omega = Omega(10.0);
 
     #[test]
-    fn step() {
+    fn step() -> Result<(), crate::Error> {
         let mut ctrl = StepperCtrl::new(StepperConst::MOT_17HE15_1504S, PIN_DIR, PIN_STEP);
-        ctrl.link(LinkedData::GEN); 
+        ctrl.write_link(LinkedData::GEN); 
     
-        ctrl.apply_load_inertia(Inertia(0.000_1));
+        ctrl.apply_inertia(Inertia(0.000_1));
     
         println!("Doing single step ... ");
-        ctrl.step(Time(0.01), &crate::ctrl::types::UpdateFunc::None);
+        ctrl.step(Time(0.01))?;
         println!("Step done ... ");
+
+        Ok(())
     }
     
     #[test]
-    fn steps() {
+    fn drive() -> Result<(), crate::Error> {
         let mut ctrl = StepperCtrl::new(StepperConst::MOT_17HE15_1504S, PIN_DIR, PIN_STEP);
-        ctrl.link(LinkedData::GEN); 
+        ctrl.write_link(LinkedData::GEN); 
     
-        ctrl.apply_load_inertia(Inertia(0.4));
-        ctrl.apply_load_force(Force(0.10));
+        ctrl.apply_inertia(Inertia(0.4));
+        ctrl.apply_force(Force(0.10));
     
         println!("Staring to move");
-        ctrl.steps(STEPS, OMEGA, crate::ctrl::types::UpdateFunc::None);
-        println!("{} with max speed {:?}rad/s done", STEPS, OMEGA);
+        ctrl.drive_rel(DELTA, OMEGA)?;
+        println!("{} with max speed {:?}rad/s done", DELTA, OMEGA);
+
+        Ok(())
+    }
+}
+
+mod curves
+{
+    use crate::{StepperConst};
+    use crate::data::{CompVars, LinkedData};
+    use crate::math;
+    use crate::units::*;
+   
+    #[test]
+    fn simple() {
+        let data = StepperConst::GEN;
+        let vars = CompVars { t_load: Force(0.1), j_load: Inertia(1.0) };
+        let lk = LinkedData::GEN;
+
+        let delta = Delta(0.62);
+        let omega = Omega(10.0);
+
+        dbg!(
+            math::curve::create_simple_curve(&data, &vars, &lk, delta, omega)
+        );
     }
 }

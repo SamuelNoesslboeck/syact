@@ -1,10 +1,9 @@
 use core::any::type_name;
 
-use crate::StepperConst;
+use crate::data::{CompVars, LinkedData};
 use crate::units::*;
 
 // Submodules
-#[cfg(feature = "simple_async")] 
 pub mod asyn;
 
 mod cylinder;
@@ -17,11 +16,16 @@ mod gear_bearing;
 pub use gear_bearing::GearBearing;
 
 pub mod group;
-pub use group::ComponentGroup;
+pub use group::SyncCompGroup;
 
 pub mod tool;
 pub use tool::Tool;
 //
+
+#[inline(always)]
+fn no_super() -> crate::Error {
+    crate::Error::new(std::io::ErrorKind::NotFound, "No super component has been found")
+}
 
 /// Trait for defining controls and components of synchronous actuators
 /// 
@@ -29,15 +33,33 @@ pub use tool::Tool;
 /// 
 /// Components can have multiple layers, for example take a stepper motor with a geaerbox attached to it. The stepper motor and both combined will be a component, the later having 
 /// the stepper motor component defined as it's super component. (See [GearBearing])
-pub trait Component : crate::meas::SimpleMeas + crate::math::MathActor + core::fmt::Debug
-{
+pub trait SyncComp : crate::meas::SimpleMeas + crate::math::MathActor + core::fmt::Debug {
+    // Init 
+        fn setup(&mut self);
+
+        #[cfg(feature = "std")]
+        fn setup_async(&mut self);
+    // 
+
     // Data
-        /// Returns a copy of the stepper constants used by the [stepper driver](crate::ctrl::StepperDriver)
-        fn consts(&self) -> StepperConst;
+        fn vars<'a>(&'a self) -> &'a CompVars;
+
+        fn link<'a>(&'a self) -> &'a LinkedData;
+
+        #[inline]
+        fn write_link(&mut self, lk : crate::data::LinkedData) {
+            if let Some(s_comp) = self.super_comp_mut() {
+                s_comp.write_link(lk);
+            }
+        }
+
+        // JSON I/O 
+        /// Get the *JSON* data of the current component as [serde_json::Value]
+        fn to_json(&self) -> Result<serde_json::Value, serde_json::Error>;
     // 
 
     // Super
-        /// Returns a readonly reference to the super [Component] if it exists, returns `None` otherwise. If not overwritten by the 
+        /// Returns a readonly reference to the super [SyncComp] if it exists, returns `None` otherwise. If not overwritten by the 
         /// trait implementation, this function returns always `None`.
         /// 
         /// # Example
@@ -45,41 +67,42 @@ pub trait Component : crate::meas::SimpleMeas + crate::math::MathActor + core::f
         /// A super component would for example be the stepper motor for a cylinder (See [Cylinder])
         /// 
         /// ```rust
-        /// use stepper_lib::{Component, StepperCtrl, StepperConst};
+        /// use stepper_lib::{SyncComp, StepperCtrl, StepperConst};
         /// use stepper_lib::comp::Cylinder;
         /// use stepper_lib::units::*;
         /// 
-        /// // Create a new cylinder (implements Component)
+        /// // Create a new cylinder (implements SyncComp)
         /// let mut cylinder = Cylinder::new(
-        ///     // Stepper Motor as subcomponent (also implements Component)
+        ///     // Stepper Motor as subcomponent (also implements SyncComp)
         ///     StepperCtrl::new_sim(StepperConst::GEN), 
         /// 1.0);     
         /// 
         /// // Overwrite the cylinder position
         /// cylinder.write_gamma(Gamma(1.0));
         /// 
-        /// // Checks position of super component (The position of the super component won't be exactly 1.0, as the stepper motor can only move whole steps)
-        /// assert!((cylinder.super_comp().unwrap().get_gamma() - Gamma(1.0)).abs().0 <= StepperConst::GEN.step_ang());
+        /// // Checks position of super component (The position of the super component won't be exactly 1.0, 
+        /// // as the stepper motor can only move whole steps)
+        /// assert!((cylinder.super_comp().unwrap().gamma() - Gamma(1.0)).abs() <= StepperConst::GEN.step_ang());
         /// ```
         #[inline(always)]
-        fn super_comp(&self) -> Option<&dyn Component> {
+        fn super_comp(&self) -> Option<&dyn SyncComp> {
             None
         }
 
-        /// Returns a mutable reference to the super [Component] if it exists, returns `None` otherwise
+        /// Returns a mutable reference to the super [SyncComp] if it exists, returns `None` otherwise
         /// 
         /// # Example
         /// 
         /// A super component would for example be the stepper motor for a cylinder (See [Cylinder])
         /// 
         /// ```rust
-        /// use stepper_lib::{Component, StepperCtrl, StepperConst};
+        /// use stepper_lib::{SyncComp, StepperCtrl, StepperConst};
         /// use stepper_lib::comp::Cylinder;
         /// use stepper_lib::units::*;
         /// 
-        /// // Create a new cylinder (implements Component)
+        /// // Create a new cylinder (implements SyncComp)
         /// let mut cylinder = Cylinder::new(
-        ///     // Stepper Motor as subcomponent (also implements Component)
+        ///     // Stepper Motor as subcomponent (also implements SyncComp)
         ///     StepperCtrl::new_sim(StepperConst::GEN), 
         /// 1.0);    
         /// 
@@ -87,10 +110,10 @@ pub trait Component : crate::meas::SimpleMeas + crate::math::MathActor + core::f
         /// cylinder.super_comp_mut().unwrap().write_gamma(Gamma(1.0));
         /// 
         /// // Check own position (The position of the component won't be exactly 1.0, as the stepper motor can only move whole steps)
-        /// assert!((cylinder.super_comp().unwrap().get_gamma() - Gamma(1.0)).abs().0 <= StepperConst::GEN.step_ang());
+        /// assert!((cylinder.super_comp().unwrap().gamma() - Gamma(1.0)).abs() <= StepperConst::GEN.step_ang());
         /// ```
         #[inline(always)]
-        fn super_comp_mut(&mut self) -> Option<&mut dyn Component> {
+        fn super_comp_mut(&mut self) -> Option<&mut dyn SyncComp> {
             None
         }
 
@@ -102,14 +125,14 @@ pub trait Component : crate::meas::SimpleMeas + crate::math::MathActor + core::f
         /// this function will return a super distance *four times higher* than the input distance.
         /// 
         /// ```rust
-        /// use stepper_lib::{Component, StepperCtrl, StepperConst};
+        /// use stepper_lib::{SyncComp, StepperCtrl, StepperConst};
         /// use stepper_lib::comp::Cylinder;
         /// use stepper_lib::units::*;
         /// 
         /// 
-        /// // Create a new cylinder (implements Component)
+        /// // Create a new cylinder (implements SyncComp)
         /// let mut cylinder = Cylinder::new(
-        ///     // Stepper Motor as subcomponent (also implements Component)
+        ///     // Stepper Motor as subcomponent (also implements SyncComp)
         ///     StepperCtrl::new_sim(StepperConst::GEN), 
         /// 2.0);    // Ratio is set to 2.0, which means for each radian the motor moves, the cylinder moves for 2.0 mm
         /// 
@@ -128,13 +151,13 @@ pub trait Component : crate::meas::SimpleMeas + crate::math::MathActor + core::f
         /// this function will return a distance *four times higher* than the input super distance
         /// 
         /// ```rust
-        /// use stepper_lib::{Component, StepperCtrl, StepperConst};
+        /// use stepper_lib::{SyncComp, StepperCtrl, StepperConst};
         /// use stepper_lib::comp::Cylinder;
         /// use stepper_lib::units::*;
         /// 
-        /// // Create a new cylinder (implements Component)
+        /// // Create a new cylinder (implements SyncComp)
         /// let mut cylinder = Cylinder::new(
-        ///     // Stepper Motor as subcomponent (also implements Component)
+        ///     // Stepper Motor as subcomponent (also implements SyncComp)
         ///     StepperCtrl::new_sim(StepperConst::GEN), 
         /// 2.0);    // Ratio is set to 2.0, which means for each radian the motor moves, the cylinder moves for 2.0 mm
         /// 
@@ -153,18 +176,18 @@ pub trait Component : crate::meas::SimpleMeas + crate::math::MathActor + core::f
         /// this function will return a [Delta] *twice as high* than the input [Delta]
         /// 
         /// ```rust
-        /// use stepper_lib::{Component, StepperCtrl, StepperConst};
+        /// use stepper_lib::{SyncComp, StepperCtrl, StepperConst};
         /// use stepper_lib::comp::Cylinder;
         /// use stepper_lib::units::*;
         /// 
         /// // Position of components
         /// const POS : Gamma = Gamma(10.0);
         /// 
-        /// // Create a new cylinder (implements Component)
+        /// // Create a new cylinder (implements SyncComp)
         /// let mut cylinder = Cylinder::new(
-        ///     // Stepper Motor as subcomponent (also implements Component)
+        ///     // Stepper Motor as subcomponent (also implements SyncComp)
         ///     StepperCtrl::new_sim(StepperConst::GEN), 
-        /// 0.5);    // Ratio is set to 2.0, which means for each radian the motor moves, the cylinder moves for 2.0 mm
+        /// 0.5);    // Ratio is set to 0.5, which means for each radian the motor moves, the cylinder moves for 0.5 mm
         /// 
         /// cylinder.write_gamma(POS);
         /// 
@@ -206,71 +229,94 @@ pub trait Component : crate::meas::SimpleMeas + crate::math::MathActor + core::f
         }
     // 
 
-    // Link
-        /// Links this component to other components in the group, sharing data that is often relevant for multiple components in a group such as *voltage*
-        /// (See [LinkedData])
-        #[inline]
-        fn link(&mut self, lk : crate::data::LinkedData) {
-            if let Some(s_comp) = self.super_comp_mut() {
-                s_comp.link(lk);
-            }
+    // Movement
+        /// Moves the component by the relative distance as fast as possible, halts the script until 
+        /// the movement is finshed and returns the actual **absolute** distance traveled
+        fn drive_rel(&mut self, mut delta : Delta, mut omega : Omega) -> Result<Delta, crate::Error> {
+            let gamma = self.gamma(); 
+
+            delta = self.delta_for_super(delta, gamma);
+            omega = self.omega_for_super(omega, gamma);
+
+            let res = if let Some(s_comp) = self.super_comp_mut() {
+                s_comp.drive_rel(delta, omega)?
+            } else { 
+                return Err(no_super()); 
+            }; 
+            
+            Ok(self.delta_for_this(res, self.gamma_for_super(gamma)))
         }
 
-        /// Returns the [LinkedData] for the component
-        // fn get_link(&self) -> &Arc<LinkedData> {
-        //     if let Some(s_comp) = self.super_comp() {
-        //         s_comp.get_link()
-        //     } 
-        // }
+        /// Moves the component to the given position as fast as possible, halts the script until the 
+        /// movement is finished and returns the actual **abolute** distance traveled to. 
+        fn drive_abs(&mut self, mut gamma : Gamma, mut omega : Omega) -> Result<Delta, crate::Error> {
+            omega = self.omega_for_super(omega, gamma);
+            gamma = self.gamma_for_super(gamma);
+
+            let res = if let Some(s_comp) = self.super_comp_mut() {
+                s_comp.drive_abs(gamma, omega)?
+            } else { Delta::ZERO }; 
+
+            Ok(self.delta_for_this(res, gamma)) 
+        }
+
+        /// Measure the component by driving the component with the velocity `omega` until either 
+        /// the measurement condition is true or the maximum distance `delta` is reached. When the endpoint 
+        /// is reached, the controls will set the distance to `set_dist`. The lower the `accuracy`, the higher 
+        /// are the computational difficulties, as the function checks more often if the measure pin has a HIGH signal
+        /// 
+        /// # Sync
+        /// 
+        /// The thread is halted until the measurement is finished
+        fn measure(&mut self, mut delta : Delta, mut omega : Omega, mut set_gamma : Gamma) -> Result<Delta, crate::Error> {
+            delta = self.delta_for_super(delta, self.gamma());
+            omega = self.omega_for_super(omega, self.gamma());
+            set_gamma = self.gamma_for_super(set_gamma);
+
+            if let Some(s_comp) = self.super_comp_mut() {
+                s_comp.measure(delta, omega, set_gamma)
+            } else { Err(crate::Error::new(std::io::ErrorKind::NotFound, "No super component has been found")) }
+        }   
     // 
 
-    // JSON I/O 
-        /// Get the *JSON* data of the current component as [serde_json::Value]
-        fn to_json(&self) -> Result<serde_json::Value, serde_json::Error>;
+    // Async
+        #[cfg(feature = "std")]
+        fn drive_rel_async(&mut self, mut delta : Delta, mut omega : Omega) -> Result<(), crate::Error> {
+            let gamma = self.gamma(); 
+
+            delta = self.delta_for_super(delta, gamma);
+            omega = self.omega_for_super(omega, gamma);
+
+            if let Some(s_comp) = self.super_comp_mut() {
+                s_comp.drive_rel_async(delta, omega)?
+            }
+            
+            Err(no_super())
+        }
+
+        /// Moves the component to the given position as fast as possible, halts the script until the 
+        /// movement is finished and returns the actual **abolute** distance traveled to. 
+        #[cfg(feature = "std")]
+        fn drive_abs_async(&mut self, mut gamma : Gamma, mut omega : Omega) -> Result<(), crate::Error> {
+            omega = self.omega_for_super(omega, gamma);
+            gamma = self.gamma_for_super(gamma);
+
+            if let Some(s_comp) = self.super_comp_mut() {
+                s_comp.drive_abs_async(gamma, omega)?
+            }
+
+            Err(no_super())
+        }
+
+        #[cfg(feature = "std")]
+        fn await_inactive(&mut self) -> Result<(), crate::Error> {
+            if let Some(s_comp) = self.super_comp_mut() {
+                s_comp.await_inactive()? 
+            }
+
+            Err(no_super())
+        }
     // 
-
-    /// Moves the component by the relative distance as fast as possible, halts the script until the movement is finshed and returns the actual **absolute** distance traveled
-    fn drive_rel(&mut self, mut delta : Delta, mut omega : Omega) -> Delta {
-        let gamma = self.get_gamma(); 
-
-        delta = self.delta_for_super(delta, gamma);
-        omega = self.omega_for_super(omega, gamma);
-
-        let res = if let Some(s_comp) = self.super_comp_mut() {
-            s_comp.drive_rel(delta, omega)
-        } else { Delta::ZERO }; 
-        
-        self.delta_for_this(res, self.gamma_for_super(gamma))
-    }
-
-    /// Moves the component to the given position as fast as possible, halts the script until the movement is finished and returns the actual **abolute** distance traveled to. 
-    fn drive_abs(&mut self, mut gamma : Gamma, mut omega : Omega) -> Delta {
-        omega = self.omega_for_super(omega, gamma);
-        gamma = self.gamma_for_super(gamma);
-
-        let res = if let Some(s_comp) = self.super_comp_mut() {
-            s_comp.drive_abs(gamma, omega)
-        } else { Delta::ZERO }; 
-
-        self.delta_for_this(res, gamma)
-    }
-
-    /// Measure the component by driving the component with the velocity `omega` until either the measurement condition is true or the maximum distance `delta` 
-    /// is reached. When the endpoint is reached, the controls will set the distance to `set_dist`. The lower the `accuracy`, the higher 
-    /// are the computational difficulties, as the function checks more often if the measure pin has a HIGH signal
-    /// 
-    /// # Sync
-    /// 
-    /// The thread is halted until the measurement is finished
-    fn measure(&mut self, mut delta : Delta, mut omega : Omega, mut set_gamma : Gamma, accuracy : u64) -> bool {
-        delta = self.delta_for_super(delta, self.get_gamma());
-        omega = self.omega_for_super(omega, self.get_gamma());
-        set_gamma = self.gamma_for_super(set_gamma);
-
-        if let Some(s_comp) = self.super_comp_mut() {
-            s_comp.measure(delta, omega, set_gamma, accuracy)
-        } else { false }
-    }   
 
     // Position
         /// Returns the **absolute** position of the component
@@ -278,9 +324,9 @@ pub trait Component : crate::meas::SimpleMeas + crate::math::MathActor + core::f
         /// # Units
         ///
         /// - Returns either radians or millimeter
-        fn get_gamma(&self) -> Gamma {
+        fn gamma(&self) -> Gamma {
             let super_len = if let Some(s_comp) = self.super_comp() {
-                s_comp.get_gamma()
+                s_comp.gamma()
             } else { Gamma::ZERO };
 
             self.gamma_for_this(super_len)
@@ -299,7 +345,8 @@ pub trait Component : crate::meas::SimpleMeas + crate::math::MathActor + core::f
             }
         }
 
-        /// Returns if any limit positions have been reached. The value returned can either be radians or millimeters, depending on the type of component
+        /// Returns if any limit positions have been reached. The value returned can either be radians or millimeters, 
+        /// depending on the type of component.
         /// 
         /// # Limits
         /// 
@@ -308,22 +355,22 @@ pub trait Component : crate::meas::SimpleMeas + crate::math::MathActor + core::f
         /// - is smaller than 0, the minimum has been reached by the returned amount
         /// - equal to 0, no limit has been reached
         /// - NaN, no limit has been set yet
-        fn get_limit_dest(&self, mut gamma : Gamma) -> Delta {
+        fn lim_for_gamma(&self, mut gamma : Gamma) -> Delta {
             gamma = self.gamma_for_super(gamma);
 
             let delta = if let Some(s_comp) = self.super_comp() {
-                s_comp.get_limit_dest(gamma)
+                s_comp.lim_for_gamma(gamma)
             } else { Delta::ZERO };
 
             self.delta_for_this(delta, gamma)
         }
 
-        fn set_endpoint(&mut self, mut set_gamma : Gamma) -> bool {
+        fn set_end(&mut self, mut set_gamma : Gamma) {
             set_gamma = self.gamma_for_super(set_gamma);
 
             if let Some(s_comp) = self.super_comp_mut() {
-                s_comp.set_endpoint(set_gamma)
-            } else { false }
+                s_comp.set_end(set_gamma)
+            }
         }
 
         fn set_limit(&mut self, mut min : Option<Gamma>, mut max : Option<Gamma>) {
@@ -345,26 +392,66 @@ pub trait Component : crate::meas::SimpleMeas + crate::math::MathActor + core::f
 
     // Load calculation
         /// Apply a load force to the component, slowing down movements 
-        fn apply_load_force(&mut self, mut force : Force) { // TODO: Add overload protection
+        /// 
+        /// ```rust
+        /// use stepper_lib::{SyncComp, StepperCtrl, StepperConst};
+        /// use stepper_lib::comp::GearBearing;
+        /// use stepper_lib::units::*;
+        /// 
+        /// // Position of components
+        /// const INERTIA : Inertia = Inertia(4.0);
+        /// 
+        /// // Create a new gear bearing (implements SyncComp)
+        /// let mut gear = GearBearing::new(
+        ///     // Stepper Motor as subcomponent (also implements SyncComp)
+        ///     StepperCtrl::new_sim(StepperConst::GEN), 
+        /// 0.5);    // Ratio is set to 0.5, which means for each radian the motor moves, the bearing moves for half a radian
+        /// 
+        /// gear.apply_inertia(INERTIA);
+        /// 
+        /// assert_eq!(Gamma(2.0), gear.gamma_for_super(Gamma(1.0)));
+        /// assert_eq!(Inertia(1.0), gear.super_comp().unwrap().vars().j_load);
+        /// ```
+        fn apply_force(&mut self, mut force : Force) { // TODO: Add overload protection
             force = Force(self.gamma_for_this(Gamma(force.0)).0);
 
             if let Some(s_comp) = self.super_comp_mut() {
-                s_comp.apply_load_force(force);
+                s_comp.apply_force(force);
             }
         }
         
         /// Apply a load inertia to the component, slowing down movements
-        fn apply_load_inertia(&mut self, mut inertia : Inertia) {
+        /// 
+        /// ```rust
+        /// use stepper_lib::{SyncComp, StepperCtrl, StepperConst};
+        /// use stepper_lib::comp::GearBearing;
+        /// use stepper_lib::units::*;
+        /// 
+        /// // Position of components
+        /// const INERTIA : Inertia = Inertia(4.0);
+        /// 
+        /// // Create a new gear bearing (implements SyncComp)
+        /// let mut gear = GearBearing::new(
+        ///     // Stepper Motor as subcomponent (also implements SyncComp)
+        ///     StepperCtrl::new_sim(StepperConst::GEN), 
+        /// 0.5);    // Ratio is set to 0.5, which means for each radian the motor moves, the bearing moves for half a radian
+        /// 
+        /// gear.apply_inertia(INERTIA);
+        /// 
+        /// assert_eq!(Gamma(2.0), gear.gamma_for_super(Gamma(1.0)));
+        /// assert_eq!(Inertia(1.0), gear.super_comp().unwrap().vars().j_load);
+        /// ```
+        fn apply_inertia(&mut self, mut inertia : Inertia) {
             inertia = Inertia(self.gamma_for_this(self.gamma_for_this(Gamma(inertia.0))).0);
 
             if let Some(s_comp) = self.super_comp_mut() {
-                s_comp.apply_load_inertia(inertia);
+                s_comp.apply_inertia(inertia);
             }
         }
     // 
 }
 
-impl dyn Component 
+impl dyn SyncComp 
 {
     /// Returns the type name of the component as [String]. Used for configuration file parsing
     #[inline(always)]

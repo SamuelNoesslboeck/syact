@@ -1,6 +1,6 @@
 use serde::{Serialize, Deserialize};
 
-use crate::Component;
+use crate::SyncComp;
 use crate::ctrl::StepperCtrl;
 
 use crate::units::*;
@@ -36,27 +36,39 @@ impl crate::math::MathActor for Cylinder
     }
 }
 
-impl crate::meas::SimpleMeas for Cylinder 
+impl crate::meas::SimpleMeas for Cylinder
 {
     fn init_meas(&mut self, pin_meas : u8) {
         self.ctrl.init_meas(pin_meas)
     }
 }
 
-impl Component for Cylinder 
+impl SyncComp for Cylinder 
 {
+    // Setup 
+        fn setup(&mut self) { }
+
+        fn setup_async(&mut self) {
+            self.ctrl.setup_async();
+        }
+    // 
+
     // Data
-        fn consts(&self) -> crate::StepperConst {
-            self.ctrl.consts()
+        fn link<'a>(&'a self) -> &'a crate::data::LinkedData {
+            self.ctrl.link()
+        }
+
+        fn vars<'a>(&'a self) -> &'a crate::data::CompVars {
+            self.ctrl.vars()
         }
     // 
 
     // Super
-        fn super_comp(&self) -> Option<&dyn Component> {
+        fn super_comp(&self) -> Option<&dyn SyncComp> {
             Some(&self.ctrl)
         }
 
-        fn super_comp_mut(&mut self) -> Option<&mut dyn Component> {
+        fn super_comp_mut(&mut self) -> Option<&mut dyn SyncComp> {
             Some(&mut self.ctrl)
         }
         
@@ -70,8 +82,8 @@ impl Component for Cylinder
     // 
 
     // Link
-        fn link(&mut self, lk : crate::data::LinkedData) {
-            self.ctrl.link(lk);    
+        fn write_link(&mut self, lk : crate::data::LinkedData) {
+            self.ctrl.write_link(lk);    
         }
     //
 
@@ -82,12 +94,12 @@ impl Component for Cylinder
     // 
 
     // Loads
-        fn apply_load_force(&mut self, force : Force) {
-            self.ctrl.apply_load_force(force * self.rte_ratio / 1000.0)
+        fn apply_force(&mut self, force : Force) {
+            self.ctrl.apply_force(force * self.rte_ratio / 1000.0)
         }
 
-        fn apply_load_inertia(&mut self, inertia : Inertia) {
-            self.ctrl.apply_load_inertia(inertia * self.rte_ratio * self.rte_ratio / 1000_000.0)
+        fn apply_inertia(&mut self, inertia : Inertia) {
+            self.ctrl.apply_inertia(inertia * self.rte_ratio * self.rte_ratio / 1000_000.0)
         }
     //
 }

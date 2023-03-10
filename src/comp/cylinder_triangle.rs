@@ -1,6 +1,6 @@
 use serde::{Serialize, Deserialize};
 
-use crate::Component;
+use crate::SyncComp;
 use crate::comp::Cylinder;
 use crate::data::LinkedData;
 use crate::math::MathActor;
@@ -33,7 +33,7 @@ pub struct CylinderTriangle
     pub l_b : f32,
 }
 
-impl CylinderTriangle 
+impl CylinderTriangle
 {
     /// Creates a new instance of a [CylinderTriangle], 
     /// writing an initial length of the longer segments the cylinder, preventing initial calculation errors
@@ -89,19 +89,31 @@ impl SimpleMeas for CylinderTriangle
     }
 }
 
-impl Component for CylinderTriangle {
+impl SyncComp for CylinderTriangle {
+    // Setup 
+        fn setup(&mut self) { }
+
+        fn setup_async(&mut self) {
+            self.cylinder.setup_async();
+        }
+    // 
+
     // Data
-        fn consts(&self) -> crate::StepperConst {
-            self.cylinder.consts()
+        fn link<'a>(&'a self) -> &'a crate::data::LinkedData {
+            self.cylinder.link()
+        }
+
+        fn vars<'a>(&'a self) -> &'a crate::data::CompVars {
+            self.cylinder.vars()
         }
     // 
 
     // Super 
-        fn super_comp(&self) -> Option<&dyn Component> {
+        fn super_comp(&self) -> Option<&dyn SyncComp> {
             Some(&self.cylinder)
         }
 
-        fn super_comp_mut(&mut self) -> Option<&mut dyn Component> {
+        fn super_comp_mut(&mut self) -> Option<&mut dyn SyncComp> {
             Some(&mut self.cylinder)
         }
 
@@ -121,8 +133,8 @@ impl Component for CylinderTriangle {
     // 
 
     // Link
-        fn link(&mut self, lk : LinkedData) {
-            self.cylinder.link(lk);
+        fn write_link(&mut self, lk : LinkedData) {
+            self.cylinder.write_link(lk);
         }
     //
 
@@ -135,42 +147,42 @@ impl Component for CylinderTriangle {
     /// See [Component::drive_rel()]
     /// - `dist`is the angular distance to be moved (Unit radians)
     /// - `vel` is the cylinders extend velocity (Unit mm per second)
-    fn drive_rel(&mut self, mut delta : Delta, omega : Omega) -> Delta {
-        let gamma = self.get_gamma();
+    fn drive_rel(&mut self, mut delta : Delta, omega : Omega) -> Result<Delta, crate::Error> {
+        let gamma = self.gamma();
         
         delta = self.delta_for_super(delta, gamma);
-        delta = self.cylinder.drive_rel(delta, omega);
+        delta = self.cylinder.drive_rel(delta, omega)?;
 
-        self.delta_for_this(delta, self.gamma_for_super(gamma))
+        Ok(self.delta_for_this(delta, self.gamma_for_super(gamma)))
     }
 
     /// See [Component::drive_abs]
     /// - `dist`is the angular distance to be moved (Unit radians)
     /// - `vel` is the cylinders extend velocity (Unit mm per second)
-    fn drive_abs(&mut self, mut gamma : Gamma, omega : Omega) -> Delta {
+    fn drive_abs(&mut self, mut gamma : Gamma, omega : Omega) -> Result<Delta, crate::Error> {
         gamma = self.gamma_for_super(gamma);
 
-        let delta = self.cylinder.drive_abs(gamma, omega);
+        let delta = self.cylinder.drive_abs(gamma, omega)?;
 
-        self.delta_for_this(delta, gamma)
+        Ok(self.delta_for_this(delta, gamma))
     }
 
     /// See [Component::measure()]
     /// - `dist` is the maximum distance for the cylinder in mm
     /// - `vel` is the maximum linear velocity for the cylinder in mm per second
     /// - `set_dist` is the set distance for the cylinder in mm
-    fn measure(&mut self, delta : Delta, omega : Omega, set_gamma : Gamma, accuracy : u64) -> bool {
+    fn measure(&mut self, delta : Delta, omega : Omega, set_gamma : Gamma) -> Result<Delta, crate::Error> {
         self.cylinder.measure(
-            delta, omega, self.gamma_for_super(set_gamma), accuracy)
+            delta, omega, self.gamma_for_super(set_gamma))
     }
     
     // Forces
-        fn apply_load_force(&mut self, force : Force) {
-            self.cylinder.apply_load_force(force)
+        fn apply_force(&mut self, force : Force) {
+            self.cylinder.apply_force(force)
         }
 
-        fn apply_load_inertia(&mut self, inertia : Inertia) {
-            self.cylinder.apply_load_inertia(inertia)
+        fn apply_inertia(&mut self, inertia : Inertia) {
+            self.cylinder.apply_inertia(inertia)
         }
     // 
 }
