@@ -4,6 +4,8 @@ use crate::data::{CompVars, LinkedData};
 use crate::units::*;
 
 // Submodules
+pub mod asyn;
+
 mod cylinder;
 pub use cylinder::Cylinder;
 
@@ -390,6 +392,26 @@ pub trait SyncComp : crate::meas::SimpleMeas + crate::math::MathActor + core::fm
 
     // Load calculation
         /// Apply a load force to the component, slowing down movements 
+        /// 
+        /// ```rust
+        /// use stepper_lib::{SyncComp, StepperCtrl, StepperConst};
+        /// use stepper_lib::comp::GearBearing;
+        /// use stepper_lib::units::*;
+        /// 
+        /// // Position of components
+        /// const INERTIA : Inertia = Inertia(4.0);
+        /// 
+        /// // Create a new gear bearing (implements SyncComp)
+        /// let mut gear = GearBearing::new(
+        ///     // Stepper Motor as subcomponent (also implements SyncComp)
+        ///     StepperCtrl::new_sim(StepperConst::GEN), 
+        /// 0.5);    // Ratio is set to 0.5, which means for each radian the motor moves, the bearing moves for half a radian
+        /// 
+        /// gear.apply_inertia(INERTIA);
+        /// 
+        /// assert_eq!(Gamma(2.0), gear.gamma_for_super(Gamma(1.0)));
+        /// assert_eq!(Inertia(1.0), gear.super_comp().unwrap().vars().j_load);
+        /// ```
         fn apply_force(&mut self, mut force : Force) { // TODO: Add overload protection
             force = Force(self.gamma_for_this(Gamma(force.0)).0);
 
