@@ -111,7 +111,7 @@ impl StepperConst
     /// The maximum angular acceleration of the motor, with a modified torque t_s
     #[inline(always)]
     pub fn alpha_max_dyn(&self, t_s : Force, var : &CompVars) -> Alpha {
-        Self::t_dyn(t_s, var.t_load) / self.j(var.j_load)
+        self.t_dyn(t_s, var.t_load) / self.j(var.j_load)
     }
 
     /// The inductivity constant [Unit s]
@@ -149,8 +149,12 @@ impl StepperConst
 
         /// Max motor torque when having a load, using a modified base torque t_s [Unit Nm]
         #[inline(always)]
-        pub fn t_dyn(t_s : Force, t_load : Force) -> Force { // TODO: Add overload protection
+        pub fn t_dyn(&self, mut t_s : Force, t_load : Force) -> Force {                    // TODO: Add overload protection #15
             assert!(t_s > Force(0.0), "Overload detected! Force: {}", t_s);
+
+            if t_s.is_nan() {
+                t_s = self.t_s;
+            }
 
             Force((t_s - t_load).0.clamp(0.0, t_s.0))
         }

@@ -7,7 +7,7 @@ use crate::units::*;
 pub fn torque_dyn(data : &StepperConst, mut omega : Omega, u : f32) -> Force {
     omega = omega.abs();
     
-    if omega == Omega::ZERO {
+    if !omega.is_normal() {
         return data.t_s;
     }
 
