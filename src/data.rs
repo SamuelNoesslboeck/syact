@@ -150,6 +150,8 @@ impl StepperConst
         /// Max motor torque when having a load, using a modified base torque t_s [Unit Nm]
         #[inline(always)]
         pub fn t_dyn(t_s : Force, t_load : Force) -> Force { // TODO: Add overload protection
+            assert!(t_s > Force(0.0), "Overload detected! Force: {}", t_s);
+
             Force((t_s - t_load).0.clamp(0.0, t_s.0))
         }
 
