@@ -192,7 +192,11 @@ additive_unit!(Time);
 
 impl Into<Duration> for Time {
     #[inline(always)]
-    fn into(self) -> Duration {
+    fn into(mut self) -> Duration {
+        if self.0.is_sign_negative() {
+            println!(" -> Fallback in Time unit used! {}", self.0); // Remove fallback
+            self.0 = self.0.abs();
+        }
         Duration::from_secs_f32(self.0) 
     }
 }
