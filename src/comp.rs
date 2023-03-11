@@ -35,6 +35,7 @@ fn no_super() -> crate::Error {
 /// the stepper motor component defined as it's super component. (See [GearBearing])
 pub trait SyncComp : crate::meas::SimpleMeas + crate::math::MathActor + core::fmt::Debug {
     // Init 
+        /// Calls all required functions to assure the components functionallity. 
         fn setup(&mut self);
 
         #[cfg(feature = "std")]
@@ -46,7 +47,7 @@ pub trait SyncComp : crate::meas::SimpleMeas + crate::math::MathActor + core::fm
 
         fn link<'a>(&'a self) -> &'a LinkedData;
 
-        #[inline]
+        #[inline(always)]
         fn write_link(&mut self, lk : crate::data::LinkedData) {
             if let Some(s_comp) = self.super_comp_mut() {
                 s_comp.write_link(lk);
