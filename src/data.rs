@@ -161,24 +161,31 @@ impl StepperConst
     //
 
     // Conversions
+        /// Converts the given angle `ang` into a absolute number of steps
         #[inline(always)]
-        pub fn steps_from_ang(&self, ang : Delta) -> u64 {
+        pub fn steps_from_ang_abs(&self, ang : Delta) -> u64 {
             (ang.abs() / self.step_ang()).round() as u64
         }
 
         #[inline(always)]
-        pub fn steps_from_ang_dir(&self, ang : Delta) -> i64 {
+        pub fn steps_from_ang(&self, ang : Delta) -> i64 {
             (ang / self.step_ang()).round() as i64
         }   
 
         #[inline(always)]
-        pub fn ang_from_steps(&self, steps : u64) -> Delta {
+        pub fn ang_from_steps_abs(&self, steps : u64) -> Delta {
             steps as f32 * self.step_ang()
         }
 
         #[inline(always)]
-        pub fn ang_from_steps_dir(&self, steps : i64) -> Delta {
+        pub fn ang_from_steps(&self, steps : i64) -> Delta {
             steps as f32 * self.step_ang()
+        }
+
+        // Comparision
+        #[inline(always)]
+        pub fn is_in_step_range(&self, steps : i64, ang : Delta) -> bool {
+            self.steps_from_ang(ang) == steps
         }
     //
 }

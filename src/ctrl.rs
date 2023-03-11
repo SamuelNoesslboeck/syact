@@ -500,12 +500,12 @@ impl SyncComp for StepperCtrl {
     // Position
         #[inline]
         fn gamma(&self) -> Gamma {
-            Gamma::ZERO + self.consts.ang_from_steps_dir(self.pos)
+            Gamma::ZERO + self.consts.ang_from_steps(self.pos)
         }   
 
         #[inline]
         fn write_gamma(&mut self, pos : Gamma) {
-            self.pos = self.consts.steps_from_ang_dir(pos - Gamma::ZERO);
+            self.pos = self.consts.steps_from_ang(pos - Gamma::ZERO);
         }
 
         #[inline]
@@ -553,7 +553,7 @@ impl SyncComp for StepperCtrl {
         }
 
         fn set_end(&mut self, set_gamma : Gamma) {
-            self.pos = self.consts.steps_from_ang_dir(set_gamma - Gamma::ZERO);
+            self.pos = self.consts.steps_from_ang(set_gamma - Gamma::ZERO);
     
             self.set_limit(
                 if self.dir { self.limit.min } else { Some(set_gamma) },

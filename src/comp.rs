@@ -346,6 +346,25 @@ pub trait SyncComp : crate::meas::SimpleMeas + crate::math::MathActor + core::fm
 
     // Position
         /// Returns the **absolute** position of the component.
+        /// 
+        /// ```rust
+        /// use stepper_lib::{SyncComp, StepperCtrl, StepperConst};
+        /// use stepper_lib::comp::Cylinder;
+        /// use stepper_lib::units::*;
+        /// 
+        /// // Position of components
+        /// const POS : Gamma = Gamma(10.0);
+        /// 
+        /// // Create a new cylinder (implements SyncComp)
+        /// let mut cylinder = Cylinder::new(
+        ///     // Stepper Motor as subcomponent (also implements SyncComp)
+        ///     StepperCtrl::new_sim(StepperConst::GEN), 
+        /// 0.5);    // Ratio is set to 0.5, which means for each radian the motor moves, the cylinder moves for 0.5 mm
+        /// 
+        /// cylinder.write_gamma(POS);
+        /// 
+        /// assert!((cylinder.gamma() - POS).abs() < Delta(0.05));      // Check with small tolerance
+        /// ```
         fn gamma(&self) -> Gamma {
             let super_len = if let Some(s_comp) = self.super_comp() {
                 s_comp.gamma()
@@ -355,6 +374,28 @@ pub trait SyncComp : crate::meas::SimpleMeas + crate::math::MathActor + core::fm
         }
 
         /// Overwrite the current **absolute** position of the component without triggering actual movements. 
+        /// 
+        /// Be aware that only full steps can be written in distance, meaning that for position comparision a 
+        /// small tolerance has to be considered, as the value written won't be the exact gamma value given.
+        /// 
+        /// ```rust
+        /// use stepper_lib::{SyncComp, StepperCtrl, StepperConst};
+        /// use stepper_lib::comp::Cylinder;
+        /// use stepper_lib::units::*;
+        /// 
+        /// // Position of components
+        /// const POS : Gamma = Gamma(10.0);
+        /// 
+        /// // Create a new cylinder (implements SyncComp)
+        /// let mut cylinder = Cylinder::new(
+        ///     // Stepper Motor as subcomponent (also implements SyncComp)
+        ///     StepperCtrl::new_sim(StepperConst::GEN), 
+        /// 0.5);    // Ratio is set to 0.5, which means for each radian the motor moves, the cylinder moves for 0.5 mm
+        /// 
+        /// cylinder.write_gamma(POS);
+        /// 
+        /// assert!((cylinder.gamma() - POS).abs() < Delta(0.05));      // Check with small tolerance
+        /// ```
         fn write_gamma(&mut self, mut gamma : Gamma) {
             gamma = self.gamma_for_super(gamma);
 
@@ -424,6 +465,29 @@ pub trait SyncComp : crate::meas::SimpleMeas + crate::math::MathActor + core::fm
         /// Sets an endpoint in the current direction by modifying the components limits. For example, when the component is moving
         /// in the positive direction and the endpoint is set, this function will overwrite the current maximum limit with the current
         /// gamma value. The component is then not allowed to move in the current direction anymore. 
+        /// 
+        /// ```rust
+        /// use stepper_lib::{SyncComp, StepperCtrl, StepperConst};
+        /// use stepper_lib::comp::GearBearing;
+        /// use stepper_lib::data::LinkedData;
+        /// use stepper_lib::units::*;
+        /// 
+        /// const GAMMA : Gamma = Gamma(1.0); 
+        /// 
+        /// // Create a new gear bearing (implements SyncComp)
+        /// let mut gear = GearBearing::new(
+        ///     // Stepper Motor as subcomponent (also implements SyncComp)
+        ///     StepperCtrl::new_sim(StepperConst::GEN), 
+        /// 0.5);    // Ratio is set to 0.5, which means for each radian the motor moves, the bearing moves for half a radian
+        /// gear.write_link(LinkedData::GEN);           // Link component for driving
+        /// 
+        /// gear.drive_rel(Delta(-0.1), Omega(50.0));    // Drive component in negative direction
+        /// 
+        /// gear.set_end(GAMMA);
+        /// 
+        /// assert_eq!(gear.lim_for_gamma(Gamma(2.0)), Delta::ZERO);     
+        /// assert_eq!(gear.lim_for_gamma(Gamma(-2.0)), Delta(-3.0));      
+        /// ```
         fn set_end(&mut self, mut set_gamma : Gamma) {
             set_gamma = self.gamma_for_super(set_gamma);
 
