@@ -570,6 +570,11 @@ impl SyncComp for StepperCtrl {
 
         #[inline(always)]
         fn apply_force(&mut self, t : Force) {
+            if t >= self.consts.t_s {
+                println!("Load will not be applied! {}", t);
+                return;
+            }
+
             self.vars.t_load = t;
         }
     //
