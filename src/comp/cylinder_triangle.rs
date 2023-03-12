@@ -91,7 +91,9 @@ impl SimpleMeas for CylinderTriangle
 
 impl SyncComp for CylinderTriangle {
     // Setup 
-        fn setup(&mut self) { }
+        fn setup(&mut self) { 
+            self.cylinder.write_gamma(Gamma(self.l_a.max(self.l_b)));
+        }
 
         fn setup_async(&mut self) {
             self.cylinder.setup_async();

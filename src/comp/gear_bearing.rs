@@ -42,7 +42,9 @@ impl MathActor for GearBearing
 impl SyncComp for GearBearing
 {
     // Setup 
-        fn setup(&mut self) { }
+        fn setup(&mut self) { 
+            
+        }
 
         fn setup_async(&mut self) {
             self.ctrl.setup_async();

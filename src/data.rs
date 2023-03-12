@@ -156,7 +156,9 @@ impl StepperConst
                 t_s = self.t_s;
             }
 
+            println!("{}, {}", t_s, t_load);
             if t_load > t_s {
+                println!("Used dirty fallback!");
                 t_load = Force::ZERO;       // TODO: Remove dirty fallback
             }
 

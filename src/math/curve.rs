@@ -64,7 +64,7 @@ pub fn write_simple_move(cur : &mut [Time], omega_max : Omega, data : &StepperCo
 
     for i in 0 .. cur_len / 2 {
         alpha = data.alpha_max_dyn(torque_dyn(data, omega, lk.u), var) / lk.s_f;
-        
+
         (time, omega) = next_node_simple(delta, omega, alpha);
 
         if omega > omega_max {
