@@ -7,9 +7,10 @@
 use core::f32::consts::PI;
 
 use serde::{Serialize, Deserialize};
-
 #[cfg(feature = "std")]
 use serde::{Deserializer, Serializer};
+
+use crate::units::*;
 
 // Submodules
 mod lk;
@@ -21,8 +22,6 @@ pub mod servo;
 /// Crate for variables read and written during runtime
 mod var;
 pub use var::CompVars;
-
-use crate::units::*;
 //
 
 /**
@@ -110,8 +109,8 @@ impl StepperConst
 
     /// The maximum angular acceleration of the motor, with a modified torque t_s
     #[inline(always)]
-    pub fn alpha_max_dyn(&self, t_s : Force, var : &CompVars) -> Alpha {
-        Self::t_dyn(t_s, var.t_load) / self.j(var.j_load)
+    pub fn alpha_max_dyn(&self, t_s : Force, var : &CompVars) -> Result<Alpha, crate::Error> {
+        Ok(Self::t_dyn(t_s, var.t_load)? / self.j(var.j_load))
     }
 
     /// The inductivity constant [Unit s]
@@ -191,10 +190,23 @@ impl StepperConst
         /// 
         /// # Panics 
         /// 
-        /// Panics if the given motor torque `t_s` is negative (-0.0 included), infinite or NAN
+        /// Panics if the given motor torque `t_s` is negative, zero (-0.0 included), infinite or NAN
         #[inline(always)]
-        pub fn t_dyn(t_s : Force, t_load : Force) -> Force { // TODO: Add overload protection
-            Force((t_s - t_load).0.clamp(0.0, t_s.0))
+        pub fn t_dyn(t_s : Force, t_load : Force) -> Result<Force, crate::Error> { // TODO: Add overload protection
+            if !t_s.is_normal() {
+                panic!("The given motor force ({}) is invalid!", t_load);
+            }
+
+            if !t_load.is_finite() {
+                panic!("The given load force ({}) is invalid!", t_load);
+            }
+
+            if t_load > t_s {
+                Err(crate::Error::new(std::io::ErrorKind::InvalidInput, 
+                    format!("Overload! (Motor torque: {}, Load: {})", t_s, t_load)))
+            } else {
+                Ok(t_s - t_load)
+            }
         }
 
         /// Motor inertia when having a load [Unit kg*m^2]
