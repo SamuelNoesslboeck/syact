@@ -80,7 +80,7 @@ pub fn write_simple_move(cur : &mut [Time], omega_max : Omega, data : &StepperCo
 #[inline]
 pub fn create_simple_curve(consts : &StepperConst, vars : &CompVars, lk : &LinkedData, delta : Delta, omega_max : Omega) 
         -> Vec<Time> {
-    let steps = consts.steps_from_ang(delta);
+    let steps = consts.steps_from_ang_abs(delta);
 
     let mut cur = crate_plain_curve(consts, steps as usize, omega_max);
     write_simple_move(cur.as_mut_slice(), omega_max, consts, vars, lk);

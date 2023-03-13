@@ -110,8 +110,8 @@ impl StepperConst
 
     /// The maximum angular acceleration of the motor, with a modified torque t_s
     #[inline(always)]
-    pub fn alpha_max_dyn(&self, t_s : Force, var : &CompVars) -> Result<Alpha, crate::Error> {
-        Ok(Self::t_dyn(t_s, var.t_load)? / self.j(var.j_load))
+    pub fn alpha_max_dyn(&self, t_s : Force, var : &CompVars) -> Alpha {
+        Self::t_dyn(t_s, var.t_load) / self.j(var.j_load)
     }
 
     /// The inductivity constant [Unit s]
@@ -193,21 +193,8 @@ impl StepperConst
         /// 
         /// Panics if the given motor torque `t_s` is negative (-0.0 included), infinite or NAN
         #[inline(always)]
-        pub fn t_dyn(t_s : Force, t_load : Force) -> Result<Force, crate::Error> { // TODO: Add overload protection
-            if t_s.is_sign_negative() | (!t_s.is_finite()) {
-                panic!("The given force ({}) is invalid!", t_s);
-            }
-
-            if !t_load.is_finite() {
-                panic!("The given load force ({}) is invalid!", t_load);
-            }
-
-            if t_load > t_s {
-                Err(crate::Error::new(std::io::ErrorKind::InvalidInput, 
-                    format!("Overload! (Motor torque: {}, Load: {})", t_s, t_load)))
-            } else {
-                Ok(t_s - t_load)
-            }
+        pub fn t_dyn(t_s : Force, t_load : Force) -> Force { // TODO: Add overload protection
+            Force((t_s - t_load).0.clamp(0.0, t_s.0))
         }
 
         /// Motor inertia when having a load [Unit kg*m^2]
@@ -226,24 +213,31 @@ impl StepperConst
     //
 
     // Conversions
+        /// Converts the given angle `ang` into a absolute number of steps
         #[inline(always)]
-        pub fn steps_from_ang(&self, ang : Delta) -> u64 {
+        pub fn steps_from_ang_abs(&self, ang : Delta) -> u64 {
             (ang.abs() / self.step_ang()).round() as u64
         }
 
         #[inline(always)]
-        pub fn steps_from_ang_dir(&self, ang : Delta) -> i64 {
+        pub fn steps_from_ang(&self, ang : Delta) -> i64 {
             (ang / self.step_ang()).round() as i64
         }   
 
         #[inline(always)]
-        pub fn ang_from_steps(&self, steps : u64) -> Delta {
+        pub fn ang_from_steps_abs(&self, steps : u64) -> Delta {
             steps as f32 * self.step_ang()
         }
 
         #[inline(always)]
-        pub fn ang_from_steps_dir(&self, steps : i64) -> Delta {
+        pub fn ang_from_steps(&self, steps : i64) -> Delta {
             steps as f32 * self.step_ang()
+        }
+
+        // Comparision
+        #[inline(always)]
+        pub fn is_in_step_range(&self, steps : i64, ang : Delta) -> bool {
+            self.steps_from_ang(ang) == steps
         }
     //
 }

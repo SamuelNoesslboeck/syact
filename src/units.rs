@@ -42,22 +42,27 @@ macro_rules! basic_unit {
             pub const NAN : Self = Self(f32::NAN);
 
             /// Returns the absolute value of the unit
+            #[inline(always)]
             pub fn abs(self) -> Self {
                 Self(self.0.abs())
             }
 
+            #[inline(always)]
             pub fn is_finite(self) -> bool {
                 self.0.is_finite()
             }
 
+            #[inline(always)]
             pub fn is_normal(self) -> bool {
                 self.0.is_normal()
             }
 
+            #[inline(always)]
             pub fn is_nan(self) -> bool {
                 self.0.is_nan()
             }
 
+            #[inline(always)]
             pub fn sin(self) -> f32 {
                 self.0.sin()
             }
@@ -68,6 +73,16 @@ macro_rules! basic_unit {
 
             pub fn is_sign_positive(self) -> bool {
                 self.0.is_sign_positive()
+            }
+
+            #[inline(always)]
+            pub fn min(self, other : Self) -> Self {
+                Self(self.0.min(other.0))
+            }
+
+            #[inline(always)]
+            pub fn max(self, other : Self) -> Self {
+                Self(self.0.max(other.0))
             }
         }
 
@@ -83,17 +98,6 @@ macro_rules! basic_unit {
                 self.0
             }
         }
-
-        // Implementing ordering traits
-            impl Eq for $a { }
-            
-            impl Ord for $a {
-                #[inline(always)]
-                fn cmp(&self, other: &Self) -> core::cmp::Ordering {
-                    self.0.total_cmp(&other.0)
-                }
-            }
-        //
 
         // Negation
             impl Neg for $a {
@@ -193,6 +197,13 @@ macro_rules! derive_units {
 /// # Unit
 /// 
 /// - In seconds
+/// 
+/// ```rust
+/// use stepper_lib::units::*;
+/// 
+/// // Comparisions
+/// assert!(Time(1.0) > Time(-1.0));
+/// ```
 #[derive(Clone, Copy, Debug, Default, Serialize, Deserialize, PartialEq, PartialOrd)]
 pub struct Time(pub f32);
 basic_unit!(Time);
@@ -200,7 +211,11 @@ additive_unit!(Time);
 
 impl Into<Duration> for Time {
     #[inline(always)]
-    fn into(self) -> Duration {
+    fn into(mut self) -> Duration {
+        if self.0.is_sign_negative() {
+            println!(" -> Fallback in Time unit used! {}", self.0); // Remove fallback
+            self.0 = self.0.abs();
+        }
         Duration::from_secs_f32(self.0) 
     }
 }
