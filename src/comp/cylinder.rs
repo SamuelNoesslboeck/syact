@@ -48,6 +48,7 @@ impl SyncComp for Cylinder
     // Setup 
         fn setup(&mut self) { }
 
+        #[cfg(feature = "std")]
         fn setup_async(&mut self) {
             self.ctrl.setup_async();
         }

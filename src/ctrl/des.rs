@@ -23,6 +23,9 @@ impl Into<StepperCtrlDes> for StepperCtrl {
         #[cfg(feature = "std")]
         let pins = self.sys.lock().unwrap(); 
 
+        #[cfg(not(feature = "std"))]
+        let pins = self.sys;
+
         StepperCtrlDes { 
             consts: self.consts, 
             pin_dir: pins.dir.pin,
@@ -36,7 +39,12 @@ impl Serialize for StepperCtrl {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
         where
             S: serde::Serializer {
+        #[cfg(feature = "std")]
         let pins = self.sys.lock().unwrap();
+
+        #[cfg(not(feature = "std"))]
+        let pins = &self.sys;
+
         let raw : StepperCtrlDes = StepperCtrlDes { 
             consts: self.consts.clone(), 
             pin_dir: pins.dir.pin,

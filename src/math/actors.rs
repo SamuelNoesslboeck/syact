@@ -1,3 +1,5 @@
+use alloc::boxed::Box;
+
 use crate::SyncComp;
 use crate::units::*;
 

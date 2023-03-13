@@ -4,6 +4,7 @@ use crate::data::{CompVars, LinkedData};
 use crate::units::*;
 
 // Submodules
+/// A module for async components like a basic DC-motor. These components cannot move certain distances or to absolute positions
 pub mod asyn;
 
 mod cylinder;
@@ -15,16 +16,26 @@ pub use cylinder_triangle::CylinderTriangle;
 mod gear_bearing;
 pub use gear_bearing::GearBearing;
 
+/// A module for component groups, as they are used in various robots. The components are all sharing the same 
+/// [LinkedData](crate::data::LinkedData) and their movements are coordinated. 
 pub mod group;
 pub use group::SyncCompGroup;
 
+/// A module defining the tools used for various robots, such as tongs, additional bearings, drills ...
 pub mod tool;
 pub use tool::Tool;
 //
 
+#[cfg(feature = "std")]
 #[inline(always)]
 fn no_super() -> crate::Error {
     crate::Error::new(std::io::ErrorKind::NotFound, "No super component has been found")
+}
+
+#[cfg(not(feature = "std"))]
+#[inline(always)]
+fn no_super() -> crate::Error {
+    crate::ErrorKind::NoSuper
 }
 
 /// Trait for defining controls and components of synchronous actuators
@@ -35,15 +46,20 @@ fn no_super() -> crate::Error {
 /// the stepper motor component defined as it's super component. (See [GearBearing])
 pub trait SyncComp : crate::meas::SimpleMeas + crate::math::MathActor + core::fmt::Debug {
     // Init 
-        /// Calls all required functions to assure the components functionallity. 
+        /// Calls all required functions to assure the components functionality. 
         fn setup(&mut self);
 
+        /// Calls all required functions to assure the components async movement functionality
+        /// 
+        /// # Features 
+        /// 
+        /// This function is only available when using the "std" feature
         #[cfg(feature = "std")]
         fn setup_async(&mut self);
     // 
 
     // Data
-        /// Returns the variables of the component
+        /// Returns the variables of the component, such as load force, inertia, limits ...
         /// 
         /// ```rust
         /// use stepper_lib::{SyncComp, StepperCtrl, StepperConst};
@@ -65,8 +81,10 @@ pub trait SyncComp : crate::meas::SimpleMeas + crate::math::MathActor + core::fm
         /// ```
         fn vars<'a>(&'a self) -> &'a CompVars;
 
+        /// Returns the [LinkedData](crate::data::LinkedData) of the component
         fn link<'a>(&'a self) -> &'a LinkedData;
-
+        
+        /// Write the [LinkedData](crate::data::LinkedData) to the component
         #[inline(always)]
         fn write_link(&mut self, lk : crate::data::LinkedData) {
             if let Some(s_comp) = self.super_comp_mut() {
@@ -76,6 +94,7 @@ pub trait SyncComp : crate::meas::SimpleMeas + crate::math::MathActor + core::fm
 
         // JSON I/O 
         /// Get the *JSON* data of the current component as [serde_json::Value]
+        #[cfg(not(feature = "embedded"))]
         fn to_json(&self) -> Result<serde_json::Value, serde_json::Error>;
     // 
 
@@ -256,18 +275,21 @@ pub trait SyncComp : crate::meas::SimpleMeas + crate::math::MathActor + core::fm
             Omega(self.gamma_for_super(Gamma(this_omega.into())).into())
         }
 
+        /// Converts the given super velocity into the velocity for the this component
         #[inline(always)]
         #[allow(unused_variables)]
         fn omega_for_this(&self, super_omega : Omega, this_gamma : Gamma) -> Omega {
             Omega(self.gamma_for_this(Gamma(super_omega.into())).into())
         }
 
+        /// Converts the given acceleration into the acceleration for the super component
         #[inline(always)]
         #[allow(unused_variables)]
         fn alpha_for_super(&self, this_alpha : Alpha, this_gamma : Gamma) -> Alpha {
             Alpha(self.gamma_for_super(Gamma(this_alpha.into())).into())
         }
 
+        /// Converts the given super acceleration into the acceleration for this component
         #[inline(always)]
         #[allow(unused_variables)]
         fn alpha_for_this(&self, super_alpha : Alpha, super_gamma : Gamma) -> Alpha {
@@ -277,7 +299,7 @@ pub trait SyncComp : crate::meas::SimpleMeas + crate::math::MathActor + core::fm
 
     // Movement
         /// Moves the component by the relative distance as fast as possible, halts the script until 
-        /// the movement is finshed and returns the actual **absolute** distance traveled
+        /// the movement is finshed and returns the actual **relative** distance travelled
         fn drive_rel(&mut self, mut delta : Delta, mut omega : Omega) -> Result<Delta, crate::Error> {
             let gamma = self.gamma(); 
 
@@ -294,7 +316,7 @@ pub trait SyncComp : crate::meas::SimpleMeas + crate::math::MathActor + core::fm
         }
 
         /// Moves the component to the given position as fast as possible, halts the script until the 
-        /// movement is finished and returns the actual **abolute** distance traveled to. 
+        /// movement is finished and returns the actual **relative** distance travelled.
         fn drive_abs(&mut self, mut gamma : Gamma, mut omega : Omega) -> Result<Delta, crate::Error> {
             omega = self.omega_for_super(omega, gamma);
             gamma = self.gamma_for_super(gamma);
@@ -308,12 +330,7 @@ pub trait SyncComp : crate::meas::SimpleMeas + crate::math::MathActor + core::fm
 
         /// Measure the component by driving the component with the velocity `omega` until either 
         /// the measurement condition is true or the maximum distance `delta` is reached. When the endpoint 
-        /// is reached, the controls will set the distance to `set_dist`. The lower the `accuracy`, the higher 
-        /// are the computational difficulties, as the function checks more often if the measure pin has a HIGH signal
-        /// 
-        /// # Sync
-        /// 
-        /// The thread is halted until the measurement is finished
+        /// is reached, the controls will set the distance to `set_dist` and return the **relative** distance travelled.
         fn measure(&mut self, mut delta : Delta, mut omega : Omega, mut set_gamma : Gamma) -> Result<Delta, crate::Error> {
             delta = self.delta_for_super(delta, self.gamma());
             omega = self.omega_for_super(omega, self.gamma());
@@ -321,11 +338,14 @@ pub trait SyncComp : crate::meas::SimpleMeas + crate::math::MathActor + core::fm
 
             if let Some(s_comp) = self.super_comp_mut() {
                 s_comp.measure(delta, omega, set_gamma)
-            } else { Err(crate::Error::new(std::io::ErrorKind::NotFound, "No super component has been found")) }
+            } else { 
+                Err(no_super()) 
+            }
         }   
     // 
 
     // Async
+        /// Moves the component by the relative distance as fast as possible
         #[cfg(feature = "std")]
         fn drive_rel_async(&mut self, mut delta : Delta, mut omega : Omega) -> Result<(), crate::Error> {
             let gamma = self.gamma(); 
@@ -354,6 +374,16 @@ pub trait SyncComp : crate::meas::SimpleMeas + crate::math::MathActor + core::fm
             Err(no_super())
         }
 
+        /// Halts the thread until the async movement is finished
+        /// 
+        /// # Features
+        /// 
+        /// Only available if the feature "std" is available
+        /// 
+        /// # Errors
+        /// 
+        /// - Returns an error if the definition has not been overwritten by the component and no super component is known
+        /// - Returns an error if no async movement has been started yet
         #[cfg(feature = "std")]
         fn await_inactive(&mut self) -> Result<(), crate::Error> {
             if let Some(s_comp) = self.super_comp_mut() {

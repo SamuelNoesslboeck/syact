@@ -155,9 +155,17 @@ impl StepperConst
                 panic!("The given load force ({}) is invalid!", t_load);
             }
 
+            #[cfg(feature = "std")]
             if t_load > self.t_s {
                 Err(crate::Error::new(std::io::ErrorKind::InvalidInput, 
                     format!("Overload! (Motor torque: {}, Load: {})", self.t_s, t_load)))
+            } else {
+                Ok(self.t_s - t_load)
+            }
+
+            #[cfg(not(feature = "std"))]
+            if t_load > self.t_s {
+                Err(crate::ErrorKind::Overload)
             } else {
                 Ok(self.t_s - t_load)
             }
@@ -178,9 +186,17 @@ impl StepperConst
                 panic!("The given load force ({}) is invalid!", t_load);
             }
 
+            #[cfg(feature = "std")]
             if t_load > t_s {
                 Err(crate::Error::new(std::io::ErrorKind::InvalidInput, 
                     format!("Overload! (Motor torque: {}, Load: {})", t_s, t_load)))
+            } else {
+                Ok(t_s - t_load)
+            }
+
+            #[cfg(not(feature = "std"))]
+            if t_load > t_s {
+                Err(crate::ErrorKind::Overload)
             } else {
                 Ok(t_s - t_load)
             }

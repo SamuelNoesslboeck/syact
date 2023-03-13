@@ -7,6 +7,7 @@
 // #![deny(missing_docs)]
 
 // Modules
+#[cfg(not(feature = "embedded"))]
 extern crate alloc;
 
 /// Components including stepper motors
@@ -18,7 +19,7 @@ pub mod ctrl;
 pub mod data;
 /// Functions and Structs for calculating Stepper Motor procedures and operations
 pub mod math;
-
+/// Functions and Structs for taking measurements with a robot for e.g. position calculation
 pub mod meas;
 
 /// Self defined units for mathematical operations
@@ -29,11 +30,12 @@ pub mod units;
 mod tests;
 
 // Wrapped types
+/// The general error type used in the crate
 #[cfg(feature = "std")]
 pub type Error = std::io::Error;
 
 #[cfg(not(feature = "std"))]
-pub type Error = u8;
+pub type Error = ErrorKind;
 
 // Relocated types
 pub use comp::{SyncComp, SyncCompGroup, Tool};
@@ -42,3 +44,13 @@ pub use data::StepperConst;
 
 // Library Types
 pub use glam::{Vec3, Mat3};
+
+#[cfg(not(feature = "std"))]
+#[derive(Debug)]
+pub enum ErrorKind {
+    // Components
+    NoSuper,
+    
+    // Load
+    Overload
+}

@@ -95,6 +95,7 @@ impl SyncComp for CylinderTriangle {
             self.cylinder.write_gamma(Gamma(self.l_a.max(self.l_b)));
         }
 
+        #[cfg(feature = "std")]
         fn setup_async(&mut self) {
             self.cylinder.setup_async();
         }

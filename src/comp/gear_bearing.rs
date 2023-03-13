@@ -46,6 +46,7 @@ impl SyncComp for GearBearing
             
         }
 
+        #[cfg(feature = "std")]
         fn setup_async(&mut self) {
             self.ctrl.setup_async();
         }
