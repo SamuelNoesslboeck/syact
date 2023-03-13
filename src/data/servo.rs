@@ -1,8 +1,5 @@
 use serde::{Deserialize, Serialize};
 
-#[cfg(feature = "std")]
-use serde::{Deserializer, Serializer};
-
 use crate::units::*;
 
 #[derive(Debug, Default, Clone, PartialEq, PartialOrd, Serialize, Deserialize)]
@@ -47,26 +44,6 @@ impl ServoConst
         f_pwm: Omega(50.0)
     };
 
-    #[cfg(feature = "std")]
-    pub fn from_standard<'de, D>(deserializer: D) -> Result<Self, D::Error> 
-    where 
-        D: Deserializer<'de> {
-        let s: String = Deserialize::deserialize(deserializer)?;
-        Ok(get_standard_servo(s.as_str()).clone()) 
-    }
-
-    #[cfg(feature = "std")]
-    pub fn to_standard<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer {
-        for (k, v) in &STANDARD_SERVO_CONST {
-            if v == self {
-                return serializer.serialize_str(*k);
-            }
-        }
-        self.serialize(serializer)
-    }
-
     pub fn default_pulse(&self) -> Time {
         (self.pwm_min + self.pwm_max) / 2.0
     }
@@ -86,21 +63,4 @@ impl ServoConst
     pub fn pulse_for_angle(&self, gamma : Gamma) -> Time {
         self.pulse_for_perc(gamma / self.gamma_max)
     }
-}
-
-/// A collection of standard stepper motors
-pub static STANDARD_SERVO_CONST : [(&str, ServoConst); 2] = [
-    ("ERROR", ServoConst::ERROR),
-    ("MG996R", ServoConst::MG996R)
-];
-
-#[cfg(feature = "std")]
-fn get_standard_servo(name : &str) -> &ServoConst {
-    for (k, v) in &STANDARD_SERVO_CONST {
-        if *k == name {
-            return v;
-        }
-    }
-
-    &ServoConst::ERROR
 }

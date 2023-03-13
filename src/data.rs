@@ -7,8 +7,6 @@
 use core::f32::consts::PI;
 
 use serde::{Serialize, Deserialize};
-#[cfg(feature = "std")]
-use serde::{Deserializer, Serializer};
 
 use crate::units::*;
 
@@ -79,27 +77,6 @@ impl StepperConst
         t_s: Force(0.42), 
         j_s: Inertia(0.000_005_7)
     }; 
-    
-    // TODO: Rework
-    #[cfg(feature = "std")]
-    pub fn from_standard<'de, D>(deserializer: D) -> Result<Self, D::Error> 
-    where 
-        D: Deserializer<'de> {
-        let s: String = Deserialize::deserialize(deserializer)?;
-        Ok(get_standard_mot(s.as_str()).clone()) 
-    }
-
-    #[cfg(feature = "std")]
-    pub fn to_standard<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer {
-        for (k, v) in &STANDARD_STEPPER_CONST {
-            if v == self {
-                return serializer.serialize_str(*k);
-            }
-        }
-        self.serialize(serializer)
-    }
 
     /// The maximum angular acceleration of the motor (in stall) in consideration of the current loads
     #[inline(always)]
@@ -252,21 +229,4 @@ impl StepperConst
             self.steps_from_ang(ang) == steps
         }
     //
-}
-
-/// A collection of standard stepper motors
-pub static STANDARD_STEPPER_CONST : [(&str, StepperConst); 2] = [
-    ("ERROR", StepperConst::ERROR),
-    ("MOT_17HE15_1504S", StepperConst::MOT_17HE15_1504S)
-];
-
-#[cfg(feature = "std")]
-fn get_standard_mot(name : &str) -> &StepperConst {
-    for (k, v) in &STANDARD_STEPPER_CONST {
-        if *k == name {
-            return v;
-        }
-    }
-
-    &StepperConst::ERROR
 }

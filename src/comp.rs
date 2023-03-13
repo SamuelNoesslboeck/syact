@@ -639,7 +639,7 @@ pub trait SyncComp : crate::meas::SimpleMeas + crate::math::MathActor + core::fm
         /// use stepper_lib::units::*;
         /// 
         /// // Force to act upon the component
-        /// const FORCE : Force = Force(2.0);
+        /// const FORCE : Force = Force(0.2);
         /// 
         /// // Create a new gear bearing (implements SyncComp)
         /// let mut gear = GearBearing::new(
@@ -650,7 +650,7 @@ pub trait SyncComp : crate::meas::SimpleMeas + crate::math::MathActor + core::fm
         /// gear.apply_force(FORCE);
         /// 
         /// assert_eq!(Gamma(2.0), gear.gamma_for_super(Gamma(1.0)));
-        /// assert_eq!(Force(1.0), gear.super_comp().unwrap().vars().t_load);
+        /// assert_eq!(Force(0.1), gear.super_comp().unwrap().vars().t_load);
         /// ```
         fn apply_force(&mut self, mut force : Force) { // TODO: Add overload protection
             force = Force(self.gamma_for_this(Gamma(force.0)).0);

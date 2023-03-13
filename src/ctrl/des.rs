@@ -6,7 +6,6 @@ use serde::{Serialize, Deserialize};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct StepperCtrlDes 
 {
-    #[cfg_attr(feature = "std", serde(serialize_with = "StepperConst::to_standard", deserialize_with = "StepperConst::from_standard"))]
     pub consts : StepperConst,
     pub pin_dir : u8,
     pub pin_step : u8
