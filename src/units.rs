@@ -61,6 +61,14 @@ macro_rules! basic_unit {
             pub fn sin(self) -> f32 {
                 self.0.sin()
             }
+
+            pub fn is_sign_negative(self) -> bool {
+                self.0.is_sign_negative()
+            }
+
+            pub fn is_sign_positive(self) -> bool {
+                self.0.is_sign_positive()
+            }
         }
 
         impl Display for $a {

@@ -52,7 +52,7 @@ mod curves
     #[test]
     fn simple() {
         let data = StepperConst::GEN;
-        let vars = CompVars { t_load: Force(0.1), j_load: Inertia(1.0) };
+        let vars = CompVars { t_load: Force(0.1), j_load: Inertia(1.0), ..Default::default() };
         let lk = LinkedData::GEN;
 
         let delta = Delta(0.62);

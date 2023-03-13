@@ -43,6 +43,26 @@ pub trait SyncComp : crate::meas::SimpleMeas + crate::math::MathActor + core::fm
     // 
 
     // Data
+        /// Returns the variables of the component
+        /// 
+        /// ```rust
+        /// use stepper_lib::{SyncComp, StepperCtrl, StepperConst};
+        /// use stepper_lib::comp::GearBearing;
+        /// use stepper_lib::units::*;
+        /// 
+        /// // Limits
+        /// const LIM_MAX : Gamma = Gamma(1.0);
+        /// const LIM_MIN : Gamma = Gamma(-2.0);
+        /// 
+        /// const LIM_MIN_LOWER : Gamma = Gamma(-3.0);
+        /// 
+        /// // Create a new gear bearing (implements SyncComp)
+        /// let mut gear = GearBearing::new(
+        ///     // Stepper Motor as subcomponent (also implements SyncComp)
+        ///     StepperCtrl::new_sim(StepperConst::GEN), 
+        /// 0.5);    // Ratio is set to 0.5, which means for each radian the motor moves, the bearing moves for half a radian
+        /// 
+        /// ```
         fn vars<'a>(&'a self) -> &'a CompVars;
 
         fn link<'a>(&'a self) -> &'a LinkedData;

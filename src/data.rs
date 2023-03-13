@@ -104,14 +104,14 @@ impl StepperConst
 
     /// The maximum angular acceleration of the motor (in stall) in consideration of the current loads
     #[inline(always)]
-    pub fn alpha_max(&self, var : &CompVars) -> Alpha {
-        self.t(var.t_load) / self.j(var.j_load)
+    pub fn alpha_max(&self, var : &CompVars) -> Result<Alpha, crate::Error> {
+        Ok(self.t(var.t_load)? / self.j(var.j_load))
     }
 
     /// The maximum angular acceleration of the motor, with a modified torque t_s
     #[inline(always)]
-    pub fn alpha_max_dyn(&self, t_s : Force, var : &CompVars) -> Alpha {
-        Self::t_dyn(t_s, var.t_load) / self.j(var.j_load)
+    pub fn alpha_max_dyn(&self, t_s : Force, var : &CompVars) -> Result<Alpha, crate::Error> {
+        Ok(Self::t_dyn(t_s, var.t_load)? / self.j(var.j_load))
     }
 
     /// The inductivity constant [Unit s]
@@ -121,9 +121,28 @@ impl StepperConst
     }
 
     /// Omega for time per step [Unit 1/s]
+    /// 
+    /// # Panics
+    /// 
+    /// Panics if the given `step_time` is zero (`-0.0` included)
+    /// 
+    /// ```rust 
+    /// use core::f32::consts::PI;
+    /// 
+    /// use stepper_lib::data::StepperConst;
+    /// use stepper_lib::units::*;
+    /// 
+    /// let data = StepperConst::GEN;
+    /// 
+    /// assert!((data.omega(Time(1.0/200.0)) - Omega(2.0 * PI)).abs() < Omega(0.001));     
+    /// ```
     #[inline(always)]
     pub fn omega(&self, step_time : Time) -> Omega {
-        (self.n_s as f32) / 2.0 / PI / step_time
+        if (step_time == Time(0.0)) | (step_time == Time(-0.0)) {
+            panic!("The given step time ({}) is zero!", step_time)
+        }
+
+        self.step_ang() / step_time
     }
 
     // Steps
@@ -134,28 +153,74 @@ impl StepperConst
         }
 
         /// Time per step for the given omega [Unit s]
+        /// 
+        /// # Panics 
+        /// 
+        /// Panics if the given `omega` is zero 
         #[inline(always)]
         pub fn step_time(&self, omega : Omega) -> Time {
+            if (omega == Omega(0.0)) | (omega == Omega(-0.0)) {
+                panic!("The given omega ({}) is zero!", omega);
+            }
+
             2.0 * PI / (self.n_s as f32) / omega
         }
     // 
 
     // Load calculations
         /// Max motor torque when having a load [Unit Nm]
+        /// 
+        /// # Pancis
+        /// 
+        /// 
         #[inline(always)]
-        pub fn t(&self, t_load : Force) -> Force {  // TODO: Add overload protection
-            Force((self.t_s - t_load).0.clamp(0.0, self.t_s.0))
+        pub fn t(&self, t_load : Force) -> Result<Force, crate::Error> {  // TODO: Add overload protection
+            if !t_load.is_finite() {
+                panic!("The given load force ({}) is invalid!", t_load);
+            }
+
+            if t_load > self.t_s {
+                Err(crate::Error::new(std::io::ErrorKind::InvalidInput, 
+                    format!("Overload! (Motor torque: {}, Load: {})", self.t_s, t_load)))
+            } else {
+                Ok(self.t_s - t_load)
+            }
         }
 
         /// Max motor torque when having a load, using a modified base torque t_s [Unit Nm]
+        /// 
+        /// # Panics 
+        /// 
+        /// Panics if the given motor torque `t_s` is negative (-0.0 included), infinite or NAN
         #[inline(always)]
-        pub fn t_dyn(t_s : Force, t_load : Force) -> Force { // TODO: Add overload protection
-            Force((t_s - t_load).0.clamp(0.0, t_s.0))
+        pub fn t_dyn(t_s : Force, t_load : Force) -> Result<Force, crate::Error> { // TODO: Add overload protection
+            if t_s.is_sign_negative() | (!t_s.is_finite()) {
+                panic!("The given force ({}) is invalid!", t_s);
+            }
+
+            if !t_load.is_finite() {
+                panic!("The given load force ({}) is invalid!", t_load);
+            }
+
+            if t_load > t_s {
+                Err(crate::Error::new(std::io::ErrorKind::InvalidInput, 
+                    format!("Overload! (Motor torque: {}, Load: {})", t_s, t_load)))
+            } else {
+                Ok(t_s - t_load)
+            }
         }
 
         /// Motor inertia when having a load [Unit kg*m^2]
+        /// 
+        /// # Panics
+        /// 
+        /// Panics if the given inertia `j_load` is negative (-0.0 included)
         #[inline(always)]
         pub fn j(&self, j_load : Inertia) -> Inertia {
+            if j_load.is_sign_negative() | (!j_load.is_finite()) {
+                panic!("The given inertia ({}) is invalid!", j_load);
+            }
+
             self.j_s + j_load
         }
     //

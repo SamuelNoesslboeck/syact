@@ -51,18 +51,10 @@ struct Pins {
     pub meas : Option<pin::SimInPin>
 }
 
-#[derive(Debug, Clone, Default)]
-struct Limits {
-    /// Limit for minimum angle/step count
-    pub min : Option<Gamma>,  
-    /// Limit for maximum angle/step count
-    pub max : Option<Gamma>
-}
-
 /// StepperCtrl
 #[derive(Debug)]
 pub struct StepperCtrl {
-    /// Stepper data
+    // Stepper data
     consts : StepperConst,
     vars : CompVars,
 
@@ -73,8 +65,6 @@ pub struct StepperCtrl {
     pos : i64,
 
     lk : LinkedData,
-
-    limit : Limits,
 
     #[cfg(feature = "std")]
     sys : Arc<Mutex<Pins>>,
@@ -124,8 +114,6 @@ impl StepperCtrl {
                 step: sys_step,
                 meas: None,
             },
-
-            limit: Default::default(),
 
             #[cfg(feature = "std")]
             thr: None,
@@ -381,7 +369,7 @@ impl crate::meas::SimpleMeas for StepperCtrl {
 impl crate::math::MathActor for StepperCtrl {
     #[inline]
     fn accel_dyn(&self, omega : Omega, _ : Gamma) -> Alpha {
-        self.consts.alpha_max_dyn(math::load::torque_dyn(&self.consts, omega, self.lk.u), &self.vars)
+        self.consts.alpha_max_dyn(math::load::torque_dyn(&self.consts, omega, self.lk.u), &self.vars).unwrap()
     }
 }
 
@@ -511,27 +499,27 @@ impl SyncComp for StepperCtrl {
         #[inline]
         fn set_limit(&mut self, min : Option<Gamma>, max : Option<Gamma>) {
             if min.is_some() {
-                self.limit.min = min;
+                self.vars.lim.min = min;
             }
 
             if max.is_some() {
-                self.limit.max = max;
+                self.vars.lim.max = max;
             }
         }
 
         #[inline]
         fn reset_limit(&mut self, min : Option<Gamma>, max : Option<Gamma>) {
-            self.limit.min = min;
-            self.limit.max = max;
+            self.vars.lim.min = min;
+            self.vars.lim.max = max;
         }
 
         fn lim_for_gamma(&self, gamma : Gamma) -> Delta {
-            match self.limit.min {
+            match self.vars.lim.min {
                 Some(ang) => {
                     if gamma < ang {
                         gamma - ang
                     } else {
-                        match self.limit.max {
+                        match self.vars.lim.max {
                             Some(ang) => {
                                 if gamma > ang {
                                     gamma - ang
@@ -541,7 +529,7 @@ impl SyncComp for StepperCtrl {
                         }
                     }
                 },
-                None => match self.limit.max {
+                None => match self.vars.lim.max {
                     Some(ang) => {
                         if gamma > ang {
                             gamma - ang
@@ -556,8 +544,8 @@ impl SyncComp for StepperCtrl {
             self.pos = self.consts.steps_from_ang_dir(set_gamma - Gamma::ZERO);
     
             self.set_limit(
-                if self.dir { self.limit.min } else { Some(set_gamma) },
-                if self.dir { Some(set_gamma) } else { self.limit.max }
+                if self.dir { self.vars.lim.min } else { Some(set_gamma) },
+                if self.dir { Some(set_gamma) } else { self.vars.lim.max }
             )
         }
     //
