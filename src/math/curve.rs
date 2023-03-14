@@ -15,7 +15,7 @@ use crate::math::load::torque_dyn;
 ///  - Returns Hertz
 #[inline]
 pub fn start_frequency(data : &StepperConst, var : &CompVars) -> Omega {
-    Omega((data.alpha_max(var) * (data.n_s as f32) / 4.0 / PI).0.powf(0.5))
+    Omega((data.alpha_max(var).unwrap() * (data.n_s as f32) / 4.0 / PI).0.powf(0.5))        // TODO: Overload
 }
 
 #[inline]
@@ -63,7 +63,7 @@ pub fn write_simple_move(cur : &mut [Time], omega_max : Omega, data : &StepperCo
     let mut alpha : Alpha;
 
     for i in 0 .. cur_len / 2 {
-        alpha = data.alpha_max_dyn(torque_dyn(data, omega, lk.u), var) / lk.s_f;
+        alpha = data.alpha_max_dyn(torque_dyn(data, omega, lk.u), var).unwrap() / lk.s_f;   // TODO: Overload 
         
         (time, omega) = next_node_simple(delta, omega, alpha);
 
@@ -80,7 +80,7 @@ pub fn write_simple_move(cur : &mut [Time], omega_max : Omega, data : &StepperCo
 #[inline]
 pub fn create_simple_curve(consts : &StepperConst, vars : &CompVars, lk : &LinkedData, delta : Delta, omega_max : Omega) 
         -> Vec<Time> {
-    let steps = consts.steps_from_ang(delta);
+    let steps = consts.steps_from_ang_abs(delta);
 
     let mut cur = crate_plain_curve(consts, steps as usize, omega_max);
     write_simple_move(cur.as_mut_slice(), omega_max, consts, vars, lk);

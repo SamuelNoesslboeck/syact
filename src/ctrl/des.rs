@@ -6,7 +6,6 @@ use serde::{Serialize, Deserialize};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct StepperCtrlDes 
 {
-    #[cfg_attr(feature = "std", serde(serialize_with = "StepperConst::to_standard", deserialize_with = "StepperConst::from_standard"))]
     pub consts : StepperConst,
     pub pin_dir : u8,
     pub pin_step : u8
@@ -24,6 +23,9 @@ impl Into<StepperCtrlDes> for StepperCtrl {
         #[cfg(feature = "std")]
         let pins = self.sys.lock().unwrap(); 
 
+        #[cfg(not(feature = "std"))]
+        let pins = self.sys;
+
         StepperCtrlDes { 
             consts: self.consts, 
             pin_dir: pins.dir.pin,
@@ -37,7 +39,12 @@ impl Serialize for StepperCtrl {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
         where
             S: serde::Serializer {
+        #[cfg(feature = "std")]
         let pins = self.sys.lock().unwrap();
+
+        #[cfg(not(feature = "std"))]
+        let pins = &self.sys;
+
         let raw : StepperCtrlDes = StepperCtrlDes { 
             consts: self.consts.clone(), 
             pin_dir: pins.dir.pin,

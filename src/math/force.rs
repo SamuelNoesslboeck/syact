@@ -1,3 +1,5 @@
+use alloc::vec::Vec;
+
 use glam::Vec3;
 
 /// Calculates all forces for a segment

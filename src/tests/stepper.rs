@@ -1,3 +1,4 @@
+#[cfg(feature = "std")]
 mod single_motor 
 {
     use core::f32::consts::PI;
@@ -42,6 +43,7 @@ mod single_motor
     }
 }
 
+#[cfg(feature = "std")]
 mod curves
 {
     use crate::{StepperConst};
@@ -52,7 +54,7 @@ mod curves
     #[test]
     fn simple() {
         let data = StepperConst::GEN;
-        let vars = CompVars { t_load: Force(0.1), j_load: Inertia(1.0) };
+        let vars = CompVars { t_load: Force(0.1), j_load: Inertia(1.0), ..Default::default() };
         let lk = LinkedData::GEN;
 
         let delta = Delta(0.62);

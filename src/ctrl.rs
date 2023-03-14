@@ -25,17 +25,21 @@ pub mod pwm;
 pub mod servo;
 // 
 
+#[cfg(feature = "std")]
 type AsyncMsg = Vec<Time>;
+#[cfg(feature = "std")]
 type AsyncRes = ();
 
 type Interrupter = fn (&mut Pins) -> bool;
 
+#[cfg(feature = "std")]
 #[inline(always)]
 fn no_async() -> crate::Error {
     crate::Error::new(std::io::ErrorKind::NotConnected, "Async has not been setup yet!")
 }
 
 #[inline(always)]
+#[cfg(feature = "std")]
 fn not_active() -> crate::Error {
     crate::Error::new(std::io::ErrorKind::PermissionDenied, "No movement has been started yet")
 }
@@ -51,18 +55,10 @@ struct Pins {
     pub meas : Option<pin::SimInPin>
 }
 
-#[derive(Debug, Clone, Default)]
-struct Limits {
-    /// Limit for minimum angle/step count
-    pub min : Option<Gamma>,  
-    /// Limit for maximum angle/step count
-    pub max : Option<Gamma>
-}
-
 /// StepperCtrl
 #[derive(Debug)]
 pub struct StepperCtrl {
-    /// Stepper data
+    // Stepper data
     consts : StepperConst,
     vars : CompVars,
 
@@ -73,8 +69,6 @@ pub struct StepperCtrl {
     pos : i64,
 
     lk : LinkedData,
-
-    limit : Limits,
 
     #[cfg(feature = "std")]
     sys : Arc<Mutex<Pins>>,
@@ -124,8 +118,6 @@ impl StepperCtrl {
                 step: sys_step,
                 meas: None,
             },
-
-            limit: Default::default(),
 
             #[cfg(feature = "std")]
             thr: None,
@@ -181,26 +173,33 @@ impl StepperCtrl {
         spin_sleep::sleep(step_time_half);
     }  
 
+    #[inline(always)]
+    #[cfg(not(feature = "std"))]
+    #[cfg(feature = "embedded")]
+    fn step_sig(time : Time, pins : &mut Pins) {
+        // TODO: Add delay handler
+    }   
+
+
     fn drive_curve_sig(cur : &[Time], pins : &mut Pins) {
         for point in cur {
             StepperCtrl::step_sig(*point, pins);
         }
     }
 
-    #[inline(always)]
-    #[cfg(not(feature = "std"))]
-    fn step_sig(time : Time, pins : &mut Pins) {
-        // TODO: Add delay handler
-    }   
-
     fn drive_curve(&mut self, cur : &[Time]) {
         #[cfg(feature = "std")]
         let mut pins = self.sys.lock().unwrap();
 
         #[cfg(not(feature = "std"))]
-        let mut pins = self.sys;
+        let pins = &mut self.sys;
 
+        #[cfg(feature = "std")]
         StepperCtrl::drive_curve_sig(cur, &mut pins);
+
+        #[cfg(not(feature = "std"))]
+        StepperCtrl::drive_curve_sig(cur, pins);
+
         self.pos += if self.dir { cur.len() as i64 } else { -(cur.len() as i64) };
 
     }
@@ -210,16 +209,27 @@ impl StepperCtrl {
         let mut pins = self.sys.lock().unwrap();
 
         #[cfg(not(feature = "std"))]
-        let mut pins = self.sys;
+        let pins = &mut self.sys;
 
         let mut trav = 0;
 
         for point in cur {
+            #[cfg(feature = "std")]
             if intr(&mut pins) {
                 break;
             }
+
+            #[cfg(not(feature = "std"))]
+            if intr(pins) {
+                break;
+            }
     
+            #[cfg(feature = "std")]
             StepperCtrl::step_sig(*point, &mut pins);
+
+            #[cfg(not(feature = "std"))]
+            StepperCtrl::step_sig(*point, pins);
+
             self.pos += if self.dir { 1 } else { -1 };
 
             trav += 1;
@@ -336,9 +346,12 @@ impl StepperCtrl {
         #[cfg(feature = "std")]
         let mut pins = self.sys.lock().unwrap(); 
         #[cfg(not(feature = "std"))]
-        let mut pins = self.sys;
+        let pins = &mut self.sys;
 
+        #[cfg(feature = "std")]
         StepperCtrl::step_sig(time, &mut pins);
+        #[cfg(not(feature = "std"))]
+        StepperCtrl::step_sig(time, pins);
 
         Ok(())
     }
@@ -348,9 +361,13 @@ impl StepperCtrl {
         #[cfg(feature = "std")]
         let mut pins = self.sys.lock().unwrap();
         #[cfg(not(feature = "std"))]
-        let mut pins = self.sys;
+        let pins = &mut self.sys;
 
+        #[cfg(feature = "std")]
         StepperCtrl::dir_sig(&mut pins, dir);
+        #[cfg(not(feature = "std"))]
+        StepperCtrl::dir_sig(pins, dir);
+
         self.dir = dir;
     }
 
@@ -381,7 +398,7 @@ impl crate::meas::SimpleMeas for StepperCtrl {
 impl crate::math::MathActor for StepperCtrl {
     #[inline]
     fn accel_dyn(&self, omega : Omega, _ : Gamma) -> Alpha {
-        self.consts.alpha_max_dyn(math::load::torque_dyn(&self.consts, omega, self.lk.u), &self.vars)
+        self.consts.alpha_max_dyn(math::load::torque_dyn(&self.consts, omega, self.lk.u), &self.vars).unwrap()
     }
 }
 
@@ -470,15 +487,18 @@ impl SyncComp for StepperCtrl {
     // 
 
     // Async
+        #[cfg(feature = "std")]
         fn drive_rel_async(&mut self, delta : Delta, omega : Omega) -> Result<(), crate::Error> {
             self.drive_simple_async(delta, omega)
         }
 
+        #[cfg(feature = "std")]
         fn drive_abs_async(&mut self, gamma : Gamma, omega : Omega) -> Result<(), crate::Error> {
             let delta = gamma - self.gamma();
             self.drive_simple_async(delta, omega)
         }
         
+        #[cfg(feature = "std")]
         fn await_inactive(&mut self) -> Result<(), crate::Error> {
             if self.receiver.is_none() {
                 return Err(no_async());
@@ -500,33 +520,48 @@ impl SyncComp for StepperCtrl {
     // Position
         #[inline]
         fn gamma(&self) -> Gamma {
-            Gamma::ZERO + self.consts.ang_from_steps_dir(self.pos)
+            Gamma::ZERO + self.consts.ang_from_steps(self.pos)
         }   
 
         #[inline]
         fn write_gamma(&mut self, pos : Gamma) {
-            self.pos = self.consts.steps_from_ang_dir(pos - Gamma::ZERO);
+            self.pos = self.consts.steps_from_ang(pos - Gamma::ZERO);
         }
 
         #[inline]
         fn set_limit(&mut self, min : Option<Gamma>, max : Option<Gamma>) {
             if min.is_some() {
-                self.limit.min = min;
+                self.vars.lim.min = min;
             }
 
             if max.is_some() {
-                self.limit.max = max;
+                self.vars.lim.max = max;
             }
         }
 
+        #[inline]
+        fn reset_limit(&mut self, min : Option<Gamma>, max : Option<Gamma>) {
+            self.vars.lim.min = min;
+            self.vars.lim.max = max;
+        }
+
         fn lim_for_gamma(&self, gamma : Gamma) -> Delta {
-            return match self.limit.min {
+            match self.vars.lim.min {
                 Some(ang) => {
                     if gamma < ang {
                         gamma - ang
-                    } else { Delta::ZERO }
+                    } else {
+                        match self.vars.lim.max {
+                            Some(ang) => {
+                                if gamma > ang {
+                                    gamma - ang
+                                } else { Delta::ZERO }
+                            },
+                            None => Delta::ZERO
+                        }
+                    }
                 },
-                None => match self.limit.max {
+                None => match self.vars.lim.max {
                     Some(ang) => {
                         if gamma > ang {
                             gamma - ang
@@ -534,27 +569,33 @@ impl SyncComp for StepperCtrl {
                     },
                     None => Delta::NAN
                 }
-            };
+            }
         }
 
         fn set_end(&mut self, set_gamma : Gamma) {
-            self.pos = self.consts.steps_from_ang_dir(set_gamma - Gamma::ZERO);
+            self.pos = self.consts.steps_from_ang(set_gamma - Gamma::ZERO);
     
             self.set_limit(
-                if self.dir { self.limit.min } else { Some(set_gamma) },
-                if self.dir { Some(set_gamma) } else { self.limit.max }
+                if self.dir { self.vars.lim.min } else { Some(set_gamma) },
+                if self.dir { Some(set_gamma) } else { self.vars.lim.max }
             )
         }
     //
 
     // Loads
-        #[inline]
+        #[inline(always)]
         fn apply_inertia(&mut self, j : Inertia) {
             self.vars.j_load = j;
         }
 
-        #[inline]
+        #[inline(always)]
         fn apply_force(&mut self, t : Force) {
+            if t >= self.consts.t_s {
+                #[cfg(feature = "std")]
+                println!("Load will not be applied! {}", t);
+                return;
+            }
+
             self.vars.t_load = t;
         }
     //
