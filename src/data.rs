@@ -1,4 +1,4 @@
-//! ### Data subfile
+//! ### Data
 //! 
 //! Structs for storing stepper motor data and performing basic calculations \
 //! NOTE: If any of the formulas are unclear, please have a look at \
@@ -22,18 +22,16 @@ mod var;
 pub use var::CompVars;
 //
 
-/**
-### `StepperData`
-A collection of the most relevant variables Unit stepper calculation 
-```
-use stepper_lib::StepperConst;
-
-// Create the data from an standard motor
-let mut data = StepperConst::MOT_17HE15_1504S;
-
-``` 
-Supports JSON-Serialize and Deserialize with the `serde_json` library
-*/
+/// ### `StepperData`
+/// A collection of the most relevant variables Unit stepper calculation 
+/// ```
+/// use stepper_lib::StepperConst;
+///
+/// // Create the data from an standard motor
+/// let mut data = StepperConst::MOT_17HE15_1504S;
+///
+/// ``` 
+/// Supports JSON-Serialize and Deserialize with the `serde_json` library
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct StepperConst
 {
@@ -146,9 +144,13 @@ impl StepperConst
     // Load calculations
         /// Max motor torque when having a load [Unit Nm]
         /// 
+        /// # Errors
+        /// 
+        /// Returns an error if the load torque `t_load` is larger than the stall torque `t_s`
+        /// 
         /// # Pancis
         /// 
-        /// 
+        /// Panics if the load force is either
         #[inline(always)]
         pub fn t(&self, t_load : Force) -> Result<Force, crate::Error> {  // TODO: Add overload protection
             if !t_load.is_finite() {
@@ -173,9 +175,29 @@ impl StepperConst
 
         /// Max motor torque when having a load, using a modified base torque t_s [Unit Nm]
         /// 
+        /// # Errors
+        /// 
+        /// Returns an error if the load torque `t_load` is larger than the stall torque `t_s`
+        /// 
         /// # Panics 
         /// 
-        /// Panics if the given motor torque `t_s` is negative, zero (-0.0 included), infinite or NAN
+        /// Panics if either the given motor torque `t_s` or load torque `t_load` are negative, zero (-0.0 included), infinite or NAN
+        /// 
+        /// ```rust
+        /// use stepper_lib::data::StepperConst;
+        /// use stepper_lib::units::*;
+        /// 
+        /// // Base torque of the motor
+        /// const BASE : Force = Force(1.0);
+        /// 
+        /// // Load torque
+        /// const LOAD_1 : Force = Force(0.5);
+        /// const LOAD_2 : Force = Force(1.5);
+        /// 
+        /// // Compare
+        /// assert_eq!(StepperConst::t_dyn(BASE, LOAD_1).unwrap(), Force(0.5));
+        /// assert!(StepperConst::t_dyn(BASE, LOAD_2).is_err());
+        /// ```
         #[inline(always)]
         pub fn t_dyn(t_s : Force, t_load : Force) -> Result<Force, crate::Error> { // TODO: Add overload protection
             if !t_s.is_normal() {
@@ -218,22 +240,25 @@ impl StepperConst
     //
 
     // Conversions
-        /// Converts the given angle `ang` into a absolute number of steps
+        /// Converts the given angle `ang` into a absolute number of steps (always positive).
         #[inline(always)]
         pub fn steps_from_ang_abs(&self, ang : Delta) -> u64 {
             (ang.abs() / self.step_ang()).round() as u64
-        }
+        }   
 
+        /// Converts the given angle `ang` into a number of steps
         #[inline(always)]
         pub fn steps_from_ang(&self, ang : Delta) -> i64 {
             (ang / self.step_ang()).round() as i64
         }   
 
+        /// Converts the given number of steps into an angle
         #[inline(always)]
         pub fn ang_from_steps_abs(&self, steps : u64) -> Delta {
             steps as f32 * self.step_ang()
         }
 
+        /// Converts the given number of steps into an angle
         #[inline(always)]
         pub fn ang_from_steps(&self, steps : i64) -> Delta {
             steps as f32 * self.step_ang()
