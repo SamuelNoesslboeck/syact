@@ -1,12 +1,13 @@
 use alloc::boxed::Box;
 use alloc::vec::Vec;
 
+use core::ops::Index;
 use core::ops::IndexMut;
 
 use crate::SyncComp;
 use crate::units::*;
 
-pub trait SyncCompGroup<T, const N : usize> : IndexMut<usize, Output = Box<T>> 
+pub trait SyncCompGroup<T, const N : usize> : IndexMut<usize, Output = Box<T>> + Index<usize, Output = Box<T>>
     where
         T: SyncComp,
         T: ?Sized
