@@ -87,6 +87,7 @@ pub trait SyncCompGroup<T, const N : usize> : IndexMut<usize, Output = Box<T>> +
     // 
 
     // Position
+        #[inline(always)]
         fn gammas(&self) -> [Gamma; N] {
             let mut dists = [Gamma::ZERO; N];
             for i in 0 .. N {
@@ -95,12 +96,14 @@ pub trait SyncCompGroup<T, const N : usize> : IndexMut<usize, Output = Box<T>> +
             dists
         }
         
+        #[inline(always)]
         fn write_gammas(&mut self, gammas : &[Gamma; N]) {
             for i in 0 .. N {
                 self[i].write_gamma(gammas[i])
             }
         }
 
+        #[inline(always)]
         fn lims_for_gammas(&self, gammas : &[Gamma; N]) -> [Delta; N] {
             let mut limits = [Delta::ZERO; N]; 
             for i in 0 .. N {
@@ -109,6 +112,7 @@ pub trait SyncCompGroup<T, const N : usize> : IndexMut<usize, Output = Box<T>> +
             limits
         }
 
+        #[inline(always)]
         fn valid_gammas(&self, gammas : &[Gamma; N]) -> bool {
             let mut res = true;
             for i in 0 .. N {
@@ -117,6 +121,7 @@ pub trait SyncCompGroup<T, const N : usize> : IndexMut<usize, Output = Box<T>> +
             res
         }
 
+        #[inline(always)]
         fn valid_gammas_verb(&self, gammas : &[Gamma; N]) -> [bool; N] {
             let mut res = [true; N];
             for i in 0 .. N {
@@ -125,12 +130,14 @@ pub trait SyncCompGroup<T, const N : usize> : IndexMut<usize, Output = Box<T>> +
             res
         }
 
+        #[inline(always)]
         fn set_end(&mut self, set_dist : &[Gamma; N]) {
             for i in 0 .. N {
                 self[i].set_end(set_dist[i]);
             }
         }
 
+        #[inline(always)]
         fn set_limit(&mut self, min : &[Option<Gamma>; N], max : &[Option<Gamma>; N]) {
             for i in 0 .. N {
                 self[i].set_limit(min[i], max[i]);
@@ -139,15 +146,24 @@ pub trait SyncCompGroup<T, const N : usize> : IndexMut<usize, Output = Box<T>> +
     //
 
     // Load calculation
+        #[inline(always)]
         fn apply_inertias(&mut self, inertias : &[Inertia; N]) {
             for i in 0 .. N {
                 self[i].apply_inertia(inertias[i]);
             }
         }
 
+        #[inline(always)]
         fn apply_forces(&mut self, forces : &[Force; N]) {
             for i in 0 .. N {
                 self[i].apply_force(forces[i]);
+            }
+        }
+
+        #[inline(always)]
+        fn apply_bend_f(&mut self, f_bend : f32) {
+            for i in 0 .. N {
+                self[i].apply_bend_f(f_bend);
             }
         }
     // 
