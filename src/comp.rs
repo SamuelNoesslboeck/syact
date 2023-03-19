@@ -346,6 +346,7 @@ pub trait SyncComp : crate::meas::SimpleMeas + crate::math::MathActor + core::fm
 
     // Async
         /// Moves the component by the relative distance as fast as possible
+        #[inline(always)]
         #[cfg(feature = "std")]
         fn drive_rel_async(&mut self, mut delta : Delta, mut omega : Omega) -> Result<(), crate::Error> {
             let gamma = self.gamma(); 
@@ -362,6 +363,7 @@ pub trait SyncComp : crate::meas::SimpleMeas + crate::math::MathActor + core::fm
 
         /// Moves the component to the given position as fast as possible, halts the script until the 
         /// movement is finished and returns the actual **abolute** distance traveled to. 
+        #[inline(always)]
         #[cfg(feature = "std")]
         fn drive_abs_async(&mut self, mut gamma : Gamma, mut omega : Omega) -> Result<(), crate::Error> {
             omega = self.omega_for_super(omega, gamma);
@@ -384,6 +386,7 @@ pub trait SyncComp : crate::meas::SimpleMeas + crate::math::MathActor + core::fm
         /// 
         /// - Returns an error if the definition has not been overwritten by the component and no super component is known
         /// - Returns an error if no async movement has been started yet
+        #[inline(always)]
         #[cfg(feature = "std")]
         fn await_inactive(&mut self) -> Result<(), crate::Error> {
             if let Some(s_comp) = self.super_comp_mut() {
@@ -415,6 +418,7 @@ pub trait SyncComp : crate::meas::SimpleMeas + crate::math::MathActor + core::fm
         /// 
         /// assert!((cylinder.gamma() - POS).abs() < Delta(0.05));      // Check with small tolerance
         /// ```
+        #[inline(always)]
         fn gamma(&self) -> Gamma {
             let super_len = if let Some(s_comp) = self.super_comp() {
                 s_comp.gamma()
@@ -446,6 +450,7 @@ pub trait SyncComp : crate::meas::SimpleMeas + crate::math::MathActor + core::fm
         /// 
         /// assert!((cylinder.gamma() - POS).abs() < Delta(0.05));      // Check with small tolerance
         /// ```
+        #[inline(always)]
         fn write_gamma(&mut self, mut gamma : Gamma) {
             gamma = self.gamma_for_super(gamma);
 
@@ -502,6 +507,7 @@ pub trait SyncComp : crate::meas::SimpleMeas + crate::math::MathActor + core::fm
         /// assert_eq!(gear.lim_for_gamma(Gamma(0.5)), Delta::ZERO);    // In range
         /// assert_eq!(gear.lim_for_gamma(Gamma(-4.0)), Delta(-1.0));   // Under the minimum, but less
         /// ```
+        #[inline(always)]
         fn lim_for_gamma(&self, mut gamma : Gamma) -> Delta {
             gamma = self.gamma_for_super(gamma);
 
@@ -538,6 +544,7 @@ pub trait SyncComp : crate::meas::SimpleMeas + crate::math::MathActor + core::fm
         /// assert_eq!(gear.lim_for_gamma(Gamma(2.0)), Delta::ZERO);     
         /// assert_eq!(gear.lim_for_gamma(Gamma(-2.0)), Delta(-3.0));      
         /// ```
+        #[inline(always)]
         fn set_end(&mut self, mut set_gamma : Gamma) {
             set_gamma = self.gamma_for_super(set_gamma);
 
@@ -682,6 +689,7 @@ pub trait SyncComp : crate::meas::SimpleMeas + crate::math::MathActor + core::fm
         /// assert_eq!(Gamma(2.0), gear.gamma_for_super(Gamma(1.0)));
         /// assert_eq!(Force(0.1), gear.super_comp().unwrap().vars().t_load);
         /// ```
+        #[inline(always)]
         fn apply_force(&mut self, mut force : Force) { // TODO: Add overload protection
             force = Force(self.gamma_for_this(Gamma(force.0)).0);
 
@@ -712,11 +720,19 @@ pub trait SyncComp : crate::meas::SimpleMeas + crate::math::MathActor + core::fm
         /// assert_eq!(Gamma(2.0), gear.gamma_for_super(Gamma(1.0)));
         /// assert_eq!(Inertia(1.0), gear.super_comp().unwrap().vars().j_load);
         /// ```
+        #[inline(always)]
         fn apply_inertia(&mut self, mut inertia : Inertia) {
             inertia = Inertia(self.gamma_for_this(self.gamma_for_this(Gamma(inertia.0))).0);
 
             if let Some(s_comp) = self.super_comp_mut() {
                 s_comp.apply_inertia(inertia);
+            }
+        }
+
+        #[inline(always)]
+        fn apply_bend_f(&mut self, f_bend : f32) {
+            if let Some(s_comp) = self.super_comp_mut() {
+                s_comp.apply_bend_f(f_bend);
             }
         }
     // 

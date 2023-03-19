@@ -17,9 +17,18 @@ pub struct CompVars {
     pub t_load : Force,
     pub j_load : Inertia,
 
+    pub f_bend : f32,
+
     pub lim : Limits
 }
 
 impl CompVars  {
-    pub const ZERO : Self = Self { t_load: Force::ZERO, j_load: Inertia::ZERO, lim: Limits::NONE };
+    pub const ZERO : Self = Self { 
+        t_load: Force::ZERO, 
+        j_load: Inertia::ZERO, 
+
+        f_bend: 0.0,
+
+        lim: Limits::NONE 
+    };
 }

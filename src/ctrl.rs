@@ -598,6 +598,11 @@ impl SyncComp for StepperCtrl {
 
             self.vars.t_load = t;
         }
+
+        #[inline(always)]
+        fn apply_bend_f(&mut self, f_bend : f32) {
+            self.vars.f_bend = f_bend;
+        }
     //
 }
 
