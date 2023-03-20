@@ -20,6 +20,10 @@ pub fn start_frequency(data : &StepperConst, var : &CompVars) -> Omega {
 
 #[inline]
 pub fn travel_times(delta : Delta, omega : Omega, alpha : Alpha) -> (Time, Time) {
+    if !alpha.is_normal() {
+        panic!("The given alpha is invalid (delta: {}, omega: {}, alpha: {})", delta, omega, alpha);
+    }
+
     let p = omega / alpha;
     let q = 2.0 * delta.0 / alpha.0;
 
