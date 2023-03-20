@@ -27,7 +27,7 @@ impl CompVars  {
         t_load: Force::ZERO, 
         j_load: Inertia::ZERO, 
 
-        f_bend: 0.0,
+        f_bend: 1.0,
 
         lim: Limits::NONE 
     };

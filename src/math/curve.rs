@@ -67,6 +67,14 @@ pub fn write_simple_move(data : &StepperConst, var : &CompVars, lk : &LinkedData
     let mut omega = Omega::ZERO;
     let mut alpha : Alpha;
 
+    if !var.f_bend.is_normal() {
+        panic!("Invaild bend factor! ({})", var.f_bend);
+    }
+
+    if !lk.s_f.is_normal() {
+        panic!("Invalid safety factor! ({})", lk.s_f);
+    }
+
     for i in 0 .. cur_len / 2 {
         alpha = data.alpha_max_dyn(torque_dyn(data, omega, lk.u), var).unwrap() / lk.s_f * var.f_bend;   // TODO: Overload 
         
