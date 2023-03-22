@@ -12,11 +12,11 @@ pub struct AxialJoint {
     pub servo : ServoDriver,
 
     pub length : f32,
-    pub mass : f32
+    pub mass : Inertia
 }
 
 impl AxialJoint {
-    pub fn new(servo : ServoDriver, length : f32, mass : f32) -> Self {
+    pub fn new(servo : ServoDriver, length : f32, mass : Inertia) -> Self {
         Self {
             servo, 
             length,
@@ -54,12 +54,12 @@ impl Tool for AxialJoint {
         Vec3::Y * self.length
     }
 
-    fn get_inertia(&self) -> f32 {
+    fn get_inertia(&self) -> Inertia {
         self.length.powi(2) * self.mass / 12.0
     }
 
     fn get_mass(&self) -> f32 {
-        self.mass
+        self.mass.0
     }
 }
 

@@ -3,6 +3,7 @@ use serde::{Serialize, Deserialize};
 use glam::Vec3;
 
 use crate::Tool;
+use crate::units::*;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NoTool { } // Empty struct
@@ -29,8 +30,8 @@ impl Tool for NoTool {
             Vec3::ZERO
         }
 
-        fn get_inertia(&self) -> f32 {
-            0.0
+        fn get_inertia(&self) -> Inertia {
+            Inertia::ZERO
         }
 
         fn get_mass(&self) -> f32 {

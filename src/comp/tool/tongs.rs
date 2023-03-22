@@ -4,6 +4,7 @@ use serde::{Serialize, Deserialize};
 use crate::Tool;
 use crate::comp::tool::SimpleTool;
 use crate::ctrl::servo::ServoDriver;
+use crate::units::*;
 
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -14,11 +15,11 @@ pub struct Tongs {
     pub perc_close : f32,
 
     pub length : f32,
-    pub mass : f32
+    pub mass : Inertia
 }
 
 impl Tongs {
-    pub fn new(servo : ServoDriver, perc_open : f32, perc_close : f32, length : f32, mass : f32) -> Self {
+    pub fn new(servo : ServoDriver, perc_open : f32, perc_close : f32, length : f32, mass : Inertia) -> Self {
         let mut tongs = Self {
             servo,
             perc_open,
@@ -62,12 +63,12 @@ impl Tool for Tongs {
         Vec3::Y * self.length
     }
 
-    fn get_inertia(&self) -> f32 {
+    fn get_inertia(&self) -> Inertia {
         self.mass * self.length.powi(2) / 12.0
     }
 
     fn get_mass(&self) -> f32 {
-        self.mass
+        self.mass.0
     }
 }
 

@@ -73,7 +73,7 @@ pub trait Tool : Debug {
         fn get_vec(&self) -> Vec3;
 
         /// Returns the tool inhertia 
-        fn get_inertia(&self) -> f32;
+        fn get_inertia(&self) -> Inertia;
 
         /// Return the tool mass
         fn get_mass(&self) -> f32;

@@ -26,9 +26,9 @@ pub mod servo;
 // 
 
 #[cfg(feature = "std")]
-type AsyncMsg = Vec<Time>;
+type AsyncMsg = (Vec<Time>, bool);
 #[cfg(feature = "std")]
-type AsyncRes = ();
+type AsyncRes = i64;
 
 type Interrupter = fn (&mut Pins) -> bool;
 
@@ -200,8 +200,11 @@ impl StepperCtrl {
         #[cfg(not(feature = "std"))]
         StepperCtrl::drive_curve_sig(cur, pins);
 
-        self.pos += if self.dir { cur.len() as i64 } else { -(cur.len() as i64) };
-
+        self.pos += if self.dir { 
+            cur.len() as i64 
+        } else { 
+            -(cur.len() as i64) 
+        };
     }
 
     fn drive_curve_int(&mut self, cur : &[Time], intr : Interrupter) -> (usize, bool) {
@@ -331,10 +334,12 @@ impl StepperCtrl {
         let cur = math::curve::create_simple_curve(&self.consts, &self.vars, &self.lk, delta, omega_max);
 
         if let Some(sender) = &self.sender {
-            sender.send(Some(cur)).unwrap(); // TODO: remove unwrap
+            self.active = true;
+            sender.send(Some((cur, self.dir))).unwrap(); // TODO: remove unwrap
+            Ok(())
+        } else {
+            Err(no_async())
         }
-
-        Ok(())
     }
 }
 
@@ -418,12 +423,18 @@ impl SyncComp for StepperCtrl {
                     match receiver_thr.recv() {
                         Ok(msg_opt) => 
                             match msg_opt {
-                                Some(msg) => {
+                                Some((msg, dir)) => {
                                     let mut pins = sys.lock().unwrap();
 
                                     StepperCtrl::drive_curve_sig(&msg, &mut pins);
 
-                                    sender_thr.send(()).unwrap();
+                                    let steps_dir = if dir {
+                                        msg.len() as i64
+                                    } else {
+                                        -(msg.len() as i64)
+                                    };
+
+                                    sender_thr.send(steps_dir).unwrap();
                                 },
                                 None => {
                                     break;
@@ -472,6 +483,8 @@ impl SyncComp for StepperCtrl {
         }
 
         fn measure(&mut self, max_delta : Delta, omega : Omega, set_gamma : Gamma) -> Result<Delta, crate::Error> {
+            self.reset_limit(None, None);
+
             let (delta, interrupted) = self.drive_simple_int(max_delta, omega, Self::__meas_helper)?;
 
             if !interrupted {
@@ -499,7 +512,7 @@ impl SyncComp for StepperCtrl {
         }
         
         #[cfg(feature = "std")]
-        fn await_inactive(&mut self) -> Result<(), crate::Error> {
+        fn await_inactive(&mut self) -> Result<Delta, crate::Error> {
             if self.receiver.is_none() {
                 return Err(no_async());
             }
@@ -508,12 +521,14 @@ impl SyncComp for StepperCtrl {
                 return Err(not_active());
             }
 
-            if let Some(recv) = &self.receiver {
-                recv.recv().unwrap(); // TODO: Remove unwrap
-            }
+            let delta = if let Some(recv) = &self.receiver {
+                self.consts.ang_from_steps(recv.recv().unwrap())        // TODO: Remove unwrap
+            } else {
+                Delta::NAN
+            };
 
             self.active = false;
-            Ok(())
+            Ok(delta)
         }
     //
 

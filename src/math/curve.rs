@@ -76,7 +76,7 @@ pub fn write_simple_move(data : &StepperConst, var : &CompVars, lk : &LinkedData
     }
 
     for i in 0 .. cur_len / 2 {
-        alpha = data.alpha_max_dyn(torque_dyn(data, omega, lk.u), var).unwrap() / lk.s_f * var.f_bend;   // TODO: Overload 
+        alpha = data.alpha_max_dyn(torque_dyn(data, omega / var.f_bend, lk.u), var).unwrap() / lk.s_f * var.f_bend;   // TODO: Overload 
         
         (time, omega) = next_node_simple(delta, omega, alpha);
 

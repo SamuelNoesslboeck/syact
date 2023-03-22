@@ -13,7 +13,7 @@ fn tongs() {
         0.7,
         0.4,
         50.0,
-        0.1
+        Inertia(0.1)
     );
 
     loop {
@@ -32,7 +32,7 @@ fn axial_joint() {
     let mut axial_joint = AxialJoint::new(
         ServoDriver::new(ServoConst::MG996R, AXIAL_JOINT_PIN),
         50.0,
-        0.1
+        Inertia(0.1)
     );
 
     loop {

@@ -22,7 +22,15 @@ fn pq_formula_times(p : f32, q : f32) -> (Time, Time) {
 
 #[inline]
 fn correct_time(t : Time) -> Time {
-    if t.0.is_nan() { Time(f32::INFINITY) } else { if t <= Time::ZERO { Time(f32::INFINITY) } else { t } } 
+    if t.0.is_nan() { 
+        Time(f32::INFINITY) 
+    } else { 
+        if t <= Time::ZERO { 
+            Time(f32::INFINITY) 
+        } else { 
+            t 
+        } 
+    } 
 }
 
 fn correct_times(times : (Time, Time)) -> (Time, Time) {

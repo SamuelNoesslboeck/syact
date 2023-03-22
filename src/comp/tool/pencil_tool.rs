@@ -3,16 +3,17 @@ use serde::{Serialize, Deserialize};
 use glam::Vec3;
 
 use crate::Tool;
+use crate::units::*;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PencilTool
 {
     pub length : f32,
-    pub mass : f32
+    pub mass : Inertia
 }
 
 impl PencilTool {
-    pub fn new(length : f32, mass : f32) -> Self {
+    pub fn new(length : f32, mass : Inertia) -> Self {
         PencilTool {
             length,
             mass
@@ -36,12 +37,12 @@ impl Tool for PencilTool {
             Vec3::new(0.0, self.length, 0.0)
         }
 
-        fn get_inertia(&self) -> f32 {
+        fn get_inertia(&self) -> Inertia {
             self.mass * self.length.powi(2) / 12.0
         }
 
         fn get_mass(&self) -> f32 {
-            self.mass
+            self.mass.0
         }
     // 
 }

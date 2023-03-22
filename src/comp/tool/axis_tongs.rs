@@ -1,8 +1,8 @@
 use serde::{Serialize, Deserialize};
 
 use crate::Tool;
-
 use crate::comp::tool::{SimpleTool, AxisTool, Tongs};
+use crate::units::*;
 
 use super::AxialJoint;
 
@@ -51,11 +51,11 @@ impl Tool for AxisTongs {
         self.axis.get_vec() + self.tongs.get_vec()
     }
 
-    fn get_inertia(&self) -> f32 {
+    fn get_inertia(&self) -> Inertia {
         self.axis.get_inertia() + self.tongs.get_inertia()
     }
 
     fn get_mass(&self) -> f32 {
-        self.axis.get_mass() + self.tongs.get_inertia()
+        self.axis.get_mass() + self.tongs.get_mass()
     }
 }

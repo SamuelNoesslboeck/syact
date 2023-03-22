@@ -26,12 +26,6 @@ pub mod tool;
 pub use tool::Tool;
 //
 
-#[cfg(feature = "std")]
-#[inline(always)]
-fn no_super() -> crate::Error {
-    crate::Error::new(std::io::ErrorKind::NotFound, "No super component has been found")
-}
-
 #[cfg(not(feature = "std"))]
 #[inline(always)]
 fn no_super() -> crate::Error {
@@ -308,9 +302,10 @@ pub trait SyncComp : crate::meas::SimpleMeas + crate::math::MathActor + core::fm
 
             let res = if let Some(s_comp) = self.super_comp_mut() {
                 s_comp.drive_rel(delta, omega)?
-            } else { 
-                return Err(no_super()); 
-            }; 
+            } else {
+                #[cfg(feature = "std")]
+                panic!("Provide a super component or an override for this component!");
+            };
             
             Ok(self.delta_for_this(res, self.gamma_for_super(gamma)))
         }
@@ -323,7 +318,10 @@ pub trait SyncComp : crate::meas::SimpleMeas + crate::math::MathActor + core::fm
 
             let res = if let Some(s_comp) = self.super_comp_mut() {
                 s_comp.drive_abs(gamma, omega)?
-            } else { Delta::ZERO }; 
+            } else {
+                #[cfg(feature = "std")]
+                panic!("Provide a super component or an override for this component!");
+            };
 
             Ok(self.delta_for_this(res, gamma)) 
         }
@@ -338,8 +336,9 @@ pub trait SyncComp : crate::meas::SimpleMeas + crate::math::MathActor + core::fm
 
             if let Some(s_comp) = self.super_comp_mut() {
                 s_comp.measure(delta, omega, set_gamma)
-            } else { 
-                Err(no_super()) 
+            } else {
+                #[cfg(feature = "std")]
+                panic!("Provide a super component or an override for this component!");
             }
         }   
     // 
@@ -355,10 +354,11 @@ pub trait SyncComp : crate::meas::SimpleMeas + crate::math::MathActor + core::fm
             omega = self.omega_for_super(omega, gamma);
 
             if let Some(s_comp) = self.super_comp_mut() {
-                s_comp.drive_rel_async(delta, omega)?
+                s_comp.drive_rel_async(delta, omega)
+            } else {
+                #[cfg(feature = "std")]
+                panic!("Provide a super component or an override for this component!");
             }
-            
-            Err(no_super())
         }
 
         /// Moves the component to the given position as fast as possible, halts the script until the 
@@ -370,10 +370,11 @@ pub trait SyncComp : crate::meas::SimpleMeas + crate::math::MathActor + core::fm
             gamma = self.gamma_for_super(gamma);
 
             if let Some(s_comp) = self.super_comp_mut() {
-                s_comp.drive_abs_async(gamma, omega)?
+                s_comp.drive_abs_async(gamma, omega)
+            } else {
+                #[cfg(feature = "std")]
+                panic!("Provide a super component or an override for this component!");
             }
-
-            Err(no_super())
         }
 
         /// Halts the thread until the async movement is finished
@@ -388,12 +389,15 @@ pub trait SyncComp : crate::meas::SimpleMeas + crate::math::MathActor + core::fm
         /// - Returns an error if no async movement has been started yet
         #[inline(always)]
         #[cfg(feature = "std")]
-        fn await_inactive(&mut self) -> Result<(), crate::Error> {
-            if let Some(s_comp) = self.super_comp_mut() {
-                s_comp.await_inactive()? 
-            }
+        fn await_inactive(&mut self) -> Result<Delta, crate::Error> {
+            let delta = if let Some(s_comp) = self.super_comp_mut() {
+                s_comp.await_inactive()?
+            } else {
+                #[cfg(feature = "std")]
+                panic!("Provide a super component or an override for this component!");
+            }; 
 
-            Err(no_super())
+            Ok(self.delta_for_this(delta, self.gamma_for_super(self.gamma())))
         }
     // 
 
@@ -422,7 +426,10 @@ pub trait SyncComp : crate::meas::SimpleMeas + crate::math::MathActor + core::fm
         fn gamma(&self) -> Gamma {
             let super_len = if let Some(s_comp) = self.super_comp() {
                 s_comp.gamma()
-            } else { Gamma::ZERO };
+            } else {
+                #[cfg(feature = "std")]
+                panic!("Provide a super component or an override for this component!");
+            }; 
 
             self.gamma_for_this(super_len)
         }
@@ -456,6 +463,9 @@ pub trait SyncComp : crate::meas::SimpleMeas + crate::math::MathActor + core::fm
 
             if let Some(s_comp) = self.super_comp_mut() {
                 s_comp.write_gamma(gamma);
+            } else {
+                #[cfg(feature = "std")]
+                panic!("Provide a super component or an override for this component!");
             }
         }
 
@@ -513,7 +523,10 @@ pub trait SyncComp : crate::meas::SimpleMeas + crate::math::MathActor + core::fm
 
             let delta = if let Some(s_comp) = self.super_comp() {
                 s_comp.lim_for_gamma(gamma)
-            } else { Delta::ZERO };
+            } else {
+                #[cfg(feature = "std")]
+                panic!("Provide a super component or an override for this component!");
+            };
 
             self.delta_for_this(delta, gamma)
         }
@@ -550,6 +563,9 @@ pub trait SyncComp : crate::meas::SimpleMeas + crate::math::MathActor + core::fm
 
             if let Some(s_comp) = self.super_comp_mut() {
                 s_comp.set_end(set_gamma)
+            } else {
+                #[cfg(feature = "std")]
+                panic!("Provide a super component or an override for this component!");
             }
         }
 
@@ -607,6 +623,9 @@ pub trait SyncComp : crate::meas::SimpleMeas + crate::math::MathActor + core::fm
 
             if let Some(s_comp) = self.super_comp_mut() {
                 s_comp.set_limit(min, max)      // If the super component exists
+            } else {
+                #[cfg(feature = "std")]
+                panic!("Provide a super component or an override for this component!");
             }
         }
 
@@ -663,6 +682,9 @@ pub trait SyncComp : crate::meas::SimpleMeas + crate::math::MathActor + core::fm
 
             if let Some(s_comp) = self.super_comp_mut() {
                 s_comp.reset_limit(min, max)
+            } else {
+                #[cfg(feature = "std")]
+                panic!("Provide a super component or an override for this component!");
             }
         }
     // 
@@ -695,10 +717,17 @@ pub trait SyncComp : crate::meas::SimpleMeas + crate::math::MathActor + core::fm
 
             if let Some(s_comp) = self.super_comp_mut() {
                 s_comp.apply_force(force);
+            } else {
+                #[cfg(feature = "std")]
+                panic!("Provide a super component or an override for this component!");
             }
         }
         
         /// Apply a load inertia to the component, slowing down movements
+        /// 
+        /// # Panics
+        /// 
+        /// Panics if no super component or override of the function has been provided.
         /// 
         /// ```rust
         /// use stepper_lib::{SyncComp, StepperCtrl, StepperConst};
@@ -726,6 +755,9 @@ pub trait SyncComp : crate::meas::SimpleMeas + crate::math::MathActor + core::fm
 
             if let Some(s_comp) = self.super_comp_mut() {
                 s_comp.apply_inertia(inertia);
+            } else {
+                #[cfg(feature = "std")]
+                panic!("Provide a super component or an override for this component!");
             }
         }
 
@@ -733,6 +765,9 @@ pub trait SyncComp : crate::meas::SimpleMeas + crate::math::MathActor + core::fm
         fn apply_bend_f(&mut self, f_bend : f32) {
             if let Some(s_comp) = self.super_comp_mut() {
                 s_comp.apply_bend_f(f_bend);
+            } else {
+                #[cfg(feature = "std")]
+                panic!("Provide a super component or an override for this component!");
             }
         }
     // 
