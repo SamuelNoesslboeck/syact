@@ -55,7 +55,7 @@
 //! ```
 #![crate_name = "stepper_lib"]
 #![cfg_attr(not(feature = "std"), no_std)]
-// #![deny(missing_docs)]
+#![deny(missing_docs)]
 
 // Modules
 #[cfg(not(feature = "embedded"))]

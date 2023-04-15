@@ -62,11 +62,12 @@ impl StepperConst
         j_s: Inertia::ZERO
     }; 
 
+    /// Generic stepper motor data, only in use when testing for simple syntax
+    #[cfg(test)]
     pub const GEN : Self = Self::MOT_17HE15_1504S;
 
     /// ### Stepper motor 17HE15-1504S
-    /// Values for standard stepper motor \
-    /// Link: <https://www.omc-stepperonline.com/de/e-serie-nema-17-bipolar-42ncm-59-49oz-in-1-5a-42x42x38mm-4-draehte-w-1m-kabel-verbinder-17he15-1504s>
+    /// Values for standard stepper motor, see <https://github.com/SamuelNoesslboeck/stepper_lib/docs/datasheets/17HE15_1504S.pdf>
     pub const MOT_17HE15_1504S : Self = Self {
         i_max: 1.5, 
         l: 0.004, 
@@ -265,6 +266,7 @@ impl StepperConst
         }
 
         // Comparision
+        /// Checks wheither the given angle `ang` is in range (closes to) a given step count `steps`
         #[inline(always)]
         pub fn is_in_step_range(&self, steps : i64, ang : Delta) -> bool {
             self.steps_from_ang(ang) == steps
