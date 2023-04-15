@@ -147,7 +147,7 @@ impl SyncComp for CylinderTriangle {
         }
     //
 
-    /// See [Component::drive_rel()]
+    /// See [SyncComp::drive_rel()]
     /// - `dist`is the angular distance to be moved (Unit radians)
     /// - `vel` is the cylinders extend velocity (Unit mm per second)
     fn drive_rel(&mut self, mut delta : Delta, omega : Omega) -> Result<Delta, crate::Error> {
@@ -159,7 +159,7 @@ impl SyncComp for CylinderTriangle {
         Ok(self.delta_for_this(delta, self.gamma_for_super(gamma)))
     }
 
-    /// See [Component::drive_abs]
+    /// See [SyncComp::drive_abs]
     /// - `dist`is the angular distance to be moved (Unit radians)
     /// - `vel` is the cylinders extend velocity (Unit mm per second)
     fn drive_abs(&mut self, mut gamma : Gamma, omega : Omega) -> Result<Delta, crate::Error> {
@@ -170,7 +170,7 @@ impl SyncComp for CylinderTriangle {
         Ok(self.delta_for_this(delta, gamma))
     }
 
-    /// See [Component::measure()]
+    /// See [SyncComp::measure()]
     /// - `dist` is the maximum distance for the cylinder in mm
     /// - `vel` is the maximum linear velocity for the cylinder in mm per second
     /// - `set_dist` is the set distance for the cylinder in mm

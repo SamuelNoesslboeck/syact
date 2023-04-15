@@ -16,7 +16,7 @@ mod single_motor
     #[test]
     fn step() -> Result<(), crate::Error> {
         let mut ctrl = StepperCtrl::new(StepperConst::MOT_17HE15_1504S, PIN_DIR, PIN_STEP);
-        ctrl.write_link(LinkedData::GEN); 
+        ctrl.write_link(LinkedData { u: 12.0, s_f: 1.5 }); 
     
         ctrl.apply_inertia(Inertia(0.000_1));
     

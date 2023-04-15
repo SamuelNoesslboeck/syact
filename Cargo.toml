@@ -4,7 +4,7 @@ authors = [ "Samuel Nösslböck <samuel.noesslboeck@gmail.com>" ]
 version = "0.10.6"
 edition = "2021"
 repository = "https://github.com/SamuelNoesslboeck/stepper_lib"
-license-file = "LICENCE"
+license-file = "LICENSE"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -26,3 +26,9 @@ rppal = "0.14.1"
 default = [ "std" ]
 std = [ ]
 embedded = [ ]
+
+[profile.dev]
+opt-level = 0
+
+[profile.release]
+opt-level = 3
