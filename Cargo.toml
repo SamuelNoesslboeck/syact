@@ -2,6 +2,7 @@
 name = "stepper_lib"
 authors = [ "Samuel Nösslböck <samuel.noesslboeck@gmail.com>" ]
 version = "0.10.6"
+description = "A simple library to control motors and components"
 edition = "2021"
 repository = "https://github.com/SamuelNoesslboeck/stepper_lib"
 license-file = "LICENSE"
