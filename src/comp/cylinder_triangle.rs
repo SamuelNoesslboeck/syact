@@ -3,7 +3,6 @@ use serde::{Serialize, Deserialize};
 use crate::SyncComp;
 use crate::comp::Cylinder;
 use crate::data::LinkedData;
-use crate::math::MathActor;
 use crate::meas::SimpleMeas;
 use crate::units::*;
 
@@ -74,16 +73,14 @@ impl CylinderTriangle
     //
 }
 
-impl MathActor for CylinderTriangle
-{
-    fn accel_dyn(&self, omega : Omega, gamma : Gamma) -> Alpha {
-        self.alpha_for_this(self.cylinder.accel_dyn(
-            self.omega_for_super(omega, gamma), self.gamma_for_super(gamma)), self.gamma_for_super(gamma))
-    }
-}
+// impl crate::math::MathActor for CylinderTriangle {
+//     fn accel_dyn(&self, omega : Omega, gamma : Gamma) -> Alpha {
+//         self.alpha_for_this(self.cylinder.accel_dyn(
+//             self.omega_for_super(omega, gamma), self.gamma_for_super(gamma)), self.gamma_for_super(gamma))
+//     }
+// }
 
-impl SimpleMeas for CylinderTriangle
-{
+impl SimpleMeas for CylinderTriangle {
     fn init_meas(&mut self, pin_meas : u8) {
         self.cylinder.init_meas(pin_meas)
     }
@@ -92,11 +89,13 @@ impl SimpleMeas for CylinderTriangle
 impl SyncComp for CylinderTriangle {
     // Setup 
         fn setup(&mut self) { 
+            self.cylinder.setup();
             self.cylinder.write_gamma(Gamma(self.l_a.max(self.l_b)));
         }
 
         #[cfg(feature = "std")]
         fn setup_async(&mut self) {
+            self.cylinder.setup();
             self.cylinder.setup_async();
         }
     // 

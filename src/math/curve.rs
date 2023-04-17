@@ -6,7 +6,7 @@ use core::f32::consts::PI;
 use crate::data::{StepperConst, CompVars, LinkedData};
 use crate::units::*;
 
-use crate::math::load::torque_dyn;
+use crate::math::force::torque_dyn;
 
 /// Returns the start freqency of a motor (data)  \
 /// 

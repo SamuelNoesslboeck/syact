@@ -1,11 +1,11 @@
 // Submodules
 mod comp;
 
-#[cfg(feature = "std")]
+#[cfg(any(feature = "rasp"))]
 mod servo;
 
-#[cfg(feature = "std")]
+#[cfg(any(feature = "rasp"))]
 mod stepper;
 
-#[cfg(feature = "std")]
+#[cfg(any(feature = "rasp"))]
 mod tools;

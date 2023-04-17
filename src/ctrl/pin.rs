@@ -1,11 +1,11 @@
-#[cfg(unix)]
+#[cfg(featue = "rasp")]
 use rppal::gpio::{Gpio, Pin, InputPin, OutputPin};
 
 pub const ERR_PIN : u8 = 0xFF; 
 
 #[derive(Debug)]
 pub struct UniPin {
-    #[cfg(unix)]
+    #[cfg(featue = "rasp")]
     sys_pin : Pin,
 
     pub pin : u8
@@ -13,7 +13,7 @@ pub struct UniPin {
 
 #[derive(Debug)]
 pub struct SimOutPin {
-    #[cfg(unix)]
+    #[cfg(featue = "rasp")]
     sys_pin : OutputPin,
     #[cfg(windows)]
     state : bool, 
@@ -23,14 +23,14 @@ pub struct SimOutPin {
 
 #[derive(Debug)]
 pub struct SimInPin {
-    #[cfg(unix)]
+    #[cfg(featue = "rasp")]
     sys_pin : InputPin,
 
     pub pin : u8
 }
 
 impl UniPin {
-    #[cfg(unix)]
+    #[cfg(featue = "rasp")]
     pub fn new(pin : u8) -> Result<Self, crate::Error> {
         let sys_pin = match Gpio::new() {
             Ok(gp) => match gp.get(pin) { 
@@ -54,7 +54,7 @@ impl UniPin {
         })
     }
 
-    #[cfg(unix)]
+    #[cfg(featue = "rasp")]
     pub fn into_input(self) -> SimInPin {
         SimInPin {
             pin: self.pin,
@@ -69,7 +69,7 @@ impl UniPin {
         }
     }
 
-    #[cfg(unix)]
+    #[cfg(featue = "rasp")]
     pub fn into_output(self) -> SimOutPin {
         SimOutPin {
             pin: self.pin,
@@ -88,7 +88,7 @@ impl UniPin {
 
 impl SimInPin {
     // Status
-        #[cfg(unix)]
+        #[cfg(featue = "rasp")]
         #[inline]
         pub fn is_sim(&self) -> bool {
             false
@@ -107,7 +107,7 @@ impl SimInPin {
         true
     }
 
-    #[cfg(unix)]
+    #[cfg(featue = "rasp")]
     #[inline]
     pub fn is_high(&self) -> bool {
         self.sys_pin.is_high()
@@ -119,7 +119,7 @@ impl SimInPin {
         false
     }
 
-    #[cfg(unix)]
+    #[cfg(featue = "rasp")]
     #[inline]
     pub fn is_low(&self) -> bool {
         self.sys_pin.is_low()
@@ -127,7 +127,7 @@ impl SimInPin {
 }
 
 impl SimOutPin {
-    #[cfg(unix)]
+    #[cfg(featue = "rasp")]
     #[inline]
     pub fn is_sim(&self) -> bool {
         false
@@ -145,7 +145,7 @@ impl SimOutPin {
         self.state
     }
 
-    #[cfg(unix)]
+    #[cfg(featue = "rasp")]
     #[inline]
     pub fn is_set_high(&self) -> bool {
         self.sys_pin.is_set_high()
@@ -157,7 +157,7 @@ impl SimOutPin {
         !self.state
     }
 
-    #[cfg(unix)]
+    #[cfg(featue = "rasp")]
     #[inline]
     pub fn is_set_low(&self) -> bool {
         self.sys_pin.is_set_low()
@@ -169,7 +169,7 @@ impl SimOutPin {
         self.state = true;
     }
 
-    #[cfg(unix)]
+    #[cfg(featue = "rasp")]
     #[inline]
     pub fn set_high(&mut self) {
         self.sys_pin.set_high();
@@ -181,7 +181,7 @@ impl SimOutPin {
         self.state = false;
     }
 
-    #[cfg(unix)]
+    #[cfg(featue = "rasp")]
     #[inline]
     pub fn set_low(&mut self) {
         self.sys_pin.set_low();

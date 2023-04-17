@@ -13,8 +13,8 @@ pub use cylinder::Cylinder;
 mod cylinder_triangle;
 pub use cylinder_triangle::CylinderTriangle;
 
-mod gear_bearing;
-pub use gear_bearing::GearBearing;
+mod gear_joint;
+pub use gear_joint::GearJoint;
 
 /// A module for component groups, as they are used in various robots. The components are all sharing the same 
 /// [LinkedData](crate::data::LinkedData) and their movements are coordinated. 
@@ -37,19 +37,41 @@ fn no_super() -> crate::Error {
 /// # Super components
 /// 
 /// Components can have multiple layers, for example take a stepper motor with a geaerbox attached to it. The stepper motor and both combined will be a component, the later having 
-/// the stepper motor component defined as it's super component. (See [GearBearing])
-pub trait SyncComp : crate::meas::SimpleMeas + crate::math::MathActor + core::fmt::Debug {
+/// the stepper motor component defined as it's super component. (See [GearJoint])
+pub trait SyncComp : crate::meas::SimpleMeas + core::fmt::Debug {
     // Init 
         /// Calls all required functions to assure the components functionality. 
-        fn setup(&mut self);
+        /// 
+        /// # Panics
+        /// 
+        /// Panics if neither a super component nor an override has been provided
+        fn setup(&mut self) {
+            if let Some(s_comp) = self.super_comp_mut() {
+                s_comp.setup()
+            } else {
+                #[cfg(feature = "std")]
+                panic!("Provide a super component or an override for this component!");
+            }
+        }
 
         /// Calls all required functions to assure the components async movement functionality
         /// 
         /// # Features 
         /// 
         /// This function is only available when using the "std" feature
+        /// 
+        /// # Panics
+        /// 
+        /// Panics if neither a super component nor an override has been provided
         #[cfg(feature = "std")]
-        fn setup_async(&mut self);
+        fn setup_async(&mut self) {
+            if let Some(s_comp) = self.super_comp_mut() {
+                s_comp.setup_async()
+            } else {
+                #[cfg(feature = "std")]
+                panic!("Provide a super component or an override for this component!");
+            }
+        }
     // 
 
     // Data
@@ -57,7 +79,7 @@ pub trait SyncComp : crate::meas::SimpleMeas + crate::math::MathActor + core::fm
         /// 
         /// ```rust
         /// use stepper_lib::{SyncComp, StepperCtrl, StepperConst};
-        /// use stepper_lib::comp::GearBearing;
+        /// use stepper_lib::comp::GearJoint;
         /// use stepper_lib::units::*;
         /// 
         /// // Limits
@@ -67,7 +89,7 @@ pub trait SyncComp : crate::meas::SimpleMeas + crate::math::MathActor + core::fm
         /// const LIM_MIN_LOWER : Gamma = Gamma(-3.0);
         /// 
         /// // Create a new gear bearing (implements SyncComp)
-        /// let mut gear = GearBearing::new(
+        /// let mut gear = GearJoint::new(
         ///     // Stepper Motor as subcomponent (also implements SyncComp)
         ///     StepperCtrl::new_sim(StepperConst::GEN), 
         /// 0.5);    // Ratio is set to 0.5, which means for each radian the motor moves, the bearing moves for half a radian
@@ -88,7 +110,11 @@ pub trait SyncComp : crate::meas::SimpleMeas + crate::math::MathActor + core::fm
 
         // JSON I/O 
         /// Get the *JSON* data of the current component as [serde_json::Value]
-        #[cfg(not(feature = "embedded"))]
+        /// 
+        /// # Feature
+        /// 
+        /// Only available when the "std"-feature is enabled
+        #[cfg(feature = "std")]
         fn to_json(&self) -> Result<serde_json::Value, serde_json::Error>;
     // 
 
@@ -484,7 +510,7 @@ pub trait SyncComp : crate::meas::SimpleMeas + crate::math::MathActor + core::fm
         /// 
         /// ```rust
         /// use stepper_lib::{SyncComp, StepperCtrl, StepperConst};
-        /// use stepper_lib::comp::GearBearing;
+        /// use stepper_lib::comp::GearJoint;
         /// use stepper_lib::units::*;
         /// 
         /// // Limits
@@ -494,7 +520,7 @@ pub trait SyncComp : crate::meas::SimpleMeas + crate::math::MathActor + core::fm
         /// const LIM_MIN_LOWER : Gamma = Gamma(-3.0);
         /// 
         /// // Create a new gear bearing (implements SyncComp)
-        /// let mut gear = GearBearing::new(
+        /// let mut gear = GearJoint::new(
         ///     // Stepper Motor as subcomponent (also implements SyncComp)
         ///     StepperCtrl::new_sim(StepperConst::GEN), 
         /// 0.5);    // Ratio is set to 0.5, which means for each radian the motor moves, the bearing moves for half a radian
@@ -537,14 +563,14 @@ pub trait SyncComp : crate::meas::SimpleMeas + crate::math::MathActor + core::fm
         /// 
         /// ```rust
         /// use stepper_lib::{SyncComp, StepperCtrl, StepperConst};
-        /// use stepper_lib::comp::GearBearing;
+        /// use stepper_lib::comp::GearJoint;
         /// use stepper_lib::data::LinkedData;
         /// use stepper_lib::units::*;
         /// 
         /// const GAMMA : Gamma = Gamma(1.0); 
         /// 
         /// // Create a new gear bearing (implements SyncComp)
-        /// let mut gear = GearBearing::new(
+        /// let mut gear = GearJoint::new(
         ///     // Stepper Motor as subcomponent (also implements SyncComp)
         ///     StepperCtrl::new_sim(StepperConst::GEN), 
         /// 0.5);    // Ratio is set to 0.5, which means for each radian the motor moves, the bearing moves for half a radian
@@ -577,7 +603,7 @@ pub trait SyncComp : crate::meas::SimpleMeas + crate::math::MathActor + core::fm
         /// 
         /// ```rust
         /// use stepper_lib::{SyncComp, StepperCtrl, StepperConst};
-        /// use stepper_lib::comp::GearBearing;
+        /// use stepper_lib::comp::GearJoint;
         /// use stepper_lib::units::*;
         /// 
         /// // Limits
@@ -587,7 +613,7 @@ pub trait SyncComp : crate::meas::SimpleMeas + crate::math::MathActor + core::fm
         /// const LIM_MIN_LOWER : Gamma = Gamma(-3.0);
         /// 
         /// // Create a new gear bearing (implements SyncComp)
-        /// let mut gear = GearBearing::new(
+        /// let mut gear = GearJoint::new(
         ///     // Stepper Motor as subcomponent (also implements SyncComp)
         ///     StepperCtrl::new_sim(StepperConst::GEN), 
         /// 0.5);    // Ratio is set to 0.5, which means for each radian the motor moves, the bearing moves for half a radian
@@ -636,7 +662,7 @@ pub trait SyncComp : crate::meas::SimpleMeas + crate::math::MathActor + core::fm
         /// 
         /// ```rust
         /// use stepper_lib::{SyncComp, StepperCtrl, StepperConst};
-        /// use stepper_lib::comp::GearBearing;
+        /// use stepper_lib::comp::GearJoint;
         /// use stepper_lib::units::*;
         /// 
         /// // Limits
@@ -646,7 +672,7 @@ pub trait SyncComp : crate::meas::SimpleMeas + crate::math::MathActor + core::fm
         /// const LIM_MIN_LOWER : Gamma = Gamma(-3.0);
         /// 
         /// // Create a new gear bearing (implements SyncComp)
-        /// let mut gear = GearBearing::new(
+        /// let mut gear = GearJoint::new(
         ///     // Stepper Motor as subcomponent (also implements SyncComp)
         ///     StepperCtrl::new_sim(StepperConst::GEN), 
         /// 0.5);    // Ratio is set to 0.5, which means for each radian the motor moves, the bearing moves for half a radian
@@ -694,14 +720,14 @@ pub trait SyncComp : crate::meas::SimpleMeas + crate::math::MathActor + core::fm
         /// 
         /// ```rust
         /// use stepper_lib::{SyncComp, StepperCtrl, StepperConst};
-        /// use stepper_lib::comp::GearBearing;
+        /// use stepper_lib::comp::GearJoint;
         /// use stepper_lib::units::*;
         /// 
         /// // Force to act upon the component
         /// const FORCE : Force = Force(0.2);
         /// 
         /// // Create a new gear bearing (implements SyncComp)
-        /// let mut gear = GearBearing::new(
+        /// let mut gear = GearJoint::new(
         ///     // Stepper Motor as subcomponent (also implements SyncComp)
         ///     StepperCtrl::new_sim(StepperConst::GEN), 
         /// 0.5);    // Ratio is set to 0.5, which means for each radian the motor moves, the bearing moves for half a radian
@@ -731,14 +757,14 @@ pub trait SyncComp : crate::meas::SimpleMeas + crate::math::MathActor + core::fm
         /// 
         /// ```rust
         /// use stepper_lib::{SyncComp, StepperCtrl, StepperConst};
-        /// use stepper_lib::comp::GearBearing;
+        /// use stepper_lib::comp::GearJoint;
         /// use stepper_lib::units::*;
         /// 
         /// // Inertia to act upon the component
         /// const INERTIA : Inertia = Inertia(4.0);
         /// 
         /// // Create a new gear bearing (implements SyncComp)
-        /// let mut gear = GearBearing::new(
+        /// let mut gear = GearJoint::new(
         ///     // Stepper Motor as subcomponent (also implements SyncComp)
         ///     StepperCtrl::new_sim(StepperConst::GEN), 
         /// 0.5);    // Ratio is set to 0.5, which means for each radian the motor moves, the bearing moves for half a radian
@@ -761,6 +787,12 @@ pub trait SyncComp : crate::meas::SimpleMeas + crate::math::MathActor + core::fm
             }
         }
 
+        /// Applies a bend factor to the given component, bending down its movements. 
+        /// 
+        /// # Panics
+        /// 
+        /// The function panics if the factor given is bigger than 1.0, equal to 0.0 or negative. Also it panics if neither the function 
+        /// definition has not been overwritten nor has a super component been provied.
         #[inline(always)]
         fn apply_bend_f(&mut self, f_bend : f32) {
             if let Some(s_comp) = self.super_comp_mut() {

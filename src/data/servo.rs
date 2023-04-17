@@ -11,7 +11,7 @@ pub struct ServoConst
     /// Maximum angular velocity [Unit rad/s]
     pub omega_max : Omega,
 
-    // Maximum angle [Unit (radians)]
+    /// Maximum angle [Unit (radians)]
     pub gamma_max : Gamma,
 
     /// Minimum signal length [Unit s]
@@ -25,6 +25,9 @@ pub struct ServoConst
 
 impl ServoConst 
 {
+    /// Invalid data for initialization purposes
+    /// 
+    /// DO NOT EXECUTE CALCULATION FUNCTIONS WITH THIS DATA
     pub const ERROR : Self = Self {
         t_max: Force::ZERO,
         omega_max: Omega::ZERO,
