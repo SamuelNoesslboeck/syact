@@ -1,5 +1,5 @@
 use crate::{StepperConst, StepperCtrl, SyncComp};
-use crate::comp::{GearBearing, Cylinder, CylinderTriangle};
+use crate::comp::{GearJoint, Cylinder, CylinderTriangle};
 use crate::data::LinkedData;
 use crate::units::*;
 
@@ -8,7 +8,7 @@ fn gear_bearing() -> Result<(), crate::Error> {
     const PIN_DIR : u8 = 27;
     const PIN_STEP : u8 = 19;
 
-    let mut gear = GearBearing::new(StepperCtrl::new(StepperConst::MOT_17HE15_1504S, PIN_DIR, PIN_STEP), 0.1);
+    let mut gear = GearJoint::new(StepperCtrl::new(StepperConst::MOT_17HE15_1504S, PIN_DIR, PIN_STEP), 0.1);
     gear.write_link(LinkedData::GEN);
 
     gear.drive_rel(Delta(0.5), Omega(0.5))?;

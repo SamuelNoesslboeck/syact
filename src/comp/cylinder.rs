@@ -28,13 +28,13 @@ impl Cylinder
     }
 }
 
-impl crate::math::MathActor for Cylinder 
-{
-    fn accel_dyn(&self, omega : Omega, gamma : Gamma) -> Alpha {
-        self.alpha_for_this(
-            self.ctrl.accel_dyn(self.omega_for_super(omega, gamma), self.gamma_for_super(gamma)), self.gamma_for_super(gamma))
-    }
-}
+// impl crate::math::MathActor for Cylinder 
+// {
+//     fn accel_dyn(&self, omega : Omega, gamma : Gamma) -> Alpha {
+//         self.alpha_for_this(
+//             self.ctrl.accel_dyn(self.omega_for_super(omega, gamma), self.gamma_for_super(gamma)), self.gamma_for_super(gamma))
+//     }
+// }
 
 impl crate::meas::SimpleMeas for Cylinder
 {
@@ -45,15 +45,6 @@ impl crate::meas::SimpleMeas for Cylinder
 
 impl SyncComp for Cylinder 
 {
-    // Setup 
-        fn setup(&mut self) { }
-
-        #[cfg(feature = "std")]
-        fn setup_async(&mut self) {
-            self.ctrl.setup_async();
-        }
-    // 
-
     // Data
         fn link<'a>(&'a self) -> &'a crate::data::LinkedData {
             self.ctrl.link()

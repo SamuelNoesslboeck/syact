@@ -4,6 +4,7 @@ use glam::{Vec3, Mat3};
 
 use crate::units::*;
 
+/// Calculates the inertia of a given point with a certain distance `dist` to a center point and a certain `mass`
 pub fn inertia_point(dist : Vec3, mass : f32) -> Mat3 {
     return mass * Mat3 {
         x_axis: Vec3 { x: dist.y.powi(2) + dist.z.powi(2), y: 0.0, z: 0.0 }, 
@@ -18,7 +19,8 @@ pub type Rod = (f32, Vec3);
 /// Rod helper type for coords, consists of (mass : f32, coord : f32)
 pub type RodCoord = (f32, f32); 
 
-pub fn inertia_rod_constr_coord(constr : &Vec<RodCoord>) -> Inertia {
+/// Helper function, calculates the inertia of a rod construction
+fn inertia_rod_constr_coord(constr : &Vec<RodCoord>) -> Inertia {
     let mut inertia = 0.0;
 
     for i in 0 .. constr.len() {
@@ -34,6 +36,7 @@ pub fn inertia_rod_constr_coord(constr : &Vec<RodCoord>) -> Inertia {
     Inertia(inertia)
 }
 
+/// Calculates the inertia of a rod construction
 pub fn inertia_rod_constr(constr : &Vec<Rod>) -> Mat3 {
     let mut x_list : Vec<RodCoord> = alloc::vec![];
     for rod in constr {
@@ -61,6 +64,8 @@ pub fn inertia_rod_constr(constr : &Vec<Rod>) -> Mat3 {
     }
 }
 
+/// Reduces a given `inertia` matrix to a mass scalar in the direction of a vector `a_hat` (does not have to be a unit vector)
+/// with the `radius` to the rotation center of the inertia
 pub fn inertia_to_mass(inertia : Mat3, radius : Vec3, mut a_hat : Vec3) -> Inertia {
     a_hat = a_hat.normalize();
 

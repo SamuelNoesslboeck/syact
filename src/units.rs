@@ -37,8 +37,11 @@ macro_rules! additive_unit {
 macro_rules! basic_unit {
     ( $a:ident ) => {      
         impl $a {
+            /// Zero value of this unit (0.0)
             pub const ZERO : Self = Self(0.0);
+            /// Infinity value of this unit (f32::INFINITY)
             pub const INFINITY : Self = Self(f32::INFINITY);
+            /// NaN value of this unit (f32::NAN)
             pub const NAN : Self = Self(f32::NAN);
 
             /// Returns the absolute value of the unit
@@ -47,39 +50,59 @@ macro_rules! basic_unit {
                 Self(self.0.abs())
             }
 
+            /// Returns `true` if this units value is neither NaN nor Infinite
             #[inline(always)]
             pub fn is_finite(self) -> bool {
                 self.0.is_finite()
             }
 
+            /// Returns `true` if this units value is neither NaN, Infinite or zero
             #[inline(always)]
             pub fn is_normal(self) -> bool {
                 self.0.is_normal()
             }
 
+            /// Returns `true` if this units value is Nan
             #[inline(always)]
             pub fn is_nan(self) -> bool {
                 self.0.is_nan()
             }
 
+            /// Returns the sin of this units value
             #[inline(always)]
             pub fn sin(self) -> f32 {
                 self.0.sin()
             }
 
-            pub fn is_sign_negative(self) -> bool {
+            /// Returns the cos of this units value
+            #[inline(always)]
+            pub fn cos(self) -> f32 {
+                self.0.tan()
+            }
+
+            /// Returns the tan of this units value
+            #[inline(always)]
+            pub fn tan(self) -> f32 {
+                self.0.tan()
+            }
+
+            /// Returns `true` if the sign bit of this value is negative (value smaller than 0.0, -0.0 included)
+            pub fn is_sign_negative(self) -> bool { 
                 self.0.is_sign_negative()
             }
 
+            /// Returns `true` if the sign bit of this value is positive (value smaller than 0.0, -0.0 included)
             pub fn is_sign_positive(self) -> bool {
                 self.0.is_sign_positive()
             }
 
+            /// Returns the smaller value of this and another unit
             #[inline(always)]
             pub fn min(self, other : Self) -> Self {
                 Self(self.0.min(other.0))
             }
 
+            /// Return the bigger value of this and another unit
             #[inline(always)]
             pub fn max(self, other : Self) -> Self {
                 Self(self.0.max(other.0))
@@ -217,7 +240,7 @@ impl Into<Duration> for Time {
             println!(" -> Fallback in Time unit used! {}", self.0); // Remove fallback
             self.0 = self.0.abs();
         }
-        Duration::from_secs_f32(self.0) 
+        Duration::from_secs_f32(self.0)
     }
 }
 
@@ -253,6 +276,8 @@ pub struct Gamma(pub f32);
 basic_unit!(Gamma);
 
 impl Gamma {
+    /// Does a force conversion of gamma-distance (absolute distance of component) to a phi-distance 
+    /// (absolute distance for mathematical calculations)
     pub fn force_to_phi(self) -> Phi {
         Phi(self.0)
     }
@@ -285,6 +310,7 @@ impl Sub<Delta> for Gamma {
     }
 }
 
+/// Helper functions to force convert an array of gammas to phis
 #[inline]
 pub fn force_phis_from_gammas<const N : usize>(gammas : [Gamma; N]) -> [Phi; N] {
     let mut phis = [Phi::ZERO; N];
@@ -294,6 +320,7 @@ pub fn force_phis_from_gammas<const N : usize>(gammas : [Gamma; N]) -> [Phi; N] 
     phis
 }
 
+/// Helper functions to foce convert an array of phis to gammas
 #[inline]
 pub fn force_gammas_from_phis<const N : usize>(phis : [Phi; N]) -> [Gamma; N] {
     let mut gammas = [Gamma::ZERO; N];
@@ -313,6 +340,8 @@ pub struct Phi(pub f32);
 basic_unit!(Phi);
 
 impl Phi {
+    /// Does a force conversion of this phi-distance (absolute distance for mathematical calculations) to a gamma-distance 
+    /// (absolute distance for components)
     pub fn force_to_gamma(self) -> Gamma {
         Gamma(self.0)
     }

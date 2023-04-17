@@ -63,7 +63,6 @@ impl StepperConst
     }; 
 
     /// Generic stepper motor data, only in use when testing for simple syntax
-    #[cfg(test)]
     pub const GEN : Self = Self::MOT_17HE15_1504S;
 
     /// ### Stepper motor 17HE15-1504S

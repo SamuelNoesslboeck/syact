@@ -14,13 +14,30 @@ use crate::math;
 use crate::units::*;
 
 // Submodules
+/// Helper functions and structs for deserializing
+/// 
+/// # Features
+/// 
+/// Only available if the "std"-feature is available
+#[cfg(feature = "std")]
 pub mod des;
 
+/// Universal pin structure
 pub mod pin;
 
+/// PWM-signal 
+/// 
+/// # Features
+/// 
+/// Only available if the "std"-feature is available
 #[cfg(feature = "std")]
 pub mod pwm;
 
+/// Structs and methods for basic servo motors
+/// 
+/// # Features 
+/// 
+/// Only available if the "std"-feature is available
 #[cfg(feature = "std")]
 pub mod servo;
 // 
@@ -90,6 +107,7 @@ pub struct StepperCtrl {
 
 // Inits
 impl StepperCtrl {   
+    /// Creates a new stepper controller with the given stepper motor constants `consts`
     pub fn new(consts : StepperConst, pin_dir : u8, pin_step : u8) -> Self {
         // Create pins if possible
         let sys_dir = pin::UniPin::new(pin_dir).unwrap().into_output(); // TODO: Handle errors
@@ -103,7 +121,7 @@ impl StepperCtrl {
             dir: true, 
             pos: 0,
 
-            lk: LinkedData::EMPTY,
+            lk: LinkedData { u: 0.0, s_f: 0.0 },
 
             #[cfg(feature = "std")]
             sys: Arc::new(Mutex::new(Pins {
@@ -135,6 +153,7 @@ impl StepperCtrl {
         ctrl
     }
 
+    /// Creates a new structure with both pins set to [pin::ERR_PIN] just for simulation purposes
     #[inline]
     pub fn new_sim(data : StepperConst) -> Self {
         Self::new(data, pin::ERR_PIN, pin::ERR_PIN)
@@ -163,7 +182,7 @@ impl StepperCtrl {
     }
 
     #[inline(always)]
-    #[cfg(feature = "std")]
+    // #[cfg()]
     fn step_sig(time : Time, pins : &mut Pins) {
         let step_time_half : Duration = (time / 2.0).into();
 
@@ -173,12 +192,12 @@ impl StepperCtrl {
         spin_sleep::sleep(step_time_half);
     }  
 
-    #[inline(always)]
-    #[cfg(not(feature = "std"))]
-    #[cfg(feature = "embedded")]
-    fn step_sig(time : Time, pins : &mut Pins) {
-        // TODO: Add delay handler
-    }   
+    // #[inline(always)]
+    // #[cfg(not(feature = "std"))]
+    // #[cfg(feature = "embedded")]
+    // fn step_sig(time : Time, pins : &mut Pins) {
+    //     // TODO: Add delay handler
+    // }   
 
 
     fn drive_curve_sig(cur : &[Time], pins : &mut Pins) {
@@ -344,6 +363,11 @@ impl StepperCtrl {
 }
 
 impl StepperCtrl {
+    /// Makes the component move a single step with the given `time`
+    /// 
+    /// # Error
+    /// 
+    /// Returns an error if `setup_drive()` fails
     pub fn step(&mut self, time : Time) -> Result<(), crate::Error> {
         let delta = if self.dir { self.consts.step_ang() } else { -self.consts.step_ang() };
         self.setup_drive(delta)?;
@@ -361,6 +385,8 @@ impl StepperCtrl {
         Ok(())
     }
 
+    /// Sets the driving direction of the component. Note that the direction of the motor depends on the connection of the cables.
+    /// The "dir"-pin is directly set to the value given
     #[inline(always)]
     pub fn set_dir(&mut self, dir : bool) {
         #[cfg(feature = "std")]
@@ -377,7 +403,13 @@ impl StepperCtrl {
     }
 
     // Debug
+        /// Prints out all pins to the console in dbg! style
+        /// 
+        /// # Features
+        /// 
+        /// Only available if the "std"-feature is active
         #[cfg(feature = "std")]
+        #[inline(always)]
         pub fn debug_pins(&self) {
             dbg!(&self.sys);
         }
@@ -400,12 +432,12 @@ impl crate::meas::SimpleMeas for StepperCtrl {
     }
 }
 
-impl crate::math::MathActor for StepperCtrl {
-    #[inline]
-    fn accel_dyn(&self, omega : Omega, _ : Gamma) -> Alpha {
-        self.consts.alpha_max_dyn(math::load::torque_dyn(&self.consts, omega, self.lk.u), &self.vars).unwrap()
-    }
-}
+// impl crate::math::MathActor for StepperCtrl {
+//     #[inline]
+//     fn accel_dyn(&self, omega : Omega, _ : Gamma) -> Alpha {
+//         self.consts.alpha_max_dyn(math::load::torque_dyn(&self.consts, omega, self.lk.u), &self.vars).unwrap()
+//     }
+// }
 
 impl SyncComp for StepperCtrl {
     // Setup function

@@ -1,13 +1,13 @@
 use serde::{Serialize, Deserialize};
 
 use crate::{SyncComp, StepperCtrl};
-use crate::math::MathActor;
+// use crate::math::MathActor;
 use crate::meas::SimpleMeas;
 use crate::units::*;
 
 /// A bearing powered by a motor with a certain gear ratio
 #[derive(Debug, Serialize, Deserialize)]
-pub struct GearBearing
+pub struct GearJoint
 {
     /// Steppercontrol for the motor of the bearing
     pub ctrl : StepperCtrl,
@@ -16,7 +16,8 @@ pub struct GearBearing
     pub ratio : f32
 }
 
-impl GearBearing {
+impl GearJoint {
+    /// Creates a new `Gearbearing`
     pub fn new(ctrl : StepperCtrl, ratio : f32) -> Self {
         Self {
             ctrl,
@@ -25,33 +26,22 @@ impl GearBearing {
     }
 }
 
-impl SimpleMeas for GearBearing
+impl SimpleMeas for GearJoint
 {
     fn init_meas(&mut self, pin_meas : u8) {
         self.ctrl.init_meas(pin_meas);
     }
 }
 
-impl MathActor for GearBearing
+// impl crate::math::MathActor for GearJoint
+// {
+//     fn accel_dyn(&self, omega : Omega, gamma : Gamma) -> Alpha {
+//         self.alpha_for_this(self.ctrl.accel_dyn(self.omega_for_super(omega, gamma), self.gamma_for_super(gamma)), self.gamma_for_super(gamma))
+//     }
+// }
+
+impl SyncComp for GearJoint
 {
-    fn accel_dyn(&self, omega : Omega, gamma : Gamma) -> Alpha {
-        self.alpha_for_this(self.ctrl.accel_dyn(self.omega_for_super(omega, gamma), self.gamma_for_super(gamma)), self.gamma_for_super(gamma))
-    }
-}
-
-impl SyncComp for GearBearing
-{
-    // Setup 
-        fn setup(&mut self) { 
-            
-        }
-
-        #[cfg(feature = "std")]
-        fn setup_async(&mut self) {
-            self.ctrl.setup_async();
-        }
-    // 
-
     // Data
         fn link<'a>(&'a self) -> &'a crate::data::LinkedData {
             self.ctrl.link()
