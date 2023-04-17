@@ -1,6 +1,14 @@
 # stepper_lib
 
+[![Crates.io version](https://img.shields.io/crates/v/stepper_lib.svg?style=flat-square) ](https://crates.io/crates/stepper_lib)
+[![stepper_lib: rustc 1.68+]][Rust 1.68]
+
+[stepper_lib: rustc 1.68+]: https://img.shields.io/badge/stepper_lib-rustc_1.68+-lightgray.svg
+[Rust 1.68]: https://blog.rust-lang.org/2023/03/09/Rust-1.68.0.html
+
 A library for all types of components used in robots, including controlls for stepper motors, servo motors and more complex assemblies using said motors. Currently all implementations are made for the raspberry pi, though new implementations for more controllers are currently being made.
+
+Basis library for the [sybot_lib]("https://github.com/SamuelNoesslboeck/sybot_lib)
 
 # In Action
 
@@ -64,10 +72,42 @@ fn main() -> Result<(), stepper_lib::Error> {
 
 # Overview
 
+- [Features](#features)
 - [Components](#components)
 - [Tools](#tools)
 - [Platforms and simulation](#platforms-and-simulation)
 - [Issues and requests](#issues-and-requests)
+
+## Features
+
+- [ ] Motors
+  - [x] Stepper motors
+  - [x] Servo motors
+  - [ ] DC motors
+- [ ] Components
+  - [x] Cylinder
+  - [x] Gear joint
+  - [x] Cylinder-triangle
+  - [ ] Conveyor
+- [x] Tools
+  - [x] Tongs
+  - [x] Axial joint
+- [x] Calculation
+  - [x] Complex acceleration curves
+  - [x] Overloads
+  - [x] Forces
+  - [x] Inertias
+- [ ] Measurements
+  - [x] Simple switch
+  - [ ] Rotary resolver
+- [x] Extendable
+  - [x] Custom components
+  - [x] Custom tools
+- [ ] Minimal
+  - [ ] Fully supports `no_std` environment
+  - [ ] Available for basic embedded systems
+- Platforms
+  - Raspberry Pi and similar
 
 ## Components
 
