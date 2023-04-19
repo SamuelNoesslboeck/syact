@@ -18,7 +18,7 @@ pub struct UniPin {
 pub struct UniOutPin {
     #[cfg(featue = "rasp")]
     sys_pin : OutputPin,
-    #[cfg(windows)]
+    #[cfg(not(any(feature = "rasp")))]
     state : bool, 
 
     /// The pin number
@@ -52,7 +52,7 @@ impl UniPin {
         })
     }
 
-    #[cfg(windows)]
+    #[cfg(not(any(feature = "rasp")))]
     pub fn new(pin : u8) -> Result<Self, crate::Error> {
         Ok(Self {
             pin
@@ -67,7 +67,7 @@ impl UniPin {
         }
     }
 
-    #[cfg(windows)]
+    #[cfg(not(any(feature = "rasp")))]
     pub fn into_input(self) -> UniInPin {
         UniInPin {
             pin: self.pin
@@ -82,7 +82,7 @@ impl UniPin {
         }
     }
 
-    #[cfg(windows)]
+    #[cfg(not(any(feature = "rasp")))]
     pub fn into_output(self) -> UniOutPin {
         UniOutPin {
             pin: self.pin,
@@ -99,14 +99,14 @@ impl UniInPin {
             false
         }
 
-        #[cfg(windows)]
+        #[cfg(not(any(feature = "rasp")))]
         #[inline]
         pub fn is_sim(&self) -> bool {
             true
         }
     // 
 
-    #[cfg(windows)]
+    #[cfg(not(any(feature = "rasp")))]
     #[inline]
     pub fn is_high(&self) -> bool {
         true
@@ -118,7 +118,7 @@ impl UniInPin {
         self.sys_pin.is_high()
     }
 
-    #[cfg(windows)]
+    #[cfg(not(any(feature = "rasp")))]
     #[inline]
     pub fn is_low(&self) -> bool {
         false
@@ -138,13 +138,13 @@ impl UniOutPin {
         false
     }
 
-    #[cfg(windows)]
+    #[cfg(not(any(feature = "rasp")))]
     #[inline]
     pub fn is_sim(&self) -> bool {
         true
     }
     
-    #[cfg(windows)]
+    #[cfg(not(any(feature = "rasp")))]
     #[inline]
     pub fn is_set_high(&self) -> bool {
         self.state
@@ -156,7 +156,7 @@ impl UniOutPin {
         self.sys_pin.is_set_high()
     }
 
-    #[cfg(windows)]
+    #[cfg(not(any(feature = "rasp")))]
     #[inline]
     pub fn is_set_low(&self) -> bool {
         !self.state
@@ -168,7 +168,7 @@ impl UniOutPin {
         self.sys_pin.is_set_low()
     }
 
-    #[cfg(windows)]
+    #[cfg(not(any(feature = "rasp")))]
     #[inline]
     pub fn set_high(&mut self) {
         self.state = true;
@@ -180,7 +180,7 @@ impl UniOutPin {
         self.sys_pin.set_high();
     }
 
-    #[cfg(windows)]
+    #[cfg(not(any(feature = "rasp")))]
     #[inline]
     pub fn set_low(&mut self) {
         self.state = false;
