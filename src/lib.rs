@@ -59,7 +59,7 @@ fn main() -> Result<(), stepper_lib::Error> {
 "]
 #![crate_name = "stepper_lib"]
 #![cfg_attr(not(feature = "std"), no_std)]
-// #![deny(missing_docs)]
+#![deny(missing_docs)]
 
 // Modules
 #[cfg(not(feature = "embedded"))]
@@ -110,3 +110,4 @@ pub enum ErrorKind {
     // Load
     Overload
 }
+

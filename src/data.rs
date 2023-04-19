@@ -1,9 +1,3 @@
-//! ### Data
-//! 
-//! Structs for storing stepper motor data and performing basic calculations \
-//! NOTE: If any of the formulas are unclear, please have a look at \
-//! the article on stepper motors included in this create under "article/article.pdf"
-
 use core::f32::consts::PI;
 
 use serde::{Serialize, Deserialize};
@@ -22,7 +16,6 @@ mod var;
 pub use var::CompVars;
 //
 
-/// ### `StepperData`
 /// A collection of the most relevant variables Unit stepper calculation 
 /// ```
 /// use stepper_lib::StepperConst;

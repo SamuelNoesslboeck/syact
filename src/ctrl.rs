@@ -14,6 +14,10 @@ use crate::math;
 use crate::units::*;
 
 // Submodules
+/// Basic DC-Motors
+pub mod dc_motor;
+pub use dc_motor::DcMotor;
+
 /// Helper functions and structs for deserializing
 /// 
 /// # Features
@@ -440,7 +444,7 @@ impl crate::meas::SimpleMeas for StepperCtrl {
 // }
 
 impl SyncComp for StepperCtrl {
-    // Setup function
+    // Setup functions
         fn setup(&mut self) { }
 
         #[cfg(feature = "std")]

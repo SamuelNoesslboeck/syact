@@ -1,6 +1,7 @@
 // use crate::data::CompVars;
 
 /// Direction of movement
+#[derive(Clone, Copy, PartialEq, PartialOrd, Eq)]
 pub enum Direction {
     /// Clockwise
     CW, 
@@ -12,6 +13,9 @@ pub enum Direction {
 
 /// A component which is asynchronous because of its hardware properties, e.g. a simple DC-Motors
 pub trait AsyncComp {
+    /// Setup the component, must be called before [AsyncComp::drive]
+    fn setup(&mut self); 
+
     /// Starts the movement process of the component in the given direction with a given speed factor
     /// 
     /// # Panics

@@ -66,12 +66,12 @@ impl ServoConst
     }
 
     /// Pulse time for a given percent
-    pub fn pulse_for_perc(&self, perc : f32) -> Time {
-        self.pwm_min + (self.pwm_max - self.pwm_min) * perc.clamp(0.0, 1.0)
+    pub fn pulse_for_factor(&self, factor : f32) -> Time {
+        self.pwm_min + (self.pwm_max - self.pwm_min) * factor.clamp(0.0, 1.0)
     }
 
     /// Pulse time for a given angle
     pub fn pulse_for_angle(&self, gamma : Gamma) -> Time {
-        self.pulse_for_perc(gamma / self.gamma_max)
+        self.pulse_for_factor(gamma / self.gamma_max)
     }
 }

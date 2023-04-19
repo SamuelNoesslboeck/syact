@@ -43,9 +43,9 @@ impl ServoDriver
         self.gamma / self.consts.gamma_max
     }
 
-    pub fn set_perc(&mut self, perc : f32) {
-        self.pwm.set_period(self.consts.pulse_for_perc(perc), self.consts.period_time());
-        self.gamma = self.consts.gamma_max * perc
+    pub fn set_perc(&mut self, factor : f32) {
+        self.pwm.set_period(self.consts.pulse_for_factor(factor), self.consts.period_time());
+        self.gamma = self.consts.gamma_max * factor
     }
 
     // Positions

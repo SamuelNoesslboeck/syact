@@ -10,6 +10,10 @@ A library for all types of components used in robots, including controlls for st
 
 Basis library for the [sybot_lib]("https://github.com/SamuelNoesslboeck/sybot_lib)
 
+### Goal
+
+- Create an all-in-one library to control motors, read sensors and do basic calculations in rust.
+
 # In Action
 
 Let us assume we want to control a simple stepper motor (in this example a [17HE15_1504_S](https://www.omc-stepperonline.com/index.php?route=product/product/get_file&file=2838/17HE15-1504S.pdf)) with a PWM controller connected to the BCM pins 27 and 19.
@@ -50,7 +54,11 @@ const OMEGA : Omega = Omega(10.0);
 
 fn main() -> Result<(), stepper_lib::Error> {
     // Create the controls for a stepper motor
-    let mut ctrl = StepperCtrl::new(StepperConst::MOT_17HE15_1504S, PIN_DIR, PIN_STEP);
+    let mut ctrl = StepperCtrl::new(
+        StepperConst::MOT_17HE15_1504S, 
+        PIN_DIR, 
+        PIN_STEP
+    );
     // Link the component to a system
     ctrl.write_link(LinkedData { 
         u: 12.0,    // System voltage in volts
@@ -62,8 +70,9 @@ fn main() -> Result<(), stepper_lib::Error> {
     ctrl.apply_force(Force(0.10));
 
     println!("Staring to move");
-    ctrl.drive_rel(DELTA, OMEGA)?;      // Move the motor
-    println!("Distance {}rad with max speed {:?}rad/s done", DELTA, OMEGA);
+    let delta_real = ctrl.drive_rel(DELTA, OMEGA)?;      // Move the motor
+    println!("Distance {}rad with max speed {:?}rad/s done", 
+        delta_real, OMEGA);
 
     Ok(())
 }
@@ -80,10 +89,10 @@ fn main() -> Result<(), stepper_lib::Error> {
 
 ## Features
 
-- [ ] Motors
+- [x] Motors
   - [x] Stepper motors
   - [x] Servo motors
-  - [ ] DC motors
+  - [x] DC motors
 - [ ] Components
   - [x] Cylinder
   - [x] Gear joint
@@ -154,9 +163,13 @@ const OMEGA : Omega = Omega(20.0);      // 20 millimeters per second
 fn main() -> Result<(), stepper_lib::Error> {
     // Create the controls for a stepper motor
     let mut cylinder = Cylinder::new(
-        StepperCtrl::new(StepperConst::MOT_17HE15_1504S, PIN_DIR, PIN_STEP),
-        1.273       // Spindle pitch of the cylinder, per radian the cylinder extends for 1.273 millimeters,
-                    // this factor calculates out of the pitch per revolve (8mm) divided by 2*PI (for radians) 
+        StepperCtrl::new(
+            StepperConst::MOT_17HE15_1504S, 
+            PIN_DIR, 
+            PIN_STEP
+        ),  1.273 // Spindle pitch of the cylinder, per radian the cylinder 
+        // extends for 1.273 millimeters, this factor calculates out 
+        // of the pitch per revolve (8mm) divided by 2*PI (for radians) 
     );
     // Link the component to a system
     cylinder.write_link(LinkedData { 
@@ -170,7 +183,8 @@ fn main() -> Result<(), stepper_lib::Error> {
 
     println!("Staring to move ... ");
     let delta_real = cylinder.drive_rel(DELTA, OMEGA)?;         // Move the cylinder
-    println!("Distance {}mm with max speed {:?}mm/s done", delta_real, OMEGA);
+    println!("Distance {}mm with max speed {:?}mm/s done", 
+        delta_real, OMEGA);
 
     Ok(())
 }
@@ -279,7 +293,8 @@ impl SyncComp for MyComp {
         }
     // 
 
-    fn drive_rel(&mut self, delta : Delta, omega : Omega) -> Result<Delta, stepper_lib::Error> {
+    fn drive_rel(&mut self, delta : Delta, omega : Omega) 
+            -> Result<Delta, stepper_lib::Error> {
         println!("Now driving!"); // Our custom message
 
         let delta_real = self.ctrl.drive_rel(
@@ -294,7 +309,11 @@ impl SyncComp for MyComp {
 fn main() -> Result<(), stepper_lib::Error> {
     // Create the controls for a stepper motor
     let mut comp = MyComp::new(
-        StepperCtrl::new(StepperConst::MOT_17HE15_1504S, PIN_DIR, PIN_STEP),
+        StepperCtrl::new(
+            StepperConst::MOT_17HE15_1504S, 
+            PIN_DIR, 
+            PIN_STEP
+        ),
         2.0 // Example ratio
     );
     // Link the component to a system
@@ -387,7 +406,7 @@ fn main() -> Result<(), stepper_lib::Error> {
 The final goal of the library is to work on as many platforms as possible, even on embedded systems. To configure the library for a specific platform, the right features have to be enabled. Note that some of the features automatically enable `std` usage.
 
 The current platforms and features enabled are
-- "rasp": Raspberry Pi and similar controller
+- "rasp": Raspberry Pi and similar controllers
 
 ```toml
 # Platform features
