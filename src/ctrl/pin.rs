@@ -10,24 +10,27 @@ pub struct UniPin {
     #[cfg(featue = "rasp")]
     sys_pin : Pin,
 
+    /// The pin number
     pub pin : u8
 }
 
 #[derive(Debug)]
-pub struct SimOutPin {
+pub struct UniOutPin {
     #[cfg(featue = "rasp")]
     sys_pin : OutputPin,
     #[cfg(windows)]
     state : bool, 
 
+    /// The pin number
     pub pin : u8
 }
 
 #[derive(Debug)]
-pub struct SimInPin {
+pub struct UniInPin {
     #[cfg(featue = "rasp")]
     sys_pin : InputPin,
 
+    /// The pin number
     pub pin : u8
 }
 
@@ -57,38 +60,38 @@ impl UniPin {
     }
 
     #[cfg(featue = "rasp")]
-    pub fn into_input(self) -> SimInPin {
-        SimInPin {
+    pub fn into_input(self) -> UniInPin {
+        UniInPin {
             pin: self.pin,
             sys_pin: self.sys_pin.into_input()
         }
     }
 
     #[cfg(windows)]
-    pub fn into_input(self) -> SimInPin {
-        SimInPin {
+    pub fn into_input(self) -> UniInPin {
+        UniInPin {
             pin: self.pin
         }
     }
 
     #[cfg(featue = "rasp")]
-    pub fn into_output(self) -> SimOutPin {
-        SimOutPin {
+    pub fn into_output(self) -> UniOutPin {
+        UniOutPin {
             pin: self.pin,
             sys_pin: self.sys_pin.into_output()
         }
     }
 
     #[cfg(windows)]
-    pub fn into_output(self) -> SimOutPin {
-        SimOutPin {
+    pub fn into_output(self) -> UniOutPin {
+        UniOutPin {
             pin: self.pin,
             state: false
         }
     }
 }
 
-impl SimInPin {
+impl UniInPin {
     // Status
         #[cfg(featue = "rasp")]
         #[inline]
@@ -128,7 +131,7 @@ impl SimInPin {
     }
 }
 
-impl SimOutPin {
+impl UniOutPin {
     #[cfg(featue = "rasp")]
     #[inline]
     pub fn is_sim(&self) -> bool {

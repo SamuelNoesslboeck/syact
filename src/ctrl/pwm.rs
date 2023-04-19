@@ -86,7 +86,7 @@ impl PWMOutput
     }
 
     /// Does a single pulse with the active time `t_ac` and inactive time `t_in`
-    pub fn pulse(sys_pwm : &mut pin::SimOutPin, t_ac : Time, t_in : Time) {
+    pub fn pulse(sys_pwm : &mut pin::UniOutPin, t_ac : Time, t_in : Time) {
         sys_pwm.set_high();
         thread::sleep(t_ac.into());
         sys_pwm.set_low(); 

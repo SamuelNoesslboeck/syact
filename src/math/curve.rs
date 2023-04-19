@@ -18,6 +18,11 @@ pub fn start_frequency(data : &StepperConst, var : &CompVars) -> Omega {
     Omega((data.alpha_max(var).unwrap() * (data.n_s as f32) / 4.0 / PI).0.powf(0.5))        // TODO: Overload
 }
 
+/// Calculates the two possible travel times for a physical object 
+/// 
+/// # Panics 
+/// 
+/// The function panics if the given alpha is not normal (`Alpha::is_normal()`)
 #[inline]
 pub fn travel_times(delta : Delta, omega : Omega, alpha : Alpha) -> (Time, Time) {
     if !alpha.is_normal() {
@@ -32,6 +37,11 @@ pub fn travel_times(delta : Delta, omega : Omega, alpha : Alpha) -> (Time, Time)
     ( -p + root, -p - root )
 }
 
+/// Calculates the next node in a curve
+/// 
+/// # Panics 
+/// 
+/// The function panics if the given alpha is not normal (`Alpha::is_normal()`)
 #[inline]
 pub fn next_node_simple(mut delta : Delta, mut omega_0 : Omega, mut alpha : Alpha) -> (Time, Omega) {
     delta = delta.abs(); 
@@ -45,11 +55,13 @@ pub fn next_node_simple(mut delta : Delta, mut omega_0 : Omega, mut alpha : Alph
 }
 
 // Curves
+/// Creates a new empty curve 
 #[inline]
 pub fn crate_plain_curve(data : &StepperConst, node_count : usize, omega_max : Omega) -> Vec<Time> {
     vec![data.step_time(omega_max); node_count]
 }
 
+/// Mirrors the curve in the center, existing values will be overwritten
 pub fn mirror_curve(cur : &mut [Time]) {
     let cur_len = cur.len();
 
@@ -58,6 +70,11 @@ pub fn mirror_curve(cur : &mut [Time]) {
     }
 }
 
+/// Writes a simple stepper motor acceleration curve to a given curve `cur` 
+/// 
+/// # Panics
+/// 
+/// Panics if the given bend or safety factor is invalid
 pub fn write_simple_move(data : &StepperConst, var : &CompVars, lk : &LinkedData, cur : &mut [Time], omega_max : Omega) {
     let cur_len = cur.len(); 
 
@@ -76,7 +93,8 @@ pub fn write_simple_move(data : &StepperConst, var : &CompVars, lk : &LinkedData
     }
 
     for i in 0 .. cur_len / 2 {
-        alpha = data.alpha_max_dyn(torque_dyn(data, omega / var.f_bend, lk.u), var).unwrap() / lk.s_f * var.f_bend;   // TODO: Overload 
+        alpha = data.alpha_max_dyn(
+            torque_dyn(data, omega / var.f_bend, lk.u), var).unwrap() / lk.s_f * var.f_bend;   // TODO: Overload 
         
         (time, omega) = next_node_simple(delta, omega, alpha);
 
@@ -90,6 +108,7 @@ pub fn write_simple_move(data : &StepperConst, var : &CompVars, lk : &LinkedData
     mirror_curve(cur);
 }
 
+/// Create a new simple acceleration curve that can be used by a stepper motor to drive safely from standstill
 #[inline]
 pub fn create_simple_curve(consts : &StepperConst, vars : &CompVars, lk : &LinkedData, delta : Delta, omega_max : Omega) 
         -> Vec<Time> {

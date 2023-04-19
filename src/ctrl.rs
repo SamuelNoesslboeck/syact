@@ -69,11 +69,11 @@ fn not_active() -> crate::Error {
 #[derive(Debug)]
 struct Pins {
     /// Pin for defining the direction
-    pub dir : pin::SimOutPin,
+    pub dir : pin::UniOutPin,
     /// Pin for PWM Step pulses
-    pub step : pin::SimOutPin,
+    pub step : pin::UniOutPin,
     /// Measurement pin
-    pub meas : Option<pin::SimInPin>
+    pub meas : Option<pin::UniInPin>
 }
 
 /// StepperCtrl
