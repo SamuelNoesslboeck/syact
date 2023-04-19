@@ -1,8 +1,10 @@
 #[cfg(featue = "rasp")]
 use rppal::gpio::{Gpio, Pin, InputPin, OutputPin};
 
+/// Error pin value
 pub const ERR_PIN : u8 = 0xFF; 
 
+/// Universal pin struct for platform independency
 #[derive(Debug)]
 pub struct UniPin {
     #[cfg(featue = "rasp")]

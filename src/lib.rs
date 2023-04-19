@@ -1,11 +1,15 @@
 #![doc = "
 # stepper_lib
 
-A library for all types of components used in robots, including controlls for stepper motors, servo motors and more complex assemblies using said motors. Currently all implementations are made for the raspberry pi, though new implementations for more controllers are currently being made.
+A library for all types of components used in robots, including controlls for stepper motors, 
+servo motors and more complex assemblies using said motors. Currently all implementations are 
+made for the raspberry pi, though new implementations for more controllers are currently being made.
 
 # In Action
 
-Let us assume we want to control a simple stepper motor (in this example a [17HE15_1504_S](https://www.omc-stepperonline.com/index.php?route=product/product/get_file&file=2838/17HE15-1504S.pdf)) with a PWM controller connected to the BCM pins 27 and 19.
+Let us assume we want to control a simple stepper motor (in this example a 
+[17HE15_1504_S](https://www.omc-stepperonline.com/index.php?route=product/product/get_file&file=2838/17HE15-1504S.pdf))
+with a PWM controller connected to the BCM pins 27 and 19.
 
 Importing the library
 

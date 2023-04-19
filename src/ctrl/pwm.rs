@@ -119,8 +119,16 @@ impl PWMOutput
     /// Set the signal times in period style 
     /// - `t_ac` is the active time
     /// - `t_per` is the full period time
+    /// 
+    /// # Panics
+    /// 
+    /// The function panics if the given active time `t_ac` is bigger than the period time `t_per`
     #[inline]
     pub fn set_period(&mut self, t_ac : Time, t_per : Time) {
+        if t_ac > t_per {
+            panic!("Active time cannot be bigger than period time! (t_ac: {}, t_per: {})", t_ac, t_per);
+        }
+
         self.set_times(
             t_ac,
             t_per - t_ac
@@ -129,7 +137,7 @@ impl PWMOutput
 
     /// Get the signal times in frequency style (`freq`, `factor`)
     /// - `freq` is the freqency of the signal, meaning how many pulses there are per second
-    /// - `factor` represents how much of the pulse is active time (`0.0` - `1.0`)
+    /// - `factor` represents how much of the pulse is active time (values `0.0` to `1.0`)
     #[inline]
     pub fn get_freq(&self) -> (Omega, f32) {
         let [ t_ac, t_per ] = self.get_period();
@@ -138,7 +146,11 @@ impl PWMOutput
 
     /// Set the signal times in frequency style
     /// - `freq` is the freqency of the signal, meaning how many pulses there are per second
-    /// - `factor` 
+    /// - `factor` represents how much of the pulse is active time (values `0.0` to `1.0`)
+    /// 
+    /// # Panics
+    /// 
+    /// The function panics if the given factor is out of range 
     #[inline]
     pub fn set_freq(&mut self, freq : Omega, factor : f32) {
         #[cfg(feature = "std")]
