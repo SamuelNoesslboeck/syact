@@ -18,7 +18,7 @@ Importing the library
 
 [dependencies]
 # Include the library with its standard features
-stepper_lib = { version = \"0.11.0\", features = [ \"rasp\" ] } 
+stepper_lib = { version = \"0.11\", features = [ \"rasp\" ] } 
 
 # ...
 ```

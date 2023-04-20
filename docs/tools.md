@@ -1,21 +1,26 @@
-#![doc = "
+# Tools
+
+The library also includes various simple tools like tongs, axial joints and so on. These tools are controlled by a servo controller, though other types of motors can be used in custom tools by implementing the `Tool` trait, just like `SyncComp`.
+
 This example controls a simple pair of tongs using a servo motor.
 
-### Note 
-
-The cargo.toml file specified below is when running the example on a raspberry pi
+<details>
+<summary>
+Click to show Cargo.toml
+</summary>
 
 ```toml
 # ...
 
 [dependencies]
 # Include the library configured for the raspberry pi
-stepper_lib = { version = \"0.11\", features = [ \"rasp\" ] } 
+stepper_lib = { version = "0.11", features = [ "rasp" ] } 
 
 # ...
 ```
-"]
+</details>
 
+```rust
 use core::time::Duration;
 
 use std::thread::sleep;
@@ -49,3 +54,4 @@ fn main() -> Result<(), stepper_lib::Error> {
 
     Ok(())
 }
+```
