@@ -7,15 +7,18 @@ use crate::units::*;
 
 use super::AxisTool;
 
+/// A tool for adding an additional axis to the robot
 #[derive(Debug, Serialize, Deserialize)]
 pub struct AxialJoint {
-    pub servo : ServoDriver,
+    servo : ServoDriver,
 
+    /// Length of the tool
     pub length : f32,
-    pub mass : Inertia
+    mass : Inertia
 }
 
 impl AxialJoint {
+    /// Creates a new instance of an `AxialJoint`
     pub fn new(servo : ServoDriver, length : f32, mass : Inertia) -> Self {
         Self {
             servo, 
@@ -50,25 +53,25 @@ impl Tool for AxialJoint {
         serde_json::to_value(self).unwrap()
     }
 
-    fn get_vec(&self) -> Vec3 {
+    fn vec(&self) -> Vec3 {
         Vec3::Y * self.length
     }
 
-    fn get_inertia(&self) -> Inertia {
+    fn inertia(&self) -> Inertia {
         self.length.powi(2) * self.mass / 12.0
     }
 
-    fn get_mass(&self) -> f32 {
+    fn mass(&self) -> f32 {
         self.mass.0
     }
 }
 
 impl AxisTool for AxialJoint {
     fn rotate_abs(&mut self, gamma : Gamma) {
-        self.servo.set_gamma(Gamma(gamma.0 + self.servo.consts.gamma_max.0 / 2.0))
+        self.servo.set_gamma(Gamma(gamma.0 + self.servo.consts().gamma_max.0 / 2.0))
     }
 
     fn gamma(&self) -> Gamma {
-        Gamma(self.servo.gamma().0 - self.servo.consts.gamma_max.0 / 2.0)
+        Gamma(self.servo.gamma().0 - self.servo.consts().gamma_max.0 / 2.0)
     }
 }

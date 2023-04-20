@@ -91,9 +91,9 @@ fn main() -> Result<(), stepper_lib::Error> {
 
 - [x] Motors
   - [x] Stepper motors
-  - [x] Servo motors
-  - [x] DC motors
-- [ ] Components
+  - [x] [Servo motors](/docs/servos.md)
+  - [x] [DC motors](/docs/dc_motors.md)
+- [ ] Componentss
   - [x] Cylinder
   - [x] Gear joint
   - [x] Cylinder-triangle

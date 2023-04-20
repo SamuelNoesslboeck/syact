@@ -5,10 +5,13 @@ use glam::Vec3;
 use crate::Tool;
 use crate::units::*;
 
+/// Placeholder tool
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NoTool { } // Empty struct
 
 impl NoTool {
+    /// Creates a new placeholder tool
+    #[inline(always)]
     pub fn new() -> Self {
         Self { }
     }
@@ -26,15 +29,15 @@ impl Tool for NoTool {
             serde_json::to_value(self).unwrap() 
         }
 
-        fn get_vec(&self) -> Vec3 {
+        fn vec(&self) -> Vec3 {
             Vec3::ZERO
         }
 
-        fn get_inertia(&self) -> Inertia {
+        fn inertia(&self) -> Inertia {
             Inertia::ZERO
         }
 
-        fn get_mass(&self) -> f32 {
+        fn mass(&self) -> f32 {
             0.0
         }
     // 

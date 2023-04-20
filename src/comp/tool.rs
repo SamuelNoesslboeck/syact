@@ -85,13 +85,13 @@ pub trait Tool : Debug {
         fn get_json(&self) -> serde_json::Value;
 
         /// Returns the characteristic vector of the tool
-        fn get_vec(&self) -> Vec3;
+        fn vec(&self) -> Vec3;
 
         /// Returns the tool inhertia 
-        fn get_inertia(&self) -> Inertia;
+        fn inertia(&self) -> Inertia;
 
         /// Return the tool mass
-        fn get_mass(&self) -> f32;
+        fn mass(&self) -> f32;
     //
 }
 

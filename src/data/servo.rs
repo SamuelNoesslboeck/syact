@@ -66,8 +66,16 @@ impl ServoConst
     }
 
     /// Pulse time for a given percent
+    /// 
+    /// # Panics
+    /// 
+    /// Panics if the factors is out of range (range is `0.0` to `1.0`)
     pub fn pulse_for_factor(&self, factor : f32) -> Time {
-        self.pwm_min + (self.pwm_max - self.pwm_min) * factor.clamp(0.0, 1.0)
+        if (1.0 < factor) & (0.0 > factor) {
+            panic!("Bad factor! ({})", factor);
+        }
+
+        self.pwm_min + (self.pwm_max - self.pwm_min) * factor
     }
 
     /// Pulse time for a given angle

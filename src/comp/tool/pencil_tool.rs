@@ -5,14 +5,17 @@ use glam::Vec3;
 use crate::Tool;
 use crate::units::*;
 
+/// A tool representing a mounted pencil with a certain length
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PencilTool
 {
+    /// Length of the pencil
     pub length : f32,
-    pub mass : Inertia
+    mass : Inertia
 }
 
 impl PencilTool {
+    /// Creates a new instance of a `Pencil tool`
     pub fn new(length : f32, mass : Inertia) -> Self {
         PencilTool {
             length,
@@ -33,15 +36,15 @@ impl Tool for PencilTool {
             serde_json::to_value(self).unwrap()
         }
 
-        fn get_vec(&self) -> Vec3 {
+        fn vec(&self) -> Vec3 {
             Vec3::new(0.0, self.length, 0.0)
         }
 
-        fn get_inertia(&self) -> Inertia {
+        fn inertia(&self) -> Inertia {
             self.mass * self.length.powi(2) / 12.0
         }
 
-        fn get_mass(&self) -> f32 {
+        fn mass(&self) -> f32 {
             self.mass.0
         }
     // 

@@ -6,19 +6,24 @@ use crate::comp::tool::SimpleTool;
 use crate::ctrl::servo::ServoDriver;
 use crate::units::*;
 
-
+/// A pair of controllable tongs with simple closed/open state switching
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Tongs {
     servo : ServoDriver,
 
+    /// Servo duty cycle percent for open state
     pub perc_open : f32,
+    /// Servo duty cycle percent for closed state
     pub perc_close : f32,
 
+    /// Length of the tongs
     pub length : f32,
-    pub mass : Inertia
+    /// Mass of the tongs
+    mass : Inertia
 }
 
 impl Tongs {
+    /// Create a new `Tongs` instance
     pub fn new(servo : ServoDriver, perc_open : f32, perc_close : f32, length : f32, mass : Inertia) -> Self {
         let mut tongs = Self {
             servo,
@@ -59,15 +64,15 @@ impl Tool for Tongs {
         serde_json::to_value(self).unwrap()
     }
 
-    fn get_vec(&self) -> Vec3 {
+    fn vec(&self) -> Vec3 {
         Vec3::Y * self.length
     }
 
-    fn get_inertia(&self) -> Inertia {
+    fn inertia(&self) -> Inertia {
         self.mass * self.length.powi(2) / 12.0
     }
 
-    fn get_mass(&self) -> f32 {
+    fn mass(&self) -> f32 {
         self.mass.0
     }
 }
