@@ -21,7 +21,7 @@ pub use gear_joint::GearJoint;
 pub mod group;
 pub use group::SyncCompGroup;
 
-/// A module defining the tools used for various robots, such as tongs, additional bearings, drills ...
+#[doc = "../docs/tools.md"]
 pub mod tool;
 pub use tool::Tool;
 //
