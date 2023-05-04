@@ -1,3 +1,4 @@
+use crate::Setup;
 use crate::comp::asyn::{Direction, AsyncComp};
 use crate::ctrl::pwm::PWMOutput;
 use crate::units::Omega;
@@ -37,12 +38,16 @@ impl DcMotor {
     }
 }
 
-impl AsyncComp for DcMotor {
-    fn setup(&mut self) {
+impl Setup for DcMotor {
+    fn setup(&mut self) -> Result<(), crate::Error> {
         self.sig_cw.start();
         self.sig_ccw.start();
+        
+        Ok(())
     }
+}
 
+impl AsyncComp for DcMotor {
     fn drive(&mut self, dir : Direction, speed_f : f32) -> Result<(), crate::Error> {
         #[cfg(feature = "std")]
         if (1.0 < speed_f) & (speed_f < 0.0) {

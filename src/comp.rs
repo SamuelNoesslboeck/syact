@@ -1,5 +1,6 @@
 use core::any::type_name;
 
+use crate::Setup;
 use crate::data::{CompVars, LinkedData};
 use crate::units::*;
 
@@ -38,22 +39,8 @@ fn no_super() -> crate::Error {
 /// 
 /// Components can have multiple layers, for example take a stepper motor with a geaerbox attached to it. The stepper motor and both combined will be a component, the later having 
 /// the stepper motor component defined as it's super component. (See [GearJoint])
-pub trait SyncComp : crate::meas::SimpleMeas + core::fmt::Debug {
+pub trait SyncComp : crate::meas::SimpleMeas + core::fmt::Debug + Setup {
     // Init 
-        /// Calls all required functions to assure the components functionality. 
-        /// 
-        /// # Panics
-        /// 
-        /// Panics if neither a super component nor an override has been provided
-        fn setup(&mut self) {
-            if let Some(s_comp) = self.super_comp_mut() {
-                s_comp.setup()
-            } else {
-                #[cfg(feature = "std")]
-                panic!("Provide a super component or an override for this component!");
-            }
-        }
-
         /// Calls all required functions to assure the components async movement functionality
         /// 
         /// # Features 

@@ -17,7 +17,7 @@ stepper_lib = { version = \"0.11\", features = [ \"rasp\" ] }
 "]
 
 // Include components and data
-use stepper_lib::{StepperCtrl, StepperConst, SyncComp};
+use stepper_lib::{StepperCtrl, StepperConst, SyncComp, Setup};
 use stepper_lib::comp::Cylinder;
 use stepper_lib::data::LinkedData;
 // Include the unit system
@@ -43,7 +43,7 @@ fn main() -> Result<(), stepper_lib::Error> {
         u: 12.0,    // System voltage in volts
         s_f: 1.5    // System safety factor, should be at least 1.0
     }); 
-    cylinder.setup();
+    cylinder.setup()?;
 
     // Apply some loads
     cylinder.apply_inertia(Inertia(0.2));

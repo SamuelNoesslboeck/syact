@@ -1,4 +1,4 @@
-use core::f32::consts::{E, PI};
+use core::f32::consts::E;
 
 use alloc::vec::Vec;
 use glam::Vec3;
@@ -29,7 +29,7 @@ use crate::units::*;
 /// // The curve has to be symmetrical
 /// assert_eq!(torque_dyn(&data, Omega(10.0), 12.0), torque_dyn(&data, Omega(10.0), 12.0));
 /// ```
-pub fn torque_dyn(data : &StepperConst, mut omega : Omega, u : f32) -> Force {
+pub fn torque_dyn(consts : &StepperConst, mut omega : Omega, u : f32) -> Force {
     omega = omega.abs();
 
     if !omega.is_finite() {
@@ -37,13 +37,13 @@ pub fn torque_dyn(data : &StepperConst, mut omega : Omega, u : f32) -> Force {
     }
     
     if omega == Omega::ZERO {
-        return data.t_s;
+        return consts.t_s;
     }
 
-    let t = 2.0 * PI / (data.n_c as f32) / omega;
-    let pow = E.powf( -t / data.tau(u) );
+    let t = consts.step_time(omega);
+    let pow = E.powf( -t / consts.tau(u) );
 
-    (1.0 - pow) / (1.0 + pow) * data.t_s
+    (1.0 - pow) / (1.0 + pow) * consts.t_s
 }
 
 /// Calculates all forces and torques acting upon a segment connected with another support segment

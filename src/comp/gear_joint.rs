@@ -1,6 +1,6 @@
 use serde::{Serialize, Deserialize};
 
-use crate::{SyncComp, StepperCtrl};
+use crate::{SyncComp, StepperCtrl, Setup};
 // use crate::math::MathActor;
 use crate::meas::SimpleMeas;
 use crate::units::*;
@@ -39,6 +39,12 @@ impl SimpleMeas for GearJoint
 //         self.alpha_for_this(self.ctrl.accel_dyn(self.omega_for_super(omega, gamma), self.gamma_for_super(gamma)), self.gamma_for_super(gamma))
 //     }
 // }
+
+impl Setup for GearJoint {
+    fn setup(&mut self) -> Result<(), crate::Error> {
+        self.ctrl.setup() 
+    }
+}
 
 impl SyncComp for GearJoint
 {

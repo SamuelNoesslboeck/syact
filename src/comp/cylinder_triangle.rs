@@ -1,6 +1,6 @@
 use serde::{Serialize, Deserialize};
 
-use crate::SyncComp;
+use crate::{SyncComp, Setup};
 use crate::comp::Cylinder;
 use crate::data::LinkedData;
 use crate::meas::SimpleMeas;
@@ -80,6 +80,15 @@ impl CylinderTriangle
 //     }
 // }
 
+impl Setup for CylinderTriangle {
+    fn setup(&mut self) -> Result<(), crate::Error> { 
+        self.cylinder.setup()?;
+        self.cylinder.write_gamma(Gamma(self.l_a.max(self.l_b)));
+
+        Ok(())
+    }
+}
+
 impl SimpleMeas for CylinderTriangle {
     fn init_meas(&mut self, pin_meas : u8) {
         self.cylinder.init_meas(pin_meas)
@@ -88,14 +97,8 @@ impl SimpleMeas for CylinderTriangle {
 
 impl SyncComp for CylinderTriangle {
     // Setup 
-        fn setup(&mut self) { 
-            self.cylinder.setup();
-            self.cylinder.write_gamma(Gamma(self.l_a.max(self.l_b)));
-        }
-
         #[cfg(feature = "std")]
         fn setup_async(&mut self) {
-            self.cylinder.setup();
             self.cylinder.setup_async();
         }
     // 

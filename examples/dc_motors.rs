@@ -19,6 +19,7 @@ stepper_lib = { version = \"0.11\", features = [ \"rasp\" ] }
 use core::time::Duration;
 use std::thread::sleep;
 
+use stepper_lib::Setup;
 use stepper_lib::comp::asyn::{AsyncComp, Direction};
 use stepper_lib::ctrl::DcMotor;
 use stepper_lib::units::*;
@@ -32,11 +33,11 @@ const PIN_CCW : u8 = 19;
 /// Defines the frequency of the PWM Signal
 const FREQ : Omega = Omega(100.0);
 
-fn main() -> Result<(), std::io::Error> {
+fn main() -> Result<(), stepper_lib::Error> {
     // Create the motor with the constants above
     let mut motor = DcMotor::new(PIN_CW, PIN_CCW, FREQ);
     // Setup the PWM signals
-    motor.setup(); 
+    motor.setup()?; 
 
     // Drive clockwise for 2 seconds with max speed
     println!("Driving CW, max speed ... ");

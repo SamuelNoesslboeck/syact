@@ -4,24 +4,18 @@ use alloc::vec::Vec;
 use core::ops::Index;
 use core::ops::IndexMut;
 
+use crate::Setup;
 use crate::SyncComp;
 use crate::units::*;
 
 /// A group of synchronous components that can be implemented for any type of array, vector or list as long as it can be indexed.
 /// This trait then allows a lot of functions to be used to execute functions for all components at once.
-pub trait SyncCompGroup<T, const COMP : usize> : IndexMut<usize, Output = Box<T>> + Index<usize, Output = Box<T>>
+pub trait SyncCompGroup<T, const COMP : usize> : IndexMut<usize, Output = Box<T>> + Index<usize, Output = Box<T>> + Setup
     where
         T: SyncComp,
         T: ?Sized
 {
     // Setup
-        /// Runs [SyncComp::setup()] for all components in the group
-        fn setup(&mut self) {
-            for i in 0 .. COMP {
-                self[i].setup();
-            }
-        }
-
         /// Runs [SyncComp::setup_async()] for all components in the group 
         /// 
         /// # Feature 
@@ -211,5 +205,26 @@ pub trait SyncCompGroup<T, const COMP : usize> : IndexMut<usize, Output = Box<T>
 }
 
 // Implementations
+impl<const N : usize> Setup for [Box<dyn SyncComp>; N] {
+    fn setup(&mut self) -> Result<(), crate::Error> {
+        for i in 0 .. N {
+            self[i].setup()?;
+        }
+
+        Ok(())
+    }
+}
+
 impl<const N : usize> SyncCompGroup<dyn SyncComp, N> for [Box<dyn SyncComp>; N] { }
+
+impl Setup for Vec<Box<dyn SyncComp>> {
+    fn setup(&mut self) -> Result<(), crate::Error> {
+        for comp in self {
+            comp.setup()?;
+        }
+
+        Ok(())
+    }
+}
+
 impl<const N : usize> SyncCompGroup<dyn SyncComp, N> for Vec<Box<dyn SyncComp>> { }

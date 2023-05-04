@@ -18,7 +18,7 @@ stepper_lib = { version = \"0.11\", features = [ \"rasp\" ] }
 "]
 
 // Include components and data
-use stepper_lib::{StepperCtrl, StepperConst, SyncComp};
+use stepper_lib::{StepperCtrl, StepperConst, SyncComp, Setup};
 use stepper_lib::data::LinkedData;
 use stepper_lib::meas::SimpleMeas;
 // Include the unit system
@@ -48,6 +48,12 @@ impl MyComp {
 impl SimpleMeas for MyComp {
     fn init_meas(&mut self, _ : u8) {
         todo!()     // Not required in this example
+    }
+}
+
+impl Setup for MyComp {
+    fn setup(&mut self) -> Result<(), stepper_lib::Error> {
+        Ok(())      // Possible actions on setup, not required
     }
 }
 

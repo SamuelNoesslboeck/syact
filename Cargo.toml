@@ -22,6 +22,9 @@ spin_sleep = "1.1.1"
 # Raspberry
 rppal = { version = "0.14.1", optional = true }
 
+[dev-dependencies]
+plotters = "0.3.4" 
+
 [features]
 default = [ "std" ]
 std = [ ]
@@ -55,3 +58,20 @@ path = "examples/tongs.rs"
 [[example]]
 name = "dc_motors"
 path = "examples/dc_motors.rs"
+
+# Curves
+[[example]]
+name = "curve_to_speed"
+path = "examples/curves/curve_to_speed.rs" 
+
+[[example]]
+name = "simple_curve"
+path = "examples/curves/simple_curve.rs" 
+
+[[example]]
+name = "simple_path"
+path = "examples/curves/simple_path.rs" 
+
+[[example]]
+name = "torque_curve"
+path = "examples/curves/torque_curve.rs" 

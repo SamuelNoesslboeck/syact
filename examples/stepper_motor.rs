@@ -21,7 +21,7 @@ stepper_lib = { version = \"0.11\", features = [ \"rasp\" ] }
 use core::f32::consts::PI;
 
 // Include components and data
-use stepper_lib::{StepperCtrl, StepperConst, SyncComp};
+use stepper_lib::{StepperCtrl, StepperConst, SyncComp, Setup};
 use stepper_lib::data::LinkedData;
 // Include the unit system
 use stepper_lib::units::*;
@@ -42,7 +42,7 @@ fn main() -> Result<(), stepper_lib::Error> {
         u: 12.0,    // System voltage in volts
         s_f: 1.5    // System safety factor, should be at least 1.0
     }); 
-    ctrl.setup();
+    ctrl.setup()?;
 
     // Apply some loads
     ctrl.apply_inertia(Inertia(0.2));

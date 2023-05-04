@@ -68,6 +68,12 @@ macro_rules! basic_unit {
                 self.0.is_nan()
             }
 
+            /// Returns the unit raised to the given integer power `pow`
+            #[inline(always)]
+            pub fn powi(self, pow : i32) -> Self {
+                Self(self.0.powi(pow))
+            }
+
             /// Returns the sin of this units value
             #[inline(always)]
             pub fn sin(self) -> f32 {
@@ -107,6 +113,16 @@ macro_rules! basic_unit {
             pub fn max(self, other : Self) -> Self {
                 Self(self.0.max(other.0))
             }
+            
+            /// Return the bigger value of this and another unit, working with references
+            #[inline(always)]
+            pub fn max_ref<'a>(&'a self, other : &'a Self) -> &'a Self {
+                if *self < *other {
+                    other
+                } else {
+                    self
+                }
+            }
         }
 
         impl Display for $a {
@@ -121,6 +137,10 @@ macro_rules! basic_unit {
                 self.0
             }
         }
+
+        // Ref
+            
+        // 
 
         // Negation
             impl Neg for $a {
@@ -182,7 +202,7 @@ macro_rules! derive_units {
         
             #[inline(always)]
             fn mul(self, rhs: $time) -> Self::Output {
-                $dist(self.0 / rhs.0)
+                $dist(self.0 * rhs.0)
             }
         }
 
@@ -191,7 +211,7 @@ macro_rules! derive_units {
         
             #[inline(always)]
             fn mul(self, rhs: $vel) -> Self::Output {
-                $dist(self.0 / rhs.0)
+                $dist(self.0 * rhs.0)
             }
         }
 
@@ -278,8 +298,8 @@ basic_unit!(Gamma);
 impl Gamma {
     /// Does a force conversion of gamma-distance (absolute distance of component) to a phi-distance 
     /// (absolute distance for mathematical calculations)
-    pub fn force_to_phi(self) -> Phi {
-        Phi(self.0)
+    pub fn force_to_phi(self) -> Gamma {
+        Gamma(self.0)
     }
 }
 
@@ -292,6 +312,12 @@ impl Sub<Gamma> for Gamma {
     }
 }
 
+impl AddAssign<Delta> for Gamma {
+    fn add_assign(&mut self, rhs: Delta) {
+        self.0 += rhs.0;
+    }
+}
+
 impl Add<Delta> for Gamma {
     type Output = Gamma;
 
@@ -301,19 +327,11 @@ impl Add<Delta> for Gamma {
     }
 }
 
-impl Sub<Delta> for Gamma {
-    type Output = Gamma;
-
-    #[inline(always)]
-    fn sub(self, rhs: Delta) -> Self::Output {
-        Self(self.0 - rhs.0)
-    }
-}
 
 /// Helper functions to force convert an array of gammas to phis
 #[inline]
-pub fn force_phis_from_gammas<const N : usize>(gammas : [Gamma; N]) -> [Phi; N] {
-    let mut phis = [Phi::ZERO; N];
+pub fn force_phis_from_gammas<const N : usize>(gammas : [Gamma; N]) -> [Gamma; N] {
+    let mut phis = [Gamma::ZERO; N];
     for i in 0 .. N {
         phis[i] = gammas[i].force_to_phi();
     }
@@ -344,6 +362,39 @@ impl Phi {
     /// (absolute distance for components)
     pub fn force_to_gamma(self) -> Gamma {
         Gamma(self.0)
+    }
+}
+
+impl Add<Phi> for Delta {
+    type Output = Phi;
+
+    #[inline(always)]
+    fn add(self, rhs: Phi) -> Self::Output {
+        Phi(self.0 + rhs.0)
+    }
+}
+
+impl AddAssign<Delta> for Phi {
+    fn add_assign(&mut self, rhs: Delta) {
+        self.0 += rhs.0;
+    }
+}
+
+impl Sub<Delta> for Phi {
+    type Output = Phi;
+
+    #[inline(always)]
+    fn sub(self, rhs: Delta) -> Self::Output {
+        Self(self.0 - rhs.0)
+    }
+}
+
+impl Sub<Phi> for Phi {
+    type Output = Delta;
+    
+    #[inline(always)]
+    fn sub(self, rhs: Phi) -> Self::Output {
+        Delta(self.0 - rhs.0)
     }
 }
 
@@ -399,6 +450,12 @@ impl Div<Omega> for f32 {
 /// # Unit
 /// 
 /// - Can be either radians per second^2 or millimeters per second^2
+/// 
+/// ```
+/// use stepper_lib::units::*;
+/// 
+/// assert_eq!(Omega(5.0), Alpha(2.5) * Time(2.0));
+/// assert_eq!(Alpha(2.5), Omega(5.0) / Time(2.0));
 #[derive(Clone, Copy, Debug, Default, Serialize, Deserialize, PartialEq, PartialOrd)]
 pub struct Alpha(pub f32); 
 basic_unit!(Alpha);

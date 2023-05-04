@@ -1,7 +1,7 @@
 #![doc = include_str!("../README.md")]
 #![crate_name = "stepper_lib"]
 #![cfg_attr(not(feature = "std"), no_std)]
-#![warn(missing_docs)]
+// #![warn(missing_docs)]
 
 // Modules
 #[cfg(not(feature = "embedded"))]
@@ -50,3 +50,15 @@ pub enum ErrorKind {
     Overload
 }
 
+/// A trait that provides a universal setup function
+pub trait Setup {
+    /// Calls all required functions to assure the components functionality
+    fn setup(&mut self) -> Result<(), Error>;
+}
+
+#[inline(always)]
+fn lib_error<E>(error : E) -> Error 
+where
+    E: Into<Box<dyn std::error::Error + Sync + Send>> {
+    Error::new(std::io::ErrorKind::Other, error)
+}

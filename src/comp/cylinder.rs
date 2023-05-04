@@ -1,6 +1,6 @@
 use serde::{Serialize, Deserialize};
 
-use crate::SyncComp;
+use crate::{SyncComp, Setup};
 use crate::ctrl::StepperCtrl;
 
 use crate::units::*;
@@ -40,6 +40,12 @@ impl crate::meas::SimpleMeas for Cylinder
 {
     fn init_meas(&mut self, pin_meas : u8) {
         self.ctrl.init_meas(pin_meas)
+    }
+}
+
+impl Setup for Cylinder {
+    fn setup(&mut self) -> Result<(), crate::Error> {
+        self.ctrl.setup()
     }
 }
 

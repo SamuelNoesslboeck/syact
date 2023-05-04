@@ -84,7 +84,13 @@ impl StepperConst
     /// The inductivity constant [Unit s]
     #[inline(always)]
     pub fn tau(&self, u : f32) -> Time {
-        Time(self.i_max * self.l / u)
+        Time(2.0 * self.i_max * self.l / u)
+    }
+
+    /// Maximum speed for a stepper motor where it can be guarantied that it works properly
+    #[inline(always)]
+    pub fn max_speed(&self, u : f32) -> Omega {
+        PI / self.tau(u) / self.n_s as f32
     }
 
     /// Omega for time per step [Unit 1/s]
