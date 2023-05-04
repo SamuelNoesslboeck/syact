@@ -9,16 +9,18 @@ pub struct PathNode {
     pub time : Time
 }
 
-impl PathNode {
-    const DEFAULT : Self = Self {
-        delta: Delta::ZERO,
-        omega_0: Omega::INFINITY,
-        time: Time::ZERO
-    }; 
+impl Default for PathNode {
+    fn default() -> Self {
+        Self {
+            delta: Delta::ZERO,
+            omega_0: Omega::INFINITY,
+            time: Time::ZERO
+        }
+    }
 }
 
 pub fn create_nodes(path : Vec<Gamma>) -> Vec<PathNode> {
-    let mut nodes = vec![PathNode::DEFAULT; path.len() - 1]; 
+    let mut nodes = vec![PathNode::default(); path.len() - 1]; 
 
     for i in 0 .. (path.len() - 1) {
         nodes[i].delta = path[i + 1] - path[i];

@@ -87,6 +87,12 @@ impl<'a> CurveBuilder<'a> {
             force::torque_dyn(self.consts, self.omega / self.var.f_bend, self.lk.u) / self.lk.s_f * self.var.f_bend, 
                 self.var
         ).unwrap();
+
+        let alpha_max = Alpha((omega_tar.powi(2) - self.omega.powi(2)).0 / 2.0 / delta.0).abs();
+
+        if alpha_max < self.alpha {
+            self.alpha = alpha_max;
+        }
         
         if omega_tar < self.omega {
             self.alpha = -self.alpha;
