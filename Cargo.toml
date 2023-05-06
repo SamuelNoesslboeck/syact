@@ -61,6 +61,14 @@ path = "examples/dc_motors.rs"
 
 # Curves
 [[example]]
+name = "complex_curve"
+path = "examples/curves/complex_curve.rs" 
+
+[[example]]
+name = "complex_paths"
+path = "examples/curves/complex_path.rs" 
+
+[[example]]
 name = "curve_to_speed"
 path = "examples/curves/curve_to_speed.rs" 
 

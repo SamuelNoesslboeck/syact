@@ -32,7 +32,12 @@ pub fn travel_times(delta : Delta, omega : Omega, alpha : Alpha) -> (Time, Time)
     let p = omega / alpha;
     let q = 2.0 * delta.0 / alpha.0;
 
-    let root = Time((p.0.powi(2) + q).sqrt());
+    let inner = p.0.powi(2) + q;
+    let root = if inner.abs() > f32::EPSILON {
+        Time(inner.sqrt())
+    } else {
+        Time::ZERO
+    };
 
     ( -p + root, -p - root )
 }
@@ -86,7 +91,7 @@ pub fn write_simple_move(consts : &StepperConst, var : &CompVars, lk : &LinkedDa
     let mut builder = CurveBuilder::new(consts, var, lk, Omega::ZERO);
 
     for i in 0 .. cur_len / 2 {
-        let time = builder.next_step_accel();
+        let time = builder.next_step_pos();
 
         if builder.omega > omega_max {
             break;

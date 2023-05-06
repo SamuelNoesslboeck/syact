@@ -20,7 +20,7 @@ assert type(raw_data) == type([])
 # plt.xlabel('Steps')
 # plt.ylabel('Time')
 
-colors = [ "red", "blue" ]
+colors = [ "red", "blue", "green", "orange", "violet", "aqua" ]
 
 for n in range(0, len(raw_data[0])):
     plt.plot(

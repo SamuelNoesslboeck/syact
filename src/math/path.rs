@@ -1,101 +1,91 @@
 use crate::math::CurveBuilder;
 use crate::units::*;
 
-
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub struct PathNode {
     pub delta : Delta,
-    pub omega_0 : Omega,
-    pub time : Time
+    pub omega_0 : Omega
 }
 
 impl Default for PathNode {
     fn default() -> Self {
         Self {
             delta: Delta::ZERO,
-            omega_0: Omega::INFINITY,
-            time: Time::ZERO
+            omega_0: Omega::INFINITY
         }
     }
-}
-
-pub fn create_nodes(path : Vec<Gamma>) -> Vec<PathNode> {
-    let mut nodes = vec![PathNode::default(); path.len() - 1]; 
-
-    for i in 0 .. (path.len() - 1) {
-        nodes[i].delta = path[i + 1] - path[i];
-    }
-
-    nodes
 }
 
 #[derive(Debug, Clone)]
 pub struct PathBuilder<'a, const N : usize> {
-    pub builders : [CurveBuilder<'a>; N],
-    pub paths : [Vec<PathNode>; N], 
-
-    pub index : usize
+    builders : [CurveBuilder<'a>; N],
+    nstack : Vec<[PathNode; N]>
 }
 
 impl<'a, const N : usize> PathBuilder<'a, N> {
-    pub fn new(builders : [CurveBuilder<'a>; N], paths : [Vec<PathNode>; N]) -> Self {
-        Self  {
-            builders, paths,
-            index: 0
+    pub fn new(builders : [CurveBuilder<'a>; N]) -> Self {
+        Self {
+            builders, 
+            nstack: vec![ ]
         }
     }
 
-    pub fn calc_point(&mut self, t_min : Time, index : usize) -> f32 {
-        let mut t_max = Time::ZERO;
-        let mut omegas = [ Omega::INFINITY; N ];
-
-        for i in 0 .. N {
-            let ( time, _ ) = self.builders[i].next(
-                self.paths[i][index].delta, 
-                2.0 * self.paths[i][index].delta / t_min - self.builders[i].omega_0
-            );
-
-            if time > t_max {
-                for n in 0 .. (i + 1) {
-                    omegas[n] = self.builders[n].correct_last(time);
+    pub fn next(&mut self, tstack : &mut [Time], dstack : &[[Delta; N]], n : usize, i : usize) {
+        let time = tstack[i];
+        let delta = dstack[i][n];
+        let omega_tar = delta / time;
+        let ( time_real, fac ) = self.builders[n].next(delta, omega_tar);
+    
+        if fac < 1.0 {
+            if self.builders[n].was_deccel() {
+                let omega_err = self.builders[n].omega - omega_tar;
+                let omega_cor = self.builders[n].omega_0 - omega_err;
+        
+                println!(" => {}: Fac: {}; Correct: {}, Error: {}, Builder: {}", i, fac, omega_cor, omega_err, self.builders[n].omega);
+        
+                tstack[i - 1] = dstack[i - 1][n] / omega_cor;
+    
+                for _n in 0 ..=n {
+                    self.builders[_n].load_node(&self.nstack[i - 1][_n]);
+                    self.next(tstack, dstack, _n, i - 1);
                 }
-
-                t_max = time;
+        
+                // let (time_res, fac_res) =  builder.next(delta, omega_tar); 
+                self.builders[n].next(delta, omega_tar);
             } else {
-                omegas[i] = self.builders[i].correct_last(t_max);
-
-                if omegas[i] < Omega::ZERO {
-                    return (self.builders[i].omega_0 + omegas[i]) / self.builders[i].omega_0;
+                if time_real > tstack[i] {
+                    tstack[i] = time_real;
+                    for _n in 0 .. n {
+                        if i == 0 {
+                            self.builders[_n].reset();
+                        } else {
+                            self.builders[_n].load_node(&self.nstack[i - 1][_n]);
+                        }
+                        self.next(tstack, dstack, _n, i);
+                    }
                 }
             }
         }
-
-        1.0
-    } 
-
-    pub fn next(&mut self, t_min : Time) {
-        if self.index > self.paths.len() {
-            panic!("Path already generated!");
-        }
-
-        let f = self.calc_point(t_min, self.index);
-
-        if f == 1.0 {
-            for i in 0 .. N {
-                self.paths[i][self.index] = self.builders[i].get_node();
-            }
-        } else {
-            for i in 0 .. N {
-                
-            }
-        }
-
-        self.index += 1;
-
-        // omegas
+    
+        self.nstack[i][n] = self.builders[n].get_node();
+        // println!("[{}, {}] Omega_0: {}, Omega: {}, tar: {}", n, i, self.nstack[i][n].omega_0, self.builders[n].omega, omega_tar);
     }
 
-    pub fn correct_back(&mut self, omega : Omega) {
+    pub fn generate(&mut self, tstack : &mut [Time], dstack : &[[Delta; N]]) {
+        if tstack.len() != dstack.len() {
+            panic!("Stacks must be equal in size!");
+        }
 
+        self.nstack = vec![ [ PathNode::default(); N ]; tstack.len() ];
+
+        for i in 0 .. tstack.len() {
+            for n in 0 .. N {
+                self.next(tstack, dstack, n, i);
+            }
+        }
+    }
+
+    pub fn get_node(&'a self, n : usize, i : usize) -> &'a PathNode {
+        &self.nstack[i][n]
     }
 }

@@ -123,6 +123,16 @@ macro_rules! basic_unit {
                     self
                 }
             }
+
+            /// Return the bigger value of this and another unit, working with references
+            #[inline(always)]
+            pub fn min_ref<'a>(&'a self, other : &'a Self) -> &'a Self {
+                if *self > *other {
+                    other
+                } else {
+                    self
+                }
+            }
         }
 
         impl Display for $a {
@@ -298,8 +308,8 @@ basic_unit!(Gamma);
 impl Gamma {
     /// Does a force conversion of gamma-distance (absolute distance of component) to a phi-distance 
     /// (absolute distance for mathematical calculations)
-    pub fn force_to_phi(self) -> Gamma {
-        Gamma(self.0)
+    pub fn force_to_phi(self) -> Phi {
+        Phi(self.0)
     }
 }
 
@@ -327,11 +337,20 @@ impl Add<Delta> for Gamma {
     }
 }
 
+impl Sub<Delta> for Gamma {
+    type Output = Gamma;
+
+    #[inline]
+    fn sub(self, rhs: Delta) -> Self::Output {
+        Self(self.0 - rhs.0)
+    }
+}
+
 
 /// Helper functions to force convert an array of gammas to phis
 #[inline]
-pub fn force_phis_from_gammas<const N : usize>(gammas : [Gamma; N]) -> [Gamma; N] {
-    let mut phis = [Gamma::ZERO; N];
+pub fn force_phis_from_gammas<const N : usize>(gammas : [Gamma; N]) -> [Phi; N] {
+    let mut phis = [Phi::ZERO; N];
     for i in 0 .. N {
         phis[i] = gammas[i].force_to_phi();
     }
