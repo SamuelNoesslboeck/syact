@@ -1,4 +1,4 @@
-use stepper_lib::{StepperCtrl, StepperConst, AsyncComp, SyncComp};
+use stepper_lib::{StepperCtrl, StepperConst, AsyncComp, SyncComp, Setup, LinkedData};
 use stepper_lib::units::*;
 
 const PIN_DIR : u8 = 27; 
@@ -10,6 +10,8 @@ fn sleep(secs : f32) {
 
 fn main() -> Result<(), stepper_lib::Error> {
     let mut ctrl = StepperCtrl::new(StepperConst::GEN, PIN_DIR, PIN_STEP);
+    ctrl.setup()?;
+    ctrl.write_link(LinkedData::GEN);
 
     ctrl.apply_inertia(Inertia(0.1));
 
