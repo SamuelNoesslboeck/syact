@@ -22,8 +22,8 @@ spin_sleep = "1.1.1"
 # Raspberry
 rppal = { version = "0.14.1", optional = true }
 
-[dev-dependencies]
-plotters = "0.3.4" 
+[target.'cfg(windows)'.dev-dependencies]
+plotters = "0.3.4"
 
 [features]
 default = [ "std" ]
