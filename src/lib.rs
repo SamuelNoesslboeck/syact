@@ -7,38 +7,47 @@
 #[cfg(not(feature = "embedded"))]
 extern crate alloc;
 
-#[doc = include_str!("../docs/components.md")]
-pub mod comp;
+// Submodules
+    #[doc = include_str!("../docs/components.md")]
+    pub mod comp;
+    pub use comp::{SyncComp, SyncCompGroup, Tool};
+    pub use comp::tool::SimpleTool;
+    #[cfg(feature = "std")]
+    pub use comp::asyn::{AsyncComp, Direction};
 
-/// Collection of structs and functions for controlling Stepper Motors
-pub mod ctrl;
-/// Structs for storing characteristics of stepper motors and devices
-pub mod data;
-/// Functions and Structs for calculating Stepper Motor procedures and operations
-pub mod math;
-/// Functions and Structs for taking measurements with a robot for e.g. position calculation
-pub mod meas;
+    /// Collection of structs and functions for controlling Stepper Motors
+    pub mod ctrl;
+    pub use ctrl::StepperCtrl;
 
-/// Self defined units for mathematical operations
-pub mod units;
+    /// Structs for storing characteristics of stepper motors and devices
+    pub mod data;
+    pub use data::{StepperConst, LinkedData};
 
-/// Module with all the tests required to assure the library funcitons as intended
-#[cfg(test)]
-mod tests;
+    /// General error type of the crate
+    pub mod err;
+
+    /// Functions and Structs for calculating Stepper Motor procedures and operations
+    pub mod math;
+
+    /// Functions and Structs for taking measurements with a robot for e.g. position calculation
+    pub mod meas;
+
+    /// Self defined units for mathematical operations
+    pub mod units;
+
+    /// Module with all the tests required to assure the library funcitons as intended
+    #[cfg(test)]
+    mod tests;
+// 
 
 // Wrapped types
 /// The general error type used in the crate
 #[cfg(feature = "std")]
-pub type Error = std::io::Error;
+pub type Error = Box<dyn std::error::Error>;
 
 #[cfg(not(feature = "std"))]
 pub type Error = ErrorKind;
 
-// Relocated types
-pub use comp::{SyncComp, SyncCompGroup, Tool};
-pub use comp::tool::SimpleTool;
-pub use ctrl::StepperCtrl;
-pub use data::StepperConst;
 
 #[cfg(not(feature = "std"))]
 #[derive(Debug)]
@@ -57,8 +66,8 @@ pub trait Setup {
 }
 
 #[inline(always)]
-fn lib_error<E>(error : E) -> Error 
+fn lib_error<E>(error : E) -> crate::Error 
 where
     E: Into<Box<dyn std::error::Error + Sync + Send>> {
-    Error::new(std::io::ErrorKind::Other, error)
+    error.into()
 }

@@ -1,6 +1,6 @@
 use core::any::type_name;
 
-use crate::Setup;
+use crate::{Setup, StepperConst};
 use crate::data::{CompVars, LinkedData};
 use crate::units::*;
 
@@ -62,6 +62,9 @@ pub trait SyncComp : crate::meas::SimpleMeas + core::fmt::Debug + Setup {
     // 
 
     // Data
+        /// Returns the constants the stepper motor used by the component
+        fn consts<'a>(&'a self) -> &'a StepperConst;
+
         /// Returns the variables of the component, such as load force, inertia, limits ...
         /// 
         /// ```rust

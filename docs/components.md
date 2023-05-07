@@ -101,7 +101,7 @@ stepper_lib = { version = "0.11", features = [ "rasp" ] }
 
 ```rust
 // Include components and data
-use stepper_lib::{StepperCtrl, StepperConst, SyncComp};
+use stepper_lib::{StepperCtrl, StepperConst, SyncComp, Setup};
 use stepper_lib::data::LinkedData;
 use stepper_lib::meas::SimpleMeas;
 // Include the unit system
@@ -134,8 +134,18 @@ impl SimpleMeas for MyComp {
     }
 }
 
+impl Setup for MyComp {
+    fn setup(&mut self) -> Result<(), stepper_lib::Error> {
+        Ok(())
+    }
+}
+
 impl SyncComp for MyComp {
     // Required memebers
+        fn consts<'a>(&'a self) -> &'a stepper_lib::StepperConst {
+            todo!()
+        }
+
         fn vars<'a>(&'a self) -> &'a stepper_lib::data::CompVars {
             todo!()     // Not required in this example
         }

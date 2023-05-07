@@ -49,6 +49,10 @@ impl Setup for GearJoint {
 impl SyncComp for GearJoint
 {
     // Data
+        fn consts<'a>(&'a self) -> &'a crate::StepperConst {
+            self.ctrl.consts()    
+        }
+
         fn link<'a>(&'a self) -> &'a crate::data::LinkedData {
             self.ctrl.link()
         }

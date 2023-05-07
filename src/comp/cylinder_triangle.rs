@@ -96,14 +96,11 @@ impl SimpleMeas for CylinderTriangle {
 }
 
 impl SyncComp for CylinderTriangle {
-    // Setup 
-        #[cfg(feature = "std")]
-        fn setup_async(&mut self) {
-            self.cylinder.setup_async();
-        }
-    // 
-
     // Data
+        fn consts<'a>(&'a self) -> &'a crate::StepperConst {
+            self.cylinder.consts()    
+        }
+
         fn link<'a>(&'a self) -> &'a crate::data::LinkedData {
             self.cylinder.link()
         }

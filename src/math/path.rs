@@ -71,6 +71,12 @@ impl<'a, const N : usize> PathBuilder<'a, N> {
         // println!("[{}, {}] Omega_0: {}, Omega: {}, tar: {}", n, i, self.nstack[i][n].omega_0, self.builders[n].omega, omega_tar);
     }
 
+    pub fn next_all(&mut self, tstack : &mut [Time], dstack : &[[Delta; N]], i : usize) {
+        for n in 0 .. N {
+            self.next(tstack, dstack, n, i);
+        }
+    }
+
     pub fn generate(&mut self, tstack : &mut [Time], dstack : &[[Delta; N]]) {
         if tstack.len() != dstack.len() {
             panic!("Stacks must be equal in size!");

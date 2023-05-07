@@ -2,7 +2,7 @@ use core::f32::consts::PI;
 
 use serde::{Serialize, Deserialize};
 
-use crate::units::*;
+use crate::{units::*, lib_error};
 
 // Submodules
 mod lk;
@@ -158,8 +158,7 @@ impl StepperConst
 
             #[cfg(feature = "std")]
             if t_load > self.t_s {
-                Err(crate::Error::new(std::io::ErrorKind::InvalidInput, 
-                    format!("Overload! (Motor torque: {}, Load: {})", self.t_s, t_load)))
+                Err(lib_error(format!("Overload! (Motor torque: {}, Load: {})", self.t_s, t_load)))
             } else {
                 Ok(self.t_s - t_load)
             }
@@ -209,8 +208,7 @@ impl StepperConst
 
             #[cfg(feature = "std")]
             if t_load > t_s {
-                Err(crate::Error::new(std::io::ErrorKind::InvalidInput, 
-                    format!("Overload! (Motor torque: {}, Load: {})", t_s, t_load)))
+                Err(lib_error(format!("Overload! (Motor torque: {}, Load: {})", t_s, t_load)))
             } else {
                 Ok(t_s - t_load)
             }

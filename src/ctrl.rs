@@ -8,7 +8,7 @@ use std::thread::JoinHandle;
 #[cfg(feature = "std")]
 use std::sync::mpsc::{Receiver, Sender, channel};
 
-use crate::{SyncComp, Setup};
+use crate::{SyncComp, Setup, lib_error};
 use crate::data::{LinkedData, StepperConst, CompVars}; 
 use crate::math::{self, CurveBuilder};
 use crate::units::*;
@@ -59,13 +59,13 @@ type Interrupter = fn (&mut Pins) -> bool;
 #[cfg(feature = "std")]
 #[inline(always)]
 fn no_async() -> crate::Error {
-    crate::Error::new(std::io::ErrorKind::NotConnected, "Async has not been setup yet!")
+    lib_error("Async has not been setup yet!")
 }
 
 #[inline(always)]
 #[cfg(feature = "std")]
 fn not_active() -> crate::Error {
-    crate::Error::new(std::io::ErrorKind::PermissionDenied, "No movement has been started yet")
+    lib_error("No movement has been started yet")
 }
 
 // Pin struct
@@ -278,7 +278,7 @@ impl StepperCtrl {
 
         if limit.is_normal() {
             #[cfg(feature = "std")]
-            return Err(crate::Error::new(std::io::ErrorKind::InvalidInput, "The delta given is not valid"))
+            return Err(lib_error("The delta given is not valid"))
         }
 
         if delta > Delta::ZERO {
@@ -561,6 +561,10 @@ impl SyncComp for StepperCtrl {
         }
 
     // Data
+        fn consts<'a>(&'a self) -> &'a StepperConst {
+            &self.consts    
+        }
+
         fn vars<'a>(&'a self) -> &'a CompVars {
             &self.vars
         }
@@ -598,8 +602,7 @@ impl SyncComp for StepperCtrl {
 
             if !interrupted {
                 #[cfg(feature = "std")]
-                return Err(crate::Error::new(std::io::ErrorKind::TimedOut, 
-                    "The measurement failed for the fiven maximum delta distance"));
+                return Err(lib_error("The measurement failed for the fiven maximum delta distance"));
             }
 
             self.set_end(set_gamma);
