@@ -218,6 +218,37 @@ pub trait SyncComp : crate::meas::SimpleMeas + core::fmt::Debug + Setup {
             super_gamma
         }   
 
+        /// Converts the given **absolute** distance for the super component to the **absolute** distance for this component
+        /// 
+        /// # Example
+        /// 
+        /// When using a gearmotor with a ratio of four (motor movement speed will be reduced to a quater), 
+        /// this function will return a distance *four times higher* than the input super distance
+        /// 
+        /// ```rust
+        /// use stepper_lib::{SyncComp, StepperCtrl, StepperConst};
+        /// use stepper_lib::comp::Cylinder;
+        /// use stepper_lib::units::*;
+        /// 
+        /// // Create a new cylinder (implements SyncComp)
+        /// let mut cylinder = Cylinder::new(
+        ///     // Stepper Motor as subcomponent (also implements SyncComp)
+        ///     StepperCtrl::new_sim(StepperConst::GEN), 
+        /// 2.0);    // Ratio is set to 2.0, which means for each radian the motor moves, the cylinder moves for 2.0 mm
+        /// 
+        /// assert_eq!(Gamma(1.0), cylinder.abs_super_gamma(Gamma(2.0)));
+        /// ```
+        #[inline(always)]
+        fn abs_super_gamma(&self, this_gamma : Gamma) -> Gamma {
+            let super_gamma = self.gamma_for_super(this_gamma);
+
+            if let Some(comp) = self.super_comp() {
+                comp.abs_super_gamma(super_gamma)
+            } else {
+                super_gamma
+            }
+        }
+
         /// Converts the given **relative** distance [Delta] for this component into the **relative** distance for the super component
         /// 
         /// # Example

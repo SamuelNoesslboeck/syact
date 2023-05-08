@@ -4,7 +4,7 @@
 // #![warn(missing_docs)]
 
 // Modules
-#[cfg(not(feature = "embedded"))]
+#[cfg(feature = "std")]
 extern crate alloc;
 
 // Submodules
