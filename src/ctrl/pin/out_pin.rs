@@ -1,3 +1,6 @@
+#[cfg(feature = "rasp")]
+use rppal::gpio::OutputPin;
+
 /// Universal ouput pin structure for platform independency
 #[derive(Debug)]
 pub struct UniOutPin {
