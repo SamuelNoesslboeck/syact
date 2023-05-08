@@ -1,7 +1,7 @@
 /// Universal output pin structure for platform independency
 #[derive(Debug)]
 pub struct UniInPin {
-    #[cfg(featue = "rasp")]
+    #[cfg(feature = "rasp")]
     sys_pin : InputPin,
 
     /// The pin number
@@ -14,7 +14,7 @@ impl UniInPin {
         /// 
         /// Returns `false` for this configuration
         #[inline(always)]
-        #[cfg(featue = "rasp")]
+        #[cfg(feature = "rasp")]
         pub fn is_sim(&self) -> bool {
             false
         }
@@ -38,7 +38,7 @@ impl UniInPin {
 
     /// Checks if the pin receives a `HIGH` signal
     #[inline]
-    #[cfg(featue = "rasp")]
+    #[cfg(feature = "rasp")]
     pub fn is_high(&self) -> bool {
         self.sys_pin.is_high()
     }
@@ -52,7 +52,7 @@ impl UniInPin {
 
     /// Checks if the pin receives a `LOW` signal
     #[inline]
-    #[cfg(featue = "rasp")]
+    #[cfg(feature = "rasp")]
     pub fn is_low(&self) -> bool {
         self.sys_pin.is_low()
     }

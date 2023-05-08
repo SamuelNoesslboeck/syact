@@ -1,7 +1,7 @@
 /// Universal ouput pin structure for platform independency
 #[derive(Debug)]
 pub struct UniOutPin {
-    #[cfg(featue = "rasp")]
+    #[cfg(feature = "rasp")]
     sys_pin : OutputPin,
     #[cfg(not(any(feature = "rasp")))]
     state : bool, 
@@ -13,7 +13,7 @@ pub struct UniOutPin {
 impl UniOutPin {
     /// Create 
     #[inline]
-    #[cfg(featue = "rasp")]
+    #[cfg(feature = "rasp")]
     pub fn new(sys_pin : OutputPin, pin : u8) -> Self {
         Self {
             sys_pin, 
@@ -35,7 +35,7 @@ impl UniOutPin {
     /// 
     /// Returns `false` for this configuration
     #[inline]
-    #[cfg(featue = "rasp")]
+    #[cfg(feature = "rasp")]
     pub fn is_sim(&self) -> bool {
         false
     }
@@ -58,7 +58,7 @@ impl UniOutPin {
 
     /// Checks if the pin is set to `HIGH`
     #[inline]
-    #[cfg(featue = "rasp")]
+    #[cfg(feature = "rasp")]
     pub fn is_set_high(&self) -> bool {
         self.sys_pin.is_set_high()
     }
@@ -72,7 +72,7 @@ impl UniOutPin {
 
     /// Checks if the pin is set to `LOW`
     #[inline]
-    #[cfg(featue = "rasp")]
+    #[cfg(feature = "rasp")]
     pub fn is_set_low(&self) -> bool {
         self.sys_pin.is_set_low()
     }
@@ -86,7 +86,7 @@ impl UniOutPin {
 
     /// Set the pin to `HIGH`
     #[inline]
-    #[cfg(featue = "rasp")]
+    #[cfg(feature = "rasp")]
     pub fn set_high(&mut self) {
         self.sys_pin.set_high();
     }
@@ -100,7 +100,7 @@ impl UniOutPin {
 
     /// Set the pin to `lOW`
     #[inline]
-    #[cfg(featue = "rasp")]
+    #[cfg(feature = "rasp")]
     pub fn set_low(&mut self) {
         self.sys_pin.set_low();
     }

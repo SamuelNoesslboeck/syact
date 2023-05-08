@@ -15,7 +15,7 @@ path = "src/lib.rs"
 [dependencies]
 gcode = "0.6.1"
 glam = "0.24.0"
-serde = { version = "1.0.104", features = ["derive"] }
+serde = { version = "1.0.104", features = [ "derive" ] }
 serde_json = "1.0.48"
 spin_sleep = "1.1.1"
 
@@ -88,3 +88,4 @@ path = "examples/curves/torque_curve.rs"
 [[example]]
 name = "fixed_speed"
 path = "examples/driving/fixed_speed.rs" 
+required-features = [ "rasp" ]

@@ -1,4 +1,4 @@
-#[cfg(featue = "rasp")]
+#[cfg(feature = "rasp")]
 use rppal::gpio::{Gpio, Pin, InputPin, OutputPin};
 
 // Submodlues
@@ -14,7 +14,7 @@ pub const ERR_PIN : u8 = 0xFF;
 /// Universal pin struct for platform independency
 #[derive(Debug)]
 pub struct UniPin {
-    #[cfg(featue = "rasp")]
+    #[cfg(feature = "rasp")]
     sys_pin : Pin,
 
     /// The pin number
@@ -23,7 +23,7 @@ pub struct UniPin {
 
 impl UniPin {
     /// Create a new raspberry pi GPIO pin
-    #[cfg(featue = "rasp")]
+    #[cfg(feature = "rasp")]
     pub fn new(pin : u8) -> Result<Self, crate::Error> {
         let sys_pin = match Gpio::new() {
             Ok(gp) => match gp.get(pin) { 
@@ -51,7 +51,7 @@ impl UniPin {
 
     /// Convert the pin into an input pin
     #[inline]
-    #[cfg(featue = "rasp")]
+    #[cfg(feature = "rasp")]
     pub fn into_input(self) -> UniInPin {
         UniInPin {
             pin: self.pin,
@@ -70,7 +70,7 @@ impl UniPin {
 
     /// Convert the pin into an output pin
     #[inline]
-    #[cfg(featue = "rasp")]
+    #[cfg(feature = "rasp")]
     pub fn into_output(self) -> UniOutPin {
         UniOutPin::new(
             self.sys_pin.into_output(),
