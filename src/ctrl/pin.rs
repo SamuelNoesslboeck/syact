@@ -15,7 +15,7 @@ pub const ERR_PIN : u8 = 0xFF;
 #[derive(Debug)]
 pub struct UniPin {
     #[cfg(feature = "rasp")]
-    sys_pin : Pin,
+    pub sys_pin : Pin,
 
     /// The pin number
     pub pin : u8

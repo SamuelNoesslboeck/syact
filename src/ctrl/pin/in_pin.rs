@@ -5,7 +5,7 @@ use rppal::gpio::InputPin;
 #[derive(Debug)]
 pub struct UniInPin {
     #[cfg(feature = "rasp")]
-    sys_pin : InputPin,
+    pub sys_pin : InputPin,
 
     /// The pin number
     pub pin : u8

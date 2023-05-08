@@ -5,7 +5,7 @@ use rppal::gpio::OutputPin;
 #[derive(Debug)]
 pub struct UniOutPin {
     #[cfg(feature = "rasp")]
-    sys_pin : OutputPin,
+    pub sys_pin : OutputPin,
     #[cfg(not(any(feature = "rasp")))]
     state : bool, 
 
