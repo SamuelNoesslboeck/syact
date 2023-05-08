@@ -25,12 +25,14 @@ impl UniPin {
     /// Create a new raspberry pi GPIO pin
     #[cfg(feature = "rasp")]
     pub fn new(pin : u8) -> Result<Self, crate::Error> {
+        use crate::lib_error;
+
         let sys_pin = match Gpio::new() {
             Ok(gp) => match gp.get(pin) { 
                 Ok(pin) => pin,
-                Err(err) => return Err(std::io::Error::new(std::io::ErrorKind::Other, format!("{:?}", err)))
+                Err(err) => return Err(lib_error(format!("{:?}", err)))
             },
-            Err(err) => return Err(std::io::Error::new(std::io::ErrorKind::Other, format!("{:?}", err)))
+            Err(err) => return Err(lib_error(format!("{:?}", err)))
         };
         
         println!(" -> Pin successfully setup! [Pin: {}]", pin);
@@ -75,7 +77,7 @@ impl UniPin {
         UniOutPin::new(
             self.sys_pin.into_output(),
             self.pin
-        );
+        )
     }
 
     /// Convert the pin into an output pin
