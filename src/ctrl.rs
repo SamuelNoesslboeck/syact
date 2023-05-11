@@ -449,70 +449,80 @@ impl StepperCtrl {
 
         self.drive_curve_async(cur, t_const)
     }
-}
 
-impl Setup for StepperCtrl {
-    fn setup(&mut self) -> Result<(), crate::Error> {
-        Ok(())
-    }
-}
+    fn setup_async(&mut self) {
+        let (sender_com, receiver_thr) : (Sender<Option<AsyncMsg>>, Receiver<Option<AsyncMsg>>) = channel();
+        let (sender_thr, receiver_com) : (Sender<AsyncRes>, Receiver<AsyncRes>) = channel();
 
-impl SyncComp for StepperCtrl {
-    // Setup functions
-        #[cfg(feature = "std")]
-        fn setup_async(&mut self) {
-            let (sender_com, receiver_thr) : (Sender<Option<AsyncMsg>>, Receiver<Option<AsyncMsg>>) = channel();
-            let (sender_thr, receiver_com) : (Sender<AsyncRes>, Receiver<AsyncRes>) = channel();
+        let sys = self.sys.clone();
 
-            let sys = self.sys.clone();
+        self.thr = Some(std::thread::spawn(move || {
+            let mut curve : Vec<Time>;
+            let mut dir : bool;
+            let mut cont : Option<Time>;
 
-            self.thr = Some(std::thread::spawn(move || {
-                let mut curve : Vec<Time>;
-                let mut dir : bool;
-                let mut cont : Option<Time>;
+            let mut msg_opt : Option<_> = None;
+            let mut msg : Option<AsyncMsg>;
 
-                let mut msg_opt : Option<_> = None;
-                let mut msg : Option<AsyncMsg>;
-
-                loop {
-                    if let Some(msg_r) = msg_opt { 
-                        msg = msg_r;
-                    } else {
-                        msg = match receiver_thr.recv() {
-                            Ok(msg_opt) => msg_opt,
-                            Err(err) => {
-                                println!("Error occured in thread! {}", err.to_string());   // TODO: Improve error message
-                                break;
-                            }
-                        };
-                    }
-
-                    match msg {
-                        Some((msg_curve, msg_dir, msg_cont)) => {
-                            let steps_dir = if msg_dir {
-                                msg_curve.len() as i64
-                            } else {
-                                -(msg_curve.len() as i64)
-                            };
-
-                            curve = msg_curve;
-                            dir = msg_dir;
-                            cont = msg_cont;
-
-                            sender_thr.send(steps_dir).unwrap();
-                        },
-                        None => {
+            loop {
+                if let Some(msg_r) = msg_opt { 
+                    msg = msg_r;
+                } else {
+                    msg = match receiver_thr.recv() {
+                        Ok(msg_opt) => msg_opt,
+                        Err(err) => {
+                            println!("Error occured in thread! {}", err.to_string());   // TODO: Improve error message
                             break;
                         }
                     };
+                }
 
-                    let mut pins = sys.lock().unwrap();
-                    let mut index : usize = 0;
-                    let curve_len = curve.len();
+                match msg {
+                    Some((msg_curve, msg_dir, msg_cont)) => {
+                        let steps_dir = if msg_dir {
+                            msg_curve.len() as i64
+                        } else {
+                            -(msg_curve.len() as i64)
+                        };
 
-                    loop {
-                        if index < curve_len {
-                            Self::step_sig(curve[index], &mut pins);
+                        curve = msg_curve;
+                        dir = msg_dir;
+                        cont = msg_cont;
+
+                        sender_thr.send(steps_dir).unwrap();
+                    },
+                    None => {
+                        break;
+                    }
+                };
+
+                let mut pins = sys.lock().unwrap();
+                let mut index : usize = 0;
+                let curve_len = curve.len();
+
+                loop {
+                    if index < curve_len {
+                        Self::step_sig(curve[index], &mut pins);
+                        index += 1;
+
+                        match receiver_thr.try_recv() {
+                            Ok(msg) => { 
+                                msg_opt = Some(msg); 
+                                break;
+                            },
+                            Err(_) => { }
+                        };
+
+                        if index == curve_len {
+                            sender_thr.send(if dir {
+                                index as i64
+                            } else {
+                                -(index as i64)
+                            }).unwrap();
+                        }
+                    } else if let Some(t_cont) = cont {
+                        loop {
+                            Self::step_sig(t_cont, &mut pins);
                             index += 1;
 
                             match receiver_thr.try_recv() {
@@ -522,43 +532,32 @@ impl SyncComp for StepperCtrl {
                                 },
                                 Err(_) => { }
                             };
-
-                            if index == curve_len {
-                                sender_thr.send(if dir {
-                                    index as i64
-                                } else {
-                                    -(index as i64)
-                                }).unwrap();
-                            }
-                        } else if let Some(t_cont) = cont {
-                            loop {
-                                Self::step_sig(t_cont, &mut pins);
-                                index += 1;
-
-                                match receiver_thr.try_recv() {
-                                    Ok(msg) => { 
-                                        msg_opt = Some(msg); 
-                                        break;
-                                    },
-                                    Err(_) => { }
-                                };
-                            }
-
-                            break;
-
-                        } else {
-                            msg_opt = None;
-
-                            break;
                         }
+
+                        break;
+
+                    } else {
+                        msg_opt = None;
+
+                        break;
                     }
-                };
-            }));
+                }
+            };
+        }));
 
-            self.sender = Some(sender_com);
-            self.receiver = Some(receiver_com);
-        }
+        self.sender = Some(sender_com);
+        self.receiver = Some(receiver_com);
+    }
+}
 
+impl Setup for StepperCtrl {
+    fn setup(&mut self) -> Result<(), crate::Error> {
+        self.setup_async();
+        Ok(())
+    }
+}
+
+impl SyncComp for StepperCtrl {
     // Data
         fn consts<'a>(&'a self) -> &'a StepperConst {
             &self.consts    

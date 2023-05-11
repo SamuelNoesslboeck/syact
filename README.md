@@ -83,6 +83,8 @@ fn main() -> Result<(), stepper_lib::Error> {
 
 - [x] Motors
   - [x] Stepper motors
+    - [x] Absolute/relative movements 
+    - [ ] Continuous movements
   - [x] [Servo motors](/docs/motors/servos.md)
   - [x] [DC motors](/docs/motors/dc_motors.md)
 - [ ] [Components](/docs/components.md)

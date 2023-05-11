@@ -38,6 +38,9 @@ opt-level = 0
 [profile.release]
 opt-level = 3
 
+[workspace]
+exclude = [ "article", "sketches" ]
+
 # Examples
 [[example]]
 name = "stepper_motor"

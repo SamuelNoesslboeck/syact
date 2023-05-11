@@ -40,27 +40,6 @@ fn no_super() -> crate::Error {
 /// Components can have multiple layers, for example take a stepper motor with a geaerbox attached to it. The stepper motor and both combined will be a component, the later having 
 /// the stepper motor component defined as it's super component. (See [GearJoint])
 pub trait SyncComp : crate::meas::SimpleMeas + core::fmt::Debug + Setup {
-    // Init 
-        /// Calls all required functions to assure the components async movement functionality
-        /// 
-        /// # Features 
-        /// 
-        /// This function is only available when using the "std" feature
-        /// 
-        /// # Panics
-        /// 
-        /// Panics if neither a super component nor an override has been provided
-        #[cfg(feature = "std")]
-        fn setup_async(&mut self) {
-            if let Some(s_comp) = self.super_comp_mut() {
-                s_comp.setup_async()
-            } else {
-                #[cfg(feature = "std")]
-                panic!("Provide a super component or an override for this component!");
-            }
-        }
-    // 
-
     // Data
         /// Returns the constants the stepper motor used by the component
         fn consts<'a>(&'a self) -> &'a StepperConst;
@@ -359,7 +338,7 @@ pub trait SyncComp : crate::meas::SimpleMeas + core::fmt::Debug + Setup {
 
         /// Moves the component to the given position as fast as possible, halts the script until the 
         /// movement is finished and returns the actual **relative** distance travelled.
-        fn drive_abs(&mut self, mut gamma : Gamma) -> Result<Delta, crate::Error> {
+        fn drive_abs(&mut self, mut gamma : Gamma, mut omega : Omega) -> Result<Delta, crate::Error> {
             omega = self.omega_for_super(omega, gamma);
             gamma = self.gamma_for_super(gamma);
 
@@ -376,7 +355,7 @@ pub trait SyncComp : crate::meas::SimpleMeas + core::fmt::Debug + Setup {
         /// Measure the component by driving the component with the velocity `omega` until either 
         /// the measurement condition is true or the maximum distance `delta` is reached. When the endpoint 
         /// is reached, the controls will set the distance to `set_dist` and return the **relative** distance travelled.
-        fn measure(&mut self, mut delta : Delta, mut set_gamma : Gamma) -> Result<Delta, crate::Error> {
+        fn measure(&mut self, mut delta : Delta, mut omega : Omega, mut set_gamma : Gamma) -> Result<Delta, crate::Error> {
             delta = self.delta_for_super(delta, self.gamma());
             omega = self.omega_for_super(omega, self.gamma());
             set_gamma = self.gamma_for_super(set_gamma);
@@ -394,7 +373,7 @@ pub trait SyncComp : crate::meas::SimpleMeas + core::fmt::Debug + Setup {
         /// Moves the component by the relative distance as fast as possible
         #[inline(always)]
         #[cfg(feature = "std")]
-        fn drive_rel_async(&mut self, mut delta : Delta) -> Result<(), crate::Error> {
+        fn drive_rel_async(&mut self, mut delta : Delta, mut omega : Omega) -> Result<(), crate::Error> {
             let gamma = self.gamma(); 
 
             delta = self.delta_for_super(delta, gamma);
@@ -412,7 +391,7 @@ pub trait SyncComp : crate::meas::SimpleMeas + core::fmt::Debug + Setup {
         /// movement is finished and returns the actual **abolute** distance traveled to. 
         #[inline(always)]
         #[cfg(feature = "std")]
-        fn drive_abs_async(&mut self, mut gamma : Gamma) -> Result<(), crate::Error> {
+        fn drive_abs_async(&mut self, mut gamma : Gamma, mut omega : Omega) -> Result<(), crate::Error> {
             omega = self.omega_for_super(omega, gamma);
             gamma = self.gamma_for_super(gamma);
 

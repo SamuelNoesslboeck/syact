@@ -17,20 +17,6 @@ pub trait SyncCompGroup<T, const C : usize> : IndexMut<usize, Output = Box<T>> +
         T: SyncComp,
         T: ?Sized
 {
-    // Setup
-        /// Runs [SyncComp::setup_async()] for all components in the group 
-        /// 
-        /// # Feature 
-        ///
-        /// This function is only available if the "std" feature is enabled
-        #[cfg(feature = "std")]
-        fn setup_async(&mut self) {
-            for i in 0 .. C {
-                self[i].setup_async();
-            }
-        }
-    // 
-
     // Data
         /// Runs [SyncComp::write_link()] for all components in the group. Note that the function is using the same 
         /// [LinkedData](crate::data::LinkedData) for all components
