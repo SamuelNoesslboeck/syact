@@ -53,7 +53,8 @@ impl SimpleMeas for MyComp {
 
 impl Setup for MyComp {
     fn setup(&mut self) -> Result<(), stepper_lib::Error> {
-        Ok(())      // Possible actions on setup, not required
+        self.ctrl.setup()?;  // Setting up the super component
+        Ok(())      
     }
 }
 
@@ -100,12 +101,12 @@ impl SyncComp for MyComp {
         }
     // 
 
-    fn drive_rel(&mut self, delta : Delta, omega : Omega) -> Result<Delta, stepper_lib::Error> {
+    fn drive_rel(&mut self, delta : Delta, speed_f : f32) -> Result<Delta, stepper_lib::Error> {
         println!("Now driving!"); // Our custom message
 
         let delta_real = self.ctrl.drive_rel(
             self.delta_for_super(delta, self.gamma()), 
-            self.omega_for_super(omega, self.gamma())
+            speed_f
         )?;
 
         Ok(self.delta_for_this(delta_real, self.gamma_for_super(self.gamma())))
@@ -124,12 +125,17 @@ fn main() -> Result<(), stepper_lib::Error> {
         s_f: 1.5    // System safety factor, should be at least 1.0
     }); 
 
+    comp.setup()?;
+
     // Apply some loads
     comp.apply_inertia(Inertia(0.2));
     comp.apply_force(Force(0.10));
 
+    // Limit the component velocity
+    comp.set_omega_max(OMEGA);
+
     println!("Staring to move ... ");
-    let delta_real = comp.drive_rel(DELTA, OMEGA)?;         // Move the comp
+    let delta_real = comp.drive_rel(DELTA, 1.0)?;         // Move the comp
     println!("Distance {}rad with max speed {:?}rad/s done", delta_real, OMEGA);
 
     Ok(())

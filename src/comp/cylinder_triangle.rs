@@ -146,14 +146,24 @@ impl SyncComp for CylinderTriangle {
         }
     //
 
+    // Omega max 
+        fn omega_max(&self) -> Omega {
+            self.cylinder.omega_max()
+        }
+
+        fn set_omega_max(&mut self, omega_max : Omega) {
+            self.cylinder.set_omega_max(omega_max)
+        }
+    // 
+
     /// See [SyncComp::drive_rel()]
     /// - `dist`is the angular distance to be moved (Unit radians)
     /// - `vel` is the cylinders extend velocity (Unit mm per second)
-    fn drive_rel(&mut self, mut delta : Delta, omega : Omega) -> Result<Delta, crate::Error> {
+    fn drive_rel(&mut self, mut delta : Delta, speed_f : f32) -> Result<Delta, crate::Error> {
         let gamma = self.gamma();
         
         delta = self.delta_for_super(delta, gamma);
-        delta = self.cylinder.drive_rel(delta, omega)?;
+        delta = self.cylinder.drive_rel(delta, speed_f)?;
 
         Ok(self.delta_for_this(delta, self.gamma_for_super(gamma)))
     }
@@ -161,10 +171,10 @@ impl SyncComp for CylinderTriangle {
     /// See [SyncComp::drive_abs]
     /// - `dist`is the angular distance to be moved (Unit radians)
     /// - `vel` is the cylinders extend velocity (Unit mm per second)
-    fn drive_abs(&mut self, mut gamma : Gamma, omega : Omega) -> Result<Delta, crate::Error> {
+    fn drive_abs(&mut self, mut gamma : Gamma, speed_f : f32) -> Result<Delta, crate::Error> {
         gamma = self.gamma_for_super(gamma);
 
-        let delta = self.cylinder.drive_abs(gamma, omega)?;
+        let delta = self.cylinder.drive_abs(gamma, speed_f)?;
 
         Ok(self.delta_for_this(delta, gamma))
     }
@@ -173,9 +183,9 @@ impl SyncComp for CylinderTriangle {
     /// - `dist` is the maximum distance for the cylinder in mm
     /// - `vel` is the maximum linear velocity for the cylinder in mm per second
     /// - `set_dist` is the set distance for the cylinder in mm
-    fn measure(&mut self, delta : Delta, omega : Omega, set_gamma : Gamma) -> Result<Delta, crate::Error> {
+    fn measure(&mut self, delta : Delta, speed_f : f32, set_gamma : Gamma) -> Result<Delta, crate::Error> {
         self.cylinder.measure(
-            delta, omega, self.gamma_for_super(set_gamma))
+            delta, speed_f, self.gamma_for_super(set_gamma))
     }
     
     // Forces

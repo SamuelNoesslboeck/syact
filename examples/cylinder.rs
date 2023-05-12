@@ -50,7 +50,7 @@ fn main() -> Result<(), stepper_lib::Error> {
     cylinder.apply_force(Force(0.10));
 
     println!("Staring to move ... ");
-    let delta_real = cylinder.drive_rel(DELTA, OMEGA)?;         // Move the cylinder
+    let delta_real = cylinder.drive_rel(DELTA, 1.0)?;         // Move the cylinder
     println!("Distance {}mm with max speed {:?}mm/s done", delta_real, OMEGA);
 
     Ok(())

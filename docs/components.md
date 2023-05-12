@@ -26,7 +26,7 @@ stepper_lib = { version = "0.11", features = [ "rasp" ] }
 
 ```rust
 // Include components and data
-use stepper_lib::{StepperCtrl, StepperConst, SyncComp};
+use stepper_lib::{StepperCtrl, StepperConst, SyncComp, Setup};
 use stepper_lib::comp::Cylinder;
 use stepper_lib::data::LinkedData;
 // Include the unit system
@@ -57,12 +57,16 @@ fn main() -> Result<(), stepper_lib::Error> {
         s_f: 1.5    // System safety factor, should be at least 1.0
     }); 
 
+    cylinder.setup();
+
     // Apply some loads
     cylinder.apply_inertia(Inertia(0.2));
     cylinder.apply_force(Force(0.10));
 
+    cylinder.set_omega_max(OMEGA);
+
     println!("Staring to move ... ");
-    let delta_real = cylinder.drive_rel(DELTA, OMEGA)?;         // Move the cylinder
+    let delta_real = cylinder.drive_rel(DELTA, 1.0)?;         // Move the cylinder
     println!("Distance {}mm with max speed {:?}mm/s done", 
         delta_real, OMEGA);
 
@@ -113,7 +117,7 @@ const PIN_STEP : u8 = 19;
 
 // Define distance and max speed
 const DELTA : Delta = Delta(10.0);      
-const OMEGA : Omega = Omega(20.0);      
+const OMEGA : Omega = Omega(15.0);      
 
 // Defining component structure
 #[derive(Debug)]
@@ -183,13 +187,13 @@ impl SyncComp for MyComp {
         }
     // 
 
-    fn drive_rel(&mut self, delta : Delta, omega : Omega) 
+    fn drive_rel(&mut self, delta : Delta, speed_f : f32) 
             -> Result<Delta, stepper_lib::Error> {
         println!("Now driving!"); // Our custom message
 
         let delta_real = self.ctrl.drive_rel(
             self.delta_for_super(delta, self.gamma()), 
-            self.omega_for_super(omega, self.gamma())
+            speed_f
         )?;
 
         Ok(self.delta_for_this(delta_real, self.gamma_for_super(self.gamma())))
@@ -212,12 +216,16 @@ fn main() -> Result<(), stepper_lib::Error> {
         s_f: 1.5    // System safety factor, should be at least 1.0
     }); 
 
+    comp.setup();
+
     // Apply some loads
     comp.apply_inertia(Inertia(0.2));
     comp.apply_force(Force(0.10));
 
+    comp.set_omega_max(OMEGA);
+
     println!("Staring to move ... ");
-    let delta_real = comp.drive_rel(DELTA, OMEGA)?;         // Move the comp
+    let delta_real = comp.drive_rel(DELTA, 1.0)?;         // Move the comp
     println!("Distance {}rad with max speed {:?}rad/s done", delta_real, OMEGA);
 
     Ok(())

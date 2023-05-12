@@ -39,7 +39,7 @@ stepper_lib = { version = "0.11", features = [ "rasp" ] }
 use core::f32::consts::PI;
 
 // Include components and data
-use stepper_lib::{StepperCtrl, StepperConst, SyncComp};
+use stepper_lib::{StepperCtrl, StepperConst, SyncComp, Setup};
 use stepper_lib::data::LinkedData;
 // Include the unit system
 use stepper_lib::units::*;
@@ -65,12 +65,16 @@ fn main() -> Result<(), stepper_lib::Error> {
         s_f: 1.5    // System safety factor, should be at least 1.0
     }); 
 
+    ctrl.setup()?;
+
     // Apply some loads
     ctrl.apply_inertia(Inertia(0.2));
     ctrl.apply_force(Force(0.10));
 
+    ctrl.set_omega_max(OMEGA);
+
     println!("Staring to move");
-    let delta_real = ctrl.drive_rel(DELTA, OMEGA)?;      // Move the motor
+    let delta_real = ctrl.drive_rel(DELTA, 1.0)?;      // Move the motor
     println!("Distance {}rad with max speed {:?}rad/s done", 
         delta_real, OMEGA);
 
@@ -84,7 +88,7 @@ fn main() -> Result<(), stepper_lib::Error> {
 - [x] Motors
   - [x] Stepper motors
     - [x] Absolute/relative movements 
-    - [ ] Continuous movements
+    - [x] Continuous movements
   - [x] [Servo motors](/docs/motors/servos.md)
   - [x] [DC motors](/docs/motors/dc_motors.md)
 - [ ] [Components](/docs/components.md)

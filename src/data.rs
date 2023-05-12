@@ -90,7 +90,7 @@ impl StepperConst
     /// Maximum speed for a stepper motor where it can be guarantied that it works properly
     #[inline(always)]
     pub fn max_speed(&self, u : f32) -> Omega {
-        PI / self.tau(u) / self.n_s as f32
+        PI / self.tau(u) / self.n_c as f32
     }
 
     /// Omega for time per step [Unit 1/s]

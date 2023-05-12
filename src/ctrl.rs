@@ -303,6 +303,8 @@ impl StepperCtrl {
         
         self.setup_drive(delta)?;
 
+        let omega_max = self.omega_max() * speed_f;
+
         let cur = math::curve::create_simple_curve(&self.consts, &self.vars, &self.lk, delta, omega_max);
         self.drive_curve(&cur);
 
@@ -444,7 +446,11 @@ impl StepperCtrl {
         }
     }
 
-    fn drive_simple_async(&mut self, delta : Delta, omega_max : Omega, t_const : Option<Time>) -> Result<(), crate::Error> {
+    fn drive_simple_async(&mut self, delta : Delta, speed_f : f32, t_const : Option<Time>) -> Result<(), crate::Error> {
+        if (1.0 < speed_f) | (0.0 > speed_f) {
+            panic!("Invalid speed factor! {}", speed_f)
+        }
+        
         if !delta.is_normal() {
             return Ok(());
         }
@@ -455,6 +461,7 @@ impl StepperCtrl {
         
         self.setup_drive(delta)?;
 
+        let omega_max = self.omega_max() * speed_f;
         let cur = math::curve::create_simple_curve(&self.consts, &self.vars, &self.lk, delta, omega_max);
 
         self.drive_curve_async(cur, t_const)
@@ -630,13 +637,13 @@ impl SyncComp for StepperCtrl {
     // Async
         #[cfg(feature = "std")]
         fn drive_rel_async(&mut self, delta : Delta, speed_f : f32) -> Result<(), crate::Error> {
-            self.drive_simple_async(delta, , None)
+            self.drive_simple_async(delta, speed_f, None)
         }
 
         #[cfg(feature = "std")]
         fn drive_abs_async(&mut self, gamma : Gamma, speed_f : f32) -> Result<(), crate::Error> {
             let delta = gamma - self.gamma();
-            self.drive_simple_async(delta, omega, None)
+            self.drive_simple_async(delta, speed_f, None)
         }
         
         #[cfg(feature = "std")]
@@ -675,7 +682,7 @@ impl SyncComp for StepperCtrl {
             self.omega_max
         }
 
-        fn set_omega_max(&mut self, mut omega_max : Omega) {
+        fn set_omega_max(&mut self, omega_max : Omega) {
             if omega_max > self.consts.max_speed(self.lk.u) {
                 #[cfg(feature = "std")]
                 panic!("Maximum omega must not be greater than recommended! (Given: {}, Rec: {})", omega_max, self.consts.max_speed(self.lk.u));
@@ -787,6 +794,11 @@ impl AsyncComp for StepperCtrl {
         let omega_tar = omega_max * speed_f;
 
         let mut builder = CurveBuilder::new(&self.consts, &self.vars, &self.lk, omega_0);
+        let t_const = if omega_tar != Omega::ZERO {
+            Some(1.0 / omega_max)
+        } else {
+            None
+        }; 
         
         let curve; 
         let curve_sec; 
@@ -802,14 +814,14 @@ impl AsyncComp for StepperCtrl {
         drop(builder);
 
         if bdir == self.dir {
-            self.drive_curve_async(curve, Some(1.0 / omega_tar))?;
+            self.drive_curve_async(curve, t_const)?;
         } else {
             self.drive_curve_async(curve, None)?;
 
             self.await_inactive()?;
             self.set_dir(bdir);
 
-            self.drive_curve_async(curve_sec, Some(1.0 / omega_tar))?;
+            self.drive_curve_async(curve_sec, t_const)?;
         }
 
         self.speed_f = speed_f;

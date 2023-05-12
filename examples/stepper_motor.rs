@@ -48,8 +48,10 @@ fn main() -> Result<(), stepper_lib::Error> {
     ctrl.apply_inertia(Inertia(0.2));
     ctrl.apply_force(Force(0.10));
 
+    ctrl.set_omega_max(OMEGA);
+
     println!("Staring to move");
-    ctrl.drive_rel(DELTA, OMEGA)?;      // Move the motor
+    ctrl.drive_rel(DELTA, 1.0)?;      // Move the motor
     println!("Distance {}rad with max speed {:?}rad/s done", DELTA, OMEGA);
 
     Ok(())

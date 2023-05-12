@@ -512,7 +512,7 @@ pub trait SyncComp : crate::meas::SimpleMeas + core::fmt::Debug + Setup {
 
         #[inline]
         fn omega_max(&self) -> Omega {
-            let super_omega = if let Some(s_comp) = self.super_comp_mut() {
+            let super_omega = if let Some(s_comp) = self.super_comp() {
                 s_comp.omega_max()
             } else {
                 #[cfg(feature = "std")]
@@ -615,7 +615,8 @@ pub trait SyncComp : crate::meas::SimpleMeas + core::fmt::Debug + Setup {
         /// 0.5);    // Ratio is set to 0.5, which means for each radian the motor moves, the bearing moves for half a radian
         /// gear.write_link(LinkedData::GEN);           // Link component for driving
         /// 
-        /// gear.drive_rel(Delta(-0.1), Omega(50.0));    // Drive component in negative direction
+        /// gear.set_omega_max(Omega(5.0));
+        /// gear.drive_rel(Delta(-0.1), 1.0).unwrap();    // Drive component in negative direction
         /// 
         /// gear.set_end(GAMMA);
         /// 
