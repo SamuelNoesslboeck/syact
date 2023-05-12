@@ -91,6 +91,7 @@ pub struct StepperCtrl {
     dir : bool,
     /// The current absolute position since set to a value
     pos : i64,
+    omega_max : Omega,
 
     lk : LinkedData,
 
@@ -110,9 +111,9 @@ pub struct StepperCtrl {
 
     #[cfg(feature = "std")]
     active : bool,
-
+    
     #[cfg(feature = "std")]
-    speed_f : f32    
+    speed_f : f32
 }
 
 // Inits
@@ -130,6 +131,7 @@ impl StepperCtrl {
 
             dir: true, 
             pos: 0,
+            omega_max: Omega::ZERO,
 
             lk: LinkedData { u: 0.0, s_f: 0.0 },
 
@@ -158,7 +160,7 @@ impl StepperCtrl {
             active: false,
 
             #[cfg(feature = "std")]
-            speed_f: 0.0
+            speed_f: 1.0
         };
 
         ctrl.set_dir(ctrl.dir);
@@ -290,7 +292,11 @@ impl StepperCtrl {
         Ok(())
     }
 
-    fn drive_simple(&mut self, delta : Delta, omega_max : Omega) -> Result<Delta, crate::Error> {
+    fn drive_simple(&mut self, delta : Delta, speed_f : f32) -> Result<Delta, crate::Error> {
+        if (1.0 < speed_f) | (0.0 > speed_f) {
+            panic!("Invalid speed factor! {}", speed_f)
+        }
+
         if !delta.is_normal() {
             return Ok(Delta::ZERO);
         }
@@ -303,14 +309,18 @@ impl StepperCtrl {
         Ok(delta)
     }
 
-    fn drive_simple_int(&mut self, delta : Delta, omega_max : Omega, intr : Interrupter) -> Result<(Delta, bool), crate::Error> {
+    fn drive_simple_int(&mut self, delta : Delta, speed_f : f32, intr : Interrupter) -> Result<(Delta, bool), crate::Error> {
+        if (1.0 < speed_f) | (0.0 > speed_f) {
+            panic!("Invalid speed factor! {}", speed_f)
+        }
+
         if !delta.is_normal() {
             return Ok((Delta::ZERO, true));
         }
         
         self.setup_drive(delta)?;
 
-        let cur = math::curve::create_simple_curve(&self.consts, &self.vars, &self.lk, delta, omega_max);
+        let cur = math::curve::create_simple_curve(&self.consts, &self.vars, &self.lk, delta, self.omega_max() * speed_f);
         let (steps, interrupted) = self.drive_curve_int(&cur, intr);
 
         if self.dir {
@@ -552,7 +562,15 @@ impl StepperCtrl {
 
 impl Setup for StepperCtrl {
     fn setup(&mut self) -> Result<(), crate::Error> {
+        if self.lk.u == 0.0 {
+            return Err("Link the construction to vaild data! (`LinkedData` is invalid)".into());
+        }
+
+        self.omega_max = self.consts.max_speed(self.lk.u);
+
+        #[cfg(feature = "std")]
         self.setup_async();
+
         Ok(())
     }
 }
@@ -584,19 +602,19 @@ impl SyncComp for StepperCtrl {
     //
 
     // Movement
-        fn drive_rel(&mut self, delta : Delta, omega : Omega) -> Result<Delta, crate::Error> {
-            self.drive_simple(delta, omega)
+        fn drive_rel(&mut self, delta : Delta, speed_f : f32) -> Result<Delta, crate::Error> {
+            self.drive_simple(delta, speed_f)
         }
 
-        fn drive_abs(&mut self, gamma : Gamma, omega : Omega) -> Result<Delta, crate::Error> {
+        fn drive_abs(&mut self, gamma : Gamma, speed_f : f32) -> Result<Delta, crate::Error> {
             let delta = gamma - self.gamma();
-            self.drive_simple(delta, omega)
+            self.drive_simple(delta, speed_f)
         }
 
-        fn measure(&mut self, max_delta : Delta, omega : Omega, set_gamma : Gamma) -> Result<Delta, crate::Error> {
+        fn measure(&mut self, max_delta : Delta, speed_f : f32, set_gamma : Gamma) -> Result<Delta, crate::Error> {
             self.reset_limit(None, None);
 
-            let (delta, interrupted) = self.drive_simple_int(max_delta, omega, Self::__meas_helper)?;
+            let (delta, interrupted) = self.drive_simple_int(max_delta, speed_f, Self::__meas_helper)?;
 
             if !interrupted {
                 #[cfg(feature = "std")]
@@ -611,12 +629,12 @@ impl SyncComp for StepperCtrl {
 
     // Async
         #[cfg(feature = "std")]
-        fn drive_rel_async(&mut self, delta : Delta, omega : Omega) -> Result<(), crate::Error> {
-            self.drive_simple_async(delta, omega, None)
+        fn drive_rel_async(&mut self, delta : Delta, speed_f : f32) -> Result<(), crate::Error> {
+            self.drive_simple_async(delta, , None)
         }
 
         #[cfg(feature = "std")]
-        fn drive_abs_async(&mut self, gamma : Gamma, omega : Omega) -> Result<(), crate::Error> {
+        fn drive_abs_async(&mut self, gamma : Gamma, speed_f : f32) -> Result<(), crate::Error> {
             let delta = gamma - self.gamma();
             self.drive_simple_async(delta, omega, None)
         }
@@ -651,6 +669,19 @@ impl SyncComp for StepperCtrl {
         #[inline]
         fn write_gamma(&mut self, pos : Gamma) {
             self.pos = self.consts.steps_from_ang(pos - Gamma::ZERO);
+        }
+
+        fn omega_max(&self) -> Omega {
+            self.omega_max
+        }
+
+        fn set_omega_max(&mut self, mut omega_max : Omega) {
+            if omega_max > self.consts.max_speed(self.lk.u) {
+                #[cfg(feature = "std")]
+                panic!("Maximum omega must not be greater than recommended! (Given: {}, Rec: {})", omega_max, self.consts.max_speed(self.lk.u));
+            }
+
+            self.omega_max = omega_max;
         }
 
         #[inline]
@@ -751,7 +782,7 @@ impl AsyncComp for StepperCtrl {
             }
         };
 
-        let omega_max = self.consts.max_speed(self.lk.u);
+        let omega_max = self.omega_max();
         let omega_0 = omega_max * self.speed_f;
         let omega_tar = omega_max * speed_f;
 
