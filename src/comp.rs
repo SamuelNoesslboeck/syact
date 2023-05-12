@@ -320,17 +320,20 @@ pub trait SyncComp : crate::meas::SimpleMeas + core::fmt::Debug + Setup {
     // Movement
         /// Moves the component by the relative distance as fast as possible, halts the script until 
         /// the movement is finshed and returns the actual **relative** distance travelled
-        fn drive_rel(&mut self, mut delta : Delta, mut omega : Omega) -> Result<Delta, crate::Error> {
+        fn drive_rel(&mut self, mut delta : Delta, speed_f : f32) -> Result<Delta, crate::Error> {
+            if (1.0 < speed_f) | (0.0 > speed_f) {
+                panic!("Invalid speed factor! {}", speed_f)
+            }
+
             let gamma = self.gamma(); 
 
             delta = self.delta_for_super(delta, gamma);
-            omega = self.omega_for_super(omega, gamma);
 
             let res = if let Some(s_comp) = self.super_comp_mut() {
-                s_comp.drive_rel(delta, omega)?
+                s_comp.drive_rel(delta, speed_f)?
             } else {
                 #[cfg(feature = "std")]
-                panic!("Provide a super component or an override for this component!");
+                panic!("Provide a super component or an override for this function!");
             };
             
             Ok(self.delta_for_this(res, self.gamma_for_super(gamma)))
@@ -338,15 +341,18 @@ pub trait SyncComp : crate::meas::SimpleMeas + core::fmt::Debug + Setup {
 
         /// Moves the component to the given position as fast as possible, halts the script until the 
         /// movement is finished and returns the actual **relative** distance travelled.
-        fn drive_abs(&mut self, mut gamma : Gamma, mut omega : Omega) -> Result<Delta, crate::Error> {
-            omega = self.omega_for_super(omega, gamma);
+        fn drive_abs(&mut self, mut gamma : Gamma, speed_f : f32) -> Result<Delta, crate::Error> {
+            if (1.0 < speed_f) | (0.0 > speed_f) {
+                panic!("Invalid speed factor! {}", speed_f)
+            }
+
             gamma = self.gamma_for_super(gamma);
 
             let res = if let Some(s_comp) = self.super_comp_mut() {
-                s_comp.drive_abs(gamma, omega)?
+                s_comp.drive_abs(gamma, speed_f)?
             } else {
                 #[cfg(feature = "std")]
-                panic!("Provide a super component or an override for this component!");
+                panic!("Provide a super component or an override for this function!");
             };
 
             Ok(self.delta_for_this(res, gamma)) 
@@ -355,16 +361,19 @@ pub trait SyncComp : crate::meas::SimpleMeas + core::fmt::Debug + Setup {
         /// Measure the component by driving the component with the velocity `omega` until either 
         /// the measurement condition is true or the maximum distance `delta` is reached. When the endpoint 
         /// is reached, the controls will set the distance to `set_dist` and return the **relative** distance travelled.
-        fn measure(&mut self, mut delta : Delta, mut omega : Omega, mut set_gamma : Gamma) -> Result<Delta, crate::Error> {
+        fn measure(&mut self, mut delta : Delta, speed_f : f32, mut set_gamma : Gamma) -> Result<Delta, crate::Error> {
+            if (1.0 < speed_f) | (0.0 > speed_f) {
+                panic!("Invalid speed factor! {}", speed_f)
+            }
+
             delta = self.delta_for_super(delta, self.gamma());
-            omega = self.omega_for_super(omega, self.gamma());
             set_gamma = self.gamma_for_super(set_gamma);
 
             if let Some(s_comp) = self.super_comp_mut() {
-                s_comp.measure(delta, omega, set_gamma)
+                s_comp.measure(delta, speed_f, set_gamma)
             } else {
                 #[cfg(feature = "std")]
-                panic!("Provide a super component or an override for this component!");
+                panic!("Provide a super component or an override for this function!");
             }
         }   
     // 
@@ -373,17 +382,20 @@ pub trait SyncComp : crate::meas::SimpleMeas + core::fmt::Debug + Setup {
         /// Moves the component by the relative distance as fast as possible
         #[inline(always)]
         #[cfg(feature = "std")]
-        fn drive_rel_async(&mut self, mut delta : Delta, mut omega : Omega) -> Result<(), crate::Error> {
+        fn drive_rel_async(&mut self, mut delta : Delta, speed_f : f32) -> Result<(), crate::Error> {
+            if (1.0 < speed_f) | (0.0 > speed_f) {
+                panic!("Invalid speed factor! {}", speed_f)
+            }
+
             let gamma = self.gamma(); 
 
             delta = self.delta_for_super(delta, gamma);
-            omega = self.omega_for_super(omega, gamma);
 
             if let Some(s_comp) = self.super_comp_mut() {
-                s_comp.drive_rel_async(delta, omega)
+                s_comp.drive_rel_async(delta, speed_f)
             } else {
                 #[cfg(feature = "std")]
-                panic!("Provide a super component or an override for this component!");
+                panic!("Provide a super component or an override for this function!");
             }
         }
 
@@ -391,15 +403,18 @@ pub trait SyncComp : crate::meas::SimpleMeas + core::fmt::Debug + Setup {
         /// movement is finished and returns the actual **abolute** distance traveled to. 
         #[inline(always)]
         #[cfg(feature = "std")]
-        fn drive_abs_async(&mut self, mut gamma : Gamma, mut omega : Omega) -> Result<(), crate::Error> {
-            omega = self.omega_for_super(omega, gamma);
+        fn drive_abs_async(&mut self, mut gamma : Gamma, speed_f : f32) -> Result<(), crate::Error> {
+            if (1.0 < speed_f) | (0.0 > speed_f) {
+                panic!("Invalid speed factor! {}", speed_f)
+            }
+
             gamma = self.gamma_for_super(gamma);
 
             if let Some(s_comp) = self.super_comp_mut() {
-                s_comp.drive_abs_async(gamma, omega)
+                s_comp.drive_abs_async(gamma, speed_f)
             } else {
                 #[cfg(feature = "std")]
-                panic!("Provide a super component or an override for this component!");
+                panic!("Provide a super component or an override for this function!");
             }
         }
 
@@ -420,7 +435,7 @@ pub trait SyncComp : crate::meas::SimpleMeas + core::fmt::Debug + Setup {
                 s_comp.await_inactive()?
             } else {
                 #[cfg(feature = "std")]
-                panic!("Provide a super component or an override for this component!");
+                panic!("Provide a super component or an override for this function!");
             }; 
 
             Ok(self.delta_for_this(delta, self.gamma_for_super(self.gamma())))
@@ -454,7 +469,7 @@ pub trait SyncComp : crate::meas::SimpleMeas + core::fmt::Debug + Setup {
                 s_comp.gamma()
             } else {
                 #[cfg(feature = "std")]
-                panic!("Provide a super component or an override for this component!");
+                panic!("Provide a super component or an override for this function!");
             }; 
 
             self.gamma_for_this(super_len)
@@ -491,7 +506,31 @@ pub trait SyncComp : crate::meas::SimpleMeas + core::fmt::Debug + Setup {
                 s_comp.write_gamma(gamma);
             } else {
                 #[cfg(feature = "std")]
-                panic!("Provide a super component or an override for this component!");
+                panic!("Provide a super component or an override for this function!");
+            }
+        }
+
+        #[inline]
+        fn omega_max(&self) -> Omega {
+            let super_omega = if let Some(s_comp) = self.super_comp_mut() {
+                s_comp.omega_max()
+            } else {
+                #[cfg(feature = "std")]
+                panic!("Provide a super component or an override for this function!");
+            }; 
+
+            self.omega_for_this(super_omega, self.gamma())
+        }
+
+        #[inline]
+        fn set_omega_max(&mut self, mut omega_max : Omega) {
+            omega_max = self.omega_for_super(omega_max, self.gamma());
+
+            if let Some(s_comp) = self.super_comp_mut() {
+                s_comp.set_omega_max(omega_max);
+            } else {
+                #[cfg(feature = "std")]
+                panic!("Provide a super component or an override for this function!");
             }
         }
 
@@ -551,7 +590,7 @@ pub trait SyncComp : crate::meas::SimpleMeas + core::fmt::Debug + Setup {
                 s_comp.lim_for_gamma(gamma)
             } else {
                 #[cfg(feature = "std")]
-                panic!("Provide a super component or an override for this component!");
+                panic!("Provide a super component or an override for this function!");
             };
 
             self.delta_for_this(delta, gamma)
@@ -591,7 +630,7 @@ pub trait SyncComp : crate::meas::SimpleMeas + core::fmt::Debug + Setup {
                 s_comp.set_end(set_gamma)
             } else {
                 #[cfg(feature = "std")]
-                panic!("Provide a super component or an override for this component!");
+                panic!("Provide a super component or an override for this function!");
             }
         }
 
@@ -651,7 +690,7 @@ pub trait SyncComp : crate::meas::SimpleMeas + core::fmt::Debug + Setup {
                 s_comp.set_limit(min, max)      // If the super component exists
             } else {
                 #[cfg(feature = "std")]
-                panic!("Provide a super component or an override for this component!");
+                panic!("Provide a super component or an override for this function!");
             }
         }
 
@@ -710,7 +749,7 @@ pub trait SyncComp : crate::meas::SimpleMeas + core::fmt::Debug + Setup {
                 s_comp.reset_limit(min, max)
             } else {
                 #[cfg(feature = "std")]
-                panic!("Provide a super component or an override for this component!");
+                panic!("Provide a super component or an override for this function!");
             }
         }
     // 
@@ -745,7 +784,7 @@ pub trait SyncComp : crate::meas::SimpleMeas + core::fmt::Debug + Setup {
                 s_comp.apply_force(force);
             } else {
                 #[cfg(feature = "std")]
-                panic!("Provide a super component or an override for this component!");
+                panic!("Provide a super component or an override for this function!");
             }
         }
         
@@ -783,7 +822,7 @@ pub trait SyncComp : crate::meas::SimpleMeas + core::fmt::Debug + Setup {
                 s_comp.apply_inertia(inertia);
             } else {
                 #[cfg(feature = "std")]
-                panic!("Provide a super component or an override for this component!");
+                panic!("Provide a super component or an override for this function!");
             }
         }
 
@@ -799,7 +838,7 @@ pub trait SyncComp : crate::meas::SimpleMeas + core::fmt::Debug + Setup {
                 s_comp.apply_bend_f(f_bend);
             } else {
                 #[cfg(feature = "std")]
-                panic!("Provide a super component or an override for this component!");
+                panic!("Provide a super component or an override for this function!");
             }
         }
     // 
