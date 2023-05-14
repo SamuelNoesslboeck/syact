@@ -28,29 +28,29 @@ pub trait SyncCompGroup<T, const C : usize> : IndexMut<usize, Output = Box<T>> +
     //
 
     /// Runs [SyncComp::drive_rel()] for all components
-    fn drive_rel(&mut self, deltas : [Delta; C], speed_f : [f32; C]) -> Result<[Delta; C], crate::Error> {
+    fn drive_rel(&mut self, deltas : [Delta; C], speed_f : f32) -> Result<[Delta; C], crate::Error> {
         let mut res = [Delta::ZERO; C];
         for i in 0 .. C {
-            res[i] = self[i].drive_rel(deltas[i], speed_f[i])?;
+            res[i] = self[i].drive_rel(deltas[i], speed_f)?;
         }
         Ok(res)
     }
 
     /// Runs [SyncComp::drive_abs()] for all components
-    fn drive_abs(&mut self, gamma : [Gamma; C], speed_f : [f32; C]) -> Result<[Delta; C], crate::Error>  {
+    fn drive_abs(&mut self, gamma : [Gamma; C], speed_f : f32) -> Result<[Delta; C], crate::Error>  {
         let mut res = [Delta::ZERO; C];
         for i in 0 .. C {
-            res[i] = self[i].drive_abs(gamma[i], speed_f[i])?;
+            res[i] = self[i].drive_abs(gamma[i], speed_f)?;
         }
         Ok(res)
     }
 
     /// Runs [SyncComp::measure()] for all components in the group
-    fn measure(&mut self, deltas : [Delta; C], speed_f : [f32; C], set_dist : [Gamma; C]) 
+    fn measure(&mut self, deltas : [Delta; C], speed_f : f32, set_dist : [Gamma; C]) 
             -> Result<[Delta; C], crate::Error> {
         let mut res = [Delta::ZERO; C];
         for i in 0 .. C {
-            res[i] = self[i].measure(deltas[i], speed_f[i], set_dist[i])?;
+            res[i] = self[i].measure(deltas[i], speed_f, set_dist[i])?;
         }
         Ok(res)
     }
@@ -62,9 +62,9 @@ pub trait SyncCompGroup<T, const C : usize> : IndexMut<usize, Output = Box<T>> +
         /// 
         /// Only available if the "std" feature is enabled
         #[cfg(feature = "std")]
-        fn drive_rel_async(&mut self, deltas : [Delta; C], speed_f : [f32; C]) -> Result<(), crate::Error> {
+        fn drive_rel_async(&mut self, deltas : [Delta; C], speed_f : f32) -> Result<(), crate::Error> {
             for i in 0 .. C {
-                self[i].drive_rel_async(deltas[i], speed_f[i])?;
+                self[i].drive_rel_async(deltas[i], speed_f)?;
             }
             Ok(())
         }
@@ -75,9 +75,9 @@ pub trait SyncCompGroup<T, const C : usize> : IndexMut<usize, Output = Box<T>> +
         /// 
         /// Only available if the "std" feature is enabled
         #[cfg(feature = "std")]
-        fn drive_abs_async(&mut self, gamma : [Gamma; C], speed_f : [f32; C]) -> Result<(), crate::Error> {
+        fn drive_abs_async(&mut self, gamma : [Gamma; C], speed_f : f32) -> Result<(), crate::Error> {
             for i in 0 .. C {
-                self[i].drive_abs_async(gamma[i], speed_f[i])?;
+                self[i].drive_abs_async(gamma[i], speed_f)?;
             }
             Ok(())
         }   
@@ -187,6 +187,12 @@ pub trait SyncCompGroup<T, const C : usize> : IndexMut<usize, Output = Box<T>> +
         fn apply_bend_f(&mut self, f_bend : f32) {
             for i in 0 .. C {
                 self[i].apply_bend_f(f_bend);
+            }
+        }
+
+        fn set_omega_max(&mut self, omega_max : [Omega; C]) {
+            for i in 0 .. C {
+                self[i].set_omega_max(omega_max[i])
             }
         }
     // 

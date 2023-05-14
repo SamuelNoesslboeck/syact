@@ -363,7 +363,7 @@ pub trait SyncComp : crate::meas::SimpleMeas + core::fmt::Debug + Setup {
         /// is reached, the controls will set the distance to `set_dist` and return the **relative** distance travelled.
         fn measure(&mut self, mut delta : Delta, speed_f : f32, mut set_gamma : Gamma) -> Result<Delta, crate::Error> {
             if (1.0 < speed_f) | (0.0 > speed_f) {
-                panic!("Invalid speed factor! {}", speed_f)
+                panic!("Invalid speed factor! {}", speed_f) 
             }
 
             delta = self.delta_for_super(delta, self.gamma());
