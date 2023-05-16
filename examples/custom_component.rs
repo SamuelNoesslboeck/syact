@@ -71,10 +71,6 @@ impl SyncComp for MyComp {
         fn link<'a>(&'a self) -> &'a LinkedData {
             todo!()     // Not required in this example
         }
-
-        fn to_json(&self) -> Result<serde_json::Value, serde_json::Error> {
-            todo!()     // Not required in this example
-        }
     //
     
     // Super component (motor)

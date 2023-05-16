@@ -140,12 +140,6 @@ impl SyncComp for CylinderTriangle {
         }
     //
 
-    // JSON I/O
-        fn to_json(&self) -> Result<serde_json::Value, serde_json::Error> {
-            serde_json::to_value(self)
-        }
-    //
-
     // Omega max 
         fn omega_max(&self) -> Omega {
             self.cylinder.omega_max()

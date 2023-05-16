@@ -76,15 +76,6 @@ pub trait SyncComp : crate::meas::SimpleMeas + core::fmt::Debug + Setup {
                 s_comp.write_link(lk);
             }
         }
-
-        // JSON I/O 
-        /// Get the *JSON* data of the current component as [serde_json::Value]
-        /// 
-        /// # Feature
-        /// 
-        /// Only available when the "std"-feature is enabled
-        #[cfg(feature = "std")]
-        fn to_json(&self) -> Result<serde_json::Value, serde_json::Error>;
     // 
 
     // Super
@@ -300,20 +291,6 @@ pub trait SyncComp : crate::meas::SimpleMeas + core::fmt::Debug + Setup {
         #[allow(unused_variables)]
         fn omega_for_this(&self, super_omega : Omega, this_gamma : Gamma) -> Omega {
             Omega(self.gamma_for_this(Gamma(super_omega.into())).into())
-        }
-
-        /// Converts the given acceleration into the acceleration for the super component
-        #[inline(always)]
-        #[allow(unused_variables)]
-        fn alpha_for_super(&self, this_alpha : Alpha, this_gamma : Gamma) -> Alpha {
-            Alpha(self.gamma_for_super(Gamma(this_alpha.into())).into())
-        }
-
-        /// Converts the given super acceleration into the acceleration for this component
-        #[inline(always)]
-        #[allow(unused_variables)]
-        fn alpha_for_this(&self, super_alpha : Alpha, super_gamma : Gamma) -> Alpha {
-            Alpha(self.gamma_for_this(Gamma(super_alpha.into())).into())
         }
     // 
 

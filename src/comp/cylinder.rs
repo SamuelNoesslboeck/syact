@@ -89,12 +89,6 @@ impl SyncComp for Cylinder
         }
     //
 
-    // JSON I/O
-        fn to_json(&self) -> Result<serde_json::Value, serde_json::Error> {
-            serde_json::to_value(self)
-        }
-    // 
-
     // Loads
         fn apply_force(&mut self, force : Force) {
             self.ctrl.apply_force(force * self.rte_ratio / 1000.0)

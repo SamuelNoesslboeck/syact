@@ -81,10 +81,4 @@ impl SyncComp for GearJoint
             super_gamma * self.ratio
         }
     //
-
-    // Json I/O
-        fn to_json(&self) -> Result<serde_json::Value, serde_json::Error> {
-            serde_json::to_value(self)
-        }
-    //
 }
