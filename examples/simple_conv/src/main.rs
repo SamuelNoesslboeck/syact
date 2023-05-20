@@ -10,8 +10,8 @@ fn sleep(secs : f32) {
 
 fn main() -> Result<(), stepper_lib::Error> {
     let mut ctrl = StepperCtrl::new(StepperConst::GEN, PIN_DIR, PIN_STEP);
-    ctrl.setup()?;
     ctrl.write_link(LinkedData::GEN);
+    ctrl.setup()?;
 
     ctrl.apply_inertia(Inertia(0.01));
 
@@ -19,11 +19,15 @@ fn main() -> Result<(), stepper_lib::Error> {
     ctrl.drive(Direction::CW, 0.5)?;
     ctrl.await_inactive()?;
 
+    println!(" -> Reached speed!");
+
     sleep(1.0);
 
     println!("Driving forward with 0.8 speed");
     ctrl.drive(Direction::CW, 0.8)?;
     ctrl.await_inactive()?;
+
+    println!(" -> Reached speed!");
 
     sleep(2.0);
 
@@ -31,9 +35,11 @@ fn main() -> Result<(), stepper_lib::Error> {
     ctrl.drive(Direction::CCW, 0.2)?;
     ctrl.await_inactive()?;
 
-    println!("Finished!");
+    println!("Reached speed!");
 
     sleep(1.0);
+
+    println!("Finished!");
 
     Ok(())
 }

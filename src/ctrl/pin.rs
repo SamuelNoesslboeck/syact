@@ -1,5 +1,5 @@
 #[cfg(feature = "rasp")]
-use rppal::gpio::{Gpio, Pin, InputPin, OutputPin};
+use rppal::gpio::{Gpio, Pin};
 
 // Submodlues
 mod in_pin;

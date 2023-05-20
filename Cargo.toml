@@ -62,33 +62,6 @@ path = "examples/tongs.rs"
 name = "dc_motors"
 path = "examples/dc_motors.rs"
 
-# Curves
 [[example]]
-name = "complex_curve"
-path = "examples/curves/complex_curve.rs" 
-
-[[example]]
-name = "complex_paths"
-path = "examples/curves/complex_path.rs" 
-
-[[example]]
-name = "curve_to_speed"
-path = "examples/curves/curve_to_speed.rs" 
-
-[[example]]
-name = "simple_curve"
-path = "examples/curves/simple_curve.rs" 
-
-[[example]]
-name = "simple_path"
-path = "examples/curves/simple_path.rs" 
-
-[[example]]
-name = "torque_curve"
-path = "examples/curves/torque_curve.rs" 
-
-# Driving
-[[example]]
-name = "fixed_speed"
-path = "examples/driving/fixed_speed.rs" 
-required-features = [ "rasp" ]
+name = "simple_conv"
+path = "examples/simple_conv"
