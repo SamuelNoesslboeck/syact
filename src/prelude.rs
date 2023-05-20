@@ -13,6 +13,7 @@ pub use crate::data::{CompVars, LinkedData, StepperConst};
 pub use crate::data::servo::ServoConst;
 
 pub use crate::math::{CurveBuilder, PathBuilder};
+pub use crate::math::curve;
 pub use crate::math::force;
 pub use crate::math::inertia;
 

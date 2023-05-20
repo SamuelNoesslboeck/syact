@@ -1,10 +1,9 @@
 use plotters::prelude::*;
-use stepper_lib::StepperConst;
-use stepper_lib::data::{CompVars, LinkedData};
-use stepper_lib::math::force::torque_dyn;
-use stepper_lib::units::*;
+use crate::prelude::*;
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+#[test]
+#[ignore = "Run manually"]
+fn torque_curve() -> Result<(), Box<dyn std::error::Error>> {
     let consts = StepperConst::GEN;
     let mut vars = CompVars::ZERO;
     let lk = LinkedData::GEN;
@@ -15,7 +14,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     vars.f_bend = 0.1;
 
     let curve : Vec<Force> = (0 .. 1000).map(
-        |index| torque_dyn(&consts, Omega(index as f32 / scalar), lk.u)).collect();
+        |index| force::torque_dyn(&consts, Omega(index as f32 / scalar), lk.u)).collect();
     
     let root = 
         SVGBackend::new("test/example-data/torque_curve.svg", (640, 480)).into_drawing_area();

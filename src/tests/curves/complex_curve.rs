@@ -1,10 +1,9 @@
 use plotters::prelude::*;
-use stepper_lib::StepperConst;
-use stepper_lib::data::{CompVars, LinkedData};
-use stepper_lib::math::CurveBuilder;
-use stepper_lib::units::*;
+use crate::prelude::*;
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+#[test]
+#[ignore = "Run manually"]
+fn complex_curve() -> Result<(), Box<dyn std::error::Error>> {
     let consts = StepperConst::GEN;
     let mut vars = CompVars::ZERO;
     let lk = LinkedData::GEN;

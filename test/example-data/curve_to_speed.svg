@@ -1,7 +1,7 @@
 <svg width="640" height="480" viewBox="0 0 640 480" xmlns="http://www.w3.org/2000/svg">
 <rect x="0" y="0" width="640" height="480" opacity="1" fill="#FFFFFF" stroke="none"/>
 <text x="320" y="10" dy="0.76em" text-anchor="middle" font-family="sans-serif" font-size="40.32258064516129" opacity="1" fill="#000000">
-examples/curves/curve_to_speed.rs
+src\tests\curves\curve_to_speed.rs
 </text>
 <line opacity="0.1" stroke="#000000" stroke-width="1" x1="37" y1="444" x2="37" y2="55"/>
 <line opacity="0.1" stroke="#000000" stroke-width="1" x1="43" y1="444" x2="43" y2="55"/>

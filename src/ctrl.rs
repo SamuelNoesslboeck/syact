@@ -398,6 +398,21 @@ impl StepperCtrl {
     // 
 }
 
+impl Setup for StepperCtrl {
+    fn setup(&mut self) -> Result<(), crate::Error> {
+        if self.lk.u == 0.0 {
+            return Err("Link the construction to vaild data! (`LinkedData` is invalid)".into());
+        }
+
+        self.omega_max = self.consts.max_speed(self.lk.u);
+
+        #[cfg(feature = "std")]
+        self.setup_async();
+
+        Ok(())
+    }
+}
+
 impl crate::meas::SimpleMeas for StepperCtrl {
     #[cfg(feature = "std")]
     fn init_meas(&mut self, pin_mes : u8) {
@@ -436,6 +451,8 @@ impl StepperCtrl {
 
     fn drive_curve_async(&mut self, curve : Vec<Time>, t_const : Option<Time>) -> Result<(), crate::Error> {
         self.clear_active_status();
+
+        println!(" => Curve: {}; Last: {:?}; t_const: {:?}", curve.len(), curve.last(), t_const);
 
         if let Some(sender) = &self.sender {
             self.active = true;
@@ -564,21 +581,6 @@ impl StepperCtrl {
 
         self.sender = Some(sender_com);
         self.receiver = Some(receiver_com);
-    }
-}
-
-impl Setup for StepperCtrl {
-    fn setup(&mut self) -> Result<(), crate::Error> {
-        if self.lk.u == 0.0 {
-            return Err("Link the construction to vaild data! (`LinkedData` is invalid)".into());
-        }
-
-        self.omega_max = self.consts.max_speed(self.lk.u);
-
-        #[cfg(feature = "std")]
-        self.setup_async();
-
-        Ok(())
     }
 }
 
@@ -789,7 +791,7 @@ impl AsyncComp for StepperCtrl {
 
         let mut builder = CurveBuilder::new(&self.consts, &self.vars, &self.lk, omega_0);
         let t_const = if omega_tar != Omega::ZERO {
-            Some(1.0 / omega_max)
+            Some(self.consts.step_time(omega_tar))
         } else {
             None
         }; 

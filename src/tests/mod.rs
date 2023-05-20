@@ -1,6 +1,8 @@
 // Submodules
 mod comp;
 
+mod curves;
+
 #[cfg(any(feature = "rasp"))]
 mod servo;
 

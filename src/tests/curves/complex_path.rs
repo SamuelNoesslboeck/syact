@@ -1,10 +1,9 @@
-use stepper_lib::StepperConst;
-use stepper_lib::data::{CompVars, LinkedData};
-use stepper_lib::math::CurveBuilder;
-use stepper_lib::math::path::PathNode;
-use stepper_lib::units::*;
+use crate::prelude::*;
+use crate::math::PathNode;
 
-fn main() {
+#[test]
+#[ignore = "Run manually"]
+fn complex_path() {
     let consts = StepperConst::GEN;
     let mut vars = CompVars::ZERO;
     let lk = LinkedData::GEN;
