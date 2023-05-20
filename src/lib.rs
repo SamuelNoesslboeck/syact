@@ -1,11 +1,14 @@
 #![doc = include_str!("../README.md")]
 #![crate_name = "stepper_lib"]
 #![cfg_attr(not(feature = "std"), no_std)]
-// #![warn(missing_docs)]
+#![warn(missing_docs)]
 
 // Modules
 #[cfg(feature = "std")]
 extern crate alloc;
+
+#[cfg(not(feature = "std"))]
+compile_error!("No-Std currently not available!");
 
 // Submodules
     #[doc = include_str!("../docs/components.md")]
@@ -23,14 +26,14 @@ extern crate alloc;
     pub mod data;
     pub use data::{StepperConst, LinkedData};
 
-    /// General error type of the crate
-    pub mod err;
-
     /// Functions and Structs for calculating Stepper Motor procedures and operations
     pub mod math;
 
     /// Functions and Structs for taking measurements with a robot for e.g. position calculation
     pub mod meas;
+
+    /// Easy import of the functionalities
+    pub mod prelude;
 
     /// Self defined units for mathematical operations
     pub mod units;

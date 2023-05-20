@@ -20,11 +20,8 @@ stepper_lib = { version = \"0.11\", features = [ \"rasp\" ] }
 
 use core::f32::consts::PI;
 
-// Include components and data
-use stepper_lib::{StepperCtrl, StepperConst, SyncComp, Setup};
-use stepper_lib::data::LinkedData;
-// Include the unit system
-use stepper_lib::units::*;
+// Include the library
+use stepper_lib::prelude::*;
 
 // Pin declerations (BCM on raspberry pi)
 const PIN_DIR : u8 = 27;

@@ -10,19 +10,17 @@ The cargo.toml file specified below is when running the example on a raspberry p
 # ...
 
 [dependencies]
-# Include the library configured for the raspberry pi
-stepper_lib = { version = \"0.11\", features = [ \"rasp\" ] } 
+stepper_lib = { version = \"0.11.4\" } 
+
+[features]
+rasp = [ \"stepper_lib/rasp\" ]
 
 # ...
 ```
 "]
 
-// Include components and data
-use stepper_lib::{StepperCtrl, StepperConst, SyncComp, Setup};
-use stepper_lib::data::LinkedData;
-use stepper_lib::meas::SimpleMeas;
-// Include the unit system
-use stepper_lib::units::*;
+// Include library
+use stepper_lib::prelude::*;
 
 // Pin declerations (BCM on raspberry pi)
 const PIN_DIR : u8 = 27;
@@ -35,8 +33,8 @@ const OMEGA : Omega = Omega(20.0);
 // Defining component structure
 #[derive(Debug)]
 struct MyComp {
-    ctrl : StepperCtrl,
-    ratio : f32
+    ctrl : StepperCtrl,     // The stepper motor built into the component
+    ratio : f32             // The gear ratio, e.g. a spingle or
 }
 
 impl MyComp {
@@ -75,7 +73,6 @@ impl SyncComp for MyComp {
     
     // Super component (motor)
         // The following two overrides give the library access to the stepper motor controller stored in our component
-        
         fn super_comp(&self) -> Option<&dyn SyncComp> {
             Some(&self.ctrl)
         }
@@ -87,7 +84,6 @@ impl SyncComp for MyComp {
 
     // Ratio
         // The following two overrides cause the library to translate the distance by the ratio we defined for our component
-
         fn gamma_for_super(&self, this_gamma : Gamma) -> Gamma {
             this_gamma * self.ratio     // Distance is translated by the ratio
         }
@@ -126,7 +122,7 @@ fn main() -> Result<(), stepper_lib::Error> {
     // Apply some loads
     comp.apply_inertia(Inertia(0.2));
     comp.apply_force(Force(0.10));
-
+    
     // Limit the component velocity
     comp.set_omega_max(OMEGA);
 

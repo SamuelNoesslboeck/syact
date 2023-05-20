@@ -1,0 +1,10 @@
+[package]
+name = "simple_conv"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+stepper_lib = "0.11.4"          # Importing the library
+
+[features]
+rasp = [ "stepper_lib/rasp" ]   # Creating the platform feature for our raspberry pi

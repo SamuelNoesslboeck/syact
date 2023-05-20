@@ -87,9 +87,7 @@ pub trait SyncComp : crate::meas::SimpleMeas + core::fmt::Debug + Setup {
         /// A super component would for example be the stepper motor for a cylinder (See [Cylinder])
         /// 
         /// ```rust
-        /// use stepper_lib::{SyncComp, StepperCtrl, StepperConst};
-        /// use stepper_lib::comp::Cylinder;
-        /// use stepper_lib::units::*;
+        /// use stepper_lib::prelude::*;
         /// 
         /// // Create a new cylinder (implements SyncComp)
         /// let mut cylinder = Cylinder::new(
@@ -116,9 +114,7 @@ pub trait SyncComp : crate::meas::SimpleMeas + core::fmt::Debug + Setup {
         /// A super component would for example be the stepper motor for a cylinder (See [Cylinder])
         /// 
         /// ```rust
-        /// use stepper_lib::{SyncComp, StepperCtrl, StepperConst};
-        /// use stepper_lib::comp::Cylinder;
-        /// use stepper_lib::units::*;
+        /// use stepper_lib::prelude::*;
         /// 
         /// // Create a new cylinder (implements SyncComp)
         /// let mut cylinder = Cylinder::new(
@@ -145,10 +141,7 @@ pub trait SyncComp : crate::meas::SimpleMeas + core::fmt::Debug + Setup {
         /// this function will return a super distance *four times higher* than the input distance.
         /// 
         /// ```rust
-        /// use stepper_lib::{SyncComp, StepperCtrl, StepperConst};
-        /// use stepper_lib::comp::Cylinder;
-        /// use stepper_lib::units::*;
-        /// 
+        /// use stepper_lib::prelude::*;
         /// 
         /// // Create a new cylinder (implements SyncComp)
         /// let mut cylinder = Cylinder::new(
@@ -171,9 +164,7 @@ pub trait SyncComp : crate::meas::SimpleMeas + core::fmt::Debug + Setup {
         /// this function will return a distance *four times higher* than the input super distance
         /// 
         /// ```rust
-        /// use stepper_lib::{SyncComp, StepperCtrl, StepperConst};
-        /// use stepper_lib::comp::Cylinder;
-        /// use stepper_lib::units::*;
+        /// use stepper_lib::prelude::*;
         /// 
         /// // Create a new cylinder (implements SyncComp)
         /// let mut cylinder = Cylinder::new(
@@ -196,9 +187,7 @@ pub trait SyncComp : crate::meas::SimpleMeas + core::fmt::Debug + Setup {
         /// this function will return a distance *four times higher* than the input super distance
         /// 
         /// ```rust
-        /// use stepper_lib::{SyncComp, StepperCtrl, StepperConst};
-        /// use stepper_lib::comp::Cylinder;
-        /// use stepper_lib::units::*;
+        /// use stepper_lib::prelude::*;s
         /// 
         /// // Create a new cylinder (implements SyncComp)
         /// let mut cylinder = Cylinder::new(
@@ -227,9 +216,7 @@ pub trait SyncComp : crate::meas::SimpleMeas + core::fmt::Debug + Setup {
         /// this function will return a [Delta] *twice as high* than the input [Delta]
         /// 
         /// ```rust
-        /// use stepper_lib::{SyncComp, StepperCtrl, StepperConst};
-        /// use stepper_lib::comp::Cylinder;
-        /// use stepper_lib::units::*;
+        /// use stepper_lib::prelude::*;
         /// 
         /// // Position of components
         /// const POS : Gamma = Gamma(10.0);
@@ -257,9 +244,7 @@ pub trait SyncComp : crate::meas::SimpleMeas + core::fmt::Debug + Setup {
         /// this function will return a [Delta] *half in value* than the input [Delta].
         /// 
         /// ```rust
-        /// use stepper_lib::{SyncComp, StepperCtrl, StepperConst};
-        /// use stepper_lib::comp::Cylinder;
-        /// use stepper_lib::units::*;
+        /// use stepper_lib::prelude::*;
         /// 
         /// // Position of components
         /// const POS : Gamma = Gamma(10.0);
@@ -423,9 +408,7 @@ pub trait SyncComp : crate::meas::SimpleMeas + core::fmt::Debug + Setup {
         /// Returns the **absolute** position of the component.
         /// 
         /// ```rust
-        /// use stepper_lib::{SyncComp, StepperCtrl, StepperConst};
-        /// use stepper_lib::comp::Cylinder;
-        /// use stepper_lib::units::*;
+        /// use stepper_lib::prelude::*;
         /// 
         /// // Position of components
         /// const POS : Gamma = Gamma(10.0);
@@ -458,9 +441,7 @@ pub trait SyncComp : crate::meas::SimpleMeas + core::fmt::Debug + Setup {
         /// small tolerance has to be considered, as the value written won't be the exact gamma value given.
         /// 
         /// ```rust
-        /// use stepper_lib::{SyncComp, StepperCtrl, StepperConst};
-        /// use stepper_lib::comp::Cylinder;
-        /// use stepper_lib::units::*;
+        /// use stepper_lib::prelude::*;
         /// 
         /// // Position of components
         /// const POS : Gamma = Gamma(10.0);
@@ -487,6 +468,12 @@ pub trait SyncComp : crate::meas::SimpleMeas + core::fmt::Debug + Setup {
             }
         }
 
+        /// Returns the maximum velocity of the component. It can be set using `SyncComp::set_omega_max()`. 
+        /// The component cannot move faster than the omega given (valid for all movement operations)
+        /// 
+        /// # Panics
+        /// 
+        /// - Panics if no super component or an override is provided
         #[inline]
         fn omega_max(&self) -> Omega {
             let super_omega = if let Some(s_comp) = self.super_comp() {
@@ -499,6 +486,12 @@ pub trait SyncComp : crate::meas::SimpleMeas + core::fmt::Debug + Setup {
             self.omega_for_this(super_omega, self.gamma())
         }
 
+        /// Set the maximum velocity of the component, current maximum omega can be access with `SyncComp::omega_max()`
+        /// 
+        /// # Panics
+        /// 
+        /// - Panics if no super component or an override is provided
+        /// - Panics if the omega given is higher than the maximum omega recommended (e.g. `StepperConst::omega_max()`)
         #[inline]
         fn set_omega_max(&mut self, mut omega_max : Omega) {
             omega_max = self.omega_for_super(omega_max, self.gamma());
@@ -525,9 +518,7 @@ pub trait SyncComp : crate::meas::SimpleMeas + core::fmt::Debug + Setup {
         /// # Example 
         /// 
         /// ```rust
-        /// use stepper_lib::{SyncComp, StepperCtrl, StepperConst};
-        /// use stepper_lib::comp::GearJoint;
-        /// use stepper_lib::units::*;
+        /// use stepper_lib::prelude::*;
         /// 
         /// // Limits
         /// const LIM_MAX : Gamma = Gamma(1.0);
@@ -578,10 +569,7 @@ pub trait SyncComp : crate::meas::SimpleMeas + core::fmt::Debug + Setup {
         /// gamma value. The component is then not allowed to move in the current direction anymore. 
         /// 
         /// ```rust
-        /// use stepper_lib::{SyncComp, StepperCtrl, StepperConst};
-        /// use stepper_lib::comp::GearJoint;
-        /// use stepper_lib::data::LinkedData;
-        /// use stepper_lib::units::*;
+        /// use stepper_lib::prelude::*;
         /// 
         /// const GAMMA : Gamma = Gamma(1.0); 
         /// 
@@ -619,9 +607,7 @@ pub trait SyncComp : crate::meas::SimpleMeas + core::fmt::Debug + Setup {
         /// are set to `None`. 
         /// 
         /// ```rust
-        /// use stepper_lib::{SyncComp, StepperCtrl, StepperConst};
-        /// use stepper_lib::comp::GearJoint;
-        /// use stepper_lib::units::*;
+        /// use stepper_lib::prelude::*;
         /// 
         /// // Limits
         /// const LIM_MAX : Gamma = Gamma(1.0);

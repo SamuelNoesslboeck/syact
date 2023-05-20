@@ -10,9 +10,13 @@ A library for all types of components used in robots, including controlls for st
 
 Basis library for the [sybot_lib]("https://github.com/SamuelNoesslboeck/sybot_lib)
 
+- [Getting started](docs/getting_started.md)
+
 ### Goal
 
 - Create an all-in-one library to control motors, read sensors and do basic calculations in rust.
+- Keep it as easy to use as possible
+- Specialize the library for hobbyists and tinkerers
 
 ## In Action
 
@@ -28,7 +32,7 @@ Click to show Cargo.toml
 
 [dependencies]
 # Include the library configured for the raspberry pi
-stepper_lib = { version = "0.11", features = [ "rasp" ] } 
+stepper_lib = { version = "0.11.4", features = [ "rasp" ] } 
 
 # ...
 ```

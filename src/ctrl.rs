@@ -27,7 +27,7 @@ pub use dc_motor::DcMotor;
 /// 
 /// Only available if the "std"-feature is available
 #[cfg(feature = "std")]
-pub mod des;
+mod des;
 
 /// Universal pin structure
 pub mod pin;

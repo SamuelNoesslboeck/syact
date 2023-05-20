@@ -19,10 +19,7 @@ stepper_lib = { version = \"0.11\", features = [ \"rasp\" ] }
 use core::time::Duration;
 use std::thread::sleep;
 
-use stepper_lib::Setup;
-use stepper_lib::comp::asyn::{AsyncComp, Direction};
-use stepper_lib::ctrl::DcMotor;
-use stepper_lib::units::*;
+use stepper_lib::prelude::*;
 
 // Pin declerations
 /// Pin for PWM-Signal in clockwise direction
