@@ -160,7 +160,7 @@ impl StepperCtrl {
             active: false,
 
             #[cfg(feature = "std")]
-            speed_f: 1.0
+            speed_f: 0.0
         };
 
         ctrl.set_dir(ctrl.dir);
@@ -788,6 +788,8 @@ impl AsyncComp for StepperCtrl {
         let omega_max = self.omega_max();
         let omega_0 = omega_max * self.speed_f;
         let omega_tar = omega_max * speed_f;
+
+        println!(" => Building curve: o_max: {}, o_0: {}, o_tar: {}, spf_0: {}, spf: {}", self.omega_max, omega_0, omega_tar, self.speed_f, speed_f);
 
         let mut builder = CurveBuilder::new(&self.consts, &self.vars, &self.lk, omega_0);
         let t_const = if omega_tar != Omega::ZERO {
