@@ -1,7 +1,7 @@
 use stepper_lib::prelude::*;
 
-const PIN_DIR : u8 = 27;        // Pin of the directional signal
-const PIN_STEP : u8 = 19;       // Pin of the 
+const PIN_DIR : u8 = 17;        // Pin of the directional signal
+const PIN_STEP : u8 = 26;       // Pin of the step signal
 
 // Helper sleep function
 fn sleep(secs : f32) {
