@@ -68,6 +68,12 @@ macro_rules! basic_unit {
                 self.0.is_nan()
             }
 
+            /// Returns the unit raised to the given integer power `pow`
+            #[inline(always)]
+            pub fn powi(self, pow : i32) -> Self {
+                Self(self.0.powi(pow))
+            }
+
             /// Returns the sin of this units value
             #[inline(always)]
             pub fn sin(self) -> f32 {
@@ -107,6 +113,26 @@ macro_rules! basic_unit {
             pub fn max(self, other : Self) -> Self {
                 Self(self.0.max(other.0))
             }
+            
+            /// Return the bigger value of this and another unit, working with references
+            #[inline(always)]
+            pub fn max_ref<'a>(&'a self, other : &'a Self) -> &'a Self {
+                if *self < *other {
+                    other
+                } else {
+                    self
+                }
+            }
+
+            /// Return the bigger value of this and another unit, working with references
+            #[inline(always)]
+            pub fn min_ref<'a>(&'a self, other : &'a Self) -> &'a Self {
+                if *self > *other {
+                    other
+                } else {
+                    self
+                }
+            }
         }
 
         impl Display for $a {
@@ -121,6 +147,10 @@ macro_rules! basic_unit {
                 self.0
             }
         }
+
+        // Ref
+            
+        // 
 
         // Negation
             impl Neg for $a {
@@ -182,7 +212,7 @@ macro_rules! derive_units {
         
             #[inline(always)]
             fn mul(self, rhs: $time) -> Self::Output {
-                $dist(self.0 / rhs.0)
+                $dist(self.0 * rhs.0)
             }
         }
 
@@ -191,7 +221,7 @@ macro_rules! derive_units {
         
             #[inline(always)]
             fn mul(self, rhs: $vel) -> Self::Output {
-                $dist(self.0 / rhs.0)
+                $dist(self.0 * rhs.0)
             }
         }
 
@@ -266,9 +296,8 @@ impl Div<Time> for f32 {
 /// // Subtract two absolute distances to get once relative
 /// assert_eq!(Gamma(2.0) - Gamma(1.0), Delta(1.0));
 /// 
-/// // Add relative distance to absolute one
+/// // Add relative distance to an absolute one
 /// assert_eq!(Gamma(2.0) + Delta(1.0), Gamma(3.0));
-/// 
 /// assert_eq!(Gamma(2.0) - Delta(1.0), Gamma(1.0));
 /// ```
 #[derive(Clone, Copy, Debug, Default, Serialize, Deserialize, PartialEq, PartialOrd)]
@@ -292,6 +321,12 @@ impl Sub<Gamma> for Gamma {
     }
 }
 
+impl AddAssign<Delta> for Gamma {
+    fn add_assign(&mut self, rhs: Delta) {
+        self.0 += rhs.0;
+    }
+}
+
 impl Add<Delta> for Gamma {
     type Output = Gamma;
 
@@ -304,11 +339,12 @@ impl Add<Delta> for Gamma {
 impl Sub<Delta> for Gamma {
     type Output = Gamma;
 
-    #[inline(always)]
+    #[inline]
     fn sub(self, rhs: Delta) -> Self::Output {
         Self(self.0 - rhs.0)
     }
 }
+
 
 /// Helper functions to force convert an array of gammas to phis
 #[inline]
@@ -347,11 +383,52 @@ impl Phi {
     }
 }
 
+impl Add<Phi> for Delta {
+    type Output = Phi;
+
+    #[inline(always)]
+    fn add(self, rhs: Phi) -> Self::Output {
+        Phi(self.0 + rhs.0)
+    }
+}
+
+impl AddAssign<Delta> for Phi {
+    fn add_assign(&mut self, rhs: Delta) {
+        self.0 += rhs.0;
+    }
+}
+
+impl Sub<Delta> for Phi {
+    type Output = Phi;
+
+    #[inline(always)]
+    fn sub(self, rhs: Delta) -> Self::Output {
+        Self(self.0 - rhs.0)
+    }
+}
+
+impl Sub<Phi> for Phi {
+    type Output = Delta;
+    
+    #[inline(always)]
+    fn sub(self, rhs: Phi) -> Self::Output {
+        Delta(self.0 - rhs.0)
+    }
+}
+
 /// The delta distance represents a relative distance traveled by the 
 /// 
 /// # Unit
 /// 
 /// - Can be either radians or millimeters
+/// 
+/// ```rust
+/// use stepper_lib::units::*;
+/// 
+/// assert_eq!(Delta(2.0), Delta(1.0) + Delta(1.0));
+/// assert_eq!(Delta(5.0), Delta(2.5) * 2.0);
+/// assert_eq!(Delta(2.0), Gamma(4.0) - Gamma(2.0));
+/// ```
 #[derive(Clone, Copy, Debug, Default, Serialize, Deserialize, PartialEq, PartialOrd)]
 pub struct Delta(pub f32);
 basic_unit!(Delta);
@@ -399,6 +476,12 @@ impl Div<Omega> for f32 {
 /// # Unit
 /// 
 /// - Can be either radians per second^2 or millimeters per second^2
+/// 
+/// ```
+/// use stepper_lib::units::*;
+/// 
+/// assert_eq!(Omega(5.0), Alpha(2.5) * Time(2.0));
+/// assert_eq!(Alpha(2.5), Omega(5.0) / Time(2.0));
 #[derive(Clone, Copy, Debug, Default, Serialize, Deserialize, PartialEq, PartialOrd)]
 pub struct Alpha(pub f32); 
 basic_unit!(Alpha);

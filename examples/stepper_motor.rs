@@ -12,7 +12,7 @@ The cargo.toml file specified below is when running the example on a raspberry p
 
 [dependencies]
 # Include the library configured for the raspberry pi
-stepper_lib = { version = \"0.11\", features = [ \"rasp\" ] } 
+stepper_lib = { version = \"0.11.4\", features = [ \"rasp\" ] } 
 
 # ...
 ```
@@ -20,11 +20,8 @@ stepper_lib = { version = \"0.11\", features = [ \"rasp\" ] }
 
 use core::f32::consts::PI;
 
-// Include components and data
-use stepper_lib::{StepperCtrl, StepperConst, SyncComp};
-use stepper_lib::data::LinkedData;
-// Include the unit system
-use stepper_lib::units::*;
+// Include the library
+use stepper_lib::prelude::*;
 
 // Pin declerations (BCM on raspberry pi)
 const PIN_DIR : u8 = 27;
@@ -42,14 +39,16 @@ fn main() -> Result<(), stepper_lib::Error> {
         u: 12.0,    // System voltage in volts
         s_f: 1.5    // System safety factor, should be at least 1.0
     }); 
-    ctrl.setup();
+    ctrl.setup()?;
 
     // Apply some loads
     ctrl.apply_inertia(Inertia(0.2));
     ctrl.apply_force(Force(0.10));
 
+    ctrl.set_omega_max(OMEGA);
+
     println!("Staring to move");
-    ctrl.drive_rel(DELTA, OMEGA)?;      // Move the motor
+    ctrl.drive_rel(DELTA, 1.0)?;      // Move the motor
     println!("Distance {}rad with max speed {:?}rad/s done", DELTA, OMEGA);
 
     Ok(())

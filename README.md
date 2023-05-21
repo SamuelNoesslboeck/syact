@@ -1,18 +1,31 @@
 # stepper_lib
 
-[![Crates.io version](https://img.shields.io/crates/v/stepper_lib.svg?style=flat-square)](https://crates.io/crates/stepper_lib)
+[![Rust]]([Rust-Workflow])
+[![Crates.io version]][stepper_lib: crates.io]
 [![stepper_lib: rustc 1.68+]][Rust 1.68]
 
+[Rust]: https://github.com/SamuelNoesslboeck/stepper_lib/actions/workflows/rust.yml/badge.svg
+[Rust-Workflow]: https://github.com/SamuelNoesslboeck/stepper_lib/actions/workflows/rust.yml
+[Crates.io version]: https://img.shields.io/crates/v/stepper_lib.svg?style=flat-square
+[stepper_lib: crates.io]: https://crates.io/crates/stepper_lib
 [stepper_lib: rustc 1.68+]: https://img.shields.io/badge/stepper_lib-rustc_1.68+-lightgray.svg
 [Rust 1.68]: https://blog.rust-lang.org/2023/03/09/Rust-1.68.0.html
+> **Note** 
+> 
+> The documentation for this library is not fully finished yet!
 
 A library for all types of components used in robots, including controlls for stepper motors, servo motors and more complex assemblies using said motors. Currently all implementations are made for the raspberry pi, though new implementations for more controllers are currently being made.
 
 Basis library for the [sybot_lib]("https://github.com/SamuelNoesslboeck/sybot_lib)
 
+- [Getting started](docs/getting_started.md)
+
 ### Goal
 
 - Create an all-in-one library to control motors, read sensors and do basic calculations in rust.
+- Keep it as easy to use as possible
+- Specialize the library for hobbyists and tinkerers
+- Offer options for static aswell as dynamic typings
 
 ## In Action
 
@@ -28,7 +41,7 @@ Click to show Cargo.toml
 
 [dependencies]
 # Include the library configured for the raspberry pi
-stepper_lib = { version = "0.11", features = [ "rasp" ] } 
+stepper_lib = { version = "0.11.4", features = [ "rasp" ] } 
 
 # ...
 ```
@@ -38,11 +51,8 @@ stepper_lib = { version = "0.11", features = [ "rasp" ] }
 ```rust
 use core::f32::consts::PI;
 
-// Include components and data
-use stepper_lib::{StepperCtrl, StepperConst, SyncComp};
-use stepper_lib::data::LinkedData;
-// Include the unit system
-use stepper_lib::units::*;
+// Include the library
+use stepper_lib::prelude::*;
 
 // Pin declerations (BCM on raspberry pi)
 const PIN_DIR : u8 = 27;
@@ -54,42 +64,44 @@ const OMEGA : Omega = Omega(10.0);
 
 fn main() -> Result<(), stepper_lib::Error> {
     // Create the controls for a stepper motor
-    let mut ctrl = StepperCtrl::new(
-        StepperConst::MOT_17HE15_1504S, 
-        PIN_DIR, 
-        PIN_STEP
-    );
+    let mut ctrl = StepperCtrl::new(StepperConst::MOT_17HE15_1504S, PIN_DIR, PIN_STEP);
     // Link the component to a system
     ctrl.write_link(LinkedData { 
         u: 12.0,    // System voltage in volts
         s_f: 1.5    // System safety factor, should be at least 1.0
     }); 
+    ctrl.setup()?;
 
     // Apply some loads
     ctrl.apply_inertia(Inertia(0.2));
     ctrl.apply_force(Force(0.10));
 
+    ctrl.set_omega_max(OMEGA);
+
     println!("Staring to move");
-    let delta_real = ctrl.drive_rel(DELTA, OMEGA)?;      // Move the motor
-    println!("Distance {}rad with max speed {:?}rad/s done", 
-        delta_real, OMEGA);
+    ctrl.drive_rel(DELTA, 1.0)?;      // Move the motor
+    println!("Distance {}rad with max speed {:?}rad/s done", DELTA, OMEGA);
 
     Ok(())
 }
 ```
-(Source: "examples/stepper_motor.rs")
+(Source: [stepper_motor]("/examples/stepper_motor.rs"))
 
 ## Features
 
 - [x] Motors
-  - [x] Stepper motors
+  - [x] [Stepper motors](/examples/stepper_motor.rs)
+    - [x] Absolute/relative movements 
+    - [x] Continuous movements
+    - [ ] Microstepping
+    - [ ] Inverting logical signals
   - [x] [Servo motors](/docs/motors/servos.md)
   - [x] [DC motors](/docs/motors/dc_motors.md)
-- [ ] [Components](/docs/components.md)
-  - [x] Cylinder
+- [x] [Components](/docs/components.md)
+  - [x] [Cylinder](/examples/cylinder.rs)
   - [x] Gear joint
   - [x] Cylinder-triangle
-  - [ ] Conveyor
+  - [x] [Conveyor](/examples/simple_conv/src/main.rs)
 - [x] [Tools](/docs/tools.md)
   - [x] Tongs
   - [x] Axial joint
@@ -101,9 +113,11 @@ fn main() -> Result<(), stepper_lib::Error> {
 - [ ] Measurements
   - [x] Simple switch
   - [ ] Rotary resolver
-- [x] Extendable
+- [ ] Extendable
   - [x] [Custom components](/docs/components.md#custom-components)
   - [x] Custom tools
+  - [ ] Custom meaurement systems
+- [x] [Unit system](/docs/unit_system.md)
 - [ ] Minimal
   - [ ] Fully supports `no_std` environment
   - [ ] Available for basic embedded systems

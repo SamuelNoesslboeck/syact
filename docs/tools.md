@@ -14,7 +14,7 @@ Click to show Cargo.toml
 
 [dependencies]
 # Include the library configured for the raspberry pi
-stepper_lib = { version = "0.11", features = [ "rasp" ] } 
+stepper_lib = { version = "0.11.4", features = [ "rasp" ] } 
 
 # ...
 ```

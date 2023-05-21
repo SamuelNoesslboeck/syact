@@ -1,6 +1,6 @@
 use serde::{Serialize, Deserialize};
 
-use crate::{SyncComp, StepperCtrl};
+use crate::{SyncComp, StepperCtrl, Setup};
 // use crate::math::MathActor;
 use crate::meas::SimpleMeas;
 use crate::units::*;
@@ -40,9 +40,19 @@ impl SimpleMeas for GearJoint
 //     }
 // }
 
+impl Setup for GearJoint {
+    fn setup(&mut self) -> Result<(), crate::Error> {
+        self.ctrl.setup() 
+    }
+}
+
 impl SyncComp for GearJoint
 {
     // Data
+        fn consts<'a>(&'a self) -> &'a crate::StepperConst {
+            self.ctrl.consts()    
+        }
+
         fn link<'a>(&'a self) -> &'a crate::data::LinkedData {
             self.ctrl.link()
         }
@@ -69,12 +79,6 @@ impl SyncComp for GearJoint
         /// Returns the angle for the motor from a given bearing angle
         fn gamma_for_this(&self, super_gamma : Gamma) -> Gamma {
             super_gamma * self.ratio
-        }
-    //
-
-    // Json I/O
-        fn to_json(&self) -> Result<serde_json::Value, serde_json::Error> {
-            serde_json::to_value(self)
         }
     //
 }

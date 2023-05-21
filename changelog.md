@@ -17,3 +17,15 @@
 - Completed documentation
 - Experimenting with new documentation structure
 - Restructurings
+
+# Version 0.11.4
+
+## Enhancements
+
+- Added new components
+- Improved overall stability
+- Improved docs
+
+## Bug fixes
+
+- Fixed the `UniPin` bug that made the library basically unusable

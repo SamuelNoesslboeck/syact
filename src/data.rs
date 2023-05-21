@@ -2,7 +2,7 @@ use core::f32::consts::PI;
 
 use serde::{Serialize, Deserialize};
 
-use crate::units::*;
+use crate::{units::*, lib_error};
 
 // Submodules
 mod lk;
@@ -84,7 +84,13 @@ impl StepperConst
     /// The inductivity constant [Unit s]
     #[inline(always)]
     pub fn tau(&self, u : f32) -> Time {
-        Time(self.i_max * self.l / u)
+        Time(2.0 * self.i_max * self.l / u)
+    }
+
+    /// Maximum speed for a stepper motor where it can be guarantied that it works properly
+    #[inline(always)]
+    pub fn max_speed(&self, u : f32) -> Omega {
+        PI / self.tau(u) / self.n_c as f32
     }
 
     /// Omega for time per step [Unit 1/s]
@@ -152,8 +158,7 @@ impl StepperConst
 
             #[cfg(feature = "std")]
             if t_load > self.t_s {
-                Err(crate::Error::new(std::io::ErrorKind::InvalidInput, 
-                    format!("Overload! (Motor torque: {}, Load: {})", self.t_s, t_load)))
+                Err(lib_error(format!("Overload! (Motor torque: {}, Load: {})", self.t_s, t_load)))
             } else {
                 Ok(self.t_s - t_load)
             }
@@ -203,8 +208,7 @@ impl StepperConst
 
             #[cfg(feature = "std")]
             if t_load > t_s {
-                Err(crate::Error::new(std::io::ErrorKind::InvalidInput, 
-                    format!("Overload! (Motor torque: {}, Load: {})", t_s, t_load)))
+                Err(lib_error(format!("Overload! (Motor torque: {}, Load: {})", t_s, t_load)))
             } else {
                 Ok(t_s - t_load)
             }

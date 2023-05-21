@@ -1,29 +1,33 @@
 use core::any::type_name;
 
+use crate::{Setup, StepperConst};
 use crate::data::{CompVars, LinkedData};
 use crate::units::*;
 
 // Submodules
-/// A module for async components like a basic DC-motor. These components cannot move certain distances or to absolute positions
-pub mod asyn;
+    /// A module for async components like a basic DC-motor. These components cannot move certain distances or to absolute positions
+    pub mod asyn;
 
-mod cylinder;
-pub use cylinder::Cylinder;
+    mod conveyor;
+    pub use conveyor::Conveyor;
 
-mod cylinder_triangle;
-pub use cylinder_triangle::CylinderTriangle;
+    mod cylinder;
+    pub use cylinder::Cylinder;
 
-mod gear_joint;
-pub use gear_joint::GearJoint;
+    mod cylinder_triangle;
+    pub use cylinder_triangle::CylinderTriangle;
 
-/// A module for component groups, as they are used in various robots. The components are all sharing the same 
-/// [LinkedData](crate::data::LinkedData) and their movements are coordinated. 
-pub mod group;
-pub use group::SyncCompGroup;
+    mod gear_joint;
+    pub use gear_joint::GearJoint;
 
-/// A module defining the tools used for various robots, such as tongs, additional bearings, drills ...
-pub mod tool;
-pub use tool::Tool;
+    /// A module for component groups, as they are used in various robots. The components are all sharing the same 
+    /// [LinkedData](crate::data::LinkedData) and their movements are coordinated. 
+    pub mod group;
+    pub use group::SyncCompGroup;
+
+    #[doc = "../docs/tools.md"]
+    pub mod tool;
+    pub use tool::Tool;
 //
 
 #[cfg(not(feature = "std"))]
@@ -38,43 +42,11 @@ fn no_super() -> crate::Error {
 /// 
 /// Components can have multiple layers, for example take a stepper motor with a geaerbox attached to it. The stepper motor and both combined will be a component, the later having 
 /// the stepper motor component defined as it's super component. (See [GearJoint])
-pub trait SyncComp : crate::meas::SimpleMeas + core::fmt::Debug {
-    // Init 
-        /// Calls all required functions to assure the components functionality. 
-        /// 
-        /// # Panics
-        /// 
-        /// Panics if neither a super component nor an override has been provided
-        fn setup(&mut self) {
-            if let Some(s_comp) = self.super_comp_mut() {
-                s_comp.setup()
-            } else {
-                #[cfg(feature = "std")]
-                panic!("Provide a super component or an override for this component!");
-            }
-        }
-
-        /// Calls all required functions to assure the components async movement functionality
-        /// 
-        /// # Features 
-        /// 
-        /// This function is only available when using the "std" feature
-        /// 
-        /// # Panics
-        /// 
-        /// Panics if neither a super component nor an override has been provided
-        #[cfg(feature = "std")]
-        fn setup_async(&mut self) {
-            if let Some(s_comp) = self.super_comp_mut() {
-                s_comp.setup_async()
-            } else {
-                #[cfg(feature = "std")]
-                panic!("Provide a super component or an override for this component!");
-            }
-        }
-    // 
-
+pub trait SyncComp : crate::meas::SimpleMeas + core::fmt::Debug + Setup {
     // Data
+        /// Returns the constants the stepper motor used by the component
+        fn consts<'a>(&'a self) -> &'a StepperConst;
+
         /// Returns the variables of the component, such as load force, inertia, limits ...
         /// 
         /// ```rust
@@ -107,15 +79,6 @@ pub trait SyncComp : crate::meas::SimpleMeas + core::fmt::Debug {
                 s_comp.write_link(lk);
             }
         }
-
-        // JSON I/O 
-        /// Get the *JSON* data of the current component as [serde_json::Value]
-        /// 
-        /// # Feature
-        /// 
-        /// Only available when the "std"-feature is enabled
-        #[cfg(feature = "std")]
-        fn to_json(&self) -> Result<serde_json::Value, serde_json::Error>;
     // 
 
     // Super
@@ -127,9 +90,7 @@ pub trait SyncComp : crate::meas::SimpleMeas + core::fmt::Debug {
         /// A super component would for example be the stepper motor for a cylinder (See [Cylinder])
         /// 
         /// ```rust
-        /// use stepper_lib::{SyncComp, StepperCtrl, StepperConst};
-        /// use stepper_lib::comp::Cylinder;
-        /// use stepper_lib::units::*;
+        /// use stepper_lib::prelude::*;
         /// 
         /// // Create a new cylinder (implements SyncComp)
         /// let mut cylinder = Cylinder::new(
@@ -156,9 +117,7 @@ pub trait SyncComp : crate::meas::SimpleMeas + core::fmt::Debug {
         /// A super component would for example be the stepper motor for a cylinder (See [Cylinder])
         /// 
         /// ```rust
-        /// use stepper_lib::{SyncComp, StepperCtrl, StepperConst};
-        /// use stepper_lib::comp::Cylinder;
-        /// use stepper_lib::units::*;
+        /// use stepper_lib::prelude::*;
         /// 
         /// // Create a new cylinder (implements SyncComp)
         /// let mut cylinder = Cylinder::new(
@@ -185,10 +144,7 @@ pub trait SyncComp : crate::meas::SimpleMeas + core::fmt::Debug {
         /// this function will return a super distance *four times higher* than the input distance.
         /// 
         /// ```rust
-        /// use stepper_lib::{SyncComp, StepperCtrl, StepperConst};
-        /// use stepper_lib::comp::Cylinder;
-        /// use stepper_lib::units::*;
-        /// 
+        /// use stepper_lib::prelude::*;
         /// 
         /// // Create a new cylinder (implements SyncComp)
         /// let mut cylinder = Cylinder::new(
@@ -211,9 +167,7 @@ pub trait SyncComp : crate::meas::SimpleMeas + core::fmt::Debug {
         /// this function will return a distance *four times higher* than the input super distance
         /// 
         /// ```rust
-        /// use stepper_lib::{SyncComp, StepperCtrl, StepperConst};
-        /// use stepper_lib::comp::Cylinder;
-        /// use stepper_lib::units::*;
+        /// use stepper_lib::prelude::*;
         /// 
         /// // Create a new cylinder (implements SyncComp)
         /// let mut cylinder = Cylinder::new(
@@ -228,6 +182,35 @@ pub trait SyncComp : crate::meas::SimpleMeas + core::fmt::Debug {
             super_gamma
         }   
 
+        /// Converts the given **absolute** distance for the super component to the **absolute** distance for this component
+        /// 
+        /// # Example
+        /// 
+        /// When using a gearmotor with a ratio of four (motor movement speed will be reduced to a quater), 
+        /// this function will return a distance *four times higher* than the input super distance
+        /// 
+        /// ```rust
+        /// use stepper_lib::prelude::*;
+        /// 
+        /// // Create a new cylinder (implements SyncComp)
+        /// let mut cylinder = Cylinder::new(
+        ///     // Stepper Motor as subcomponent (also implements SyncComp)
+        ///     StepperCtrl::new_sim(StepperConst::GEN), 
+        /// 2.0);    // Ratio is set to 2.0, which means for each radian the motor moves, the cylinder moves for 2.0 mm
+        /// 
+        /// assert_eq!(Gamma(1.0), cylinder.abs_super_gamma(Gamma(2.0)));
+        /// ```
+        #[inline(always)]
+        fn abs_super_gamma(&self, this_gamma : Gamma) -> Gamma {
+            let super_gamma = self.gamma_for_super(this_gamma);
+
+            if let Some(comp) = self.super_comp() {
+                comp.abs_super_gamma(super_gamma)
+            } else {
+                super_gamma
+            }
+        }
+
         /// Converts the given **relative** distance [Delta] for this component into the **relative** distance for the super component
         /// 
         /// # Example
@@ -236,9 +219,7 @@ pub trait SyncComp : crate::meas::SimpleMeas + core::fmt::Debug {
         /// this function will return a [Delta] *twice as high* than the input [Delta]
         /// 
         /// ```rust
-        /// use stepper_lib::{SyncComp, StepperCtrl, StepperConst};
-        /// use stepper_lib::comp::Cylinder;
-        /// use stepper_lib::units::*;
+        /// use stepper_lib::prelude::*;
         /// 
         /// // Position of components
         /// const POS : Gamma = Gamma(10.0);
@@ -266,9 +247,7 @@ pub trait SyncComp : crate::meas::SimpleMeas + core::fmt::Debug {
         /// this function will return a [Delta] *half in value* than the input [Delta].
         /// 
         /// ```rust
-        /// use stepper_lib::{SyncComp, StepperCtrl, StepperConst};
-        /// use stepper_lib::comp::Cylinder;
-        /// use stepper_lib::units::*;
+        /// use stepper_lib::prelude::*;
         /// 
         /// // Position of components
         /// const POS : Gamma = Gamma(10.0);
@@ -301,36 +280,25 @@ pub trait SyncComp : crate::meas::SimpleMeas + core::fmt::Debug {
         fn omega_for_this(&self, super_omega : Omega, this_gamma : Gamma) -> Omega {
             Omega(self.gamma_for_this(Gamma(super_omega.into())).into())
         }
-
-        /// Converts the given acceleration into the acceleration for the super component
-        #[inline(always)]
-        #[allow(unused_variables)]
-        fn alpha_for_super(&self, this_alpha : Alpha, this_gamma : Gamma) -> Alpha {
-            Alpha(self.gamma_for_super(Gamma(this_alpha.into())).into())
-        }
-
-        /// Converts the given super acceleration into the acceleration for this component
-        #[inline(always)]
-        #[allow(unused_variables)]
-        fn alpha_for_this(&self, super_alpha : Alpha, super_gamma : Gamma) -> Alpha {
-            Alpha(self.gamma_for_this(Gamma(super_alpha.into())).into())
-        }
     // 
 
     // Movement
         /// Moves the component by the relative distance as fast as possible, halts the script until 
         /// the movement is finshed and returns the actual **relative** distance travelled
-        fn drive_rel(&mut self, mut delta : Delta, mut omega : Omega) -> Result<Delta, crate::Error> {
+        fn drive_rel(&mut self, mut delta : Delta, speed_f : f32) -> Result<Delta, crate::Error> {
+            if (1.0 < speed_f) | (0.0 > speed_f) {
+                panic!("Invalid speed factor! {}", speed_f)
+            }
+
             let gamma = self.gamma(); 
 
             delta = self.delta_for_super(delta, gamma);
-            omega = self.omega_for_super(omega, gamma);
 
             let res = if let Some(s_comp) = self.super_comp_mut() {
-                s_comp.drive_rel(delta, omega)?
+                s_comp.drive_rel(delta, speed_f)?
             } else {
                 #[cfg(feature = "std")]
-                panic!("Provide a super component or an override for this component!");
+                panic!("Provide a super component or an override for this function!");
             };
             
             Ok(self.delta_for_this(res, self.gamma_for_super(gamma)))
@@ -338,15 +306,18 @@ pub trait SyncComp : crate::meas::SimpleMeas + core::fmt::Debug {
 
         /// Moves the component to the given position as fast as possible, halts the script until the 
         /// movement is finished and returns the actual **relative** distance travelled.
-        fn drive_abs(&mut self, mut gamma : Gamma, mut omega : Omega) -> Result<Delta, crate::Error> {
-            omega = self.omega_for_super(omega, gamma);
+        fn drive_abs(&mut self, mut gamma : Gamma, speed_f : f32) -> Result<Delta, crate::Error> {
+            if (1.0 < speed_f) | (0.0 > speed_f) {
+                panic!("Invalid speed factor! {}", speed_f)
+            }
+
             gamma = self.gamma_for_super(gamma);
 
             let res = if let Some(s_comp) = self.super_comp_mut() {
-                s_comp.drive_abs(gamma, omega)?
+                s_comp.drive_abs(gamma, speed_f)?
             } else {
                 #[cfg(feature = "std")]
-                panic!("Provide a super component or an override for this component!");
+                panic!("Provide a super component or an override for this function!");
             };
 
             Ok(self.delta_for_this(res, gamma)) 
@@ -355,16 +326,19 @@ pub trait SyncComp : crate::meas::SimpleMeas + core::fmt::Debug {
         /// Measure the component by driving the component with the velocity `omega` until either 
         /// the measurement condition is true or the maximum distance `delta` is reached. When the endpoint 
         /// is reached, the controls will set the distance to `set_dist` and return the **relative** distance travelled.
-        fn measure(&mut self, mut delta : Delta, mut omega : Omega, mut set_gamma : Gamma) -> Result<Delta, crate::Error> {
+        fn measure(&mut self, mut delta : Delta, speed_f : f32, mut set_gamma : Gamma) -> Result<Delta, crate::Error> {
+            if (1.0 < speed_f) | (0.0 > speed_f) {
+                panic!("Invalid speed factor! {}", speed_f) 
+            }
+
             delta = self.delta_for_super(delta, self.gamma());
-            omega = self.omega_for_super(omega, self.gamma());
             set_gamma = self.gamma_for_super(set_gamma);
 
             if let Some(s_comp) = self.super_comp_mut() {
-                s_comp.measure(delta, omega, set_gamma)
+                s_comp.measure(delta, speed_f, set_gamma)
             } else {
                 #[cfg(feature = "std")]
-                panic!("Provide a super component or an override for this component!");
+                panic!("Provide a super component or an override for this function!");
             }
         }   
     // 
@@ -373,17 +347,20 @@ pub trait SyncComp : crate::meas::SimpleMeas + core::fmt::Debug {
         /// Moves the component by the relative distance as fast as possible
         #[inline(always)]
         #[cfg(feature = "std")]
-        fn drive_rel_async(&mut self, mut delta : Delta, mut omega : Omega) -> Result<(), crate::Error> {
+        fn drive_rel_async(&mut self, mut delta : Delta, speed_f : f32) -> Result<(), crate::Error> {
+            if (1.0 < speed_f) | (0.0 > speed_f) {
+                panic!("Invalid speed factor! {}", speed_f)
+            }
+
             let gamma = self.gamma(); 
 
             delta = self.delta_for_super(delta, gamma);
-            omega = self.omega_for_super(omega, gamma);
 
             if let Some(s_comp) = self.super_comp_mut() {
-                s_comp.drive_rel_async(delta, omega)
+                s_comp.drive_rel_async(delta, speed_f)
             } else {
                 #[cfg(feature = "std")]
-                panic!("Provide a super component or an override for this component!");
+                panic!("Provide a super component or an override for this function!");
             }
         }
 
@@ -391,15 +368,18 @@ pub trait SyncComp : crate::meas::SimpleMeas + core::fmt::Debug {
         /// movement is finished and returns the actual **abolute** distance traveled to. 
         #[inline(always)]
         #[cfg(feature = "std")]
-        fn drive_abs_async(&mut self, mut gamma : Gamma, mut omega : Omega) -> Result<(), crate::Error> {
-            omega = self.omega_for_super(omega, gamma);
+        fn drive_abs_async(&mut self, mut gamma : Gamma, speed_f : f32) -> Result<(), crate::Error> {
+            if (1.0 < speed_f) | (0.0 > speed_f) {
+                panic!("Invalid speed factor! {}", speed_f)
+            }
+
             gamma = self.gamma_for_super(gamma);
 
             if let Some(s_comp) = self.super_comp_mut() {
-                s_comp.drive_abs_async(gamma, omega)
+                s_comp.drive_abs_async(gamma, speed_f)
             } else {
                 #[cfg(feature = "std")]
-                panic!("Provide a super component or an override for this component!");
+                panic!("Provide a super component or an override for this function!");
             }
         }
 
@@ -420,7 +400,7 @@ pub trait SyncComp : crate::meas::SimpleMeas + core::fmt::Debug {
                 s_comp.await_inactive()?
             } else {
                 #[cfg(feature = "std")]
-                panic!("Provide a super component or an override for this component!");
+                panic!("Provide a super component or an override for this function!");
             }; 
 
             Ok(self.delta_for_this(delta, self.gamma_for_super(self.gamma())))
@@ -431,9 +411,7 @@ pub trait SyncComp : crate::meas::SimpleMeas + core::fmt::Debug {
         /// Returns the **absolute** position of the component.
         /// 
         /// ```rust
-        /// use stepper_lib::{SyncComp, StepperCtrl, StepperConst};
-        /// use stepper_lib::comp::Cylinder;
-        /// use stepper_lib::units::*;
+        /// use stepper_lib::prelude::*;
         /// 
         /// // Position of components
         /// const POS : Gamma = Gamma(10.0);
@@ -454,7 +432,7 @@ pub trait SyncComp : crate::meas::SimpleMeas + core::fmt::Debug {
                 s_comp.gamma()
             } else {
                 #[cfg(feature = "std")]
-                panic!("Provide a super component or an override for this component!");
+                panic!("Provide a super component or an override for this function!");
             }; 
 
             self.gamma_for_this(super_len)
@@ -466,9 +444,7 @@ pub trait SyncComp : crate::meas::SimpleMeas + core::fmt::Debug {
         /// small tolerance has to be considered, as the value written won't be the exact gamma value given.
         /// 
         /// ```rust
-        /// use stepper_lib::{SyncComp, StepperCtrl, StepperConst};
-        /// use stepper_lib::comp::Cylinder;
-        /// use stepper_lib::units::*;
+        /// use stepper_lib::prelude::*;
         /// 
         /// // Position of components
         /// const POS : Gamma = Gamma(10.0);
@@ -491,7 +467,43 @@ pub trait SyncComp : crate::meas::SimpleMeas + core::fmt::Debug {
                 s_comp.write_gamma(gamma);
             } else {
                 #[cfg(feature = "std")]
-                panic!("Provide a super component or an override for this component!");
+                panic!("Provide a super component or an override for this function!");
+            }
+        }
+
+        /// Returns the maximum velocity of the component. It can be set using `SyncComp::set_omega_max()`. 
+        /// The component cannot move faster than the omega given (valid for all movement operations)
+        /// 
+        /// # Panics
+        /// 
+        /// - Panics if no super component or an override is provided
+        #[inline]
+        fn omega_max(&self) -> Omega {
+            let super_omega = if let Some(s_comp) = self.super_comp() {
+                s_comp.omega_max()
+            } else {
+                #[cfg(feature = "std")]
+                panic!("Provide a super component or an override for this function!");
+            }; 
+
+            self.omega_for_this(super_omega, self.gamma())
+        }
+
+        /// Set the maximum velocity of the component, current maximum omega can be access with `SyncComp::omega_max()`
+        /// 
+        /// # Panics
+        /// 
+        /// - Panics if no super component or an override is provided
+        /// - Panics if the omega given is higher than the maximum omega recommended (e.g. `StepperConst::omega_max()`)
+        #[inline]
+        fn set_omega_max(&mut self, mut omega_max : Omega) {
+            omega_max = self.omega_for_super(omega_max, self.gamma());
+
+            if let Some(s_comp) = self.super_comp_mut() {
+                s_comp.set_omega_max(omega_max);
+            } else {
+                #[cfg(feature = "std")]
+                panic!("Provide a super component or an override for this function!");
             }
         }
 
@@ -509,9 +521,7 @@ pub trait SyncComp : crate::meas::SimpleMeas + core::fmt::Debug {
         /// # Example 
         /// 
         /// ```rust
-        /// use stepper_lib::{SyncComp, StepperCtrl, StepperConst};
-        /// use stepper_lib::comp::GearJoint;
-        /// use stepper_lib::units::*;
+        /// use stepper_lib::prelude::*;
         /// 
         /// // Limits
         /// const LIM_MAX : Gamma = Gamma(1.0);
@@ -551,7 +561,7 @@ pub trait SyncComp : crate::meas::SimpleMeas + core::fmt::Debug {
                 s_comp.lim_for_gamma(gamma)
             } else {
                 #[cfg(feature = "std")]
-                panic!("Provide a super component or an override for this component!");
+                panic!("Provide a super component or an override for this function!");
             };
 
             self.delta_for_this(delta, gamma)
@@ -562,10 +572,7 @@ pub trait SyncComp : crate::meas::SimpleMeas + core::fmt::Debug {
         /// gamma value. The component is then not allowed to move in the current direction anymore. 
         /// 
         /// ```rust
-        /// use stepper_lib::{SyncComp, StepperCtrl, StepperConst};
-        /// use stepper_lib::comp::GearJoint;
-        /// use stepper_lib::data::LinkedData;
-        /// use stepper_lib::units::*;
+        /// use stepper_lib::prelude::*;
         /// 
         /// const GAMMA : Gamma = Gamma(1.0); 
         /// 
@@ -576,7 +583,8 @@ pub trait SyncComp : crate::meas::SimpleMeas + core::fmt::Debug {
         /// 0.5);    // Ratio is set to 0.5, which means for each radian the motor moves, the bearing moves for half a radian
         /// gear.write_link(LinkedData::GEN);           // Link component for driving
         /// 
-        /// gear.drive_rel(Delta(-0.1), Omega(50.0));    // Drive component in negative direction
+        /// gear.set_omega_max(Omega(5.0));
+        /// gear.drive_rel(Delta(-0.1), 1.0).unwrap();    // Drive component in negative direction
         /// 
         /// gear.set_end(GAMMA);
         /// 
@@ -591,7 +599,7 @@ pub trait SyncComp : crate::meas::SimpleMeas + core::fmt::Debug {
                 s_comp.set_end(set_gamma)
             } else {
                 #[cfg(feature = "std")]
-                panic!("Provide a super component or an override for this component!");
+                panic!("Provide a super component or an override for this function!");
             }
         }
 
@@ -602,9 +610,7 @@ pub trait SyncComp : crate::meas::SimpleMeas + core::fmt::Debug {
         /// are set to `None`. 
         /// 
         /// ```rust
-        /// use stepper_lib::{SyncComp, StepperCtrl, StepperConst};
-        /// use stepper_lib::comp::GearJoint;
-        /// use stepper_lib::units::*;
+        /// use stepper_lib::prelude::*;
         /// 
         /// // Limits
         /// const LIM_MAX : Gamma = Gamma(1.0);
@@ -651,7 +657,7 @@ pub trait SyncComp : crate::meas::SimpleMeas + core::fmt::Debug {
                 s_comp.set_limit(min, max)      // If the super component exists
             } else {
                 #[cfg(feature = "std")]
-                panic!("Provide a super component or an override for this component!");
+                panic!("Provide a super component or an override for this function!");
             }
         }
 
@@ -710,7 +716,7 @@ pub trait SyncComp : crate::meas::SimpleMeas + core::fmt::Debug {
                 s_comp.reset_limit(min, max)
             } else {
                 #[cfg(feature = "std")]
-                panic!("Provide a super component or an override for this component!");
+                panic!("Provide a super component or an override for this function!");
             }
         }
     // 
@@ -745,7 +751,7 @@ pub trait SyncComp : crate::meas::SimpleMeas + core::fmt::Debug {
                 s_comp.apply_force(force);
             } else {
                 #[cfg(feature = "std")]
-                panic!("Provide a super component or an override for this component!");
+                panic!("Provide a super component or an override for this function!");
             }
         }
         
@@ -783,7 +789,7 @@ pub trait SyncComp : crate::meas::SimpleMeas + core::fmt::Debug {
                 s_comp.apply_inertia(inertia);
             } else {
                 #[cfg(feature = "std")]
-                panic!("Provide a super component or an override for this component!");
+                panic!("Provide a super component or an override for this function!");
             }
         }
 
@@ -799,7 +805,7 @@ pub trait SyncComp : crate::meas::SimpleMeas + core::fmt::Debug {
                 s_comp.apply_bend_f(f_bend);
             } else {
                 #[cfg(feature = "std")]
-                panic!("Provide a super component or an override for this component!");
+                panic!("Provide a super component or an override for this function!");
             }
         }
     // 

@@ -8,10 +8,13 @@ use std::thread::JoinHandle;
 #[cfg(feature = "std")]
 use std::sync::mpsc::{Receiver, Sender, channel};
 
-use crate::SyncComp;
+use crate::{SyncComp, Setup, lib_error};
 use crate::data::{LinkedData, StepperConst, CompVars}; 
-use crate::math;
+use crate::math::{self, CurveBuilder};
 use crate::units::*;
+
+#[cfg(feature = "std")]
+use crate::comp::asyn::{AsyncComp, Direction};
 
 // Submodules
 /// Basic DC-Motors
@@ -24,7 +27,7 @@ pub use dc_motor::DcMotor;
 /// 
 /// Only available if the "std"-feature is available
 #[cfg(feature = "std")]
-pub mod des;
+mod des;
 
 /// Universal pin structure
 pub mod pin;
@@ -47,7 +50,7 @@ pub mod servo;
 // 
 
 #[cfg(feature = "std")]
-type AsyncMsg = (Vec<Time>, bool);
+type AsyncMsg = (Vec<Time>, bool, Option<Time>);
 #[cfg(feature = "std")]
 type AsyncRes = i64;
 
@@ -56,13 +59,13 @@ type Interrupter = fn (&mut Pins) -> bool;
 #[cfg(feature = "std")]
 #[inline(always)]
 fn no_async() -> crate::Error {
-    crate::Error::new(std::io::ErrorKind::NotConnected, "Async has not been setup yet!")
+    lib_error("Async has not been setup yet!")
 }
 
 #[inline(always)]
 #[cfg(feature = "std")]
 fn not_active() -> crate::Error {
-    crate::Error::new(std::io::ErrorKind::PermissionDenied, "No movement has been started yet")
+    lib_error("No movement has been started yet")
 }
 
 // Pin struct
@@ -88,6 +91,7 @@ pub struct StepperCtrl {
     dir : bool,
     /// The current absolute position since set to a value
     pos : i64,
+    omega_max : Omega,
 
     lk : LinkedData,
 
@@ -106,7 +110,10 @@ pub struct StepperCtrl {
     receiver : Option<Receiver<AsyncRes>>,
 
     #[cfg(feature = "std")]
-    active : bool
+    active : bool,
+    
+    #[cfg(feature = "std")]
+    speed_f : f32
 }
 
 // Inits
@@ -124,6 +131,7 @@ impl StepperCtrl {
 
             dir: true, 
             pos: 0,
+            omega_max: Omega::ZERO,
 
             lk: LinkedData { u: 0.0, s_f: 0.0 },
 
@@ -149,7 +157,10 @@ impl StepperCtrl {
             receiver: None,
 
             #[cfg(feature = "std")]
-            active: false
+            active: false,
+
+            #[cfg(feature = "std")]
+            speed_f: 0.0
         };
 
         ctrl.set_dir(ctrl.dir);
@@ -269,7 +280,7 @@ impl StepperCtrl {
 
         if limit.is_normal() {
             #[cfg(feature = "std")]
-            return Err(crate::Error::new(std::io::ErrorKind::InvalidInput, "The delta given is not valid"))
+            return Err(lib_error("The delta given is not valid"))
         }
 
         if delta > Delta::ZERO {
@@ -281,12 +292,18 @@ impl StepperCtrl {
         Ok(())
     }
 
-    fn drive_simple(&mut self, delta : Delta, omega_max : Omega) -> Result<Delta, crate::Error> {
+    fn drive_simple(&mut self, delta : Delta, speed_f : f32) -> Result<Delta, crate::Error> {
+        if (1.0 < speed_f) | (0.0 > speed_f) {
+            panic!("Invalid speed factor! {}", speed_f)
+        }
+
         if !delta.is_normal() {
             return Ok(Delta::ZERO);
         }
         
         self.setup_drive(delta)?;
+
+        let omega_max = self.omega_max() * speed_f;
 
         let cur = math::curve::create_simple_curve(&self.consts, &self.vars, &self.lk, delta, omega_max);
         self.drive_curve(&cur);
@@ -294,14 +311,18 @@ impl StepperCtrl {
         Ok(delta)
     }
 
-    fn drive_simple_int(&mut self, delta : Delta, omega_max : Omega, intr : Interrupter) -> Result<(Delta, bool), crate::Error> {
+    fn drive_simple_int(&mut self, delta : Delta, speed_f : f32, intr : Interrupter) -> Result<(Delta, bool), crate::Error> {
+        if (1.0 < speed_f) | (0.0 > speed_f) {
+            panic!("Invalid speed factor! {}", speed_f)
+        }
+
         if !delta.is_normal() {
             return Ok((Delta::ZERO, true));
         }
         
         self.setup_drive(delta)?;
 
-        let cur = math::curve::create_simple_curve(&self.consts, &self.vars, &self.lk, delta, omega_max);
+        let cur = math::curve::create_simple_curve(&self.consts, &self.vars, &self.lk, delta, self.omega_max() * speed_f);
         let (steps, interrupted) = self.drive_curve_int(&cur, intr);
 
         if self.dir {
@@ -311,7 +332,8 @@ impl StepperCtrl {
         }
     }
 
-    // fn drive_complex(&mut self, delta : Delta, omega_0 : Omega, omega_end : Omega, omega_max : Omega) -> Result<Delta, crate::Error> {
+    // fn drive_complex(&mut self, delta : Delta, omega_0 : Omega, omega_end : Omega, omega_max : Omega) 
+    //          -> Result<Delta, crate::Error> {
     //     if !delta.is_normal() {
     //         return Ok(Delta::ZERO);
     //     }
@@ -320,50 +342,6 @@ impl StepperCtrl {
 
     //     todo!();
     // }
-}
-
-#[cfg(feature = "std")]
-impl StepperCtrl {
-    fn clear_active_status(&mut self) {
-        let recv : &Receiver<AsyncRes>;
-
-        if let Some(_recv) = &self.receiver {
-            recv = _recv;
-        } else {
-            return; // TODO: Maybe add proper error message? 
-        }
-
-        loop {
-            if recv.try_recv().is_err() {
-                break;
-            }
-        }
-
-        self.active = false;
-    }
-
-    fn drive_simple_async(&mut self, delta : Delta, omega_max : Omega) -> Result<(), crate::Error> {
-        if !delta.is_normal() {
-            return Ok(());
-        }
-
-        if self.sender.is_none() {
-            return Err(no_async());
-        }
-        
-        self.setup_drive(delta)?;
-        self.clear_active_status();
-
-        let cur = math::curve::create_simple_curve(&self.consts, &self.vars, &self.lk, delta, omega_max);
-
-        if let Some(sender) = &self.sender {
-            self.active = true;
-            sender.send(Some((cur, self.dir))).unwrap(); // TODO: remove unwrap
-            Ok(())
-        } else {
-            Err(no_async())
-        }
-    }
 }
 
 impl StepperCtrl {
@@ -420,6 +398,21 @@ impl StepperCtrl {
     // 
 }
 
+impl Setup for StepperCtrl {
+    fn setup(&mut self) -> Result<(), crate::Error> {
+        if self.lk.u == 0.0 {
+            return Err("Link the construction to vaild data! (`LinkedData` is invalid)".into());
+        }
+
+        self.omega_max = self.consts.max_speed(self.lk.u);
+
+        #[cfg(feature = "std")]
+        self.setup_async();
+
+        Ok(())
+    }
+}
+
 impl crate::meas::SimpleMeas for StepperCtrl {
     #[cfg(feature = "std")]
     fn init_meas(&mut self, pin_mes : u8) {
@@ -436,58 +429,167 @@ impl crate::meas::SimpleMeas for StepperCtrl {
     }
 }
 
-// impl crate::math::MathActor for StepperCtrl {
-//     #[inline]
-//     fn accel_dyn(&self, omega : Omega, _ : Gamma) -> Alpha {
-//         self.consts.alpha_max_dyn(math::load::torque_dyn(&self.consts, omega, self.lk.u), &self.vars).unwrap()
-//     }
-// }
+#[cfg(feature = "std")]
+impl StepperCtrl {
+    fn clear_active_status(&mut self) {
+        let recv : &Receiver<AsyncRes>;
 
-impl SyncComp for StepperCtrl {
-    // Setup functions
-        fn setup(&mut self) { }
-
-        #[cfg(feature = "std")]
-        fn setup_async(&mut self) {
-            let (sender_com, receiver_thr) : (Sender<Option<AsyncMsg>>, Receiver<Option<AsyncMsg>>) = channel();
-            let (sender_thr, receiver_com) : (Sender<AsyncRes>, Receiver<AsyncRes>) = channel();
-
-            let sys = self.sys.clone();
-
-            self.thr = Some(std::thread::spawn(move || {
-                loop {
-                    match receiver_thr.recv() {
-                        Ok(msg_opt) => 
-                            match msg_opt {
-                                Some((msg, dir)) => {
-                                    let mut pins = sys.lock().unwrap();
-
-                                    StepperCtrl::drive_curve_sig(&msg, &mut pins);
-
-                                    let steps_dir = if dir {
-                                        msg.len() as i64
-                                    } else {
-                                        -(msg.len() as i64)
-                                    };
-
-                                    sender_thr.send(steps_dir).unwrap();
-                                },
-                                None => {
-                                    break;
-                                }
-                            },
-                        Err(err) => {
-                            println!("Error occured in thread! {}", err.to_string());
-                        }
-                    }
-                };
-            }));
-
-            self.sender = Some(sender_com);
-            self.receiver = Some(receiver_com);
+        if let Some(_recv) = &self.receiver {
+            recv = _recv;
+        } else {
+            return; // TODO: Maybe add proper error message? 
         }
 
+        loop {
+            if recv.try_recv().is_err() {
+                break;
+            }
+        }
+
+        self.active = false;
+    }
+
+    fn drive_curve_async(&mut self, curve : Vec<Time>, t_const : Option<Time>) -> Result<(), crate::Error> {
+        self.clear_active_status();
+
+        println!(" => Curve: {}; Last: {:?}; t_const: {:?}", curve.len(), curve.last(), t_const);
+
+        if let Some(sender) = &self.sender {
+            self.active = true;
+            sender.send(Some((curve, self.dir, t_const)))?; 
+            Ok(())
+        } else {
+            Err(no_async())
+        }
+    }
+
+    fn drive_simple_async(&mut self, delta : Delta, speed_f : f32, t_const : Option<Time>) -> Result<(), crate::Error> {
+        if (1.0 < speed_f) | (0.0 > speed_f) {
+            panic!("Invalid speed factor! {}", speed_f)
+        }
+        
+        if !delta.is_normal() {
+            return Ok(());
+        }
+
+        if self.sender.is_none() {
+            return Err(no_async());
+        }
+        
+        self.setup_drive(delta)?;
+
+        let omega_max = self.omega_max() * speed_f;
+        let cur = math::curve::create_simple_curve(&self.consts, &self.vars, &self.lk, delta, omega_max);
+
+        self.drive_curve_async(cur, t_const)
+    }
+
+    fn setup_async(&mut self) {
+        let (sender_com, receiver_thr) : (Sender<Option<AsyncMsg>>, Receiver<Option<AsyncMsg>>) = channel();
+        let (sender_thr, receiver_com) : (Sender<AsyncRes>, Receiver<AsyncRes>) = channel();
+
+        let sys = self.sys.clone();
+
+        self.thr = Some(std::thread::spawn(move || {
+            let mut curve : Vec<Time>;
+            let mut dir : bool;
+            let mut cont : Option<Time>;
+
+            let mut msg_opt : Option<_> = None;
+            let mut msg : Option<AsyncMsg>;
+
+            loop {
+                if let Some(msg_r) = msg_opt { 
+                    msg = msg_r;
+                } else {
+                    msg = match receiver_thr.recv() {
+                        Ok(msg_opt) => msg_opt,
+                        Err(err) => {
+                            println!("Error occured in thread! {}", err.to_string());   // TODO: Improve error message
+                            break;
+                        }
+                    };
+                }
+
+                match msg {
+                    Some((msg_curve, msg_dir, msg_cont)) => {
+                        let steps_dir = if msg_dir {
+                            msg_curve.len() as i64
+                        } else {
+                            -(msg_curve.len() as i64)
+                        };
+
+                        curve = msg_curve;
+                        dir = msg_dir;
+                        cont = msg_cont;
+
+                        sender_thr.send(steps_dir).unwrap();
+                    },
+                    None => {
+                        break;
+                    }
+                };
+
+                let mut pins = sys.lock().unwrap();
+                let mut index : usize = 0;
+                let curve_len = curve.len();
+
+                loop {
+                    if index < curve_len {
+                        Self::step_sig(curve[index], &mut pins);
+                        index += 1;
+
+                        match receiver_thr.try_recv() {
+                            Ok(msg) => { 
+                                msg_opt = Some(msg); 
+                                break;
+                            },
+                            Err(_) => { }
+                        };
+
+                        if index == curve_len {
+                            sender_thr.send(if dir {
+                                index as i64
+                            } else {
+                                -(index as i64)
+                            }).unwrap();
+                        }
+                    } else if let Some(t_cont) = cont {
+                        loop {
+                            Self::step_sig(t_cont, &mut pins);
+                            index += 1;
+
+                            match receiver_thr.try_recv() {
+                                Ok(msg) => { 
+                                    msg_opt = Some(msg); 
+                                    break;
+                                },
+                                Err(_) => { }
+                            };
+                        }
+
+                        break;
+
+                    } else {
+                        msg_opt = None;
+
+                        break;
+                    }
+                }
+            };
+        }));
+
+        self.sender = Some(sender_com);
+        self.receiver = Some(receiver_com);
+    }
+}
+
+impl SyncComp for StepperCtrl {
     // Data
+        fn consts<'a>(&'a self) -> &'a StepperConst {
+            &self.consts    
+        }
+
         fn vars<'a>(&'a self) -> &'a CompVars {
             &self.vars
         }
@@ -502,31 +604,24 @@ impl SyncComp for StepperCtrl {
         }  
     //
 
-    // JSON 
-        fn to_json(&self) -> Result<serde_json::Value, serde_json::Error> {
-            serde_json::to_value(self)
-        }
-    //
-
     // Movement
-        fn drive_rel(&mut self, delta : Delta, omega : Omega) -> Result<Delta, crate::Error> {
-            self.drive_simple(delta, omega)
+        fn drive_rel(&mut self, delta : Delta, speed_f : f32) -> Result<Delta, crate::Error> {
+            self.drive_simple(delta, speed_f)
         }
 
-        fn drive_abs(&mut self, gamma : Gamma, omega : Omega) -> Result<Delta, crate::Error> {
+        fn drive_abs(&mut self, gamma : Gamma, speed_f : f32) -> Result<Delta, crate::Error> {
             let delta = gamma - self.gamma();
-            self.drive_simple(delta, omega)
+            self.drive_simple(delta, speed_f)
         }
 
-        fn measure(&mut self, max_delta : Delta, omega : Omega, set_gamma : Gamma) -> Result<Delta, crate::Error> {
+        fn measure(&mut self, max_delta : Delta, speed_f : f32, set_gamma : Gamma) -> Result<Delta, crate::Error> {
             self.reset_limit(None, None);
 
-            let (delta, interrupted) = self.drive_simple_int(max_delta, omega, Self::__meas_helper)?;
+            let (delta, interrupted) = self.drive_simple_int(max_delta, speed_f, Self::__meas_helper)?;
 
             if !interrupted {
                 #[cfg(feature = "std")]
-                return Err(crate::Error::new(std::io::ErrorKind::TimedOut, 
-                    "The measurement failed for the fiven maximum delta distance"));
+                return Err(lib_error("The measurement failed for the fiven maximum delta distance"));
             }
 
             self.set_end(set_gamma);
@@ -537,14 +632,14 @@ impl SyncComp for StepperCtrl {
 
     // Async
         #[cfg(feature = "std")]
-        fn drive_rel_async(&mut self, delta : Delta, omega : Omega) -> Result<(), crate::Error> {
-            self.drive_simple_async(delta, omega)
+        fn drive_rel_async(&mut self, delta : Delta, speed_f : f32) -> Result<(), crate::Error> {
+            self.drive_simple_async(delta, speed_f, None)
         }
 
         #[cfg(feature = "std")]
-        fn drive_abs_async(&mut self, gamma : Gamma, omega : Omega) -> Result<(), crate::Error> {
+        fn drive_abs_async(&mut self, gamma : Gamma, speed_f : f32) -> Result<(), crate::Error> {
             let delta = gamma - self.gamma();
-            self.drive_simple_async(delta, omega)
+            self.drive_simple_async(delta, speed_f, None)
         }
         
         #[cfg(feature = "std")]
@@ -577,6 +672,19 @@ impl SyncComp for StepperCtrl {
         #[inline]
         fn write_gamma(&mut self, pos : Gamma) {
             self.pos = self.consts.steps_from_ang(pos - Gamma::ZERO);
+        }
+
+        fn omega_max(&self) -> Omega {
+            self.omega_max
+        }
+
+        fn set_omega_max(&mut self, omega_max : Omega) {
+            if omega_max > self.consts.max_speed(self.lk.u) {
+                #[cfg(feature = "std")]
+                panic!("Maximum omega must not be greater than recommended! (Given: {}, Rec: {})", omega_max, self.consts.max_speed(self.lk.u));
+            }
+
+            self.omega_max = omega_max;
         }
 
         #[inline]
@@ -657,3 +765,79 @@ impl SyncComp for StepperCtrl {
     //
 }
 
+#[cfg(feature = "std")]
+impl AsyncComp for StepperCtrl {
+    fn drive(&mut self, dir : Direction, mut speed_f : f32) -> Result<(), crate::Error> {
+        if (0.0 > speed_f) | (1.0 < speed_f) {
+            panic!("Bad speed_f! {}", speed_f);
+        }
+
+        if self.active {
+            return Err(crate::lib_error("The component is already active!"));
+        }
+
+        let bdir = match dir {
+            Direction::CW => true,
+            Direction::CCW => false,
+            Direction::None => { 
+                speed_f = 0.0; 
+                self.dir
+            }
+        };
+
+        let omega_max = self.omega_max();
+        let omega_0 = omega_max * self.speed_f;
+        let omega_tar = omega_max * speed_f;
+
+        println!(" => Building curve: o_max: {}, o_0: {}, o_tar: {}, spf_0: {}, spf: {}", self.omega_max, omega_0, omega_tar, self.speed_f, speed_f);
+
+        let mut builder = CurveBuilder::new(&self.consts, &self.vars, &self.lk, omega_0);
+        let t_const = if omega_tar != Omega::ZERO {
+            Some(self.consts.step_time(omega_tar))
+        } else {
+            None
+        }; 
+        
+        let curve; 
+        let curve_sec; 
+
+        if bdir == self.dir {
+            curve = builder.to_speed(omega_tar)?;
+            curve_sec = vec![];
+        } else {
+            curve = builder.to_speed(Omega::ZERO)?; 
+            curve_sec = builder.to_speed(omega_tar)?;
+        }
+
+        drop(builder);
+
+        if bdir == self.dir {
+            self.drive_curve_async(curve, t_const)?;
+        } else {
+            self.drive_curve_async(curve, None)?;
+
+            self.await_inactive()?;
+            self.set_dir(bdir);
+
+            self.drive_curve_async(curve_sec, t_const)?;
+        }
+
+        self.speed_f = speed_f;
+
+        Ok(())
+    }
+
+    fn dir(&self) -> Direction {
+        if !self.speed_f.is_normal() {
+            Direction::None
+        } else if self.dir {
+            Direction::CW 
+        } else {
+            Direction::CCW
+        }
+    }
+
+    fn speed_f(&self) -> f32 {
+        self.speed_f
+    }
+}

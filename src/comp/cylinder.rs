@@ -1,6 +1,7 @@
+#[cfg(feature = "std")]
 use serde::{Serialize, Deserialize};
 
-use crate::SyncComp;
+use crate::{SyncComp, Setup};
 use crate::ctrl::StepperCtrl;
 
 use crate::units::*;
@@ -43,9 +44,19 @@ impl crate::meas::SimpleMeas for Cylinder
     }
 }
 
+impl Setup for Cylinder {
+    fn setup(&mut self) -> Result<(), crate::Error> {
+        self.ctrl.setup()
+    }
+}
+
 impl SyncComp for Cylinder 
 {
     // Data
+        fn consts<'a>(&'a self) -> &'a crate::StepperConst {
+            self.ctrl.consts()
+        }
+        
         fn link<'a>(&'a self) -> &'a crate::data::LinkedData {
             self.ctrl.link()
         }
@@ -78,12 +89,6 @@ impl SyncComp for Cylinder
             self.ctrl.write_link(lk);    
         }
     //
-
-    // JSON I/O
-        fn to_json(&self) -> Result<serde_json::Value, serde_json::Error> {
-            serde_json::to_value(self)
-        }
-    // 
 
     // Loads
         fn apply_force(&mut self, force : Force) {

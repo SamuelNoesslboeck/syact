@@ -10,19 +10,17 @@ The cargo.toml file specified below is when running the example on a raspberry p
 # ...
 
 [dependencies]
-# Include the library configured for the raspberry pi
-stepper_lib = { version = \"0.11\", features = [ \"rasp\" ] } 
+stepper_lib = { version = \"0.11.4\" } 
+
+[features]
+rasp = [ \"stepper_lib/rasp\" ]
 
 # ...
 ```
 "]
 
-// Include components and data
-use stepper_lib::{StepperCtrl, StepperConst, SyncComp};
-use stepper_lib::data::LinkedData;
-use stepper_lib::meas::SimpleMeas;
-// Include the unit system
-use stepper_lib::units::*;
+// Include library
+use stepper_lib::prelude::*;
 
 // Pin declerations (BCM on raspberry pi)
 const PIN_DIR : u8 = 27;
@@ -30,13 +28,13 @@ const PIN_STEP : u8 = 19;
 
 // Define distance and max speed
 const DELTA : Delta = Delta(10.0);      
-const OMEGA : Omega = Omega(20.0);      
+const OMEGA : Omega = Omega(10.0);      
 
 // Defining component structure
 #[derive(Debug)]
 struct MyComp {
-    ctrl : StepperCtrl,
-    ratio : f32
+    ctrl : StepperCtrl,     // The stepper motor built into the component
+    ratio : f32             // The gear ratio, e.g. a spingle or
 }
 
 impl MyComp {
@@ -51,8 +49,19 @@ impl SimpleMeas for MyComp {
     }
 }
 
+impl Setup for MyComp {
+    fn setup(&mut self) -> Result<(), stepper_lib::Error> {
+        self.ctrl.setup()?;  // Setting up the super component
+        Ok(())      
+    }
+}
+
 impl SyncComp for MyComp {
     // Required memebers
+        fn consts<'a>(&'a self) -> &'a StepperConst {
+            todo!()
+        }
+        
         fn vars<'a>(&'a self) -> &'a stepper_lib::data::CompVars {
             todo!()     // Not required in this example
         }
@@ -60,15 +69,10 @@ impl SyncComp for MyComp {
         fn link<'a>(&'a self) -> &'a LinkedData {
             todo!()     // Not required in this example
         }
-
-        fn to_json(&self) -> Result<serde_json::Value, serde_json::Error> {
-            todo!()     // Not required in this example
-        }
     //
     
     // Super component (motor)
         // The following two overrides give the library access to the stepper motor controller stored in our component
-        
         fn super_comp(&self) -> Option<&dyn SyncComp> {
             Some(&self.ctrl)
         }
@@ -80,7 +84,6 @@ impl SyncComp for MyComp {
 
     // Ratio
         // The following two overrides cause the library to translate the distance by the ratio we defined for our component
-
         fn gamma_for_super(&self, this_gamma : Gamma) -> Gamma {
             this_gamma * self.ratio     // Distance is translated by the ratio
         }
@@ -90,12 +93,12 @@ impl SyncComp for MyComp {
         }
     // 
 
-    fn drive_rel(&mut self, delta : Delta, omega : Omega) -> Result<Delta, stepper_lib::Error> {
+    fn drive_rel(&mut self, delta : Delta, speed_f : f32) -> Result<Delta, stepper_lib::Error> {
         println!("Now driving!"); // Our custom message
 
         let delta_real = self.ctrl.drive_rel(
             self.delta_for_super(delta, self.gamma()), 
-            self.omega_for_super(omega, self.gamma())
+            speed_f
         )?;
 
         Ok(self.delta_for_this(delta_real, self.gamma_for_super(self.gamma())))
@@ -114,12 +117,17 @@ fn main() -> Result<(), stepper_lib::Error> {
         s_f: 1.5    // System safety factor, should be at least 1.0
     }); 
 
+    comp.setup()?;
+
     // Apply some loads
     comp.apply_inertia(Inertia(0.2));
     comp.apply_force(Force(0.10));
+    
+    // Limit the component velocity
+    comp.set_omega_max(OMEGA);
 
     println!("Staring to move ... ");
-    let delta_real = comp.drive_rel(DELTA, OMEGA)?;         // Move the comp
+    let delta_real = comp.drive_rel(DELTA, 1.0)?;         // Move the comp
     println!("Distance {}rad with max speed {:?}rad/s done", delta_real, OMEGA);
 
     Ok(())

@@ -6,7 +6,7 @@ use core::f32::consts::PI;
 use crate::data::{StepperConst, CompVars, LinkedData};
 use crate::units::*;
 
-use crate::math::force::torque_dyn;
+use crate::math::CurveBuilder;
 
 /// Returns the start freqency of a motor (data)  \
 /// 
@@ -32,7 +32,12 @@ pub fn travel_times(delta : Delta, omega : Omega, alpha : Alpha) -> (Time, Time)
     let p = omega / alpha;
     let q = 2.0 * delta.0 / alpha.0;
 
-    let root = Time((p.0.powi(2) + q).sqrt());
+    let inner = p.0.powi(2) + q;
+    let root = if inner.abs() > f32::EPSILON {
+        Time(inner.sqrt())
+    } else {
+        Time::ZERO
+    };
 
     ( -p + root, -p - root )
 }
@@ -43,13 +48,18 @@ pub fn travel_times(delta : Delta, omega : Omega, alpha : Alpha) -> (Time, Time)
 /// 
 /// The function panics if the given alpha is not normal (`Alpha::is_normal()`)
 #[inline]
-pub fn next_node_simple(mut delta : Delta, mut omega_0 : Omega, mut alpha : Alpha) -> (Time, Omega) {
-    delta = delta.abs(); 
-    omega_0 = omega_0.abs(); 
-    alpha = alpha.abs(); 
+pub fn next_node_simple(delta : Delta, omega_0 : Omega, alpha : Alpha) -> (Time, Omega) {
+    let (mut t_1, mut t_2) = travel_times(delta, omega_0, alpha);
 
-    let (t_1, t_2) = travel_times(delta, omega_0, alpha);
-    let t = t_1.max(t_2);
+    if t_1 < Time::ZERO {
+        t_1 = Time::INFINITY;
+    }
+
+    if t_2 < Time::ZERO {
+        t_2 = Time::INFINITY;
+    }
+
+    let t = t_1.min(t_2);
 
     ( t, omega_0 + alpha * t )
 }
@@ -75,30 +85,15 @@ pub fn mirror_curve(cur : &mut [Time]) {
 /// # Panics
 /// 
 /// Panics if the given bend or safety factor is invalid
-pub fn write_simple_move(data : &StepperConst, var : &CompVars, lk : &LinkedData, cur : &mut [Time], omega_max : Omega) {
+pub fn write_simple_move(consts : &StepperConst, var : &CompVars, lk : &LinkedData, cur : &mut [Time], omega_max : Omega) {
     let cur_len = cur.len(); 
 
-    let delta = data.step_ang();
-
-    let mut time : Time;
-    let mut omega = Omega::ZERO;
-    let mut alpha : Alpha;
-
-    if !var.f_bend.is_normal() {
-        panic!("Invaild bend factor! ({})", var.f_bend);
-    }
-
-    if !lk.s_f.is_normal() {
-        panic!("Invalid safety factor! ({})", lk.s_f);
-    }
+    let mut builder = CurveBuilder::new(consts, var, lk, Omega::ZERO);
 
     for i in 0 .. cur_len / 2 {
-        alpha = data.alpha_max_dyn(
-            torque_dyn(data, omega / var.f_bend, lk.u), var).unwrap() / lk.s_f * var.f_bend;   // TODO: Overload 
-        
-        (time, omega) = next_node_simple(delta, omega, alpha);
+        let time = builder.next_step_pos();
 
-        if omega > omega_max {
+        if builder.omega > omega_max {
             break;
         }
 

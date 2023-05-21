@@ -16,12 +16,8 @@ stepper_lib = { version = \"0.11\", features = [ \"rasp\" ] }
 ```
 "]
 
-// Include components and data
-use stepper_lib::{StepperCtrl, StepperConst, SyncComp};
-use stepper_lib::comp::Cylinder;
-use stepper_lib::data::LinkedData;
-// Include the unit system
-use stepper_lib::units::*;
+// Include the library
+use stepper_lib::prelude::*;
 
 // Pin declerations (BCM on raspberry pi)
 const PIN_DIR : u8 = 27;
@@ -43,14 +39,14 @@ fn main() -> Result<(), stepper_lib::Error> {
         u: 12.0,    // System voltage in volts
         s_f: 1.5    // System safety factor, should be at least 1.0
     }); 
-    cylinder.setup();
+    cylinder.setup()?;
 
     // Apply some loads
     cylinder.apply_inertia(Inertia(0.2));
     cylinder.apply_force(Force(0.10));
 
     println!("Staring to move ... ");
-    let delta_real = cylinder.drive_rel(DELTA, OMEGA)?;         // Move the cylinder
+    let delta_real = cylinder.drive_rel(DELTA, 1.0)?;         // Move the cylinder
     println!("Distance {}mm with max speed {:?}mm/s done", delta_real, OMEGA);
 
     Ok(())
