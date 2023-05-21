@@ -1,7 +1,7 @@
 #[cfg(feature = "std")]
 use serde::{Serialize, Deserialize}; 
 
-use crate::{StepperCtrl, SyncComp, Setup, StepperConst, LinkedData};
+use crate::{StepperCtrl, SyncComp, Setup, StepperConst, LinkedData, AsyncComp};
 use crate::comp::CompVars;
 use crate::meas::SimpleMeas;
 use crate::units::*;
@@ -70,4 +70,18 @@ impl SyncComp for Conveyor {
             super_gamma * self.r_roll
         }
     // 
+}
+
+impl AsyncComp for Conveyor {
+    fn drive(&mut self, dir : crate::Direction, speed_f : f32) -> Result<(), crate::Error> {
+        self.ctrl.drive(dir, speed_f)
+    }
+
+    fn dir(&self) -> crate::Direction {
+        self.ctrl.dir()
+    }
+
+    fn speed_f(&self) -> f32 {
+        self.ctrl.speed_f()
+    }
 }

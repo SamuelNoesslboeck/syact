@@ -65,14 +65,55 @@ Below are three approches listed to showcase some of the functionalities of the 
 
 > **Note**
 >
-> If any of the types `Delta`, `Gamma`, `Omega`, ... are unclear to you, have a look at the [unit system](./unit_system.md)
+> - If any of the types `Delta`, `Gamma`, `Omega`, ... are unclear to you, have a look at the [unit system](./unit_system.md)
+> - The motor used in this example ("MOT_17HE15_1504S") is predefined in the `StepperData` class. Please insert the data of the stepper motors you are using.
 
 ### Using the predefined component
 
 The easiest approch for this example would be using the predefined component from the library.
 
 ```rust 
+let mut conv = Conveyor::new(
+    StepperCtrl::new(StepperConst::MOT_17HE15_1504S, PIN_DIR, PIN_STEP),        // The stepper motor
+    R_ROLL
+);
 
+conv.write_link(LinkedData::GEN);
+conv.setup()?;
+
+// Apply a inertia to the conveyor (possible masses on the belt)
+conv.apply_inertia(Inertia(0.01));
+
+// Set the maximum speed of the conveyor tp 40 millimeters per second
+conv.set_omega_max(Omega(40.0));
+
+println!("Driving forward with 0.5 speed");
+conv.drive(Direction::CW, 0.5)?;
+conv.await_inactive()?;
+
+println!(" -> Reached speed!");
+
+sleep(1.0);
+
+println!("Driving forward with 0.8 speed");
+conv.drive(Direction::CW, 0.8)?;
+conv.await_inactive()?;
+
+println!(" -> Reached speed!");
+
+sleep(2.0);
+
+println!("Driving backwards with 0.2 speed");
+conv.drive(Direction::CCW, 0.2)?;
+conv.await_inactive()?;
+
+println!("Reached speed!");
+
+sleep(1.0);
+
+println!("Finished!");
+
+Ok(())
 ```
 
 ### Direct appproach
