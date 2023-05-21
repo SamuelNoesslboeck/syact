@@ -5,26 +5,29 @@ use crate::data::{CompVars, LinkedData};
 use crate::units::*;
 
 // Submodules
-/// A module for async components like a basic DC-motor. These components cannot move certain distances or to absolute positions
-pub mod asyn;
+    /// A module for async components like a basic DC-motor. These components cannot move certain distances or to absolute positions
+    pub mod asyn;
 
-mod cylinder;
-pub use cylinder::Cylinder;
+    mod conveyor;
+    pub use conveyor::Conveyor;
 
-mod cylinder_triangle;
-pub use cylinder_triangle::CylinderTriangle;
+    mod cylinder;
+    pub use cylinder::Cylinder;
 
-mod gear_joint;
-pub use gear_joint::GearJoint;
+    mod cylinder_triangle;
+    pub use cylinder_triangle::CylinderTriangle;
 
-/// A module for component groups, as they are used in various robots. The components are all sharing the same 
-/// [LinkedData](crate::data::LinkedData) and their movements are coordinated. 
-pub mod group;
-pub use group::SyncCompGroup;
+    mod gear_joint;
+    pub use gear_joint::GearJoint;
 
-#[doc = "../docs/tools.md"]
-pub mod tool;
-pub use tool::Tool;
+    /// A module for component groups, as they are used in various robots. The components are all sharing the same 
+    /// [LinkedData](crate::data::LinkedData) and their movements are coordinated. 
+    pub mod group;
+    pub use group::SyncCompGroup;
+
+    #[doc = "../docs/tools.md"]
+    pub mod tool;
+    pub use tool::Tool;
 //
 
 #[cfg(not(feature = "std"))]
