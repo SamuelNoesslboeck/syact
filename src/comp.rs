@@ -187,7 +187,7 @@ pub trait SyncComp : crate::meas::SimpleMeas + core::fmt::Debug + Setup {
         /// this function will return a distance *four times higher* than the input super distance
         /// 
         /// ```rust
-        /// use stepper_lib::prelude::*;s
+        /// use stepper_lib::prelude::*;
         /// 
         /// // Create a new cylinder (implements SyncComp)
         /// let mut cylinder = Cylinder::new(

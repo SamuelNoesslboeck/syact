@@ -28,7 +28,7 @@ const PIN_STEP : u8 = 19;
 
 // Define distance and max speed
 const DELTA : Delta = Delta(10.0);      
-const OMEGA : Omega = Omega(20.0);      
+const OMEGA : Omega = Omega(10.0);      
 
 // Defining component structure
 #[derive(Debug)]

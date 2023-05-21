@@ -65,7 +65,9 @@ pub enum ErrorKind {
 /// A trait that provides a universal setup function
 pub trait Setup {
     /// Calls all required functions to assure the components functionality
-    fn setup(&mut self) -> Result<(), Error>;
+    fn setup(&mut self) -> Result<(), Error> { 
+        Ok(()) 
+    }
 }
 
 #[inline(always)]

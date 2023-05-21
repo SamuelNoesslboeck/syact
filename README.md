@@ -25,6 +25,7 @@ Basis library for the [sybot_lib]("https://github.com/SamuelNoesslboeck/sybot_li
 - Create an all-in-one library to control motors, read sensors and do basic calculations in rust.
 - Keep it as easy to use as possible
 - Specialize the library for hobbyists and tinkerers
+- Offer options for static aswell as dynamic typings
 
 ## In Action
 
@@ -50,11 +51,8 @@ stepper_lib = { version = "0.11.4", features = [ "rasp" ] }
 ```rust
 use core::f32::consts::PI;
 
-// Include components and data
-use stepper_lib::{StepperCtrl, StepperConst, SyncComp, Setup};
-use stepper_lib::data::LinkedData;
-// Include the unit system
-use stepper_lib::units::*;
+// Include the library
+use stepper_lib::prelude::*;
 
 // Pin declerations (BCM on raspberry pi)
 const PIN_DIR : u8 = 27;
@@ -66,17 +64,12 @@ const OMEGA : Omega = Omega(10.0);
 
 fn main() -> Result<(), stepper_lib::Error> {
     // Create the controls for a stepper motor
-    let mut ctrl = StepperCtrl::new(
-        StepperConst::MOT_17HE15_1504S, 
-        PIN_DIR, 
-        PIN_STEP
-    );
+    let mut ctrl = StepperCtrl::new(StepperConst::MOT_17HE15_1504S, PIN_DIR, PIN_STEP);
     // Link the component to a system
     ctrl.write_link(LinkedData { 
         u: 12.0,    // System voltage in volts
         s_f: 1.5    // System safety factor, should be at least 1.0
     }); 
-
     ctrl.setup()?;
 
     // Apply some loads
@@ -86,28 +79,29 @@ fn main() -> Result<(), stepper_lib::Error> {
     ctrl.set_omega_max(OMEGA);
 
     println!("Staring to move");
-    let delta_real = ctrl.drive_rel(DELTA, 1.0)?;      // Move the motor
-    println!("Distance {}rad with max speed {:?}rad/s done", 
-        delta_real, OMEGA);
+    ctrl.drive_rel(DELTA, 1.0)?;      // Move the motor
+    println!("Distance {}rad with max speed {:?}rad/s done", DELTA, OMEGA);
 
     Ok(())
 }
 ```
-(Source: "examples/stepper_motor.rs")
+(Source: [stepper_motor]("/examples/stepper_motor.rs"))
 
 ## Features
 
 - [x] Motors
-  - [x] Stepper motors
+  - [x] [Stepper motors](/examples/stepper_motor.rs)
     - [x] Absolute/relative movements 
     - [x] Continuous movements
+    - [ ] Microstepping
+    - [ ] Inverting logical signals
   - [x] [Servo motors](/docs/motors/servos.md)
   - [x] [DC motors](/docs/motors/dc_motors.md)
-- [ ] [Components](/docs/components.md)
-  - [x] Cylinder
+- [x] [Components](/docs/components.md)
+  - [x] [Cylinder](/examples/cylinder.rs)
   - [x] Gear joint
   - [x] Cylinder-triangle
-  - [ ] Conveyor
+  - [x] [Conveyor](/examples/simple_conv/src/main.rs)
 - [x] [Tools](/docs/tools.md)
   - [x] Tongs
   - [x] Axial joint
@@ -119,9 +113,11 @@ fn main() -> Result<(), stepper_lib::Error> {
 - [ ] Measurements
   - [x] Simple switch
   - [ ] Rotary resolver
-- [x] Extendable
+- [ ] Extendable
   - [x] [Custom components](/docs/components.md#custom-components)
   - [x] Custom tools
+  - [ ] Custom meaurement systems
+- [x] [Unit system](/docs/unit_system.md)
 - [ ] Minimal
   - [ ] Fully supports `no_std` environment
   - [ ] Available for basic embedded systems

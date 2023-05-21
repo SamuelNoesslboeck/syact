@@ -61,7 +61,3 @@ path = "examples/tongs.rs"
 [[example]]
 name = "dc_motors"
 path = "examples/dc_motors.rs"
-
-[[example]]
-name = "simple_conv"
-path = "examples/simple_conv"

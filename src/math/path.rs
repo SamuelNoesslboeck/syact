@@ -1,9 +1,12 @@
 use crate::math::CurveBuilder;
 use crate::units::*;
 
+/// A node for describing a path driven by a stepper motor
 #[derive(Debug, Clone, Copy)]
 pub struct PathNode {
+    /// Delta distance covered in the node
     pub delta : Delta,
+    /// Start velocity of the node
     pub omega_0 : Omega
 }
 
@@ -16,6 +19,7 @@ impl Default for PathNode {
     }
 }
 
+/// A structure that helps building paths for multiple stepper motors
 #[derive(Debug, Clone)]
 pub struct PathBuilder<'a, const N : usize> {
     builders : [CurveBuilder<'a>; N],
@@ -23,6 +27,7 @@ pub struct PathBuilder<'a, const N : usize> {
 }
 
 impl<'a, const N : usize> PathBuilder<'a, N> {
+    /// Create a new pathbuilder from a set of curvebuilders
     pub fn new(builders : [CurveBuilder<'a>; N]) -> Self {
         Self {
             builders, 
@@ -30,6 +35,7 @@ impl<'a, const N : usize> PathBuilder<'a, N> {
         }
     }
 
+    /// Iterate through the path
     pub fn next(&mut self, tstack : &mut [Time], dstack : &[[Delta; N]], n : usize, i : usize) {
         let time = tstack[i];
         let delta = dstack[i][n];
@@ -71,12 +77,14 @@ impl<'a, const N : usize> PathBuilder<'a, N> {
         // println!("[{}, {}] Omega_0: {}, Omega: {}, tar: {}", n, i, self.nstack[i][n].omega_0, self.builders[n].omega, omega_tar);
     }
 
+    /// Iterate a full row through the path
     pub fn next_all(&mut self, tstack : &mut [Time], dstack : &[[Delta; N]], i : usize) {
         for n in 0 .. N {
             self.next(tstack, dstack, n, i);
         }
     }
 
+    /// Generate the complete path
     pub fn generate(&mut self, tstack : &mut [Time], dstack : &[[Delta; N]]) {
         if tstack.len() != dstack.len() {
             panic!("Stacks must be equal in size!");
@@ -91,6 +99,7 @@ impl<'a, const N : usize> PathBuilder<'a, N> {
         }
     }
 
+    /// Get a pathnode stored in the builder
     pub fn get_node(&'a self, n : usize, i : usize) -> &'a PathNode {
         &self.nstack[i][n]
     }

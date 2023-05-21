@@ -74,7 +74,7 @@ fn main() -> Result<(), stepper_lib::Error> {
 }
 ```
 
-(Source: "examples/cylinder.rs")
+(See [the rust example](../examples/cylinder.rs))
 
 ## Custom components
 
@@ -113,7 +113,7 @@ const PIN_STEP : u8 = 19;
 
 // Define distance and max speed
 const DELTA : Delta = Delta(10.0);      
-const OMEGA : Omega = Omega(20.0);      
+const OMEGA : Omega = Omega(10.0);      
 
 // Defining component structure
 #[derive(Debug)]
@@ -226,4 +226,4 @@ fn main() -> Result<(), stepper_lib::Error> {
 // "
 ```
 
-(See [the rust example]("../examples/custom_component.rs"))
+(See [the rust example](../examples/custom_component.rs))

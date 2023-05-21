@@ -296,9 +296,8 @@ impl Div<Time> for f32 {
 /// // Subtract two absolute distances to get once relative
 /// assert_eq!(Gamma(2.0) - Gamma(1.0), Delta(1.0));
 /// 
-/// // Add relative distance to absolute one
+/// // Add relative distance to an absolute one
 /// assert_eq!(Gamma(2.0) + Delta(1.0), Gamma(3.0));
-/// 
 /// assert_eq!(Gamma(2.0) - Delta(1.0), Gamma(1.0));
 /// ```
 #[derive(Clone, Copy, Debug, Default, Serialize, Deserialize, PartialEq, PartialOrd)]
@@ -422,6 +421,14 @@ impl Sub<Phi> for Phi {
 /// # Unit
 /// 
 /// - Can be either radians or millimeters
+/// 
+/// ```rust
+/// use stepper_lib::units::*;
+/// 
+/// assert_eq!(Delta(2.0), Delta(1.0) + Delta(1.0));
+/// assert_eq!(Delta(5.0), Delta(2.5) * 2.0);
+/// assert_eq!(Delta(2.0), Gamma(4.0) - Gamma(2.0));
+/// ```
 #[derive(Clone, Copy, Debug, Default, Serialize, Deserialize, PartialEq, PartialOrd)]
 pub struct Delta(pub f32);
 basic_unit!(Delta);

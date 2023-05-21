@@ -4,6 +4,7 @@ use crate::data::LinkedData;
 use crate::units::*;
 
 #[test]
+#[cfg_attr(not(feature = "rasp"), ignore = "run manually when in simulation mode")]
 fn gear_bearing() -> Result<(), crate::Error> {
     const PIN_DIR : u8 = 27;
     const PIN_STEP : u8 = 19;
@@ -19,6 +20,7 @@ fn gear_bearing() -> Result<(), crate::Error> {
 }
 
 #[test]
+#[cfg_attr(not(feature = "rasp"), ignore = "run manually when in simulation mode")]
 fn cylinder() -> Result<(), crate::Error> {
     const PIN_DIR : u8 = 22;
     const PIN_STEP : u8 = 11;
@@ -35,6 +37,7 @@ fn cylinder() -> Result<(), crate::Error> {
 }
 
 #[test]
+#[cfg_attr(not(feature = "rasp"), ignore = "run manually when in simulation mode")]
 fn cylinder_tri() -> Result<(), crate::Error> {
     const PIN_DIR : u8 = 22;
     const PIN_STEP : u8 = 11;

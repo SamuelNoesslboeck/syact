@@ -24,13 +24,16 @@ pub use path::{PathBuilder, PathNode};
 pub struct CurveBuilder<'a> {
     /// Acceleration of motor
     pub alpha : Alpha,
+    /// Start velocity
     pub omega_0 : Omega,
     /// Motor speed
     pub omega : Omega,
-    /// Delta distance of motor
+    /// Current absolute position
     pub gamma : Gamma,
+    /// Last delta distance traveled
     pub delta : Delta,
 
+    /// Time traveled within the last node
     pub time : Time,
 
     consts : &'a StepperConst,
@@ -64,6 +67,7 @@ impl<'a> CurveBuilder<'a> {
         }
     }
 
+    /// Resets the builder
     #[inline]
     pub fn reset(&mut self) {
         self.alpha = Alpha::ZERO;
@@ -85,14 +89,17 @@ impl<'a> CurveBuilder<'a> {
         self.consts.max_speed(self.lk.u)
     }
 
+    /// Checks whether the motor accelerated when travelling the last node
     pub fn was_accel(&self) -> bool {
         self.omega > self.omega_0
     }
 
+    /// Checks whether the motor deccelerated when travelling the last node
     pub fn was_deccel(&self) -> bool {
         self.omega < self.omega_0
     }
 
+    /// Generate the next node
     pub fn next(&mut self, mut delta : Delta, mut omega_tar : Omega) -> (Time, f32) {
         if (omega_tar.0 * self.omega.0) < 0.0 {
             omega_tar = Omega::ZERO;
@@ -216,6 +223,7 @@ impl<'a> CurveBuilder<'a> {
         Ok(())
     }
 
+    /// Return a pathnode stored in the builder
     pub fn get_node(&self) -> path::PathNode {
         path::PathNode {
             delta: self.delta,
@@ -223,15 +231,9 @@ impl<'a> CurveBuilder<'a> {
         }
     }
 
+    /// Load a node into the builder
     pub fn load_node(&mut self, node : &path::PathNode) {
         self.delta = node.delta;
         self.omega = node.omega_0;
     } 
-
-    pub fn correct_last(&mut self, time : Time) -> Omega {
-        self.omega = 2.0 * self.delta / time - self.omega_0;
-        self.time = time;
-
-        self.omega
-    }
 }

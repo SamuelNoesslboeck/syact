@@ -190,6 +190,16 @@ pub trait SyncCompGroup<T, const C : usize> : IndexMut<usize, Output = Box<T>> +
             }
         }
 
+        /// Returns the maximum omegas for each component of the group
+        fn omega_max(&self) -> [Omega; C] {
+            let mut omegas = [Omega::ZERO; C]; 
+            for i in 0 .. C {
+                omegas[i] = self[i].omega_max()
+            }
+            omegas
+        }
+
+        /// Set the maximum omega of the components
         fn set_omega_max(&mut self, omega_max : [Omega; C]) {
             for i in 0 .. C {
                 self[i].set_omega_max(omega_max[i])
@@ -198,6 +208,9 @@ pub trait SyncCompGroup<T, const C : usize> : IndexMut<usize, Output = Box<T>> +
     // 
 
     // Misc
+        /// Returns the pathbuilder for the collection of components
+        /// 
+        /// WILL BE REMOVED IN FUTURE RELEASES! This function only works for stepper motor components
         #[cfg(feature = "std")]
         fn get_pathbuilder<'a>(&'a self, omega_0 : [Omega; C]) -> PathBuilder<C> 
         where T : 'a {
