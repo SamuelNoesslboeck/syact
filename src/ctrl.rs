@@ -144,8 +144,7 @@ impl StepperCtrl {
             #[cfg(not(feature = "std"))]
             sys: Pins {
                 dir: sys_dir,
-                step: sys_step,
-                meas: None,
+                step: sys_step
             },
 
             #[cfg(feature = "std")]

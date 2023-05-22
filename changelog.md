@@ -29,3 +29,10 @@
 ## Bug fixes
 
 - Fixed the `UniPin` bug that made the library basically unusable
+
+# Version 0.11.5
+
+## Enhancements
+
+- Reworked the measurement system
+- Improved docs
