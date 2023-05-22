@@ -10,9 +10,11 @@
 [stepper_lib: crates.io]: https://crates.io/crates/stepper_lib
 [stepper_lib: rustc 1.68+]: https://img.shields.io/badge/stepper_lib-rustc_1.68+-lightgray.svg
 [Rust 1.68]: https://blog.rust-lang.org/2023/03/09/Rust-1.68.0.html
+
 > **Note** 
 > 
-> The documentation for this library is not fully finished yet!
+> Many aspects of the library (for example the documentation) are not fully finished yet! 
+> (Though I try to update it as freqent as possible)
 
 A library for all types of components used in robots, including controlls for stepper motors, servo motors and more complex assemblies using said motors. Currently all implementations are made for the raspberry pi, though new implementations for more controllers are currently being made.
 

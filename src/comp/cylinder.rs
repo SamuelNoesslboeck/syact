@@ -37,13 +37,6 @@ impl Cylinder
 //     }
 // }
 
-impl crate::meas::SimpleMeas for Cylinder
-{
-    fn init_meas(&mut self, pin_meas : u8) {
-        self.ctrl.init_meas(pin_meas)
-    }
-}
-
 impl Setup for Cylinder {
     fn setup(&mut self) -> Result<(), crate::Error> {
         self.ctrl.setup()

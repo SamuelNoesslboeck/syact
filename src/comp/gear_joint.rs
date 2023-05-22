@@ -2,7 +2,6 @@ use serde::{Serialize, Deserialize};
 
 use crate::{SyncComp, StepperCtrl, Setup};
 // use crate::math::MathActor;
-use crate::meas::SimpleMeas;
 use crate::units::*;
 
 /// A bearing powered by a motor with a certain gear ratio
@@ -23,13 +22,6 @@ impl GearJoint {
             ctrl,
             ratio
         }
-    }
-}
-
-impl SimpleMeas for GearJoint
-{
-    fn init_meas(&mut self, pin_meas : u8) {
-        self.ctrl.init_meas(pin_meas);
     }
 }
 

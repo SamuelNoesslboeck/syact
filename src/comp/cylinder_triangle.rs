@@ -1,9 +1,10 @@
 use serde::{Serialize, Deserialize};
 
+use crate::ctrl::Interrupter;
 use crate::{SyncComp, Setup};
 use crate::comp::Cylinder;
 use crate::data::LinkedData;
-use crate::meas::SimpleMeas;
+use crate::meas::MeasData;
 use crate::units::*;
 
 /// A component representing a cylinder connected to two segments with constant lengths, forming a triangular shape
@@ -89,12 +90,6 @@ impl Setup for CylinderTriangle {
     }
 }
 
-impl SimpleMeas for CylinderTriangle {
-    fn init_meas(&mut self, pin_meas : u8) {
-        self.cylinder.init_meas(pin_meas)
-    }
-}
-
 impl SyncComp for CylinderTriangle {
     // Data
         fn consts<'a>(&'a self) -> &'a crate::StepperConst {
@@ -173,15 +168,17 @@ impl SyncComp for CylinderTriangle {
         Ok(self.delta_for_this(delta, gamma))
     }
 
-    /// See [SyncComp::measure()]
-    /// - `dist` is the maximum distance for the cylinder in mm
-    /// - `vel` is the maximum linear velocity for the cylinder in mm per second
-    /// - `set_dist` is the set distance for the cylinder in mm
-    fn measure(&mut self, delta : Delta, speed_f : f32, set_gamma : Gamma) -> Result<Delta, crate::Error> {
-        self.cylinder.measure(
-            delta, speed_f, self.gamma_for_super(set_gamma))
+    fn drive_rel_int(&mut self, mut delta : Delta, speed_f : f32, intr : Interrupter, intr_data : &mut dyn MeasData) 
+    -> Result<(Delta, bool), crate::Error> {
+        let gamma = self.gamma();
+        
+        delta = self.delta_for_super(delta, gamma);
+        let mut delta_res = self.cylinder.drive_rel_int(delta, speed_f, intr, intr_data)?;
+        delta_res.0 = self.delta_for_this(delta_res.0, self.gamma_for_super(gamma));
+
+        Ok(delta_res)
     }
-    
+
     // Forces
         fn apply_force(&mut self, force : Force) {
             self.cylinder.apply_force(force)
