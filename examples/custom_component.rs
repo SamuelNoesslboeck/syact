@@ -43,12 +43,6 @@ impl MyComp {
     }
 }
 
-impl SimpleMeas for MyComp {
-    fn init_meas(&mut self, _ : u8) {
-        todo!()     // Not required in this example
-    }
-}
-
 impl Setup for MyComp {
     fn setup(&mut self) -> Result<(), stepper_lib::Error> {
         self.ctrl.setup()?;  // Setting up the super component

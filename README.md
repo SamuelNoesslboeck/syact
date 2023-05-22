@@ -115,6 +115,7 @@ fn main() -> Result<(), stepper_lib::Error> {
 - [ ] Measurements
   - [x] Simple switch
   - [ ] Rotary resolver
+  - [x] Trait for custom measurements
 - [ ] Extendable
   - [x] [Custom components](/docs/components.md#custom-components)
   - [x] Custom tools

@@ -32,6 +32,7 @@ pub struct EndSwitch {
 }
 
 impl EndSwitch {
+    /// Creates a new end switch
     pub fn new(pin : u8, max_dist : Delta, meas_speed_f : f32) -> Self {
         Self {
             pin, max_dist, meas_speed_f,
