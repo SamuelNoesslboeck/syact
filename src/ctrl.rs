@@ -8,6 +8,7 @@ use std::thread::JoinHandle;
 #[cfg(feature = "std")]
 use std::sync::mpsc::{Receiver, Sender, channel};
 
+use crate::meas::MeasData;
 use crate::{SyncComp, Setup, lib_error};
 use crate::data::{LinkedData, StepperConst, CompVars}; 
 use crate::math::{self, CurveBuilder};
@@ -54,7 +55,8 @@ type AsyncMsg = (Vec<Time>, bool, Option<Time>);
 #[cfg(feature = "std")]
 type AsyncRes = i64;
 
-type Interrupter = fn (&mut Pins) -> bool;
+/// A function that can be used to interrupt the movement process of a component
+pub type Interrupter<'a> = fn (&mut dyn MeasData) -> bool;
 
 #[cfg(feature = "std")]
 #[inline(always)]
@@ -74,9 +76,7 @@ struct Pins {
     /// Pin for defining the direction
     pub dir : pin::UniOutPin,
     /// Pin for PWM Step pulses
-    pub step : pin::UniOutPin,
-    /// Measurement pin
-    pub meas : Option<pin::UniInPin>
+    pub step : pin::UniOutPin
 }
 
 /// StepperCtrl
@@ -138,8 +138,7 @@ impl StepperCtrl {
             #[cfg(feature = "std")]
             sys: Arc::new(Mutex::new(Pins {
                 dir: sys_dir,
-                step: sys_step,
-                meas: None,
+                step: sys_step
             })),
             
             #[cfg(not(feature = "std"))]
@@ -173,17 +172,6 @@ impl StepperCtrl {
     pub fn new_sim(data : StepperConst) -> Self {
         Self::new(data, pin::ERR_PIN, pin::ERR_PIN)
     }
-
-    // Misc
-        /// Helper function for measurements with a single pin
-        #[inline]
-        fn __meas_helper(pins : &mut Pins) -> bool {
-            match &mut pins.meas {
-                Some(pin) => pin.is_high(), 
-                None => false
-            }
-        }
-    //
 }
 
 impl StepperCtrl {
@@ -241,7 +229,7 @@ impl StepperCtrl {
         };
     }
 
-    fn drive_curve_int(&mut self, cur : &[Time], intr : Interrupter) -> (usize, bool) {
+    fn drive_curve_int(&mut self, cur : &[Time], intr : Interrupter, intr_data : &mut dyn MeasData) -> (usize, bool) {
         #[cfg(feature = "std")]
         let mut pins = self.sys.lock().unwrap();
 
@@ -252,7 +240,7 @@ impl StepperCtrl {
 
         for point in cur {
             #[cfg(feature = "std")]
-            if intr(&mut pins) {
+            if intr(intr_data) {
                 break;
             }
 
@@ -311,7 +299,8 @@ impl StepperCtrl {
         Ok(delta)
     }
 
-    fn drive_simple_int(&mut self, delta : Delta, speed_f : f32, intr : Interrupter) -> Result<(Delta, bool), crate::Error> {
+    fn drive_simple_int(&mut self, delta : Delta, speed_f : f32, intr : Interrupter, intr_data : &mut dyn MeasData) 
+    -> Result<(Delta, bool), crate::Error> {
         if (1.0 < speed_f) | (0.0 > speed_f) {
             panic!("Invalid speed factor! {}", speed_f)
         }
@@ -323,7 +312,7 @@ impl StepperCtrl {
         self.setup_drive(delta)?;
 
         let cur = math::curve::create_simple_curve(&self.consts, &self.vars, &self.lk, delta, self.omega_max() * speed_f);
-        let (steps, interrupted) = self.drive_curve_int(&cur, intr);
+        let (steps, interrupted) = self.drive_curve_int(&cur, intr, intr_data);
 
         if self.dir {
             Ok((steps as f32 * self.consts.step_ang(), interrupted))
@@ -410,22 +399,6 @@ impl Setup for StepperCtrl {
         self.setup_async();
 
         Ok(())
-    }
-}
-
-impl crate::meas::SimpleMeas for StepperCtrl {
-    #[cfg(feature = "std")]
-    fn init_meas(&mut self, pin_mes : u8) {
-        self.sys.lock().unwrap().meas = Some(
-            pin::UniPin::new(pin_mes).unwrap().into_input()     // TODO: Proper error message
-        )
-    }
-
-    #[cfg(not(feature = "std"))]
-    fn init_meas(&mut self, pin_mes : u8) {
-        self.sys.meas = Some(
-            pin::UniPin::new(pin_mes).unwrap().into_input()     // TODO: Proper error message
-        )
     }
 }
 
@@ -614,19 +587,9 @@ impl SyncComp for StepperCtrl {
             self.drive_simple(delta, speed_f)
         }
 
-        fn measure(&mut self, max_delta : Delta, speed_f : f32, set_gamma : Gamma) -> Result<Delta, crate::Error> {
-            self.reset_limit(None, None);
-
-            let (delta, interrupted) = self.drive_simple_int(max_delta, speed_f, Self::__meas_helper)?;
-
-            if !interrupted {
-                #[cfg(feature = "std")]
-                return Err(lib_error("The measurement failed for the fiven maximum delta distance"));
-            }
-
-            self.set_end(set_gamma);
-
-            Ok(delta)
+        fn drive_rel_int(&mut self, delta : Delta, speed_f : f32, intr : Interrupter, intr_data : &mut dyn MeasData) 
+        -> Result<(Delta, bool), crate::Error> {
+            self.drive_simple_int(delta, speed_f, intr, intr_data)
         }
     // 
 

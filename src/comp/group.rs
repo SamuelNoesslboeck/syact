@@ -45,16 +45,6 @@ pub trait SyncCompGroup<T, const C : usize> : IndexMut<usize, Output = Box<T>> +
         Ok(res)
     }
 
-    /// Runs [SyncComp::measure()] for all components in the group
-    fn measure(&mut self, deltas : [Delta; C], speed_f : f32, set_dist : [Gamma; C]) 
-            -> Result<[Delta; C], crate::Error> {
-        let mut res = [Delta::ZERO; C];
-        for i in 0 .. C {
-            res[i] = self[i].measure(deltas[i], speed_f, set_dist[i])?;
-        }
-        Ok(res)
-    }
-
     // Async
         /// Runs [SyncComp::drive_rel_async()] for all components
         /// 

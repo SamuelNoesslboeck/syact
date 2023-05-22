@@ -1,5 +1,7 @@
 use core::any::type_name;
 
+use crate::ctrl::Interrupter;
+use crate::meas::MeasData;
 use crate::{Setup, StepperConst};
 use crate::data::{CompVars, LinkedData};
 use crate::units::*;
@@ -42,7 +44,7 @@ fn no_super() -> crate::Error {
 /// 
 /// Components can have multiple layers, for example take a stepper motor with a geaerbox attached to it. The stepper motor and both combined will be a component, the later having 
 /// the stepper motor component defined as it's super component. (See [GearJoint])
-pub trait SyncComp : crate::meas::SimpleMeas + core::fmt::Debug + Setup {
+pub trait SyncComp : core::fmt::Debug + Setup {
     // Data
         /// Returns the constants the stepper motor used by the component
         fn consts<'a>(&'a self) -> &'a StepperConst;
@@ -323,24 +325,28 @@ pub trait SyncComp : crate::meas::SimpleMeas + core::fmt::Debug + Setup {
             Ok(self.delta_for_this(res, gamma)) 
         }
 
-        /// Measure the component by driving the component with the velocity `omega` until either 
-        /// the measurement condition is true or the maximum distance `delta` is reached. When the endpoint 
-        /// is reached, the controls will set the distance to `set_dist` and return the **relative** distance travelled.
-        fn measure(&mut self, mut delta : Delta, speed_f : f32, mut set_gamma : Gamma) -> Result<Delta, crate::Error> {
+        /// Moves the component by the relative distance as fast as possible with a possibility to interrupt the movement, 
+        /// halts the script until the movement is finshed and returns the actual **relative** distance travelled and a bool
+        /// whether or not the movement has been interrupted
+        fn drive_rel_int(&mut self, mut delta : Delta, speed_f : f32, intr : Interrupter, intr_data : &mut dyn MeasData) 
+        -> Result<(Delta, bool), crate::Error> {
             if (1.0 < speed_f) | (0.0 > speed_f) {
-                panic!("Invalid speed factor! {}", speed_f) 
+                panic!("Invalid speed factor! {}", speed_f)
             }
 
-            delta = self.delta_for_super(delta, self.gamma());
-            set_gamma = self.gamma_for_super(set_gamma);
+            let gamma = self.gamma(); 
 
-            if let Some(s_comp) = self.super_comp_mut() {
-                s_comp.measure(delta, speed_f, set_gamma)
+            delta = self.delta_for_super(delta, gamma);
+
+            let res = if let Some(s_comp) = self.super_comp_mut() {
+                s_comp.drive_rel_int(delta, speed_f, intr, intr_data)?
             } else {
                 #[cfg(feature = "std")]
                 panic!("Provide a super component or an override for this function!");
-            }
-        }   
+            };
+            
+            Ok((self.delta_for_this(res.0, self.gamma_for_super(gamma)), res.1))
+        }
     // 
 
     // Async

@@ -2,7 +2,7 @@
 name = "stepper_lib"
 authors = [ "Samuel Nösslböck <samuel.noesslboeck@gmail.com>" ]
 version = "0.11.4"
-description = "A simple library to control motors and components"
+description = "A simple library to control motors and components with controllers like the raspberry pi"
 edition = "2021"
 repository = "https://github.com/SamuelNoesslboeck/stepper_lib"
 license-file = "LICENSE"

@@ -3,7 +3,6 @@ use serde::{Serialize, Deserialize};
 
 use crate::{StepperCtrl, SyncComp, Setup, StepperConst, LinkedData, AsyncComp};
 use crate::comp::CompVars;
-use crate::meas::SimpleMeas;
 use crate::units::*;
 
 /// A simple conveyor powered by a stepper motor
@@ -29,12 +28,6 @@ impl Conveyor {
 impl Setup for Conveyor {
     fn setup(&mut self) -> Result<(), crate::Error> {
         self.ctrl.setup()
-    }
-}
-
-impl SimpleMeas for Conveyor {
-    fn init_meas(&mut self, pin_meas : u8) {
-        self.ctrl.init_meas(pin_meas)
     }
 }
 
