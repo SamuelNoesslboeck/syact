@@ -4,6 +4,7 @@ use rppal::gpio::InputPin;
 /// Universal output pin structure for platform independency
 #[derive(Debug)]
 pub struct UniInPin {
+    /// The pin control used
     #[cfg(feature = "rasp")]
     pub sys_pin : InputPin,
 

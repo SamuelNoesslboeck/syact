@@ -14,6 +14,7 @@ pub const ERR_PIN : u8 = 0xFF;
 /// Universal pin struct for platform independency
 #[derive(Debug)]
 pub struct UniPin {
+    /// The pin control used
     #[cfg(feature = "rasp")]
     pub sys_pin : Pin,
 
