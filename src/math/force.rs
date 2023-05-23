@@ -46,6 +46,21 @@ pub fn torque_dyn(consts : &StepperConst, mut omega : Omega, u : f32) -> Force {
     (1.0 - pow) / (1.0 + pow) * consts.t_s
 }
 
+/// An approximate torque function
+pub fn torque_dyn_approx(consts : &StepperConst, mut omega : Omega, max_omega : Omega) -> Force {
+    omega = omega.abs();
+
+    if !omega.is_finite() {
+        panic!("Bad omega! {}", omega);
+    }
+
+    if omega > max_omega {
+        return Force::ZERO;
+    }
+    
+    consts.t_s * (1.0 - omega / max_omega)
+}
+
 /// Calculates all forces and torques acting upon a segment connected with another support segment
 /// 
 /// - `actors` is a tuple vector of all forces acting upon the segment, each tuple consists of (`f_a`, `a_f`)

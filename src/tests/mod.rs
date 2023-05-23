@@ -1,6 +1,8 @@
 // Submodules
 mod comp;
 
+mod speed;
+
 // mod curves;      TODO: Fix!
 
 #[cfg(any(feature = "rasp"))]

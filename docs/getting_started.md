@@ -73,47 +73,52 @@ Below are three approches listed to showcase some of the functionalities of the 
 The easiest approch for this example would be using the predefined component from the library.
 
 ```rust 
-let mut conv = Conveyor::new(
-    StepperCtrl::new(StepperConst::MOT_17HE15_1504S, PIN_DIR, PIN_STEP),        // The stepper motor
-    R_ROLL
-);
+// Define the radius of the powered conveyor roll as a constant with 5 millimeters
+const R_ROLL : f32 = 10.0;
 
-conv.write_link(LinkedData::GEN);
-conv.setup()?;
+pub fn predefined() -> Result<(), stepper_lib::Error> {
+    let mut conv = Conveyor::new(
+        StepperCtrl::new(StepperConst::MOT_17HE15_1504S, PIN_DIR, PIN_STEP),        // The stepper motor
+        R_ROLL
+    );
 
-// Apply a inertia to the conveyor (possible masses on the belt)
-conv.apply_inertia(Inertia(0.01));
+    conv.write_link(LinkedData::GEN);
+    conv.setup()?;
+    
+    // Apply a inertia to the conveyor (possible masses on the belt, 1.0kg estimated)
+    conv.apply_inertia(Inertia(1.0));
 
-// Set the maximum speed of the conveyor tp 40 millimeters per second
-conv.set_omega_max(Omega(40.0));
+    // Set the maximum speed of the conveyor to 40 millimeters per second
+    conv.set_omega_max(Omega(40.0));
 
-println!("Driving forward with 0.5 speed");
-conv.drive(Direction::CW, 0.5)?;
-conv.await_inactive()?;
+    println!("Driving forward with 0.5 speed");
+    conv.drive(Direction::CW, 0.5)?;
+    conv.await_inactive()?;
 
-println!(" -> Reached speed!");
+    println!(" -> Reached speed!");
 
-sleep(1.0);
+    sleep(1.0);
 
-println!("Driving forward with 0.8 speed");
-conv.drive(Direction::CW, 0.8)?;
-conv.await_inactive()?;
+    println!("Driving forward with 0.8 speed");
+    conv.drive(Direction::CW, 0.8)?;
+    conv.await_inactive()?;
 
-println!(" -> Reached speed!");
+    println!(" -> Reached speed!");
 
-sleep(2.0);
+    sleep(2.0);
 
-println!("Driving backwards with 0.2 speed");
-conv.drive(Direction::CCW, 0.2)?;
-conv.await_inactive()?;
+    println!("Driving backwards with 0.2 speed");
+    conv.drive(Direction::CCW, 0.2)?;
+    conv.await_inactive()?;
 
-println!("Reached speed!");
+    println!("Reached speed!");
 
-sleep(1.0);
+    sleep(1.0);
 
-println!("Finished!");
+    println!("Finished!");
 
-Ok(())
+    Ok(())
+}
 ```
 
 ### Direct appproach
@@ -122,20 +127,27 @@ Sometimes a rather direct way is easier to understand and simpler to maintain, j
 
 ```rust
 // Define the radius of the powered conveyor roll as a constant with 5 millimeters
-const R_ROLL : f32 = 5.0;
+const R_ROLL : f32 = 10.0;
 
 // Convert the linear conveyor speed to an angular speed of the motor
 fn omega_for_motor(omega_conv : Omega) -> Omega {
     omega_conv / R_ROLL
 }
 
-fn direct_approach() {
-    let mut ctrl = StepperCtrl::new(StepperConst::GEN, PIN_DIR, PIN_STEP);
+fn inertia_for_motor(inertia_conv : Inertia) -> Inertia {
+    inertia_conv * R_ROLL * R_ROLL / 1_000_000.0      
+    // R_ROLL has units millimeter, therefore a factor of 10^6 is required for conversion from kg to kgm^2
+}
+
+pub fn direct_approach() -> Result<(), stepper_lib::Error> {
+    let mut ctrl = StepperCtrl::new(StepperConst::MOT_17HE15_1504S, PIN_DIR, PIN_STEP);
     ctrl.write_link(LinkedData::GEN);
     ctrl.setup()?;
     
     // Apply a inertia to the conveyor (possible masses on the belt)
-    ctrl.apply_inertia(Inertia(0.01));
+    ctrl.apply_inertia(
+        inertia_for_motor(Inertia(0.5))
+    );
 
     // Set the maximum speed of the conveyor tp 40 millimeters per second
     ctrl.set_omega_max(
@@ -167,6 +179,8 @@ fn direct_approach() {
     sleep(1.0);
 
     println!("Finished!");
+
+    Ok(())
 }
 ```
 

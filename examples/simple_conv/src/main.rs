@@ -5,25 +5,31 @@ use stepper_lib::prelude::*;
 const PIN_DIR : u8 = 17;        // Pin of the directional signal
 const PIN_STEP : u8 = 26;       // Pin of the step signal
 
+#[cfg(all(feature = "predef", feature = "direct"))]
+compile_error!("Please select only one of the approaches!");
+
 // Helper sleep function
 fn sleep(secs : f32) {
     std::thread::sleep(core::time::Duration::from_secs_f32(secs))
 }
 
-
 fn main() -> Result<(), stepper_lib::Error> {
+    #[cfg(feature = "predef")]
     predefined::predefined()?;
+
+    #[cfg(feature = "direct")]
     direct::direct_approach()?;
 
     Ok(())
 }
 
 /// Demonstration of the approach using predefined structs
+#[cfg(feature = "predef")]
 mod predefined {
     use super::*;
 
     // Define the radius of the powered conveyor roll as a constant with 5 millimeters
-    const R_ROLL : f32 = 5.0;
+    const R_ROLL : f32 = 10.0;
     
     pub fn predefined() -> Result<(), stepper_lib::Error> {
         let mut conv = Conveyor::new(
@@ -34,10 +40,10 @@ mod predefined {
         conv.write_link(LinkedData::GEN);
         conv.setup()?;
         
-        // Apply a inertia to the conveyor (possible masses on the belt)
-        conv.apply_inertia(Inertia(0.01));
+        // Apply a inertia to the conveyor (possible masses on the belt, 1.0kg estimated)
+        conv.apply_inertia(Inertia(1.0));
 
-        // Set the maximum speed of the conveyor tp 40 millimeters per second
+        // Set the maximum speed of the conveyor to 40 millimeters per second
         conv.set_omega_max(Omega(40.0));
     
         println!("Driving forward with 0.5 speed");
@@ -70,16 +76,21 @@ mod predefined {
     }
 }
 
-///
+#[cfg(feature = "direct")]
 mod direct {
     use super::*;
 
     // Define the radius of the powered conveyor roll as a constant with 5 millimeters
-    const R_ROLL : f32 = 5.0;
+    const R_ROLL : f32 = 10.0;
 
     // Convert the linear conveyor speed to an angular speed of the motor
     fn omega_for_motor(omega_conv : Omega) -> Omega {
         omega_conv / R_ROLL
+    }
+
+    fn inertia_for_motor(inertia_conv : Inertia) -> Inertia {
+        inertia_conv * R_ROLL * R_ROLL / 1_000_000.0      
+        // R_ROLL has units millimeter, therefore a factor of 10^6 is required for conversion from kg to kgm^2
     }
 
     pub fn direct_approach() -> Result<(), stepper_lib::Error> {
@@ -88,7 +99,9 @@ mod direct {
         ctrl.setup()?;
         
         // Apply a inertia to the conveyor (possible masses on the belt)
-        ctrl.apply_inertia(Inertia(0.01));
+        ctrl.apply_inertia(
+            inertia_for_motor(Inertia(0.5))
+        );
 
         // Set the maximum speed of the conveyor tp 40 millimeters per second
         ctrl.set_omega_max(

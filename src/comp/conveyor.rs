@@ -63,6 +63,16 @@ impl SyncComp for Conveyor {
             super_gamma * self.r_roll
         }
     // 
+
+    fn apply_force(&mut self, mut force : Force) {
+        force = force * self.r_roll / 1000.0;   // Millimeters to 
+        self.ctrl.apply_force(force)
+    }
+
+    fn apply_inertia(&mut self, mut inertia : Inertia) {
+        inertia = inertia * self.r_roll * self.r_roll / 1_000_000.0;
+        self.ctrl.apply_inertia(inertia)
+    }
 }
 
 impl AsyncComp for Conveyor {
