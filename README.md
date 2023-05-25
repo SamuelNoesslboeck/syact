@@ -14,7 +14,7 @@
 > **Note** 
 > 
 > Many aspects of the library (for example the documentation) are not fully finished yet! 
-> (Though I try to update it as freqent as possible)
+> (Though I try to update it as frequent as possible)
 
 A library for all types of components used in robots, including controlls for stepper motors, servo motors and more complex assemblies using said motors. Currently all implementations are made for the raspberry pi, though new implementations for more controllers are currently being made.
 
