@@ -44,7 +44,7 @@ fn no_super() -> crate::Error {
 /// 
 /// Components can have multiple layers, for example take a stepper motor with a geaerbox attached to it. The stepper motor and both combined will be a component, the later having 
 /// the stepper motor component defined as it's super component. (See [GearJoint])
-pub trait SyncComp : core::fmt::Debug + Setup {
+pub trait SyncComp : Setup {
     // Data
         /// Returns the constants the stepper motor used by the component
         fn consts<'a>(&'a self) -> &'a StepperConst;
@@ -817,11 +817,144 @@ pub trait SyncComp : core::fmt::Debug + Setup {
     // 
 }
 
+// Implementations
+
 impl dyn SyncComp 
 {
     /// Returns the type name of the component as [String]. Used for configuration file parsing.
     #[inline(always)]
     pub fn get_type_name(&self) -> &str {
         type_name::<Self>()
+    }
+}
+
+impl<T : AsMut<dyn SyncComp>> Setup for T {
+    fn setup(&mut self) -> Result<(), crate::Error> {
+        self.as_mut().setup()
+    }
+}
+
+impl<T : AsRef<dyn SyncComp> + AsMut<dyn SyncComp>> SyncComp for T {
+    // Data
+        fn consts<'a>(&'a self) -> &'a crate::StepperConst {
+            self.as_ref().consts()
+        }
+
+        fn vars<'a>(&'a self) -> &'a crate::prelude::CompVars {
+            self.as_ref().vars()
+        }
+
+        fn link<'a>(&'a self) -> &'a crate::LinkedData {
+            self.as_ref().link()
+        }
+    // 
+
+    fn write_link(&mut self, lk : crate::data::LinkedData) {
+        self.as_mut().write_link(lk)
+    }
+
+    fn super_comp(&self) -> Option<&dyn SyncComp> {
+        self.as_ref().super_comp()
+    }
+
+    fn super_comp_mut(&mut self) -> Option<&mut dyn SyncComp> {
+        self.as_mut().super_comp_mut()
+    }
+
+    fn gamma_for_super(&self, this_gamma : Gamma) -> Gamma {
+        self.as_ref().gamma_for_super(this_gamma)
+    }
+
+    fn gamma_for_this(&self, super_gamma : Gamma) -> Gamma {
+        self.as_ref().gamma_for_this(super_gamma)
+    }
+
+    fn abs_super_gamma(&self, this_gamma : Gamma) -> Gamma {
+        self.as_ref().abs_super_gamma(this_gamma)
+    }
+
+    fn delta_for_super(&self, this_delta : Delta, this_gamma : Gamma) -> Delta {
+        self.as_ref().delta_for_super(this_delta, this_gamma)
+    }
+
+    fn delta_for_this(&self, super_delta : Delta, super_gamma : Gamma) -> Delta {
+        self.as_ref().delta_for_this(super_delta, super_gamma)
+    }
+
+    fn omega_for_super(&self, this_omega : Omega, this_gamma : Gamma) -> Omega {
+        self.as_ref().omega_for_super(this_omega, this_gamma)
+    }
+
+    fn omega_for_this(&self, super_omega : Omega, this_gamma : Gamma) -> Omega {
+        self.as_ref().omega_for_this(super_omega, this_gamma)
+    }
+
+    fn drive_rel(&mut self, delta : Delta, speed_f : f32) -> Result<Delta, crate::Error> {
+        self.as_mut().drive_rel(delta, speed_f)
+    }
+
+    fn drive_abs(&mut self, gamma : Gamma, speed_f : f32) -> Result<Delta, crate::Error> {
+        self.as_mut().drive_abs(gamma, speed_f)
+    }
+
+    fn drive_rel_int(&mut self, delta : Delta, speed_f : f32, intr : Interrupter, intr_data : &mut dyn MeasData) 
+    -> Result<(Delta, bool), crate::Error> {
+        self.as_mut().drive_rel_int(delta, speed_f, intr, intr_data)
+    }
+
+    fn drive_rel_async(&mut self, delta : Delta, speed_f : f32) -> Result<(), crate::Error> {
+        self.as_mut().drive_rel_async(delta, speed_f)
+    }
+
+    fn drive_abs_async(&mut self, gamma : Gamma, speed_f : f32) -> Result<(), crate::Error> {
+        self.as_mut().drive_abs_async(gamma, speed_f)
+    }
+
+    fn await_inactive(&mut self) -> Result<Delta, crate::Error> {
+        self.as_mut().await_inactive()
+    }
+
+    fn gamma(&self) -> Gamma {
+        self.as_ref().gamma()
+    }
+
+    fn write_gamma(&mut self, gamma : Gamma) {
+        self.as_mut().write_gamma(gamma)
+    }
+
+    fn omega_max(&self) -> Omega {
+        self.as_ref().omega_max()
+    }
+
+    fn set_omega_max(&mut self, omega_max : Omega) {
+        self.as_mut().set_omega_max(omega_max)
+    }
+
+    fn lim_for_gamma(&self, gamma : Gamma) -> Delta {
+        self.as_ref().lim_for_gamma(gamma)
+    }
+
+    fn set_end(&mut self, set_gamma : Gamma) {
+        self.as_mut().set_end(set_gamma)
+    }
+
+    fn set_limit(&mut self, min : Option<Gamma>, max : Option<Gamma>) {
+        self.as_mut().set_limit(min, max)
+    }
+
+    fn reset_limit(&mut self, min : Option<Gamma>, max : Option<Gamma>) {
+        self.as_mut().reset_limit(min, max)
+    }
+
+    fn apply_force(&mut self, force : Force) { 
+        self.as_mut().apply_force(force)
+    }
+
+    fn apply_inertia(&mut self, inertia : Inertia) {
+        self.as_mut().apply_inertia(inertia)
+    }
+
+    fn apply_bend_f(&mut self, f_bend : f32) {
+        self.as_mut().apply_bend_f(f_bend)
     }
 }

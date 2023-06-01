@@ -1,18 +1,24 @@
 [package]
 name = "stepper_lib"
 authors = [ "Samuel Nösslböck <samuel.noesslboeck@gmail.com>" ]
-version = "0.11.5"
+version = "0.11.6"
 description = "A simple library to control motors and components with controllers like the raspberry pi"
 edition = "2021"
 repository = "https://github.com/SamuelNoesslboeck/stepper_lib"
 license-file = "LICENSE"
 keywords = [ "no_std", "framework", "robotics" ]
 
+[workspace]
+members = [ "stepper_macros" ]
+exclude = [ "article", "sketches" ]
+
 [lib]
 name = "stepper_lib"
 path = "src/lib.rs"
 
 [dependencies]
+stepper_macros = { path = "stepper_macros" }
+
 gcode = "0.6.1"
 glam = "0.24.0"
 serde = { version = "1.0.104", features = [ "derive" ] }
@@ -37,9 +43,6 @@ opt-level = 0
 
 [profile.release]
 opt-level = 3
-
-[workspace]
-exclude = [ "article", "sketches" ]
 
 # Examples
 [[example]]

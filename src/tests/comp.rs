@@ -1,7 +1,31 @@
-use crate::{StepperConst, StepperCtrl, SyncComp, Setup};
-use crate::comp::{GearJoint, Cylinder, CylinderTriangle};
-use crate::data::LinkedData;
-use crate::units::*;
+use crate::prelude::*;
+use crate as stepper_lib;
+
+#[derive(SyncCompGroup)]
+struct TestGroup {
+    pub base : StepperCtrl,
+    pub arm1 : StepperCtrl
+}
+
+#[test]
+fn group_dyn() {
+    let group_arr_stat = [
+        StepperCtrl::new_sim(StepperConst::GEN)
+    ];
+    let _group_arr_ref : &dyn SyncCompGroup<1> = &group_arr_stat;
+
+    let group_dyn_stat : [Box<dyn SyncComp>; 1] = [ 
+        Box::new(StepperCtrl::new_sim(StepperConst::GEN))
+    ];
+    let _group_dyn_ref : &dyn SyncCompGroup<1> = &group_dyn_stat;
+
+    let test = TestGroup {
+        base: StepperCtrl::new_sim(StepperConst::GEN),
+        arm1: StepperCtrl::new_sim(StepperConst::GEN)
+    };
+
+    let _test_ref : &dyn SyncCompGroup<2> = &test;
+}
 
 #[test]
 #[cfg_attr(not(feature = "rasp"), ignore = "run manually when in simulation mode")]

@@ -17,6 +17,8 @@ compile_error!("No-Std currently not available!");
     pub use comp::tool::SimpleTool;
     #[cfg(feature = "std")]
     pub use comp::asyn::{AsyncComp, Direction};
+    
+    pub use stepper_macros::SyncCompGroup;
 
     /// Collection of structs and functions for controlling Stepper Motors
     pub mod ctrl;
