@@ -17,7 +17,7 @@ name = "stepper_lib"
 path = "src/lib.rs"
 
 [dependencies]
-stepper_macros = { path = "stepper_macros" }
+stepper_macros = { path = "stepper_macros", version = "0.1.0" }
 
 gcode = "0.6.1"
 glam = "0.24.0"
