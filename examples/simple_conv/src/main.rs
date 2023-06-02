@@ -44,7 +44,7 @@ mod predefined {
         conv.apply_inertia(Inertia(1.0));
 
         // Set the maximum speed of the conveyor to 40 millimeters per second
-        conv.set_omega_max(Omega(40.0));
+        conv.set_omega_max(Omega(200.0));
     
         println!("Driving forward with 0.5 speed");
         conv.drive(Direction::CW, 0.5)?;
@@ -105,7 +105,7 @@ mod direct {
 
         // Set the maximum speed of the conveyor tp 40 millimeters per second
         ctrl.set_omega_max(
-            omega_for_motor(Omega(40.0))
+            omega_for_motor(Omega(200.0))
         );
     
         println!("Driving forward with 0.5 speed");
