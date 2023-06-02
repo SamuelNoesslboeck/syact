@@ -10,7 +10,7 @@ The cargo.toml file specified below is when running the example on a raspberry p
 # ...
 
 [dependencies]
-stepper_lib = { version = \"0.11.4\" } 
+stepper_lib = { version = \"0.11.6\" } 
 
 [features]
 rasp = [ \"stepper_lib/rasp\" ]

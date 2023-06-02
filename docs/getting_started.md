@@ -11,7 +11,7 @@ cargo add stepper_lib
 in your project command line, or add
 
 ```toml
-stepper_lib = "0.11.4"
+stepper_lib = "0.11.6"
 ```
 
 to your dependencies.Depending on which platform you are using, the build command for the library changes. It is not recommended to add a feature directly to the dependency, as the library will cause build errors if platforms are switched. 
@@ -20,7 +20,7 @@ Without any platform feature supplied, the library will automatically enter "sim
 
 ```toml
 [dependencies]
-stepper_lib = "0.11.4"
+stepper_lib = "0.11.6"
 # ...
 
 [features]
@@ -48,7 +48,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-stepper_lib = "0.11.4"          # Importing the library
+stepper_lib = "0.11.6"          # Importing the library
 
 [features]
 rasp = [ "stepper_lib/rasp" ]   # Creating the platform feature for our raspberry pi

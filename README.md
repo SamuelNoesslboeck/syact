@@ -43,7 +43,7 @@ Click to show Cargo.toml
 
 [dependencies]
 # Include the library configured for the raspberry pi
-stepper_lib = { version = "0.11.4", features = [ "rasp" ] } 
+stepper_lib = { version = "0.11.6", features = [ "rasp" ] } 
 
 # ...
 ```
@@ -87,13 +87,14 @@ fn main() -> Result<(), stepper_lib::Error> {
     Ok(())
 }
 ```
+
 (Source: [stepper_motor]("/examples/stepper_motor.rs"))
 
 ## Features
 
 - [x] Motors
   - [x] [Stepper motors](/examples/stepper_motor.rs)
-    - [x] Absolute/relative movements 
+    - [x] Absolute/relative movements
     - [x] Continuous movements
     - [ ] Microstepping
     - [ ] Inverting logical signals

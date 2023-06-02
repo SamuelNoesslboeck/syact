@@ -17,7 +17,7 @@ In this example we drive a cylinder by a certain amount of millimeters.
 
 [dependencies]
 # Include the library configured for the raspberry pi
-stepper_lib = { version = "0.11.4", features = [ "rasp" ] } 
+stepper_lib = { version = "0.11.6", features = [ "rasp" ] } 
 
 # ...
 ```
@@ -96,7 +96,7 @@ Click to show Cargo.toml
 
 [dependencies]
 # Include the library configured for the raspberry pi
-stepper_lib = { version = "0.11.4", features = [ "rasp" ] } 
+stepper_lib = { version = "0.11.6", features = [ "rasp" ] } 
 
 # ...
 ```
