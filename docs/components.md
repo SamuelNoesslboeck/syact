@@ -137,10 +137,6 @@ impl Setup for MyComp {
 
 impl SyncComp for MyComp {
     // Required memebers
-        fn consts<'a>(&'a self) -> &'a StepperConst {
-            todo!()
-        }
-        
         fn vars<'a>(&'a self) -> &'a stepper_lib::data::CompVars {
             todo!()     // Not required in this example
         }
