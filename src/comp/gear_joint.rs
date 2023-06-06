@@ -1,13 +1,12 @@
 use serde::{Serialize, Deserialize};
 
-use crate::{SyncComp, StepperCtrl, Setup};
-// use crate::math::MathActor;
+use crate::{SyncComp, StepperCtrl, Setup, StepperConst};
+use crate::comp::stepper::StepperComp;
 use crate::units::*;
 
 /// A bearing powered by a motor with a certain gear ratio
 #[derive(Debug, Serialize, Deserialize)]
-pub struct GearJoint
-{
+pub struct GearJoint {
     /// Steppercontrol for the motor of the bearing
     pub ctrl : StepperCtrl,
     
@@ -38,13 +37,8 @@ impl Setup for GearJoint {
     }
 }
 
-impl SyncComp for GearJoint
-{
+impl SyncComp for GearJoint {
     // Data
-        fn consts<'a>(&'a self) -> &'a crate::StepperConst {
-            self.ctrl.consts()    
-        }
-
         fn link<'a>(&'a self) -> &'a crate::data::LinkedData {
             self.ctrl.link()
         }
@@ -73,4 +67,10 @@ impl SyncComp for GearJoint
             super_gamma * self.ratio
         }
     //
+}
+
+impl StepperComp for GearJoint {
+    fn consts(&self) -> &StepperConst {
+        self.ctrl.consts()   
+    }
 }

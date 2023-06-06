@@ -1,12 +1,12 @@
 [package]
 name = "stepper_lib"
 authors = [ "Samuel Nösslböck <samuel.noesslboeck@gmail.com>" ]
-version = "0.11.6"
-description = "A simple library to control motors and components with controllers like the raspberry pi"
+version = "0.11.7"
+description = "A library to control motors, components and IOT-devices with controllers like the raspberry pi"
 edition = "2021"
 repository = "https://github.com/SamuelNoesslboeck/stepper_lib"
 license-file = "LICENSE"
-keywords = [ "no_std", "framework", "robotics" ]
+keywords = [ "framework", "robotics", "iot", "raspberry-pi" ]
 
 [workspace]
 members = [ "stepper_macros" ]
@@ -17,7 +17,7 @@ name = "stepper_lib"
 path = "src/lib.rs"
 
 [dependencies]
-stepper_macros = { path = "stepper_macros", version = "0.1.0" }
+stepper_macros = { path = "stepper_macros", version = "0.1.1" }
 
 gcode = "0.6.1"
 glam = "0.24.0"

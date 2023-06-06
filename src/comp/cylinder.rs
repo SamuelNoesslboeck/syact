@@ -1,15 +1,14 @@
 #[cfg(feature = "std")]
 use serde::{Serialize, Deserialize};
 
-use crate::{SyncComp, Setup};
+use crate::{SyncComp, Setup, StepperConst};
+use crate::comp::stepper::StepperComp;
 use crate::ctrl::StepperCtrl;
-
 use crate::units::*;
 
 /// Cylinder component struct
 #[derive(Debug, Serialize, Deserialize)]
-pub struct Cylinder
-{
+pub struct Cylinder {
     /// Data of the connected stepper motor
     pub ctrl : StepperCtrl,
 
@@ -18,8 +17,7 @@ pub struct Cylinder
     pub rte_ratio : f32
 }
 
-impl Cylinder
-{
+impl Cylinder {
     /// Create a new cylinder instance
     pub fn new(ctrl : StepperCtrl, rte_ratio : f32) -> Self {
         return Cylinder {
@@ -43,13 +41,8 @@ impl Setup for Cylinder {
     }
 }
 
-impl SyncComp for Cylinder 
-{
+impl SyncComp for Cylinder {
     // Data
-        fn consts<'a>(&'a self) -> &'a crate::StepperConst {
-            self.ctrl.consts()
-        }
-        
         fn link<'a>(&'a self) -> &'a crate::data::LinkedData {
             self.ctrl.link()
         }
@@ -92,4 +85,10 @@ impl SyncComp for Cylinder
             self.ctrl.apply_inertia(inertia * self.rte_ratio * self.rte_ratio / 1000_000.0)
         }
     //
+}
+
+impl StepperComp for Cylinder {
+    fn consts(&self) -> &StepperConst {
+        self.ctrl.consts()
+    }
 }

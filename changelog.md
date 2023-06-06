@@ -46,3 +46,13 @@
 - Added a procedural macro for the `SyncCompGroup` trait to automatically implement it on small structures
 - Added some documentation 
 
+## Version 0.11.7
+
+### Enhancements
+
+- Added stepper components
+- Added another proc macro for `StepperCompGroups`
+
+### Bug fixes
+
+- Fixed bug that caused the measurement of an `EndSwitch` to fail

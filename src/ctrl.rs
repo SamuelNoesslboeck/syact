@@ -8,6 +8,7 @@ use std::thread::JoinHandle;
 #[cfg(feature = "std")]
 use std::sync::mpsc::{Receiver, Sender, channel};
 
+use crate::comp::stepper::StepperComp;
 use crate::meas::MeasData;
 use crate::{SyncComp, Setup, lib_error};
 use crate::data::{LinkedData, StepperConst, CompVars}; 
@@ -558,10 +559,6 @@ impl StepperCtrl {
 
 impl SyncComp for StepperCtrl {
     // Data
-        fn consts<'a>(&'a self) -> &'a StepperConst {
-            &self.consts    
-        }
-
         fn vars<'a>(&'a self) -> &'a CompVars {
             &self.vars
         }
@@ -805,5 +802,8 @@ impl AsyncComp for StepperCtrl {
     }
 }
 
-
-
+impl StepperComp for StepperCtrl {
+    fn consts(&self) -> &StepperConst {
+        &self.consts
+    }
+}

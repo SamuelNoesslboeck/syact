@@ -3,6 +3,7 @@ pub use crate::{AsyncComp, Direction, Setup, StepperCtrl, SimpleTool, SyncComp, 
 
 pub use crate::comp::{Conveyor, Cylinder, CylinderTriangle, GearJoint, Tool};
 pub use crate::comp::tool;
+pub use crate::comp::stepper::*;
 
 pub use crate::ctrl::DcMotor;
 pub use crate::ctrl::pwm::PWMOutput;

@@ -1,11 +1,13 @@
 use serde::{Serialize, Deserialize};
 
 use crate::ctrl::Interrupter;
-use crate::{SyncComp, Setup};
+use crate::{SyncComp, Setup, StepperConst};
 use crate::comp::Cylinder;
 use crate::data::LinkedData;
 use crate::meas::MeasData;
 use crate::units::*;
+
+use super::stepper::StepperComp;
 
 /// A component representing a cylinder connected to two segments with constant lengths, forming a triangular shape
 /// 
@@ -21,8 +23,7 @@ use crate::units::*;
 /// on the variable length c, making them also variable. The most relevant angle being gamma, as it is the opposing angle to 
 /// the length c, representing the 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct CylinderTriangle 
-{
+pub struct CylinderTriangle {
     /// The cylinder of the triangle, being the *super component* for this one
     pub cylinder : Cylinder,
 
@@ -33,12 +34,10 @@ pub struct CylinderTriangle
     pub l_b : f32,
 }
 
-impl CylinderTriangle
-{
+impl CylinderTriangle {
     /// Creates a new instance of a [CylinderTriangle], 
     /// writing an initial length of the longer segments the cylinder, preventing initial calculation errors
-    pub fn new(cylinder : Cylinder, l_a : f32, l_b : f32) -> Self
-    {
+    pub fn new(cylinder : Cylinder, l_a : f32, l_b : f32) -> Self {
         let mut tri = CylinderTriangle {
             l_a, 
             l_b,
@@ -92,10 +91,6 @@ impl Setup for CylinderTriangle {
 
 impl SyncComp for CylinderTriangle {
     // Data
-        fn consts<'a>(&'a self) -> &'a crate::StepperConst {
-            self.cylinder.consts()    
-        }
-
         fn link<'a>(&'a self) -> &'a crate::data::LinkedData {
             self.cylinder.link()
         }
@@ -188,4 +183,10 @@ impl SyncComp for CylinderTriangle {
             self.cylinder.apply_inertia(inertia)
         }
     // 
+}
+
+impl StepperComp for CylinderTriangle {
+    fn consts(&self) -> &StepperConst {
+        self.cylinder.consts()
+    }
 }

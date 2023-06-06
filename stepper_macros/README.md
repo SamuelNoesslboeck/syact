@@ -11,18 +11,23 @@ Includes a derive proc-macro to implement `SyncCompGroup` for a struct consistin
 ```rust
 use stepper_lib::prelude::*;
 
-#[derive(SyncCompGroup)]
+// Simple group of components that consists of multiple fields
+#[derive(SyncCompGroup)]        // Automatically implements SyncCompGroup
+#[derive(StepperCompGroup)]     // Automatically implements StepperCompGroup
 struct TestGroup {
     pub base : StepperCtrl,
-    pub arm1 : StepperCtrl
+    pub arm : StepperCtrl
 }
 
 fn main() {
     let test = TestGroup {
         base: StepperCtrl::new_sim(StepperConst::GEN),
-        arm1: StepperCtrl::new_sim(StepperConst::GEN)
+        arm: StepperCtrl::new_sim(StepperConst::GEN)
     };
 
-    let _test_ref : &dyn SyncCompGroup<2> = &test;
+    let test_ref : &dyn SyncCompGroup<2> = &test;
+
+    // Usually requires multiple curve builders
+    let path_builder : PathBuilder<2> = test.create_path_builder();
 }
 ```

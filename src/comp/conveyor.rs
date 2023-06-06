@@ -5,6 +5,8 @@ use crate::{StepperCtrl, SyncComp, Setup, StepperConst, LinkedData, AsyncComp};
 use crate::comp::CompVars;
 use crate::units::*;
 
+use super::stepper::StepperComp;
+
 /// A simple conveyor powered by a stepper motor
 #[derive(Debug)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
@@ -32,10 +34,6 @@ impl Setup for Conveyor {
 }
 
 impl SyncComp for Conveyor {
-    fn consts<'a>(&'a self) -> &'a StepperConst {
-        self.ctrl.consts()
-    }
-
     fn vars<'a>(&'a self) -> &'a CompVars {
         self.ctrl.vars()
     }
@@ -86,5 +84,11 @@ impl AsyncComp for Conveyor {
 
     fn speed_f(&self) -> f32 {
         self.ctrl.speed_f()
+    }
+}
+
+impl StepperComp for Conveyor {
+    fn consts(&self) -> &StepperConst {
+        self.ctrl.consts()
     }
 }

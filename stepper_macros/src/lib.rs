@@ -100,3 +100,45 @@ pub fn sync_comp_group_derive(input : proc_macro::TokenStream) -> proc_macro::To
     let ast : DeriveInput = syn::parse(input).unwrap();
     sync_comp_group_impl(ast)
 }
+
+fn stepper_comp_group_impl(ast : DeriveInput) -> proc_macro::TokenStream {
+    match ast.data {
+        syn::Data::Struct(data) => {
+            let name = ast.ident;
+            let fields = data.fields;
+            let fields_count = fields.len();
+
+            let mut builder_stream = TokenStream::new();
+
+            let mut f_index : usize  = 0;
+            for field in fields {
+                let field_name = field.ident;
+                
+                builder_stream.extend::<TokenStream>(if let Some(n) = field_name.clone() {
+                    quote::quote! { self.#n.create_curve_builder(omega_0[#f_index]), }
+                } else {
+                    TokenStream::from_str(&format!("self.{}.create_curve_builder(omega_0[f_index]),", f_index)).unwrap()
+                });
+
+                f_index += 1;
+            }
+
+            quote::quote! {
+                impl StepperCompGroup<#fields_count> for #name { 
+                    fn create_path_builder(&self, omega_0 : [Omega; #fields_count]) -> PathBuilder<#fields_count> {
+                        PathBuilder::new([
+                            #builder_stream
+                        ])
+                    }
+                }
+            }.into()
+        },
+        _ => panic!("This macro can only be used on structs")
+    }
+}
+
+#[proc_macro_derive(StepperCompGroup)]
+pub fn stepper_comp_group_derive(input : proc_macro::TokenStream) -> proc_macro::TokenStream {
+    let ast : DeriveInput = syn::parse(input).unwrap();
+    stepper_comp_group_impl(ast)
+}

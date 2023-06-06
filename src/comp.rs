@@ -2,7 +2,7 @@ use core::any::type_name;
 
 use crate::ctrl::Interrupter;
 use crate::meas::MeasData;
-use crate::{Setup, StepperConst};
+use crate::Setup;
 use crate::data::{CompVars, LinkedData};
 use crate::units::*;
 
@@ -27,6 +27,9 @@ use crate::units::*;
     pub mod group;
     pub use group::SyncCompGroup;
 
+    /// Stepper motors and their unique methods and traits
+    pub mod stepper;
+
     #[doc = "../docs/tools.md"]
     pub mod tool;
     pub use tool::Tool;
@@ -46,9 +49,6 @@ fn no_super() -> crate::Error {
 /// the stepper motor component defined as it's super component. (See [GearJoint])
 pub trait SyncComp : Setup {
     // Data
-        /// Returns the constants the stepper motor used by the component
-        fn consts<'a>(&'a self) -> &'a StepperConst;
-
         /// Returns the variables of the component, such as load force, inertia, limits ...
         /// 
         /// ```rust
@@ -836,10 +836,6 @@ impl<T : AsMut<dyn SyncComp>> Setup for T {
 
 impl<T : AsRef<dyn SyncComp> + AsMut<dyn SyncComp>> SyncComp for T {
     // Data
-        fn consts<'a>(&'a self) -> &'a crate::StepperConst {
-            self.as_ref().consts()
-        }
-
         fn vars<'a>(&'a self) -> &'a crate::prelude::CompVars {
             self.as_ref().vars()
         }

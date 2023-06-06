@@ -2,6 +2,7 @@ use crate::prelude::*;
 use crate as stepper_lib;
 
 #[derive(SyncCompGroup)]
+#[derive(StepperCompGroup)]
 struct TestGroup {
     pub base : StepperCtrl,
     pub arm1 : StepperCtrl

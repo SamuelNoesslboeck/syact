@@ -1,6 +1,8 @@
 // Submodules
 mod comp;
 
+// mod curves;
+
 mod speed;
 
 // mod curves;      TODO: Fix!
