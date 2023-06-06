@@ -54,7 +54,7 @@ impl SimpleMeas for EndSwitch {
             let pin_opt = data.pin_mut(); 
 
             if let Some(pin) = pin_opt {
-                pin.is_low()
+                pin.is_high()
             } else {
                 false
             }
