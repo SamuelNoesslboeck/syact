@@ -163,15 +163,12 @@ impl SyncComp for CylinderTriangle {
         Ok(self.delta_for_this(delta, gamma))
     }
 
-    fn drive_rel_int(&mut self, mut delta : Delta, speed_f : f32, intr : Interrupter, intr_data : &mut dyn MeasData) 
+    /// See [SyncComp::drive_rel_int]
+    /// This override directly routes all values into `drive_rel_int` for the cylinder, as this function is often used to take measurements. 
+    /// Delta calculations do not make sense for this component as long as it has not been measured!
+    fn drive_rel_int(&mut self, delta : Delta, speed_f : f32, intr : Interrupter, intr_data : &mut dyn MeasData) 
     -> Result<(Delta, bool), crate::Error> {
-        let gamma = self.gamma();
-        
-        delta = self.delta_for_super(delta, gamma);
-        let mut delta_res = self.cylinder.drive_rel_int(delta, speed_f, intr, intr_data)?;
-        delta_res.0 = self.delta_for_this(delta_res.0, self.gamma_for_super(gamma));
-
-        Ok(delta_res)
+        self.cylinder.drive_rel_int(delta, speed_f, intr, intr_data)
     }
 
     // Forces
