@@ -85,3 +85,16 @@ impl MeasData for EndSwitch {
         }
     }
 }
+
+/// Struct that performs no measurement (placeholder)  \
+/// Will be removed soon!
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+pub struct NoMeas { }
+
+impl Setup for NoMeas { }
+
+impl SimpleMeas for NoMeas {
+    fn measure(&mut self, _ : &mut dyn SyncComp) -> Result<Delta, crate::Error> {
+        Ok(Delta::ZERO)
+    }
+}
