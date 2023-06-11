@@ -23,6 +23,7 @@ pub trait MeasData {
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub struct EndSwitch {
     max_dist : Delta,
+    set_val : Gamma,
     meas_speed_f : f32, 
 
     pin : u8,
@@ -33,9 +34,9 @@ pub struct EndSwitch {
 
 impl EndSwitch {
     /// Creates a new end switch
-    pub fn new(pin : u8, max_dist : Delta, meas_speed_f : f32) -> Self {
+    pub fn new(pin : u8, max_dist : Delta, meas_speed_f : f32, set_val : Gamma) -> Self {
         Self {
-            pin, max_dist, meas_speed_f,
+            pin, max_dist, meas_speed_f, set_val,
             sys_pin: None
         }
     }
@@ -61,6 +62,7 @@ impl SimpleMeas for EndSwitch {
         }, self)?; 
 
         if meas_res.1 {
+            comp.write_gamma(self.set_val);
             Ok(meas_res.0)
         } else {
             Err("Measurement failed! (Reached maximum distance)".into())
