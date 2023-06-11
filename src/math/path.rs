@@ -59,6 +59,8 @@ impl<'a, const N : usize> PathBuilder<'a, N> {
                 // let (time_res, fac_res) =  builder.next(delta, omega_tar); 
                 self.builders[n].next(delta, omega_tar);
             } else {
+                println!(" => {}: Fac: {}; Builder: {}", i, fac, self.builders[n].omega);
+
                 if time_real > tstack[i] {
                     tstack[i] = time_real;
                     for _n in 0 .. n {
@@ -74,7 +76,7 @@ impl<'a, const N : usize> PathBuilder<'a, N> {
         }
     
         self.nstack[i][n] = self.builders[n].get_node();
-        // println!("[{}, {}] Omega_0: {}, Omega: {}, tar: {}", n, i, self.nstack[i][n].omega_0, self.builders[n].omega, omega_tar);
+        println!("[i: {}, n: {}] Omega_0: {}, Omega: {}, tar: {}", i, n, self.nstack[i][n].omega_0, self.builders[n].omega, omega_tar);
     }
 
     /// Iterate a full row through the path
