@@ -14,7 +14,7 @@ in your project command line, or add
 stepper_lib = "0.11.6"
 ```
 
-to your dependencies.Depending on which platform you are using, the build command for the library changes. It is not recommended to add a feature directly to the dependency, as the library will cause build errors if platforms are switched. 
+to your dependencies.Depending on which platform you are using, the build command for the library changes. It is not recommended to add a feature directly to the dependency, as the library will cause build errors if platforms are switched.
 
 Without any platform feature supplied, the library will automatically enter "simulation-mode", which means no pins will actually be written to and all inputs checked return `true`. I recommend creating platform features for different implementations:
 
@@ -28,7 +28,7 @@ rasp = [ "stepper_lib/rasp" ]
 # ... 
 ```
 
-As the library is currently **only available for the raspberry pi**, the build command will look like this: 
+As the library is currently **only available for the raspberry pi**, the build command will look like this:
 
 ```sh
 cargo build --features="rasp"
@@ -41,6 +41,7 @@ For more information, see [platforms](./platforms.md).
 To demonstrate the tools of the library, let's assume we want to control a simple conveyor powered by a stepper motor. (See [the rust example](../examples/simple_conv/src/main.rs))
 
 The cargo file of our project:
+
 ```toml
 [package]
 name = "simple_conv"
@@ -61,7 +62,7 @@ const PIN_DIR : u8 = 17;        // Pin of the directional signal
 const PIN_STEP : u8 = 26;       // Pin of the step signal
 ```
 
-Below are three approches listed to showcase some of the functionalities of the library. 
+Below are three approches listed to showcase some of the functionalities of the library.
 
 > **Note**
 >
@@ -72,27 +73,37 @@ Below are three approches listed to showcase some of the functionalities of the 
 
 The easiest approch for this example would be using the predefined component from the library.
 
-```rust 
+```rust
 // Define the radius of the powered conveyor roll as a constant with 5 millimeters
 const R_ROLL : f32 = 10.0;
 
 pub fn predefined() -> Result<(), stepper_lib::Error> {
+    // First we crate our conveyor using a stepper motor and the radius of the roll that connects the belt to the motor
     let mut conv = Conveyor::new(
-        StepperCtrl::new(StepperConst::MOT_17HE15_1504S, PIN_DIR, PIN_STEP),        // The stepper motor
+        Stepper::new(StepperConst::MOT_17HE15_1504S, PIN_DIR, PIN_STEP),        // The stepper motor
         R_ROLL
     );
 
-    conv.write_link(LinkedData::GEN);
+    // Now we write the `LinkedData` to our component. The `LinkedData` is often data that is the same for 
+    // all components, e.g. supply voltage
+    conv.write_link(LinkedData {
+        u: 12.0,        // Voltage
+        s_f: 1.5        // Safety factor, the higher the factor, the safer is the stepper to not jump over steps,
+                        // however the performance suffers from very high safety factors
+    });
+
+    // Setup all the neccessary stuff for a stepper motor
+    // => Spawns the thread to execute async movements
     conv.setup()?;
     
     // Apply a inertia to the conveyor (possible masses on the belt, 1.0kg estimated)
     conv.apply_inertia(Inertia(1.0));
 
-    // Set the maximum speed of the conveyor to 40 millimeters per second
-    conv.set_omega_max(Omega(40.0));
+    // Set the maximum speed of the conveyor to 200 millimeters per second
+    conv.set_omega_max(Omega(200.0));
 
     println!("Driving forward with 0.5 speed");
-    conv.drive(Direction::CW, 0.5)?;
+    conv.drive(Direction::CW, 0.5)?;        // Drive with 100 mm/s speed (50%, 0.5)
     conv.await_inactive()?;
 
     println!(" -> Reached speed!");
@@ -100,7 +111,7 @@ pub fn predefined() -> Result<(), stepper_lib::Error> {
     sleep(1.0);
 
     println!("Driving forward with 0.8 speed");
-    conv.drive(Direction::CW, 0.8)?;
+    conv.drive(Direction::CW, 0.8)?;        // Drive with 160 mm/s speed (80%, 0.8)
     conv.await_inactive()?;
 
     println!(" -> Reached speed!");
@@ -108,7 +119,7 @@ pub fn predefined() -> Result<(), stepper_lib::Error> {
     sleep(2.0);
 
     println!("Driving backwards with 0.2 speed");
-    conv.drive(Direction::CCW, 0.2)?;
+    conv.drive(Direction::CCW, 0.2)?;       // Drive with 40 mm/s speed in the opposite direction (20%, 0.2)
     conv.await_inactive()?;
 
     println!("Reached speed!");
@@ -140,7 +151,7 @@ fn inertia_for_motor(inertia_conv : Inertia) -> Inertia {
 }
 
 pub fn direct_approach() -> Result<(), stepper_lib::Error> {
-    let mut ctrl = StepperCtrl::new(StepperConst::MOT_17HE15_1504S, PIN_DIR, PIN_STEP);
+    let mut ctrl = Stepper::new(StepperConst::MOT_17HE15_1504S, PIN_DIR, PIN_STEP);
     ctrl.write_link(LinkedData::GEN);
     ctrl.setup()?;
     
@@ -184,7 +195,6 @@ pub fn direct_approach() -> Result<(), stepper_lib::Error> {
 }
 ```
 
-
 ### Defining a custom component
 
-In special cases the default structs offered by the library are not flexible enough, therefore a custom component is required. See [custom components](./components.md#custom-components). 
+In special cases the default structs offered by the library are not flexible enough, therefore a custom component is required. See [custom components](./components.md#custom-components).

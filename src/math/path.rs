@@ -36,30 +36,30 @@ impl<'a, const N : usize> PathBuilder<'a, N> {
     }
 
     /// Iterate through the path
-    pub fn next(&mut self, tstack : &mut [Time], dstack : &[[Delta; N]], n : usize, i : usize) {
+    pub fn next(&mut self, tstack : &mut [Time], dstack : &[[Delta; N]], omega_tar_opt : Option<Omega>, n : usize, i : usize) {
         let time = tstack[i];
         let delta = dstack[i][n];
-        let omega_tar = delta / time;
-        let ( time_real, fac ) = self.builders[n].next(delta, omega_tar);
+        let omega_tar = omega_tar_opt.unwrap_or(delta / time);
+        let ( time_real, fac ) = self.builders[n].next(delta, omega_tar, None);
     
-        if fac < 1.0 {
+        if (fac - 1.0) < -0.005 {               // Hysteresis
             if self.builders[n].was_deccel() {
                 let omega_err = self.builders[n].omega - omega_tar;
                 let omega_cor = self.builders[n].omega_0 - omega_err;
         
-                println!(" => {}: Fac: {}; Correct: {}, Error: {}, Builder: {}", i, fac, omega_cor, omega_err, self.builders[n].omega);
+                // println!(" => {}: Fac: {}; Correct: {}, Error: {}, Builder: {}", i, fac, omega_cor, omega_err, self.builders[n].omega);
         
                 tstack[i - 1] = dstack[i - 1][n] / omega_cor;
     
                 for _n in 0 ..=n {
                     self.builders[_n].load_node(&self.nstack[i - 1][_n]);
-                    self.next(tstack, dstack, _n, i - 1);
+                    self.next(tstack, dstack, None, _n, i - 1);
                 }
         
                 // let (time_res, fac_res) =  builder.next(delta, omega_tar); 
-                self.builders[n].next(delta, omega_tar);
+                self.builders[n].next(delta, omega_tar, None);
             } else {
-                println!(" => {}: Fac: {}; Builder: {}", i, fac, self.builders[n].omega);
+                // println!(" => {}: Fac: {}; Builder: {}", i, fac, self.builders[n].omega);
 
                 if time_real > tstack[i] {
                     tstack[i] = time_real;
@@ -69,40 +69,49 @@ impl<'a, const N : usize> PathBuilder<'a, N> {
                         } else {
                             self.builders[_n].load_node(&self.nstack[i - 1][_n]);
                         }
-                        self.next(tstack, dstack, _n, i);
+                        self.next(tstack, dstack, None, _n, i);
                     }
                 }
             }
         }
     
         self.nstack[i][n] = self.builders[n].get_node();
-        println!("[i: {}, n: {}] Omega_0: {}, Omega: {}, tar: {}", i, n, self.nstack[i][n].omega_0, self.builders[n].omega, omega_tar);
+        // println!("[i: {}, n: {}] Omega_0: {}, Omega: {}, tar: {}", i, n, self.nstack[i][n].omega_0, self.builders[n].omega, omega_tar);
     }
 
     /// Iterate a full row through the path
-    pub fn next_all(&mut self, tstack : &mut [Time], dstack : &[[Delta; N]], i : usize) {
+    pub fn next_all(&mut self, tstack : &mut [Time], dstack : &[[Delta; N]], omega_tar_opt : [Option<Omega>; N], i : usize) {
         for n in 0 .. N {
-            self.next(tstack, dstack, n, i);
+            self.next(tstack, dstack, omega_tar_opt[n], n, i);
         }
     }
 
     /// Generate the complete path
-    pub fn generate(&mut self, tstack : &mut [Time], dstack : &[[Delta; N]]) {
+    pub fn generate(&mut self, tstack : &mut [Time], dstack : &[[Delta; N]], omega_last : [Option<Omega>; N]) {
         if tstack.len() != dstack.len() {
             panic!("Stacks must be equal in size!");
         }
 
         self.nstack = vec![ [ PathNode::default(); N ]; tstack.len() ];
 
-        for i in 0 .. tstack.len() {
+        for i in 0 .. (tstack.len() - 1) {
             for n in 0 .. N {
-                self.next(tstack, dstack, n, i);
+                self.next(tstack, dstack, None, n, i);
             }
+        }
+
+        for n in 0 .. N {
+            self.next(tstack, dstack, omega_last[n], n, tstack.len() - 1);
         }
     }
 
     /// Get a pathnode stored in the builder
     pub fn get_node(&'a self, n : usize, i : usize) -> &'a PathNode {
         &self.nstack[i][n]
+    }
+
+    /// Consumes the builder, returning it's nodes
+    pub fn unpack(self) -> Vec<[PathNode; N]> {
+        self.nstack
     }
 }

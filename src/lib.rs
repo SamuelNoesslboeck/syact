@@ -22,7 +22,7 @@ compile_error!("No-Std currently not available!");
 
     /// Collection of structs and functions for controlling Stepper Motors
     pub mod ctrl;
-    pub use ctrl::StepperCtrl;
+    pub use ctrl::Stepper;
 
     /// Structs for storing characteristics of stepper motors and devices
     pub mod data;

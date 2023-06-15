@@ -33,12 +33,12 @@ const OMEGA : Omega = Omega(10.0);
 // Defining component structure
 #[derive(Debug)]
 struct MyComp {
-    ctrl : StepperCtrl,     // The stepper motor built into the component
+    ctrl : Stepper,     // The stepper motor built into the component
     ratio : f32             // The gear ratio, e.g. a spingle or
 }
 
 impl MyComp {
-    pub fn new(ctrl : StepperCtrl, ratio : f32) -> Self {
+    pub fn new(ctrl : Stepper, ratio : f32) -> Self {
         Self { ctrl, ratio }
     }
 }
@@ -98,7 +98,7 @@ impl SyncComp for MyComp {
 fn main() -> Result<(), stepper_lib::Error> {
     // Create the controls for a stepper motor
     let mut comp = MyComp::new(
-        StepperCtrl::new(StepperConst::MOT_17HE15_1504S, PIN_DIR, PIN_STEP),
+        Stepper::new(StepperConst::MOT_17HE15_1504S, PIN_DIR, PIN_STEP),
         2.0 // Example ratio
     );
     // Link the component to a system

@@ -15,14 +15,14 @@ use stepper_lib::prelude::*;
 #[derive(SyncCompGroup)]        // Automatically implements SyncCompGroup
 #[derive(StepperCompGroup)]     // Automatically implements StepperCompGroup
 struct TestGroup {
-    pub base : StepperCtrl,
-    pub arm : StepperCtrl
+    pub base : Stepper,
+    pub arm : Stepper
 }
 
 fn main() {
     let test = TestGroup {
-        base: StepperCtrl::new_sim(StepperConst::GEN),
-        arm: StepperCtrl::new_sim(StepperConst::GEN)
+        base: Stepper::new_sim(StepperConst::GEN),
+        arm: Stepper::new_sim(StepperConst::GEN)
     };
 
     let test_ref : &dyn SyncCompGroup<2> = &test;

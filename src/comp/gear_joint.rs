@@ -1,22 +1,25 @@
 use serde::{Serialize, Deserialize};
 
-use crate::{SyncComp, StepperCtrl, Setup, StepperConst};
+use crate::{SyncComp, Stepper, Setup, StepperConst};
 use crate::comp::stepper::StepperComp;
 use crate::units::*;
 
+/// A gear joint using a stepper motor to power itself
+pub type StepperGearJoint = GearJoint<Stepper>;
+
 /// A bearing powered by a motor with a certain gear ratio
 #[derive(Debug, Serialize, Deserialize)]
-pub struct GearJoint {
+pub struct GearJoint<C : SyncComp> {
     /// Steppercontrol for the motor of the bearing
-    pub ctrl : StepperCtrl,
+    pub ctrl : C,
     
     /// Angle ration from motor to bearing (omega_b / omega_m)
     pub ratio : f32
 }
 
-impl GearJoint {
+impl<C : SyncComp> GearJoint<C> {
     /// Creates a new `Gearbearing`
-    pub fn new(ctrl : StepperCtrl, ratio : f32) -> Self {
+    pub fn new(ctrl : C, ratio : f32) -> Self {
         Self {
             ctrl,
             ratio
@@ -24,20 +27,13 @@ impl GearJoint {
     }
 }
 
-// impl crate::math::MathActor for GearJoint
-// {
-//     fn accel_dyn(&self, omega : Omega, gamma : Gamma) -> Alpha {
-//         self.alpha_for_this(self.ctrl.accel_dyn(self.omega_for_super(omega, gamma), self.gamma_for_super(gamma)), self.gamma_for_super(gamma))
-//     }
-// }
-
-impl Setup for GearJoint {
+impl<C : SyncComp> Setup for GearJoint<C> {
     fn setup(&mut self) -> Result<(), crate::Error> {
         self.ctrl.setup() 
     }
 }
 
-impl SyncComp for GearJoint {
+impl<C : SyncComp> SyncComp for GearJoint<C> {
     // Data
         fn link<'a>(&'a self) -> &'a crate::data::LinkedData {
             self.ctrl.link()
@@ -69,8 +65,12 @@ impl SyncComp for GearJoint {
     //
 }
 
-impl StepperComp for GearJoint {
+impl<C : StepperComp> StepperComp for GearJoint<C> {
     fn consts(&self) -> &StepperConst {
         self.ctrl.consts()   
+    }
+
+    fn drive_nodes(&mut self, delta : Delta, omega_0 : Omega, omega_tar : Omega, corr : &mut (Delta, Time)) -> Result<(), crate::Error> {
+        self.ctrl.drive_nodes(delta, omega_0, omega_tar, corr)
     }
 }

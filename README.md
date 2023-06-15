@@ -66,7 +66,7 @@ const OMEGA : Omega = Omega(10.0);
 
 fn main() -> Result<(), stepper_lib::Error> {
     // Create the controls for a stepper motor
-    let mut ctrl = StepperCtrl::new(StepperConst::MOT_17HE15_1504S, PIN_DIR, PIN_STEP);
+    let mut ctrl = Stepper::new(StepperConst::MOT_17HE15_1504S, PIN_DIR, PIN_STEP);
     // Link the component to a system
     ctrl.write_link(LinkedData { 
         u: 12.0,    // System voltage in volts

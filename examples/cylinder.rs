@@ -30,7 +30,7 @@ const OMEGA : Omega = Omega(20.0);      // 20 millimeters per second
 fn main() -> Result<(), stepper_lib::Error> {
     // Create the controls for a stepper motor
     let mut cylinder = Cylinder::new(
-        StepperCtrl::new(StepperConst::MOT_17HE15_1504S, PIN_DIR, PIN_STEP),
+        Stepper::new(StepperConst::MOT_17HE15_1504S, PIN_DIR, PIN_STEP),
         1.273       // Spindle pitch of the cylinder, per radian the cylinder extends for 1.273 millimeters,
                     // this factor calculates out of the pitch per revolve (8mm) divided by 2*PI (for radians) 
     );

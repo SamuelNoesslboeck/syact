@@ -11,16 +11,16 @@ use crate::units::*;
     pub mod asyn;
 
     mod conveyor;
-    pub use conveyor::Conveyor;
+    pub use conveyor::{Conveyor, StepperConveyor};
 
     mod cylinder;
-    pub use cylinder::Cylinder;
+    pub use cylinder::{Cylinder, StepperCylinder};
 
     mod cylinder_triangle;
-    pub use cylinder_triangle::CylinderTriangle;
+    pub use cylinder_triangle::{CylinderTriangle, StepperCylTriangle};
 
     mod gear_joint;
-    pub use gear_joint::GearJoint;
+    pub use gear_joint::{GearJoint, StepperGearJoint};
 
     /// A module for component groups, as they are used in various robots. The components are all sharing the same 
     /// [LinkedData](crate::data::LinkedData) and their movements are coordinated. 
@@ -52,7 +52,7 @@ pub trait SyncComp : Setup {
         /// Returns the variables of the component, such as load force, inertia, limits ...
         /// 
         /// ```rust
-        /// use stepper_lib::{SyncComp, StepperCtrl, StepperConst};
+        /// use stepper_lib::{SyncComp, Stepper, StepperConst};
         /// use stepper_lib::comp::GearJoint;
         /// use stepper_lib::units::*;
         /// 
@@ -65,7 +65,7 @@ pub trait SyncComp : Setup {
         /// // Create a new gear bearing (implements SyncComp)
         /// let mut gear = GearJoint::new(
         ///     // Stepper Motor as subcomponent (also implements SyncComp)
-        ///     StepperCtrl::new_sim(StepperConst::GEN), 
+        ///     Stepper::new_sim(StepperConst::GEN), 
         /// 0.5);    // Ratio is set to 0.5, which means for each radian the motor moves, the bearing moves for half a radian
         /// 
         /// ```
@@ -97,7 +97,7 @@ pub trait SyncComp : Setup {
         /// // Create a new cylinder (implements SyncComp)
         /// let mut cylinder = Cylinder::new(
         ///     // Stepper Motor as subcomponent (also implements SyncComp)
-        ///     StepperCtrl::new_sim(StepperConst::GEN), 
+        ///     Stepper::new_sim(StepperConst::GEN), 
         /// 1.0);     
         /// 
         /// // Overwrite the cylinder position
@@ -124,7 +124,7 @@ pub trait SyncComp : Setup {
         /// // Create a new cylinder (implements SyncComp)
         /// let mut cylinder = Cylinder::new(
         ///     // Stepper Motor as subcomponent (also implements SyncComp)
-        ///     StepperCtrl::new_sim(StepperConst::GEN), 
+        ///     Stepper::new_sim(StepperConst::GEN), 
         /// 1.0);    
         /// 
         /// // Overwrite position in super component
@@ -151,7 +151,7 @@ pub trait SyncComp : Setup {
         /// // Create a new cylinder (implements SyncComp)
         /// let mut cylinder = Cylinder::new(
         ///     // Stepper Motor as subcomponent (also implements SyncComp)
-        ///     StepperCtrl::new_sim(StepperConst::GEN), 
+        ///     Stepper::new_sim(StepperConst::GEN), 
         /// 2.0);    // Ratio is set to 2.0, which means for each radian the motor moves, the cylinder moves for 2.0 mm
         /// 
         /// assert_eq!(Gamma(1.0), cylinder.gamma_for_super(Gamma(2.0)));
@@ -174,7 +174,7 @@ pub trait SyncComp : Setup {
         /// // Create a new cylinder (implements SyncComp)
         /// let mut cylinder = Cylinder::new(
         ///     // Stepper Motor as subcomponent (also implements SyncComp)
-        ///     StepperCtrl::new_sim(StepperConst::GEN), 
+        ///     Stepper::new_sim(StepperConst::GEN), 
         /// 2.0);    // Ratio is set to 2.0, which means for each radian the motor moves, the cylinder moves for 2.0 mm
         /// 
         /// assert_eq!(Gamma(2.0), cylinder.gamma_for_this(Gamma(1.0)));
@@ -184,7 +184,8 @@ pub trait SyncComp : Setup {
             super_gamma
         }   
 
-        /// Converts the given **absolute** distance for the super component to the **absolute** distance for this component
+        /// Converts the given **absolute** distance for this component to the **absolute** distance for the lowest subcomponent 
+        /// of this structure
         /// 
         /// # Example
         /// 
@@ -197,7 +198,7 @@ pub trait SyncComp : Setup {
         /// // Create a new cylinder (implements SyncComp)
         /// let mut cylinder = Cylinder::new(
         ///     // Stepper Motor as subcomponent (also implements SyncComp)
-        ///     StepperCtrl::new_sim(StepperConst::GEN), 
+        ///     Stepper::new_sim(StepperConst::GEN), 
         /// 2.0);    // Ratio is set to 2.0, which means for each radian the motor moves, the cylinder moves for 2.0 mm
         /// 
         /// assert_eq!(Gamma(1.0), cylinder.abs_super_gamma(Gamma(2.0)));
@@ -229,7 +230,7 @@ pub trait SyncComp : Setup {
         /// // Create a new cylinder (implements SyncComp)
         /// let mut cylinder = Cylinder::new(
         ///     // Stepper Motor as subcomponent (also implements SyncComp)
-        ///     StepperCtrl::new_sim(StepperConst::GEN), 
+        ///     Stepper::new_sim(StepperConst::GEN), 
         /// 0.5);    // Ratio is set to 0.5, which means for each radian the motor moves, the cylinder moves for 0.5 mm
         /// 
         /// cylinder.write_gamma(POS);
@@ -257,7 +258,7 @@ pub trait SyncComp : Setup {
         /// // Create a new cylinder (implements SyncComp)
         /// let mut cylinder = Cylinder::new(
         ///     // Stepper Motor as subcomponent (also implements SyncComp)
-        ///     StepperCtrl::new_sim(StepperConst::GEN), 
+        ///     Stepper::new_sim(StepperConst::GEN), 
         /// 0.5);    // Ratio is set to 0.5, which means for each radian the motor moves, the cylinder moves for 0.5 mm
         /// 
         /// cylinder.write_gamma(POS);
@@ -425,7 +426,7 @@ pub trait SyncComp : Setup {
         /// // Create a new cylinder (implements SyncComp)
         /// let mut cylinder = Cylinder::new(
         ///     // Stepper Motor as subcomponent (also implements SyncComp)
-        ///     StepperCtrl::new_sim(StepperConst::GEN), 
+        ///     Stepper::new_sim(StepperConst::GEN), 
         /// 0.5);    // Ratio is set to 0.5, which means for each radian the motor moves, the cylinder moves for 0.5 mm
         /// 
         /// cylinder.write_gamma(POS);
@@ -458,7 +459,7 @@ pub trait SyncComp : Setup {
         /// // Create a new cylinder (implements SyncComp)
         /// let mut cylinder = Cylinder::new(
         ///     // Stepper Motor as subcomponent (also implements SyncComp)
-        ///     StepperCtrl::new_sim(StepperConst::GEN), 
+        ///     Stepper::new_sim(StepperConst::GEN), 
         /// 0.5);    // Ratio is set to 0.5, which means for each radian the motor moves, the cylinder moves for 0.5 mm
         /// 
         /// cylinder.write_gamma(POS);
@@ -538,7 +539,7 @@ pub trait SyncComp : Setup {
         /// // Create a new gear bearing (implements SyncComp)
         /// let mut gear = GearJoint::new(
         ///     // Stepper Motor as subcomponent (also implements SyncComp)
-        ///     StepperCtrl::new_sim(StepperConst::GEN), 
+        ///     Stepper::new_sim(StepperConst::GEN), 
         /// 0.5);    // Ratio is set to 0.5, which means for each radian the motor moves, the bearing moves for half a radian
         /// 
         /// gear.set_limit(Some(LIM_MIN), Some(LIM_MAX));
@@ -585,7 +586,7 @@ pub trait SyncComp : Setup {
         /// // Create a new gear bearing (implements SyncComp)
         /// let mut gear = GearJoint::new(
         ///     // Stepper Motor as subcomponent (also implements SyncComp)
-        ///     StepperCtrl::new_sim(StepperConst::GEN), 
+        ///     Stepper::new_sim(StepperConst::GEN), 
         /// 0.5);    // Ratio is set to 0.5, which means for each radian the motor moves, the bearing moves for half a radian
         /// gear.write_link(LinkedData::GEN);           // Link component for driving
         /// 
@@ -627,7 +628,7 @@ pub trait SyncComp : Setup {
         /// // Create a new gear bearing (implements SyncComp)
         /// let mut gear = GearJoint::new(
         ///     // Stepper Motor as subcomponent (also implements SyncComp)
-        ///     StepperCtrl::new_sim(StepperConst::GEN), 
+        ///     Stepper::new_sim(StepperConst::GEN), 
         /// 0.5);    // Ratio is set to 0.5, which means for each radian the motor moves, the bearing moves for half a radian
         /// 
         /// gear.set_limit(Some(LIM_MIN), Some(LIM_MAX));
@@ -673,7 +674,7 @@ pub trait SyncComp : Setup {
         /// The difference to [SyncComp::set_limit()] is that this function **overwrites** the current limits set.
         /// 
         /// ```rust
-        /// use stepper_lib::{SyncComp, StepperCtrl, StepperConst};
+        /// use stepper_lib::{SyncComp, Stepper, StepperConst};
         /// use stepper_lib::comp::GearJoint;
         /// use stepper_lib::units::*;
         /// 
@@ -686,7 +687,7 @@ pub trait SyncComp : Setup {
         /// // Create a new gear bearing (implements SyncComp)
         /// let mut gear = GearJoint::new(
         ///     // Stepper Motor as subcomponent (also implements SyncComp)
-        ///     StepperCtrl::new_sim(StepperConst::GEN), 
+        ///     Stepper::new_sim(StepperConst::GEN), 
         /// 0.5);    // Ratio is set to 0.5, which means for each radian the motor moves, the bearing moves for half a radian
         /// 
         /// gear.set_limit(Some(LIM_MIN), Some(LIM_MAX));
@@ -731,7 +732,7 @@ pub trait SyncComp : Setup {
         /// Apply a load force to the component, slowing down movements 
         /// 
         /// ```rust
-        /// use stepper_lib::{SyncComp, StepperCtrl, StepperConst};
+        /// use stepper_lib::{SyncComp, Stepper, StepperConst};
         /// use stepper_lib::comp::GearJoint;
         /// use stepper_lib::units::*;
         /// 
@@ -741,7 +742,7 @@ pub trait SyncComp : Setup {
         /// // Create a new gear bearing (implements SyncComp)
         /// let mut gear = GearJoint::new(
         ///     // Stepper Motor as subcomponent (also implements SyncComp)
-        ///     StepperCtrl::new_sim(StepperConst::GEN), 
+        ///     Stepper::new_sim(StepperConst::GEN), 
         /// 0.5);    // Ratio is set to 0.5, which means for each radian the motor moves, the bearing moves for half a radian
         /// 
         /// gear.apply_force(FORCE);
@@ -768,7 +769,7 @@ pub trait SyncComp : Setup {
         /// Panics if no super component or override of the function has been provided.
         /// 
         /// ```rust
-        /// use stepper_lib::{SyncComp, StepperCtrl, StepperConst};
+        /// use stepper_lib::{SyncComp, Stepper, StepperConst};
         /// use stepper_lib::comp::GearJoint;
         /// use stepper_lib::units::*;
         /// 
@@ -778,7 +779,7 @@ pub trait SyncComp : Setup {
         /// // Create a new gear bearing (implements SyncComp)
         /// let mut gear = GearJoint::new(
         ///     // Stepper Motor as subcomponent (also implements SyncComp)
-        ///     StepperCtrl::new_sim(StepperConst::GEN), 
+        ///     Stepper::new_sim(StepperConst::GEN), 
         /// 0.5);    // Ratio is set to 0.5, which means for each radian the motor moves, the bearing moves for half a radian
         /// 
         /// // Applies the inertia to the gearbearing component

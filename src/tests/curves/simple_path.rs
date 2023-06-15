@@ -14,8 +14,8 @@ fn simple_path() {
     vars.f_bend = 0.1;
     
     let mut builder = PathBuilder::new([
-            CurveBuilder::new(&consts, &vars, &lk, Omega::ZERO),
-            CurveBuilder::new(&consts, &vars, &lk, Omega::ZERO)
+        CurveBuilder::new(&consts, &vars, &lk, Omega::ZERO),
+        CurveBuilder::new(&consts, &vars, &lk, Omega::ZERO)
     ]);
 
     let mut dstack = vec![ ];

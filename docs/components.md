@@ -3,6 +3,7 @@
 A component (`trait SyncComp` in the library) represents a synchronous motor, optionally connected to a mechanical structure that transforms the rotatory movements created by the motor. If a struct implements the `SyncComp` trait, it can be linked into a group with `SyncCompGroup`, later required in the [sybot_lib](https://github.com/SamuelNoesslboeck/sybot_lib).
 
 The library does include some standard components commonly used
+
 - *Cylinder*, a simple cylinder translating the rotatory movements of a motor to a linear extension
 - *GearJoint*, a motor connected to a gear that translates the movement with a certain ratio
 - *Cylinder-triangle*, a cylinder being the hypotenuse in a triangular shape, creating a high torque/slow movement joint
@@ -21,12 +22,13 @@ stepper_lib = { version = "0.11.6", features = [ "rasp" ] }
 
 # ...
 ```
+
 </details>
 <p></p>
 
 ```rust
 // Include components and data
-use stepper_lib::{StepperCtrl, StepperConst, SyncComp, Setup};
+use stepper_lib::{Stepper, StepperConst, SyncComp, Setup};
 use stepper_lib::comp::Cylinder;
 use stepper_lib::data::LinkedData;
 // Include the unit system
@@ -43,7 +45,7 @@ const OMEGA : Omega = Omega(20.0);      // 20 millimeters per second
 fn main() -> Result<(), stepper_lib::Error> {
     // Create the controls for a stepper motor
     let mut cylinder = Cylinder::new(
-        StepperCtrl::new(
+        Stepper::new(
             StepperConst::MOT_17HE15_1504S, 
             PIN_DIR, 
             PIN_STEP
@@ -78,9 +80,10 @@ fn main() -> Result<(), stepper_lib::Error> {
 
 ## Custom components
 
-If a component is desired that is not included in the standard components, then a custom component can be created. Simply implement the `SyncComp` trait for the component. 
+If a component is desired that is not included in the standard components, then a custom component can be created. Simply implement the `SyncComp` trait for the component.
 
 There are two ways of defining a new component
+
 - Defining a super component, which would be the motor to a gear or the cylinder in the `CylinderTriangle`, the only functions that have to be overwritten then are the functions required to communicate with the super component. Though in many cases some kind of ratio is added.
 - Completely implementing the trait, therefore defining a completely new type of motor.
 
@@ -100,6 +103,7 @@ stepper_lib = { version = "0.11.6", features = [ "rasp" ] }
 
 # ...
 ```
+
 </details>
 <p></p>
 
@@ -118,12 +122,12 @@ const OMEGA : Omega = Omega(10.0);
 // Defining component structure
 #[derive(Debug)]
 struct MyComp {
-    ctrl : StepperCtrl,     // The stepper motor built into the component
+    ctrl : Stepper,     // The stepper motor built into the component
     ratio : f32             // The gear ratio, e.g. a spingle or
 }
 
 impl MyComp {
-    pub fn new(ctrl : StepperCtrl, ratio : f32) -> Self {
+    pub fn new(ctrl : Stepper, ratio : f32) -> Self {
         Self { ctrl, ratio }
     }
 }
@@ -183,7 +187,7 @@ impl SyncComp for MyComp {
 fn main() -> Result<(), stepper_lib::Error> {
     // Create the controls for a stepper motor
     let mut comp = MyComp::new(
-        StepperCtrl::new(StepperConst::MOT_17HE15_1504S, PIN_DIR, PIN_STEP),
+        Stepper::new(StepperConst::MOT_17HE15_1504S, PIN_DIR, PIN_STEP),
         2.0 // Example ratio
     );
     // Link the component to a system

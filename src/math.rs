@@ -34,7 +34,9 @@ pub struct CurveBuilder<'a> {
     pub delta : Delta,
 
     /// Time traveled within the last node
-    pub time : Time,
+    pub time : Time,    
+    /// Total time of the curve processing
+    pub time_total : Time,
 
     consts : &'a StepperConst,
     var : &'a CompVars,
@@ -60,6 +62,7 @@ impl<'a> CurveBuilder<'a> {
             delta: Delta::ZERO,
 
             time: Time::ZERO,
+            time_total: Time::ZERO,
 
             consts,
             var,
@@ -75,6 +78,7 @@ impl<'a> CurveBuilder<'a> {
         self.gamma = Gamma::ZERO;
         self.delta = Delta::ZERO;
         self.time = Time::ZERO;
+        self.time_total = Time::ZERO;
     }
 
     /// Set the speed of this `CurveBuilder` 
@@ -100,27 +104,39 @@ impl<'a> CurveBuilder<'a> {
     }
 
     /// Generate the next node
-    pub fn next(&mut self, mut delta : Delta, mut omega_tar : Omega) -> (Time, f32) {
+    pub fn next(&mut self, delta : Delta, mut omega_tar : Omega, alpha : Option<Alpha>) -> (Time, f32) {
         if (omega_tar.0 * self.omega.0) < 0.0 {
             omega_tar = Omega::ZERO;
-        } else if omega_tar < Omega::ZERO {
-            delta = -delta;
         }
-
-        self.alpha = self.consts.alpha_max_dyn(
-            force::torque_dyn(self.consts, 
-                    (self.omega /* + omega_tar */).abs() /* / 2.0 */ / self.var.f_bend, self.lk.u) / self.lk.s_f * self.var.f_bend, 
-                self.var
-        ).unwrap();
 
         let alpha_max = Alpha((omega_tar.powi(2) - self.omega.powi(2)).0 / 2.0 / delta.0).abs();
 
-        if alpha_max < self.alpha {
-            self.alpha = alpha_max;
-        }
-        
-        if omega_tar < self.omega {
-            self.alpha = -self.alpha;
+        if let Some(a) = alpha {
+            self.alpha = a;
+
+            if alpha_max < self.alpha { 
+                self.alpha = alpha_max;
+            }
+
+            if self.alpha < Alpha::ZERO {
+                if -alpha_max > self.alpha {
+                    self.alpha = -alpha_max;
+                }
+            }
+        } else {
+            self.alpha = self.consts.alpha_max_dyn(
+                force::torque_dyn(self.consts, 
+                        (self.omega /* + omega_tar */).abs() /* / 2.0 */ / self.var.f_bend, self.lk.u) / self.lk.s_f * self.var.f_bend, 
+                    self.var
+            ).unwrap();
+    
+            if alpha_max < self.alpha {
+                self.alpha = alpha_max;
+            }
+            
+            if omega_tar < self.omega {
+                self.alpha = -self.alpha;
+            }
         }
 
         let time; let omega;
@@ -142,6 +158,7 @@ impl<'a> CurveBuilder<'a> {
         self.omega_0 = self.omega;
         self.omega = omega;
         self.time = time;
+        self.time_total += time;
 
         let mut f = (self.omega - self.omega_0) / (omega_tar - self.omega_0);
 
@@ -158,23 +175,29 @@ impl<'a> CurveBuilder<'a> {
     }
 
     /// Calculates the next step in an acceleration curve and returns the step-time
-    pub fn next_step_pos(&mut self) -> Time {
-        self.next(self.consts.step_ang(), self.max_speed()).0
+    pub fn next_step_pos(&mut self, alpha : Option<Alpha>) -> Time {
+        self.next(self.consts.step_ang(), self.max_speed(), alpha).0
     }
 
     /// Calculates the next step in an decceleration curve and returns the step-time
-    pub fn next_step_neg(&mut self) -> Time {
-        self.next(self.consts.step_ang(), -self.max_speed()).0
+    pub fn next_step_neg(&mut self, alpha : Option<Alpha>) -> Time {
+        self.next(self.consts.step_ang(), -self.max_speed(), alpha).0
     }
 
     #[inline(always)]
-    fn next_step(&mut self, omega : Omega, time : &mut Time) -> bool {
+    fn next_step(&mut self, omega : Omega, time : &mut Time, alpha : Option<Alpha>) -> bool {
+        let step_delta = if (self.omega + omega) >= Omega::ZERO {
+            self.consts.step_ang()
+        } else {
+            -self.consts.step_ang()
+        };
+
         if omega > self.omega {
-            *time = self.next_step_pos();
+            *time = self.next(step_delta, self.max_speed(), alpha).0;
 
             self.omega >= omega 
         } else {
-            *time = self.next_step_neg();
+            *time = self.next(step_delta, -self.max_speed(), alpha).0;
 
             self.omega <= omega              
         }
@@ -194,7 +217,7 @@ impl<'a> CurveBuilder<'a> {
 
         loop {
             let mut time : Time = Time::ZERO;
-            if self.next_step(omega, &mut time) {
+            if self.next_step(omega, &mut time, None) {
                 break;
             }
             curve.push(time);
@@ -215,12 +238,70 @@ impl<'a> CurveBuilder<'a> {
         }
 
         for elem in curve {
-            if self.next_step(omega, elem) {
+            if self.next_step(omega, elem, None) {
                 break;
             }
         }
 
         Ok(())
+    }
+    
+    /// Drive
+    pub fn to_speed_lim(&mut self, mut delta : Delta, omega_0 : Omega, omega_tar : Omega, corr : &mut (Delta, Time)) -> Result<Vec<Time>, crate::Error> {
+        dbg!(delta, omega_0, omega_tar);
+
+        if delta == Delta::ZERO {
+            if omega_0 == Omega::ZERO {
+                if omega_tar == Omega::ZERO {
+                    return Ok(Vec::new())
+                }
+            }
+        }   // TODO: Handle more cases
+        
+        let steps = self.consts.steps_from_ang(delta);
+        corr.0 = delta - self.consts.ang_from_steps(steps);
+        delta = delta - corr.0;
+
+        if steps == 0 {
+            return Ok(Vec::new());
+        }
+
+        let t_total = 2.0 * delta / (omega_0 + omega_tar);
+        let alpha = (omega_tar - omega_0) / t_total;
+
+        if omega_tar.abs() > self.max_speed() {
+            return Err(crate::lib_error(format!("The given omega is too high! {}", omega_tar)))
+        }
+
+        // Debug! TODO: Remove
+        if alpha.abs() > self.consts.alpha_max_dyn(force::torque_dyn(self.consts, (omega_0 + omega_tar) / 2.0, self.lk.u), self.var)? {
+            panic!("Acceleration reached! {} max: {}", alpha, 
+            self.consts.alpha_max_dyn(force::torque_dyn(self.consts, (omega_0 + omega_tar) / 2.0, self.lk.u), self.var)?);
+        }
+
+        let mut curve = vec![]; 
+
+        self.reset();
+
+        self.omega_0 = omega_0;
+        self.omega = self.omega_0;
+        
+        loop {
+            let mut time : Time = Time::ZERO;
+            if self.next_step(omega_tar, &mut time, Some(alpha)) {
+                if curve.len() < (steps.abs() as usize) {
+                    curve.push(time);   
+                }
+                break;
+            }
+            curve.push(time);
+        }
+
+        let time_rem = t_total - self.time_total;
+
+        corr.1 = time_rem;
+
+        Ok(curve)
     }
 
     /// Return a pathnode stored in the builder

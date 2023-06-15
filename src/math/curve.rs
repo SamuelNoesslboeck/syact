@@ -91,7 +91,7 @@ pub fn write_simple_move(consts : &StepperConst, var : &CompVars, lk : &LinkedDa
     let mut builder = CurveBuilder::new(consts, var, lk, Omega::ZERO);
 
     for i in 0 .. cur_len / 2 {
-        let time = builder.next_step_pos();
+        let time = builder.next_step_pos(None);
 
         if builder.omega > omega_max {
             break;

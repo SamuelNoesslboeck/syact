@@ -1,4 +1,4 @@
-use crate::ctrl::StepperCtrl;
+use crate::ctrl::Stepper;
 use crate::data::StepperConst;
 
 use serde::{Serialize, Deserialize};
@@ -12,13 +12,13 @@ struct StepperCtrlDes
 }
 
 // JSON Parsing
-impl From<StepperCtrlDes> for StepperCtrl {
+impl From<StepperCtrlDes> for Stepper {
     fn from(des : StepperCtrlDes) -> Self {
-        StepperCtrl::new(des.consts, des.pin_dir, des.pin_step)
+        Stepper::new(des.consts, des.pin_dir, des.pin_step)
     }
 }
 
-impl Into<StepperCtrlDes> for StepperCtrl {
+impl Into<StepperCtrlDes> for Stepper {
     fn into(self) -> StepperCtrlDes {
         #[cfg(feature = "std")]
         let pins = self.sys.lock().unwrap(); 
@@ -35,7 +35,7 @@ impl Into<StepperCtrlDes> for StepperCtrl {
 }
 
 // JSON_
-impl Serialize for StepperCtrl {
+impl Serialize for Stepper {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
         where
             S: serde::Serializer {
@@ -54,11 +54,11 @@ impl Serialize for StepperCtrl {
     }
 }
 
-impl<'de, 'a> Deserialize<'de> for StepperCtrl {
+impl<'de, 'a> Deserialize<'de> for Stepper {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
         where
             D: serde::Deserializer<'de> {
         let raw = StepperCtrlDes::deserialize(deserializer)?;
-        Ok(StepperCtrl::from(raw))
+        Ok(Stepper::from(raw))
     }
 }

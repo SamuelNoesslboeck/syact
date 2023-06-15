@@ -1,25 +1,27 @@
 #[cfg(feature = "std")]
 use serde::{Serialize, Deserialize}; 
 
-use crate::{StepperCtrl, SyncComp, Setup, StepperConst, LinkedData, AsyncComp};
+use crate::{Stepper, SyncComp, Setup, StepperConst, LinkedData, AsyncComp};
 use crate::comp::CompVars;
+use crate::comp::stepper::StepperComp;
 use crate::units::*;
 
-use super::stepper::StepperComp;
+/// A conveyor that uses a stepper as its motor
+pub type StepperConveyor = Conveyor<Stepper>;
 
 /// A simple conveyor powered by a stepper motor
 #[derive(Debug)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-pub struct Conveyor {
-    ctrl : StepperCtrl,
+pub struct Conveyor<C : SyncComp> {
+    ctrl : C,
 
     /// Radius of the powered conveyor roll
     pub r_roll : f32
 }
 
-impl Conveyor {
+impl<C : SyncComp> Conveyor<C> {
     /// Creates a new instance of a conveyor
-    pub fn new(ctrl : StepperCtrl, r_roll : f32) -> Self {
+    pub fn new(ctrl : C, r_roll : f32) -> Self {
         Self {
             ctrl, 
             r_roll
@@ -27,13 +29,13 @@ impl Conveyor {
     }
 }
 
-impl Setup for Conveyor {
+impl<C : SyncComp> Setup for Conveyor<C> {
     fn setup(&mut self) -> Result<(), crate::Error> {
         self.ctrl.setup()
     }
 }
 
-impl SyncComp for Conveyor {
+impl<C : SyncComp> SyncComp for Conveyor<C> {
     fn vars<'a>(&'a self) -> &'a CompVars {
         self.ctrl.vars()
     }
@@ -73,7 +75,7 @@ impl SyncComp for Conveyor {
     }
 }
 
-impl AsyncComp for Conveyor {
+impl<C : AsyncComp + SyncComp> AsyncComp for Conveyor<C> {
     fn drive(&mut self, dir : crate::Direction, speed_f : f32) -> Result<(), crate::Error> {
         self.ctrl.drive(dir, speed_f)
     }
@@ -87,8 +89,12 @@ impl AsyncComp for Conveyor {
     }
 }
 
-impl StepperComp for Conveyor {
+impl<C : StepperComp> StepperComp for Conveyor<C> {
     fn consts(&self) -> &StepperConst {
         self.ctrl.consts()
+    }
+
+    fn drive_nodes(&mut self, delta : Delta, omega_0 : Omega, omega_tar : Omega, corr : &mut (Delta, Time)) -> Result<(), crate::Error> {
+        self.ctrl.drive_nodes(delta, omega_0, omega_tar, corr)
     }
 }

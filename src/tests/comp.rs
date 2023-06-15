@@ -4,25 +4,25 @@ use crate as stepper_lib;
 #[derive(SyncCompGroup)]
 #[derive(StepperCompGroup)]
 struct TestGroup {
-    pub base : StepperCtrl,
-    pub arm1 : StepperCtrl
+    pub base : Stepper,
+    pub arm1 : Stepper
 }
 
 #[test]
 fn group_dyn() {
     let group_arr_stat = [
-        StepperCtrl::new_sim(StepperConst::GEN)
+        Stepper::new_sim(StepperConst::GEN)
     ];
     let _group_arr_ref : &dyn SyncCompGroup<1> = &group_arr_stat;
 
     let group_dyn_stat : [Box<dyn SyncComp>; 1] = [ 
-        Box::new(StepperCtrl::new_sim(StepperConst::GEN))
+        Box::new(Stepper::new_sim(StepperConst::GEN))
     ];
     let _group_dyn_ref : &dyn SyncCompGroup<1> = &group_dyn_stat;
 
     let test = TestGroup {
-        base: StepperCtrl::new_sim(StepperConst::GEN),
-        arm1: StepperCtrl::new_sim(StepperConst::GEN)
+        base: Stepper::new_sim(StepperConst::GEN),
+        arm1: Stepper::new_sim(StepperConst::GEN)
     };
 
     let _test_ref : &dyn SyncCompGroup<2> = &test;
@@ -34,7 +34,7 @@ fn gear_bearing() -> Result<(), crate::Error> {
     const PIN_DIR : u8 = 27;
     const PIN_STEP : u8 = 19;
 
-    let mut gear = GearJoint::new(StepperCtrl::new(StepperConst::MOT_17HE15_1504S, PIN_DIR, PIN_STEP), 0.1);
+    let mut gear = GearJoint::new(Stepper::new(StepperConst::MOT_17HE15_1504S, PIN_DIR, PIN_STEP), 0.1);
     gear.write_link(LinkedData::GEN);
     gear.setup()?;
 
@@ -50,7 +50,7 @@ fn cylinder() -> Result<(), crate::Error> {
     const PIN_DIR : u8 = 22;
     const PIN_STEP : u8 = 11;
 
-    let mut cylinder = Cylinder::new(StepperCtrl::new(StepperConst::MOT_17HE15_1504S, PIN_DIR, PIN_STEP), 1.27);
+    let mut cylinder = Cylinder::new(Stepper::new(StepperConst::MOT_17HE15_1504S, PIN_DIR, PIN_STEP), 1.27);
     cylinder.write_link(LinkedData::GEN);
     cylinder.setup()?;
     
@@ -68,7 +68,7 @@ fn cylinder_tri() -> Result<(), crate::Error> {
     const PIN_STEP : u8 = 11;
 
     let mut cyl_tri = CylinderTriangle::new(
-        Cylinder::new(StepperCtrl::new(StepperConst::MOT_17HE15_1504S, PIN_DIR, PIN_STEP), 1.27), 200.0, 200.0);
+        Cylinder::new(Stepper::new(StepperConst::MOT_17HE15_1504S, PIN_DIR, PIN_STEP), 1.27), 200.0, 200.0);
     cyl_tri.write_link(LinkedData::GEN);
     cyl_tri.setup()?;
 

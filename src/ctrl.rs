@@ -1,3 +1,4 @@
+use core::ops::{AddAssign, DerefMut};
 #[cfg(feature = "std")]
 use core::time::Duration;
 
@@ -51,27 +52,35 @@ pub mod pwm;
 pub mod servo;
 // 
 
+/// Elements are:
+/// - the curve to drive : `Vec<Time>`
+/// - direction : `bool`
+/// - interuptable : `bool`
+/// - constant time to drive after curve : `Option<Time>`
 #[cfg(feature = "std")]
-type AsyncMsg = (Vec<Time>, bool, Option<Time>);
+type AsyncMsg = (Vec<Time>, bool, bool, Option<Time>);
+/// Steps moved by the thread
 #[cfg(feature = "std")]
 type AsyncRes = i64;
 
 /// A function that can be used to interrupt the movement process of a component
 pub type Interrupter<'a> = fn (&mut dyn MeasData) -> bool;
 
+/// Error that is used if the async thread of the component has not been setup yet
 #[cfg(feature = "std")]
 #[inline(always)]
 fn no_async() -> crate::Error {
     lib_error("Async has not been setup yet!")
 }
 
+/// Error that is used when waiting for an inactive component
 #[inline(always)]
 #[cfg(feature = "std")]
 fn not_active() -> crate::Error {
-    lib_error("No movement has been started yet")
+    lib_error("No movement has been started yet (Waiting for an inactive component!)")
 }
 
-// Pin struct
+// Pin helper struct
 #[derive(Debug)]
 struct Pins {
     /// Pin for defining the direction
@@ -80,9 +89,11 @@ struct Pins {
     pub step : pin::UniOutPin
 }
 
-/// StepperCtrl
+/// A stepper motor
+/// 
+/// Controlled by two pins, one giving information about the direction, the other about the step signal (PWM)
 #[derive(Debug)]
-pub struct StepperCtrl {
+pub struct Stepper {
     // Stepper data
     consts : StepperConst,
     vars : CompVars,
@@ -91,7 +102,11 @@ pub struct StepperCtrl {
     /// DO NOT WRITE TO THIS VALUE! 
     dir : bool,
     /// The current absolute position since set to a value
+    #[cfg(feature = "std")]
+    pos : Arc<Mutex<i64>>,
+    #[cfg(not(feature = "std"))]
     pos : i64,
+
     omega_max : Omega,
 
     lk : LinkedData,
@@ -118,15 +133,39 @@ pub struct StepperCtrl {
 }
 
 // Inits
-impl StepperCtrl {   
+impl Stepper {   
     /// Creates a new stepper controller with the given stepper motor constants `consts`
     pub fn new(consts : StepperConst, pin_dir : u8, pin_step : u8) -> Self {
         // Create pins if possible
         let sys_dir = pin::UniPin::new(pin_dir).unwrap().into_output(); // TODO: Handle errors
-
         let sys_step = pin::UniPin::new(pin_step).unwrap().into_output();
 
-        let mut ctrl = StepperCtrl { 
+        #[cfg(feature = "std")]
+        let mut ctrl = Stepper { 
+            consts, 
+            vars: CompVars::ZERO, 
+
+            dir: true, 
+            pos : Arc::new(Mutex::new(0)),
+            omega_max: Omega::ZERO,
+
+            lk: LinkedData { u: 0.0, s_f: 0.0 },
+
+            sys: Arc::new(Mutex::new(Pins {
+                dir: sys_dir,
+                step: sys_step
+            })),
+
+            thr: None,
+            sender: None,
+            receiver: None,
+
+            active: false,
+            speed_f: 0.0
+        };
+
+        #[cfg(not(feature = "std"))]
+        let mut ctrl = Stepper { 
             consts, 
             vars: CompVars::ZERO, 
 
@@ -136,30 +175,10 @@ impl StepperCtrl {
 
             lk: LinkedData { u: 0.0, s_f: 0.0 },
 
-            #[cfg(feature = "std")]
-            sys: Arc::new(Mutex::new(Pins {
-                dir: sys_dir,
-                step: sys_step
-            })),
-            
-            #[cfg(not(feature = "std"))]
             sys: Pins {
                 dir: sys_dir,
                 step: sys_step
-            },
-
-            #[cfg(feature = "std")]
-            thr: None,
-            #[cfg(feature = "std")]
-            sender: None,
-            #[cfg(feature = "std")]
-            receiver: None,
-
-            #[cfg(feature = "std")]
-            active: false,
-
-            #[cfg(feature = "std")]
-            speed_f: 0.0
+            }
         };
 
         ctrl.set_dir(ctrl.dir);
@@ -167,14 +186,18 @@ impl StepperCtrl {
         ctrl
     }
 
-    /// Creates a new structure with both pins set to [pin::ERR_PIN] just for simulation purposes
+    /// Creates a new structure with both pins set to [pin::ERR_PIN] just for simulation and testing purposes
     #[inline]
     pub fn new_sim(data : StepperConst) -> Self {
         Self::new(data, pin::ERR_PIN, pin::ERR_PIN)
     }
 }
 
-impl StepperCtrl {
+// Helper functions for the component
+impl Stepper {
+    /// Set the signal for the direction
+    ///
+    /// This function does not require a `Stepper` instance
     #[inline(always)]
     fn dir_sig(pins : &mut Pins, dir : bool) {
         if dir {
@@ -184,8 +207,10 @@ impl StepperCtrl {
         }
     }
 
+    /// Write a single PWM pulse to the pin and wait
+    /// 
+    /// This function does not require a `Stepper` instance
     #[inline(always)]
-    // #[cfg()]
     fn step_sig(time : Time, pins : &mut Pins) {
         let step_time_half : Duration = (time / 2.0).into();
 
@@ -193,34 +218,38 @@ impl StepperCtrl {
         spin_sleep::sleep(step_time_half);
         pins.step.set_low();
         spin_sleep::sleep(step_time_half);
-    }  
+    } 
 
-    // #[inline(always)]
-    // #[cfg(not(feature = "std"))]
-    // #[cfg(feature = "embedded")]
-    // fn step_sig(time : Time, pins : &mut Pins) {
-    //     // TODO: Add delay handler
-    // }   
-
-
+    /// Write a curve of signals to the output pin
+    /// 
+    /// This function does not require a `Stepper` instance
     fn drive_curve_sig(cur : &[Time], pins : &mut Pins) {
         for point in cur {
-            StepperCtrl::step_sig(*point, pins);
+            Stepper::step_sig(*point, pins);
         }
     }
 
+    /// Write a curve of signals to the output pin
+    #[cfg(feature = "std")]
     fn drive_curve(&mut self, cur : &[Time]) {
-        #[cfg(feature = "std")]
         let mut pins = self.sys.lock().unwrap();
 
-        #[cfg(not(feature = "std"))]
+        Stepper::drive_curve_sig(cur, &mut pins);
+
+        let mut pos = self.pos.lock().unwrap();
+        pos.add_assign(if self.dir { 
+            cur.len() as i64 
+        } else { 
+            -(cur.len() as i64) 
+        });
+    }
+
+    /// Write a curve of signals to the output pin
+    #[cfg(not(feature = "std"))]
+    fn drive_curve(&mut self, cur : &[Time]) {
         let pins = &mut self.sys;
 
-        #[cfg(feature = "std")]
-        StepperCtrl::drive_curve_sig(cur, &mut pins);
-
-        #[cfg(not(feature = "std"))]
-        StepperCtrl::drive_curve_sig(cur, pins);
+        Stepper::drive_curve_sig(cur, pins);
 
         self.pos += if self.dir { 
             cur.len() as i64 
@@ -229,6 +258,7 @@ impl StepperCtrl {
         };
     }
 
+    /// Drive the given curve with a possibility to interrupt the movement by e.g. a measurement
     fn drive_curve_int(&mut self, cur : &[Time], intr : Interrupter, intr_data : &mut dyn MeasData) -> (usize, bool) {
         #[cfg(feature = "std")]
         let mut pins = self.sys.lock().unwrap();
@@ -250,12 +280,20 @@ impl StepperCtrl {
             }
     
             #[cfg(feature = "std")]
-            StepperCtrl::step_sig(*point, &mut pins);
+            Stepper::step_sig(*point, &mut pins);
 
             #[cfg(not(feature = "std"))]
-            StepperCtrl::step_sig(*point, pins);
+            Stepper::step_sig(*point, pins);
 
-            self.pos += if self.dir { 1 } else { -1 };
+            #[cfg(not(feature = "std"))] {
+                self.pos += if self.dir { 1 } else { -1 };
+            }
+
+            #[cfg(feature = "std")] {
+                let mut pos = self.pos.lock().unwrap();
+
+                pos.add_assign(if self.dir { 1 } else { -1 });
+            }
 
             trav += 1;
         }
@@ -320,20 +358,9 @@ impl StepperCtrl {
             Ok((steps as f32 * -self.consts.step_ang(), interrupted))
         }
     }
-
-    // fn drive_complex(&mut self, delta : Delta, omega_0 : Omega, omega_end : Omega, omega_max : Omega) 
-    //          -> Result<Delta, crate::Error> {
-    //     if !delta.is_normal() {
-    //         return Ok(Delta::ZERO);
-    //     }
-
-    //     self.setup_drive(delta)?;
-
-    //     todo!();
-    // }
 }
 
-impl StepperCtrl {
+impl Stepper {
     /// Makes the component move a single step with the given `time`
     /// 
     /// # Error
@@ -349,9 +376,9 @@ impl StepperCtrl {
         let pins = &mut self.sys;
 
         #[cfg(feature = "std")]
-        StepperCtrl::step_sig(time, &mut pins);
+        Stepper::step_sig(time, &mut pins);
         #[cfg(not(feature = "std"))]
-        StepperCtrl::step_sig(time, pins);
+        Stepper::step_sig(time, pins);
 
         Ok(())
     }
@@ -366,9 +393,9 @@ impl StepperCtrl {
         let pins = &mut self.sys;
 
         #[cfg(feature = "std")]
-        StepperCtrl::dir_sig(&mut pins, dir);
+        Stepper::dir_sig(&mut pins, dir);
         #[cfg(not(feature = "std"))]
-        StepperCtrl::dir_sig(pins, dir);
+        Stepper::dir_sig(pins, dir);
 
         self.dir = dir;
     }
@@ -387,23 +414,9 @@ impl StepperCtrl {
     // 
 }
 
-impl Setup for StepperCtrl {
-    fn setup(&mut self) -> Result<(), crate::Error> {
-        if self.lk.u == 0.0 {
-            return Err("Link the construction to vaild data! (`LinkedData` is invalid)".into());
-        }
-
-        self.omega_max = self.consts.max_speed(self.lk.u);
-
-        #[cfg(feature = "std")]
-        self.setup_async();
-
-        Ok(())
-    }
-}
-
+// Async helper functions
 #[cfg(feature = "std")]
-impl StepperCtrl {
+impl Stepper {
     fn clear_active_status(&mut self) {
         let recv : &Receiver<AsyncRes>;
 
@@ -422,14 +435,14 @@ impl StepperCtrl {
         self.active = false;
     }
 
-    fn drive_curve_async(&mut self, curve : Vec<Time>, t_const : Option<Time>) -> Result<(), crate::Error> {
+    fn drive_curve_async(&mut self, curve : Vec<Time>, intr : bool, t_const : Option<Time>) -> Result<(), crate::Error> {
         self.clear_active_status();
 
-        println!(" => Curve: {}; Last: {:?}; t_const: {:?}", curve.len(), curve.last(), t_const);
+        // println!(" => Curve: {}; Last: {:?}; t_const: {:?}", curve.len(), curve.last(), t_const);
 
         if let Some(sender) = &self.sender {
             self.active = true;
-            sender.send(Some((curve, self.dir, t_const)))?; 
+            sender.send(Some((curve, self.dir, intr, t_const)))?; 
             Ok(())
         } else {
             Err(no_async())
@@ -454,7 +467,7 @@ impl StepperCtrl {
         let omega_max = self.omega_max() * speed_f;
         let cur = math::curve::create_simple_curve(&self.consts, &self.vars, &self.lk, delta, omega_max);
 
-        self.drive_curve_async(cur, t_const)
+        self.drive_curve_async(cur, false, t_const)
     }
 
     fn setup_async(&mut self) {
@@ -462,11 +475,15 @@ impl StepperCtrl {
         let (sender_thr, receiver_com) : (Sender<AsyncRes>, Receiver<AsyncRes>) = channel();
 
         let sys = self.sys.clone();
+        let pos = self.pos.clone();
 
         self.thr = Some(std::thread::spawn(move || {
             let mut curve : Vec<Time>;
             let mut dir : bool;
+            let mut intr : bool;
             let mut cont : Option<Time>;
+
+            let mut msg_sent = false;
 
             let mut msg_opt : Option<_> = None;
             let mut msg : Option<AsyncMsg>;
@@ -477,26 +494,19 @@ impl StepperCtrl {
                 } else {
                     msg = match receiver_thr.recv() {
                         Ok(msg_opt) => msg_opt,
-                        Err(err) => {
-                            println!("Error occured in thread! {}", err.to_string());   // TODO: Improve error message
+                        Err(_) => {
+                            // println!("Error occured in thread! {}", err.to_string());   // TODO: Improve error message
                             break;
                         }
                     };
                 }
 
                 match msg {
-                    Some((msg_curve, msg_dir, msg_cont)) => {
-                        let steps_dir = if msg_dir {
-                            msg_curve.len() as i64
-                        } else {
-                            -(msg_curve.len() as i64)
-                        };
-
+                    Some((msg_curve, msg_dir, msg_intr, msg_cont)) => {
                         curve = msg_curve;
                         dir = msg_dir;
+                        intr = msg_intr;
                         cont = msg_cont;
-
-                        sender_thr.send(steps_dir).unwrap();
                     },
                     None => {
                         break;
@@ -510,15 +520,18 @@ impl StepperCtrl {
                 loop {
                     if index < curve_len {
                         Self::step_sig(curve[index], &mut pins);
+                        pos.lock().unwrap().add_assign(if dir { 1 } else { -1 });
                         index += 1;
 
-                        match receiver_thr.try_recv() {
-                            Ok(msg) => { 
-                                msg_opt = Some(msg); 
-                                break;
-                            },
-                            Err(_) => { }
-                        };
+                        if intr {
+                            match receiver_thr.try_recv() {
+                                Ok(msg) => { 
+                                    msg_opt = Some(msg); 
+                                    break;
+                                },
+                                Err(_) => { }
+                            };
+                        }
 
                         if index == curve_len {
                             sender_thr.send(if dir {
@@ -526,10 +539,23 @@ impl StepperCtrl {
                             } else {
                                 -(index as i64)
                             }).unwrap();
+
+                            msg_sent = true;
                         }
                     } else if let Some(t_cont) = cont {
+                        if !msg_sent {
+                            sender_thr.send(if dir {
+                                index as i64
+                            } else {
+                                -(index as i64)
+                            }).unwrap();
+
+                            msg_sent = true;
+                        }
+
                         loop {
                             Self::step_sig(t_cont, &mut pins);
+                            pos.lock().unwrap().add_assign(if dir { 1 } else { -1 });
                             index += 1;
 
                             match receiver_thr.try_recv() {
@@ -542,9 +568,17 @@ impl StepperCtrl {
                         }
 
                         break;
-
                     } else {
+                        if !msg_sent {
+                            sender_thr.send(if dir {
+                                index as i64
+                            } else {
+                                -(index as i64)
+                            }).unwrap();
+                        }
+
                         msg_opt = None;
+                        msg_sent = false;
 
                         break;
                     }
@@ -557,7 +591,22 @@ impl StepperCtrl {
     }
 }
 
-impl SyncComp for StepperCtrl {
+impl Setup for Stepper {
+    fn setup(&mut self) -> Result<(), crate::Error> {
+        if self.lk.u == 0.0 {
+            return Err("Link the construction to vaild data! (`LinkedData` is invalid)".into());
+        }
+
+        self.omega_max = self.consts.max_speed(self.lk.u);
+
+        #[cfg(feature = "std")]
+        self.setup_async();
+
+        Ok(())
+    }
+}
+
+impl SyncComp for Stepper {
     // Data
         fn vars<'a>(&'a self) -> &'a CompVars {
             &self.vars
@@ -625,14 +674,27 @@ impl SyncComp for StepperCtrl {
     // Position
         #[inline]
         fn gamma(&self) -> Gamma {
-            Gamma::ZERO + self.consts.ang_from_steps(self.pos)
+            #[cfg(feature = "std")] {
+                return Gamma::ZERO + self.consts.ang_from_steps(self.pos.lock().unwrap().clone()); 
+            }
+
+            #[cfg(not(feature = "std"))] {
+                return Gamma::ZERO + self.consts.ang_from_steps(self.pos); 
+            }
         }   
 
         #[inline]
         fn write_gamma(&mut self, pos : Gamma) {
-            self.pos = self.consts.steps_from_ang(pos - Gamma::ZERO);
+            #[cfg(feature = "std")] {
+                *self.pos.lock().unwrap().deref_mut() = self.consts.steps_from_ang(pos - Gamma::ZERO);
+            }
+
+            #[cfg(not(feature = "std"))] {
+                self.pos = self.consts.steps_from_ang(pos - Gamma::ZERO);
+            }
         }
 
+        #[inline]
         fn omega_max(&self) -> Omega {
             self.omega_max
         }
@@ -691,7 +753,13 @@ impl SyncComp for StepperCtrl {
         }
 
         fn set_end(&mut self, set_gamma : Gamma) {
-            self.pos = self.consts.steps_from_ang(set_gamma - Gamma::ZERO);
+            #[cfg(feature = "std")] {
+                *self.pos.lock().unwrap().deref_mut() = self.consts.steps_from_ang(set_gamma - Gamma::ZERO);
+            }
+
+            #[cfg(not(feature = "std"))] {
+                self.pos = self.consts.steps_from_ang(set_gamma - Gamma::ZERO);
+            }
     
             self.set_limit(
                 if self.dir { self.vars.lim.min } else { Some(set_gamma) },
@@ -725,7 +793,7 @@ impl SyncComp for StepperCtrl {
 }
 
 #[cfg(feature = "std")]
-impl AsyncComp for StepperCtrl {
+impl AsyncComp for Stepper {
     fn drive(&mut self, dir : Direction, mut speed_f : f32) -> Result<(), crate::Error> {
         if (0.0 > speed_f) | (1.0 < speed_f) {
             panic!("Bad speed_f! {}", speed_f);
@@ -772,14 +840,14 @@ impl AsyncComp for StepperCtrl {
         drop(builder);
 
         if bdir == self.dir {
-            self.drive_curve_async(curve, t_const)?;
+            self.drive_curve_async(curve, true, t_const)?;
         } else {
-            self.drive_curve_async(curve, None)?;
+            self.drive_curve_async(curve, true, None)?;
 
             self.await_inactive()?;
             self.set_dir(bdir);
 
-            self.drive_curve_async(curve_sec, t_const)?;
+            self.drive_curve_async(curve_sec, true, t_const)?;
         }
 
         self.speed_f = speed_f;
@@ -802,8 +870,26 @@ impl AsyncComp for StepperCtrl {
     }
 }
 
-impl StepperComp for StepperCtrl {
+impl StepperComp for Stepper {
     fn consts(&self) -> &StepperConst {
         &self.consts
+    }
+
+    fn drive_nodes(&mut self, delta : Delta, omega_0 : Omega, omega_tar : Omega, corr : &mut (Delta, Time)) -> Result<(), crate::Error> {
+        self.setup_drive(delta)?;
+
+        let mut builder = self.create_curve_builder(omega_0);
+        let curve = builder.to_speed_lim(delta, omega_0, omega_tar, corr)?;
+
+        // dbg!(self.consts.steps_from_ang(delta));
+        // dbg!(2.0 * delta / (omega_0 + omega_tar));
+        // dbg!(curve.len());
+        // dbg!(curve.iter().map(|x| x.0).sum::<f32>());
+
+        drop(builder);
+
+        self.drive_curve_async(curve, false, None)?;
+
+        Ok(())
     }
 }

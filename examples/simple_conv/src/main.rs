@@ -32,22 +32,32 @@ mod predefined {
     const R_ROLL : f32 = 10.0;
     
     pub fn predefined() -> Result<(), stepper_lib::Error> {
+        // First we crate our conveyor using a stepper motor and the radius of the roll that connects the belt to the motor
         let mut conv = Conveyor::new(
-            StepperCtrl::new(StepperConst::MOT_17HE15_1504S, PIN_DIR, PIN_STEP),        // The stepper motor
+            Stepper::new(StepperConst::MOT_17HE15_1504S, PIN_DIR, PIN_STEP),        // The stepper motor
             R_ROLL
         );
 
-        conv.write_link(LinkedData::GEN);
+        // Now we write the `LinkedData` to our component. The `LinkedData` is often data that is the same for 
+        // all components, e.g. supply voltage
+        conv.write_link(LinkedData {
+            u: 12.0,        // Voltage
+            s_f: 1.5        // Safety factor, the higher the factor, the safer is the stepper to not jump over steps,
+                            // however the performance suffers from very high safety factors
+        });
+
+        // Setup all the neccessary stuff for a stepper motor
+        // => Spawns the thread to execute async movements
         conv.setup()?;
         
         // Apply a inertia to the conveyor (possible masses on the belt, 1.0kg estimated)
         conv.apply_inertia(Inertia(1.0));
 
-        // Set the maximum speed of the conveyor to 40 millimeters per second
+        // Set the maximum speed of the conveyor to 200 millimeters per second
         conv.set_omega_max(Omega(200.0));
     
         println!("Driving forward with 0.5 speed");
-        conv.drive(Direction::CW, 0.5)?;
+        conv.drive(Direction::CW, 0.5)?;        // Drive with 100 mm/s speed (50%, 0.5)
         conv.await_inactive()?;
     
         println!(" -> Reached speed!");
@@ -55,7 +65,7 @@ mod predefined {
         sleep(1.0);
     
         println!("Driving forward with 0.8 speed");
-        conv.drive(Direction::CW, 0.8)?;
+        conv.drive(Direction::CW, 0.8)?;        // Drive with 160 mm/s speed (80%, 0.8)
         conv.await_inactive()?;
     
         println!(" -> Reached speed!");
@@ -63,7 +73,7 @@ mod predefined {
         sleep(2.0);
     
         println!("Driving backwards with 0.2 speed");
-        conv.drive(Direction::CCW, 0.2)?;
+        conv.drive(Direction::CCW, 0.2)?;       // Drive with 40 mm/s speed in the opposite direction (20%, 0.2)
         conv.await_inactive()?;
     
         println!("Reached speed!");
@@ -94,7 +104,7 @@ mod direct {
     }
 
     pub fn direct_approach() -> Result<(), stepper_lib::Error> {
-        let mut ctrl = StepperCtrl::new(StepperConst::MOT_17HE15_1504S, PIN_DIR, PIN_STEP);
+        let mut ctrl = Stepper::new(StepperConst::MOT_17HE15_1504S, PIN_DIR, PIN_STEP);
         ctrl.write_link(LinkedData::GEN);
         ctrl.setup()?;
         
@@ -142,7 +152,7 @@ mod custom {
     use super::*;
 
     pub struct CustomConveyor {
-        ctrl : StepperCtrl, 
+        ctrl : Stepper, 
         pub roll_radius : f32
     }
 

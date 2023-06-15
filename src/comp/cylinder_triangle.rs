@@ -1,13 +1,14 @@
 use serde::{Serialize, Deserialize};
-
-use crate::ctrl::Interrupter;
-use crate::{SyncComp, Setup, StepperConst};
+use crate::{SyncComp, Setup, StepperConst, Stepper};
 use crate::comp::Cylinder;
+use crate::comp::stepper::StepperComp;
+use crate::ctrl::Interrupter;
 use crate::data::LinkedData;
 use crate::meas::MeasData;
 use crate::units::*;
 
-use super::stepper::StepperComp;
+/// A cylinder triangle using a cylinder with a stepper motor to power itself
+pub type StepperCylTriangle = CylinderTriangle<Stepper>;
 
 /// A component representing a cylinder connected to two segments with constant lengths, forming a triangular shape
 /// 
@@ -23,9 +24,9 @@ use super::stepper::StepperComp;
 /// on the variable length c, making them also variable. The most relevant angle being gamma, as it is the opposing angle to 
 /// the length c, representing the 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct CylinderTriangle {
+pub struct CylinderTriangle<C : SyncComp> {
     /// The cylinder of the triangle, being the *super component* for this one
-    pub cylinder : Cylinder,
+    pub cylinder : Cylinder<C>,
 
     // Triangle
     /// The constant length of the first triangle component in millimeters
@@ -34,10 +35,10 @@ pub struct CylinderTriangle {
     pub l_b : f32,
 }
 
-impl CylinderTriangle {
+impl<C : SyncComp> CylinderTriangle<C> {
     /// Creates a new instance of a [CylinderTriangle], 
     /// writing an initial length of the longer segments the cylinder, preventing initial calculation errors
-    pub fn new(cylinder : Cylinder, l_a : f32, l_b : f32) -> Self {
+    pub fn new(cylinder : Cylinder<C>, l_a : f32, l_b : f32) -> Self {
         let mut tri = CylinderTriangle {
             l_a, 
             l_b,
@@ -80,7 +81,7 @@ impl CylinderTriangle {
 //     }
 // }
 
-impl Setup for CylinderTriangle {
+impl<C : SyncComp> Setup for CylinderTriangle<C> {
     fn setup(&mut self) -> Result<(), crate::Error> { 
         self.cylinder.setup()?;
         self.cylinder.write_gamma(Gamma(self.l_a.max(self.l_b)));
@@ -89,7 +90,7 @@ impl Setup for CylinderTriangle {
     }
 }
 
-impl SyncComp for CylinderTriangle {
+impl<C : SyncComp> SyncComp for CylinderTriangle<C> {
     // Data
         fn link<'a>(&'a self) -> &'a crate::data::LinkedData {
             self.cylinder.link()
@@ -182,8 +183,12 @@ impl SyncComp for CylinderTriangle {
     // 
 }
 
-impl StepperComp for CylinderTriangle {
+impl<C : StepperComp> StepperComp for CylinderTriangle<C> {
     fn consts(&self) -> &StepperConst {
         self.cylinder.consts()
+    }
+
+    fn drive_nodes(&mut self, delta : Delta, omega_0 : Omega, omega_tar : Omega, corr : &mut (Delta, Time)) -> Result<(), crate::Error> {
+        self.cylinder.drive_nodes(delta, omega_0, omega_tar, corr)
     }
 }

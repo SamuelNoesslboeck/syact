@@ -3,23 +3,26 @@ use serde::{Serialize, Deserialize};
 
 use crate::{SyncComp, Setup, StepperConst};
 use crate::comp::stepper::StepperComp;
-use crate::ctrl::StepperCtrl;
+use crate::ctrl::Stepper;
 use crate::units::*;
+
+/// A cylinder using a stepper motor to power itself
+pub type StepperCylinder = Cylinder<Stepper>;
 
 /// Cylinder component struct
 #[derive(Debug, Serialize, Deserialize)]
-pub struct Cylinder {
+pub struct Cylinder<C : SyncComp> {
     /// Data of the connected stepper motor
-    pub ctrl : StepperCtrl,
+    pub ctrl : C,
 
     /// Distance traveled per rad (Unit mm)   \
     /// f_rte = pitch / (2pi)
     pub rte_ratio : f32
 }
 
-impl Cylinder {
+impl<C : SyncComp> Cylinder<C> {
     /// Create a new cylinder instance
-    pub fn new(ctrl : StepperCtrl, rte_ratio : f32) -> Self {
+    pub fn new(ctrl : C, rte_ratio : f32) -> Self {
         return Cylinder {
             ctrl,
             rte_ratio
@@ -35,13 +38,13 @@ impl Cylinder {
 //     }
 // }
 
-impl Setup for Cylinder {
+impl<C : SyncComp> Setup for Cylinder<C> {
     fn setup(&mut self) -> Result<(), crate::Error> {
         self.ctrl.setup()
     }
 }
 
-impl SyncComp for Cylinder {
+impl<C : SyncComp> SyncComp for Cylinder<C> {
     // Data
         fn link<'a>(&'a self) -> &'a crate::data::LinkedData {
             self.ctrl.link()
@@ -87,8 +90,12 @@ impl SyncComp for Cylinder {
     //
 }
 
-impl StepperComp for Cylinder {
+impl<C : StepperComp> StepperComp for Cylinder<C> {
     fn consts(&self) -> &StepperConst {
         self.ctrl.consts()
+    }
+
+    fn drive_nodes(&mut self, delta : Delta, omega_0 : Omega, omega_tar : Omega, corr : &mut (Delta, Time)) -> Result<(), crate::Error> {
+        self.ctrl.drive_nodes(delta, omega_0, omega_tar, corr)
     }
 }
