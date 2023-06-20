@@ -1,36 +1,35 @@
 use core::any::type_name;
-use core::fmt::Debug;
 
 use glam::Vec3;
 
 use crate::units::*;
 
 // Tools
-#[cfg(feature = "std")]
-mod axial_joint;
-#[cfg(feature = "std")]
-pub use axial_joint::AxialJoint;
+    #[cfg(feature = "std")]
+    mod axial_joint;
+    #[cfg(feature = "std")]
+    pub use axial_joint::AxialJoint;
 
-#[cfg(feature = "std")]
-mod axis_tongs;
-#[cfg(feature = "std")]
-pub use axis_tongs::AxisTongs;
+    #[cfg(feature = "std")]
+    mod axis_tongs;
+    #[cfg(feature = "std")]
+    pub use axis_tongs::AxisTongs;
 
-mod no_tool;
-pub use no_tool::NoTool;
+    mod pencil_tool;
+    pub use pencil_tool::PencilTool;
 
-mod pencil_tool;
-pub use pencil_tool::PencilTool;
+    mod relay;
+    pub use relay::Relay;
 
-#[cfg(feature = "std")]
-mod tongs;
-#[cfg(feature = "std")]
-pub use tongs::Tongs;
+    #[cfg(feature = "std")]
+    mod tongs;
+    #[cfg(feature = "std")]
+    pub use tongs::Tongs;
 //
 
 // Tools
 /// General tool trait
-pub trait Tool : Debug {
+pub trait Tool {
     // Setup / Shutdown
         /// Mounts the component.
         /// 
@@ -97,7 +96,7 @@ pub trait Tool : Debug {
 
 // Subtools
     /// A trait for tools that add an additional axis for exact positioning 
-    pub trait AxisTool : Tool {
+    pub trait AxisTool {
         // Actions
             /// Rotate the axis to an exact position
             fn rotate_abs(&mut self, gamma : Gamma);
@@ -110,7 +109,7 @@ pub trait Tool : Debug {
     }
 
     /// A trait for tools that have a simple on/off or open/closed functionallity
-    pub trait SimpleTool : Tool {
+    pub trait SimpleTool {
         // Actions
             /// Activates the tool
             fn activate(&mut self);
@@ -135,7 +134,7 @@ pub trait Tool : Debug {
     }
 
     /// A trait for tools that have a spindle that can be driven into two directions
-    pub trait SpindleTool : Tool {
+    pub trait SpindleTool {
         // Actions
             /// Activates the spindle, when `cw` is true, the motor drives clockwise
             fn activate(&mut self, cw : bool);

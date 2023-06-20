@@ -108,4 +108,15 @@ impl UniOutPin {
     pub fn set_low(&mut self) {
         self.sys_pin.set_low();
     }
+
+    /// Sets the pin to a boolean value 
+    /// - `true` for high
+    /// - `false` for low
+    pub fn set(&mut self, val : bool) {
+        if val {
+            self.set_high()
+        } else {
+            self.set_low()
+        }
+    }
 }
