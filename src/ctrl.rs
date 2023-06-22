@@ -1,4 +1,4 @@
-use core::ops::{AddAssign, DerefMut};
+use core::ops::{AddAssign, DerefMut, MulAssign};
 #[cfg(feature = "std")]
 use core::time::Duration;
 
@@ -106,6 +106,7 @@ pub struct Stepper {
     pos : Arc<Mutex<i64>>,
     #[cfg(not(feature = "std"))]
     pos : i64,
+    micro : u8,
 
     omega_max : Omega,
 
@@ -147,6 +148,7 @@ impl Stepper {
 
             dir: true, 
             pos : Arc::new(Mutex::new(0)),
+            micro: 1,
             omega_max: Omega::ZERO,
 
             lk: LinkedData { u: 0.0, s_f: 0.0 },
@@ -331,7 +333,7 @@ impl Stepper {
 
         let omega_max = self.omega_max() * speed_f;
 
-        let cur = math::curve::create_simple_curve(&self.consts, &self.vars, &self.lk, delta, omega_max);
+        let cur = math::curve::create_simple_curve(&self.consts, &self.vars, &self.lk, delta, omega_max, self.micro);
         self.drive_curve(&cur);
 
         Ok(delta)
@@ -349,13 +351,13 @@ impl Stepper {
         
         self.setup_drive(delta)?;
 
-        let cur = math::curve::create_simple_curve(&self.consts, &self.vars, &self.lk, delta, self.omega_max() * speed_f);
+        let cur = math::curve::create_simple_curve(&self.consts, &self.vars, &self.lk, delta, self.omega_max() * speed_f, self.micro);
         let (steps, interrupted) = self.drive_curve_int(&cur, intr, intr_data);
 
         if self.dir {
-            Ok((steps as f32 * self.consts.step_ang(), interrupted))
+            Ok((steps as f32 * self.consts.step_ang(self.micro), interrupted))
         } else {
-            Ok((steps as f32 * -self.consts.step_ang(), interrupted))
+            Ok((steps as f32 * -self.consts.step_ang(self.micro), interrupted))
         }
     }
 }
@@ -367,7 +369,7 @@ impl Stepper {
     /// 
     /// Returns an error if `setup_drive()` fails
     pub fn step(&mut self, time : Time) -> Result<(), crate::Error> {
-        let delta = if self.dir { self.consts.step_ang() } else { -self.consts.step_ang() };
+        let delta = if self.dir { self.consts.step_ang(self.micro) } else { -self.consts.step_ang(self.micro) };
         self.setup_drive(delta)?;
 
         #[cfg(feature = "std")]
@@ -465,7 +467,7 @@ impl Stepper {
         self.setup_drive(delta)?;
 
         let omega_max = self.omega_max() * speed_f;
-        let cur = math::curve::create_simple_curve(&self.consts, &self.vars, &self.lk, delta, omega_max);
+        let cur = math::curve::create_simple_curve(&self.consts, &self.vars, &self.lk, delta, omega_max, self.micro);
 
         self.drive_curve_async(cur, false, t_const)
     }
@@ -661,7 +663,7 @@ impl SyncComp for Stepper {
             }
 
             let delta = if let Some(recv) = &self.receiver {
-                self.consts.ang_from_steps(recv.recv().unwrap())        // TODO: Remove unwrap
+                self.consts.ang_from_steps(recv.recv().unwrap(), self.micro)        // TODO: Remove unwrap
             } else {
                 Delta::NAN
             };
@@ -675,7 +677,7 @@ impl SyncComp for Stepper {
         #[inline]
         fn gamma(&self) -> Gamma {
             #[cfg(feature = "std")] {
-                return Gamma::ZERO + self.consts.ang_from_steps(self.pos.lock().unwrap().clone()); 
+                return Gamma::ZERO + self.consts.ang_from_steps(self.pos.lock().unwrap().clone(), self.micro); 
             }
 
             #[cfg(not(feature = "std"))] {
@@ -686,7 +688,7 @@ impl SyncComp for Stepper {
         #[inline]
         fn write_gamma(&mut self, pos : Gamma) {
             #[cfg(feature = "std")] {
-                *self.pos.lock().unwrap().deref_mut() = self.consts.steps_from_ang(pos - Gamma::ZERO);
+                *self.pos.lock().unwrap().deref_mut() = self.consts.steps_from_ang(pos - Gamma::ZERO, self.micro);
             }
 
             #[cfg(not(feature = "std"))] {
@@ -754,7 +756,7 @@ impl SyncComp for Stepper {
 
         fn set_end(&mut self, set_gamma : Gamma) {
             #[cfg(feature = "std")] {
-                *self.pos.lock().unwrap().deref_mut() = self.consts.steps_from_ang(set_gamma - Gamma::ZERO);
+                *self.pos.lock().unwrap().deref_mut() = self.consts.steps_from_ang(set_gamma - Gamma::ZERO, self.micro);
             }
 
             #[cfg(not(feature = "std"))] {
@@ -819,9 +821,9 @@ impl AsyncComp for Stepper {
         // println!(" => Building curve: o_max: {}, o_0: {}, o_tar: {}, spf_0: {}, spf: {}", 
         //     self.omega_max, omega_0, omega_tar, self.speed_f, speed_f);
 
-        let mut builder = CurveBuilder::new(&self.consts, &self.vars, &self.lk, omega_0);
+        let mut builder = CurveBuilder::new(&self.consts, &self.vars, &self.lk, omega_0, self.micro);
         let t_const = if omega_tar != Omega::ZERO {
-            Some(self.consts.step_time(omega_tar))
+            Some(self.consts.step_time(omega_tar, self.micro))
         } else {
             None
         }; 
@@ -873,6 +875,18 @@ impl AsyncComp for Stepper {
 impl StepperComp for Stepper {
     fn consts(&self) -> &StepperConst {
         &self.consts
+    }
+
+    fn micro(&self) -> u8 {
+        self.micro
+    }
+
+    fn set_micro(&mut self, micro : u8) {
+        if cfg!(feature = "std") {
+            self.pos.lock().unwrap().mul_assign((micro / self.micro) as i64);
+        }
+
+        self.micro = micro;
     }
 
     fn drive_nodes(&mut self, delta : Delta, omega_0 : Omega, omega_tar : Omega, corr : &mut (Delta, Time)) -> Result<(), crate::Error> {

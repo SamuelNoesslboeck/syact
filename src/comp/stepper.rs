@@ -9,9 +9,20 @@ pub trait StepperComp : SyncComp {
     /// Returns the constants of the stepper motor
     fn consts(&self) -> &StepperConst;
 
+    /// The amount of microsteps in a full step
+    fn micro(&self) -> u8;
+
+    /// Set the amount of microsteps in a full step
+    fn set_micro(&mut self, micro : u8);
+
+    /// The angle of a step
+    fn step_ang(&self) -> Delta {
+        self.consts().step_ang(self.micro())
+    }
+
     /// Creates a new curve builder for the stepper motor
     fn create_curve_builder(&self, omega_0 : Omega) -> CurveBuilder {
-        CurveBuilder::new(self.consts(), self.vars(), self.link(), omega_0)
+        CurveBuilder::new(self.consts(), self.vars(), self.link(), omega_0, self.micro())
     }
 
     /// Drive from node to node (used for path algorithms, use as a normal drive function is not recommended)
@@ -21,6 +32,14 @@ pub trait StepperComp : SyncComp {
 impl<T : AsRef<dyn StepperComp> + AsMut<dyn StepperComp> + AsRef<dyn SyncComp> + AsMut<dyn SyncComp>> StepperComp for T {
     fn consts(&self) -> &StepperConst {
         <T as AsRef<dyn StepperComp>>::as_ref(self).consts()
+    }
+
+    fn micro(&self) -> u8 {
+        <T as AsRef<dyn StepperComp>>::as_ref(self).micro()
+    }
+
+    fn set_micro(&mut self, micro : u8) {
+        <T as AsMut<dyn StepperComp>>::as_mut(self).set_micro(micro)
     }
 
     fn drive_nodes(&mut self, delta : Delta, omega_0 : Omega, omega_tar : Omega, corr : &mut (Delta, Time)) -> Result<(), crate::Error> {

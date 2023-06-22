@@ -35,8 +35,6 @@ pub struct StepperConst
 
     /// Step count per revolution [Unit (1)]
     pub n_s : u64,
-    /// Coil pair count (n_s / 2) Unit many cases [Unit (1)]
-    pub n_c : u64,
     /// Stall torque [Unit Nm]
     pub t_s : Force,
     /// Inhertia moment [Unit kg*m^2]
@@ -50,7 +48,6 @@ impl StepperConst
         i_max: 0.0,
         l: 0.0,
         n_s: 0,
-        n_c: 0,
         t_s: Force::ZERO,
         j_s: Inertia::ZERO
     }; 
@@ -64,7 +61,6 @@ impl StepperConst
         i_max: 1.5, 
         l: 0.004, 
         n_s: 200, 
-        n_c: 100,
         t_s: Force(0.42), 
         j_s: Inertia(0.000_005_7)
     }; 
@@ -90,7 +86,7 @@ impl StepperConst
     /// Maximum speed for a stepper motor where it can be guarantied that it works properly
     #[inline(always)]
     pub fn max_speed(&self, u : f32) -> Omega {
-        PI / self.tau(u) / self.n_c as f32
+        2.0 * PI / self.tau(u) / self.n_s as f32
     }
 
     /// Omega for time per step [Unit 1/s]
@@ -107,22 +103,22 @@ impl StepperConst
     /// 
     /// let data = StepperConst::GEN;
     /// 
-    /// assert!((data.omega(Time(1.0/200.0)) - Omega(2.0 * PI)).abs() < Omega(0.001));     
+    /// assert!((data.omega(Time(1.0/200.0), 1) - Omega(2.0 * PI)).abs() < Omega(0.001));     
     /// ```
     #[inline(always)]
-    pub fn omega(&self, step_time : Time) -> Omega {
+    pub fn omega(&self, step_time : Time, micro : u8) -> Omega {
         if (step_time == Time(0.0)) | (step_time == Time(-0.0)) {
             panic!("The given step time ({}) is zero!", step_time)
         }
 
-        self.step_ang() / step_time
+        self.step_ang(micro) / step_time
     }
 
     // Steps
         /// Get the angular distance of a step Unit rad [Unit 1]
         #[inline(always)]
-        pub fn step_ang(&self) -> Delta {
-            Delta(2.0 * PI / self.n_s as f32)
+        pub fn step_ang(&self, micro : u8) -> Delta {
+            Delta(2.0 * PI / self.n_s as f32 / micro as f32)
         }
 
         /// Time per step for the given omega [Unit s]
@@ -131,12 +127,12 @@ impl StepperConst
         /// 
         /// Panics if the given `omega` is zero 
         #[inline(always)]
-        pub fn step_time(&self, omega : Omega) -> Time {
+        pub fn step_time(&self, omega : Omega, micro : u8) -> Time {
             if (omega == Omega(0.0)) | (omega == Omega(-0.0)) {
                 panic!("The given omega ({}) is zero!", omega);
             }
 
-            2.0 * PI / (self.n_s as f32) / omega
+            self.step_ang(micro) / omega
         }
     // 
 
@@ -239,33 +235,33 @@ impl StepperConst
     // Conversions
         /// Converts the given angle `ang` into a absolute number of steps (always positive).
         #[inline(always)]
-        pub fn steps_from_ang_abs(&self, ang : Delta) -> u64 {
-            (ang.abs() / self.step_ang()).round() as u64
+        pub fn steps_from_ang_abs(&self, ang : Delta, micro : u8) -> u64 {
+            (ang.abs() / self.step_ang(micro)).round() as u64
         }   
 
         /// Converts the given angle `ang` into a number of steps
         #[inline(always)]
-        pub fn steps_from_ang(&self, ang : Delta) -> i64 {
-            (ang / self.step_ang()).round() as i64
+        pub fn steps_from_ang(&self, ang : Delta, micro : u8) -> i64 {
+            (ang / self.step_ang(micro)).round() as i64
         }   
 
         /// Converts the given number of steps into an angle
         #[inline(always)]
-        pub fn ang_from_steps_abs(&self, steps : u64) -> Delta {
-            steps as f32 * self.step_ang()
+        pub fn ang_from_steps_abs(&self, steps : u64, micro : u8) -> Delta {
+            steps as f32 * self.step_ang(micro)
         }
 
         /// Converts the given number of steps into an angle
         #[inline(always)]
-        pub fn ang_from_steps(&self, steps : i64) -> Delta {
-            steps as f32 * self.step_ang()
+        pub fn ang_from_steps(&self, steps : i64, micro : u8) -> Delta {
+            steps as f32 * self.step_ang(micro)
         }
 
         // Comparision
         /// Checks wheither the given angle `ang` is in range (closes to) a given step count `steps`
         #[inline(always)]
-        pub fn is_in_step_range(&self, steps : i64, ang : Delta) -> bool {
-            self.steps_from_ang(ang) == steps
+        pub fn is_in_step_range(&self, steps : i64, ang : Delta, micro : u8) -> bool {
+            self.steps_from_ang(ang, micro) == steps
         }
     //
 }

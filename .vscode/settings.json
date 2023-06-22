@@ -1,4 +1,3 @@
 {
-    "rust-analyzer.showUnlinkedFileNotification": false,
-    "godot_tools.scene_file_config": "d:\\Just data\\Libraries\\stepper_lib\\examples\\simple_conv"
+    "rust-analyzer.showUnlinkedFileNotification": false
 }

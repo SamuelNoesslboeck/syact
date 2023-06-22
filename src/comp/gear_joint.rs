@@ -70,6 +70,14 @@ impl<C : StepperComp> StepperComp for GearJoint<C> {
         self.ctrl.consts()   
     }
 
+    fn micro(&self) -> u8 {
+        self.ctrl.micro()
+    }
+
+    fn set_micro(&mut self, micro : u8) {
+        self.ctrl.set_micro(micro)
+    }
+
     fn drive_nodes(&mut self, delta : Delta, omega_0 : Omega, omega_tar : Omega, corr : &mut (Delta, Time)) -> Result<(), crate::Error> {
         self.ctrl.drive_nodes(delta, omega_0, omega_tar, corr)
     }

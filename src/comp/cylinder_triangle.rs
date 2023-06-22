@@ -188,6 +188,14 @@ impl<C : StepperComp> StepperComp for CylinderTriangle<C> {
         self.cylinder.consts()
     }
 
+    fn micro(&self) -> u8 {
+        self.cylinder.micro()
+    }
+
+    fn set_micro(&mut self, micro : u8) {
+        self.cylinder.set_micro(micro)
+    }
+
     fn drive_nodes(&mut self, delta : Delta, omega_0 : Omega, omega_tar : Omega, corr : &mut (Delta, Time)) -> Result<(), crate::Error> {
         self.cylinder.drive_nodes(delta, omega_0, omega_tar, corr)
     }

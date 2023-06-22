@@ -105,7 +105,7 @@ pub trait SyncComp : Setup {
         /// 
         /// // Checks position of super component (The position of the super component won't be exactly 1.0, 
         /// // as the stepper motor can only move whole steps)
-        /// assert!((cylinder.super_comp().unwrap().gamma() - Gamma(1.0)).abs() <= StepperConst::GEN.step_ang());
+        /// assert!((cylinder.super_comp().unwrap().gamma() - Gamma(1.0)).abs() <= cylinder.step_ang());
         /// ```
         #[inline(always)]
         fn super_comp(&self) -> Option<&dyn SyncComp> {
@@ -131,7 +131,7 @@ pub trait SyncComp : Setup {
         /// cylinder.super_comp_mut().unwrap().write_gamma(Gamma(1.0));
         /// 
         /// // Check own position (The position of the component won't be exactly 1.0, as the stepper motor can only move whole steps)
-        /// assert!((cylinder.super_comp().unwrap().gamma() - Gamma(1.0)).abs() <= StepperConst::GEN.step_ang());
+        /// assert!((cylinder.super_comp().unwrap().gamma() - Gamma(1.0)).abs() <= cylinder.step_ang());
         /// ```
         #[inline(always)]
         fn super_comp_mut(&mut self) -> Option<&mut dyn SyncComp> {

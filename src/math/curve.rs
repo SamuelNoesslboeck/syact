@@ -67,8 +67,8 @@ pub fn next_node_simple(delta : Delta, omega_0 : Omega, alpha : Alpha) -> (Time,
 // Curves
 /// Creates a new empty curve 
 #[inline]
-pub fn crate_plain_curve(data : &StepperConst, node_count : usize, omega_max : Omega) -> Vec<Time> {
-    vec![data.step_time(omega_max); node_count]
+pub fn crate_plain_curve(data : &StepperConst, node_count : usize, omega_max : Omega, micro : u8) -> Vec<Time> {
+    vec![data.step_time(omega_max, micro); node_count]
 }
 
 /// Mirrors the curve in the center, existing values will be overwritten
@@ -85,10 +85,10 @@ pub fn mirror_curve(cur : &mut [Time]) {
 /// # Panics
 /// 
 /// Panics if the given bend or safety factor is invalid
-pub fn write_simple_move(consts : &StepperConst, var : &CompVars, lk : &LinkedData, cur : &mut [Time], omega_max : Omega) {
+pub fn write_simple_move(consts : &StepperConst, var : &CompVars, lk : &LinkedData, cur : &mut [Time], omega_max : Omega, micro : u8) {
     let cur_len = cur.len(); 
 
-    let mut builder = CurveBuilder::new(consts, var, lk, Omega::ZERO);
+    let mut builder = CurveBuilder::new(consts, var, lk, Omega::ZERO, micro);
 
     for i in 0 .. cur_len / 2 {
         let time = builder.next_step_pos(None);
@@ -105,12 +105,12 @@ pub fn write_simple_move(consts : &StepperConst, var : &CompVars, lk : &LinkedDa
 
 /// Create a new simple acceleration curve that can be used by a stepper motor to drive safely from standstill
 #[inline]
-pub fn create_simple_curve(consts : &StepperConst, vars : &CompVars, lk : &LinkedData, delta : Delta, omega_max : Omega) 
+pub fn create_simple_curve(consts : &StepperConst, vars : &CompVars, lk : &LinkedData, delta : Delta, omega_max : Omega, micro : u8) 
         -> Vec<Time> {
-    let steps = consts.steps_from_ang_abs(delta);
+    let steps = consts.steps_from_ang_abs(delta, micro);
 
-    let mut cur = crate_plain_curve(consts, steps as usize, omega_max);
-    write_simple_move(consts, vars, lk, cur.as_mut_slice(), omega_max);
+    let mut cur = crate_plain_curve(consts, steps as usize, omega_max, micro);
+    write_simple_move(consts, vars, lk, cur.as_mut_slice(), omega_max, micro);
 
     cur
 }

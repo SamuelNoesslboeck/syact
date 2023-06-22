@@ -38,6 +38,9 @@ pub struct CurveBuilder<'a> {
     /// Total time of the curve processing
     pub time_total : Time,
 
+    /// Microstepping
+    pub micro : u8, 
+
     consts : &'a StepperConst,
     var : &'a CompVars,
     lk : &'a LinkedData
@@ -45,7 +48,7 @@ pub struct CurveBuilder<'a> {
 
 impl<'a> CurveBuilder<'a> {
     /// Creates a new `CurveBuilder`
-    pub fn new(consts : &'a StepperConst, var : &'a CompVars, lk : &'a LinkedData, omega_0 : Omega) -> Self {
+    pub fn new(consts : &'a StepperConst, var : &'a CompVars, lk : &'a LinkedData, omega_0 : Omega, micro : u8) -> Self {
         if !var.f_bend.is_normal() {
             panic!("Invaild bend factor! ({})", var.f_bend);
         }
@@ -63,6 +66,8 @@ impl<'a> CurveBuilder<'a> {
 
             time: Time::ZERO,
             time_total: Time::ZERO,
+
+            micro,
 
             consts,
             var,
@@ -126,7 +131,7 @@ impl<'a> CurveBuilder<'a> {
         } else {
             self.alpha = self.consts.alpha_max_dyn(
                 force::torque_dyn(self.consts, 
-                        (self.omega /* + omega_tar */).abs() /* / 2.0 */ / self.var.f_bend, self.lk.u) / self.lk.s_f * self.var.f_bend, 
+                        (self.omega /* + omega_tar */).abs() /* / 2.0 */ / self.var.f_bend, self.lk.u, self.micro) / self.lk.s_f * self.var.f_bend, 
                     self.var
             ).unwrap();
     
@@ -176,20 +181,20 @@ impl<'a> CurveBuilder<'a> {
 
     /// Calculates the next step in an acceleration curve and returns the step-time
     pub fn next_step_pos(&mut self, alpha : Option<Alpha>) -> Time {
-        self.next(self.consts.step_ang(), self.max_speed(), alpha).0
+        self.next(self.consts.step_ang(self.micro), self.max_speed(), alpha).0
     }
 
     /// Calculates the next step in an decceleration curve and returns the step-time
     pub fn next_step_neg(&mut self, alpha : Option<Alpha>) -> Time {
-        self.next(self.consts.step_ang(), -self.max_speed(), alpha).0
+        self.next(self.consts.step_ang(self.micro), -self.max_speed(), alpha).0
     }
 
     #[inline(always)]
     fn next_step(&mut self, omega : Omega, time : &mut Time, alpha : Option<Alpha>) -> bool {
         let step_delta = if (self.omega + omega) >= Omega::ZERO {
-            self.consts.step_ang()
+            self.consts.step_ang(self.micro)
         } else {
-            -self.consts.step_ang()
+            -self.consts.step_ang(self.micro)
         };
 
         if omega > self.omega {
@@ -258,8 +263,8 @@ impl<'a> CurveBuilder<'a> {
             }
         }   // TODO: Handle more cases
         
-        let steps = self.consts.steps_from_ang(delta);
-        corr.0 = delta - self.consts.ang_from_steps(steps);
+        let steps = self.consts.steps_from_ang(delta, self.micro);
+        corr.0 = delta - self.consts.ang_from_steps(steps, self.micro);
         delta = delta - corr.0;
 
         if steps == 0 {
@@ -274,9 +279,9 @@ impl<'a> CurveBuilder<'a> {
         }
 
         // Debug! TODO: Remove
-        if alpha.abs() > self.consts.alpha_max_dyn(force::torque_dyn(self.consts, (omega_0 + omega_tar) / 2.0, self.lk.u), self.var)? {
+        if alpha.abs() > self.consts.alpha_max_dyn(force::torque_dyn(self.consts, (omega_0 + omega_tar) / 2.0, self.lk.u, self.micro), self.var)? {
             panic!("Acceleration reached! {} max: {}", alpha, 
-            self.consts.alpha_max_dyn(force::torque_dyn(self.consts, (omega_0 + omega_tar) / 2.0, self.lk.u), self.var)?);
+            self.consts.alpha_max_dyn(force::torque_dyn(self.consts, (omega_0 + omega_tar) / 2.0, self.lk.u, self.micro), self.var)?);
         }
 
         let mut curve = vec![]; 

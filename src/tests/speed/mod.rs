@@ -10,7 +10,7 @@ fn torque_dyn_exact_speed() {
     let inst = Instant::now();
 
     for i in 0 .. 1_000_000 {
-        force::torque_dyn(&consts, Omega(0.01 * (i as f32)), 12.0);
+        force::torque_dyn(&consts, Omega(0.01 * (i as f32)), 12.0, 1);
     }
 
     println!("Elapsed: {}s", inst.elapsed().as_secs_f32());
@@ -40,7 +40,7 @@ fn create_curve_speed() {
 
     let inst = Instant::now();
 
-    let c = curve::create_simple_curve(&consts, &vars, &lk, Delta(100_000.0), Omega(1_000.0));
+    let c = curve::create_simple_curve(&consts, &vars, &lk, Delta(100_000.0), Omega(1_000.0), 1);
 
     println!(" => Created curve with {} nodes", c.len());
     println!("Elapsed: {}s", inst.elapsed().as_secs_f32());

@@ -21,15 +21,15 @@ use crate::units::*;
 /// let data = StepperConst::GEN;   // Using generic stepper motor data
 /// 
 /// // Without speed (in stall) the torque has to equal the stall torque
-/// assert_eq!(torque_dyn(&data, Omega::ZERO, 12.0), data.t_s);    
+/// assert_eq!(torque_dyn(&data, Omega::ZERO, 12.0, 1), data.t_s);    
 /// // The torque has to reduce with increasing speed 
-/// assert!(torque_dyn(&data, Omega(10.0), 12.0) < data.t_s);
+/// assert!(torque_dyn(&data, Omega(10.0), 12.0, 1) < data.t_s);
 /// // The curve has to go down
-/// assert!(torque_dyn(&data, Omega(20.0), 12.0) < torque_dyn(&data, Omega(10.0), 12.0));
+/// assert!(torque_dyn(&data, Omega(20.0), 12.0, 1) < torque_dyn(&data, Omega(10.0), 12.0, 1));
 /// // The curve has to be symmetrical
-/// assert_eq!(torque_dyn(&data, Omega(10.0), 12.0), torque_dyn(&data, Omega(10.0), 12.0));
+/// assert_eq!(torque_dyn(&data, Omega(10.0), 12.0, 1), torque_dyn(&data, Omega(10.0), 12.0, 1));
 /// ```
-pub fn torque_dyn(consts : &StepperConst, mut omega : Omega, u : f32) -> Force {
+pub fn torque_dyn(consts : &StepperConst, mut omega : Omega, u : f32, micro : u8) -> Force {
     omega = omega.abs();
 
     if !omega.is_finite() {
@@ -40,7 +40,7 @@ pub fn torque_dyn(consts : &StepperConst, mut omega : Omega, u : f32) -> Force {
         return consts.t_s;
     }
 
-    let t = consts.step_time(omega);
+    let t = consts.step_time(omega, micro);
     let pow = E.powf( -t / consts.tau(u) );
 
     (1.0 - pow) / (1.0 + pow) * consts.t_s
