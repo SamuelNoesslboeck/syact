@@ -6,9 +6,9 @@ edition = "2021"
 [workspace]
 
 [dependencies]
-stepper_lib = { path = "../../" } # "0.11.6"          # Importing the library
+syact = { path = "../../" } # "0.12.0"          # Importing the library
 
 [features]
-rasp = [ "stepper_lib/rasp" ]   # Creating the platform feature for our raspberry pi
+rasp = [ "syact/rasp" ]   # Creating the platform feature for our raspberry pi
 direct = [ ]
 predef = [ ]

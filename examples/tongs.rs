@@ -10,7 +10,7 @@ The cargo.toml file specified below is when running the example on a raspberry p
 
 [dependencies]
 # Include the library configured for the raspberry pi
-stepper_lib = { version = \"0.11\", features = [ \"rasp\" ] } 
+syact = { version = \"0.11\", features = [ \"rasp\" ] } 
 
 # ...
 ```
@@ -21,12 +21,12 @@ use core::time::Duration;
 use std::thread::sleep;
 
 // Include the library
-use stepper_lib::prelude::*;
+use syact::prelude::*;
 
 // Pin declerations (BCM on raspberry pi)
 const PIN_PWM : u8 = 27;
 
-fn main() -> Result<(), stepper_lib::Error> {
+fn main() -> Result<(), syact::Error> {
     // Create the tongs controller
     let mut tongs = tool::Tongs::new(
         ServoDriver::new(ServoConst::MG996R, PIN_PWM),    // The tongs use a MG996R servo connected to the BCM pin 27   

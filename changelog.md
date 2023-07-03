@@ -56,3 +56,7 @@
 ### Bug fixes
 
 - Fixed bug that caused the measurement of an `EndSwitch` to fail
+
+## Version 0.12.0
+
+New name for library scaling and rust convention

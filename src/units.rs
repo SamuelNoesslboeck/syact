@@ -252,7 +252,7 @@ macro_rules! derive_units {
 /// - In seconds
 /// 
 /// ```rust
-/// use stepper_lib::units::*;
+/// use syact::units::*;
 /// 
 /// // Comparisions
 /// assert!(Time(1.0) > Time(-1.0));
@@ -291,7 +291,7 @@ impl Div<Time> for f32 {
 /// 
 //// # Operations
 /// ```rust
-/// use stepper_lib::units::{Gamma, Delta};
+/// use syact::units::{Gamma, Delta};
 /// 
 /// // Subtract two absolute distances to get once relative
 /// assert_eq!(Gamma(2.0) - Gamma(1.0), Delta(1.0));
@@ -423,7 +423,7 @@ impl Sub<Phi> for Phi {
 /// - Can be either radians or millimeters
 /// 
 /// ```rust
-/// use stepper_lib::units::*;
+/// use syact::units::*;
 /// 
 /// assert_eq!(Delta(2.0), Delta(1.0) + Delta(1.0));
 /// assert_eq!(Delta(5.0), Delta(2.5) * 2.0);
@@ -478,7 +478,7 @@ impl Div<Omega> for f32 {
 /// - Can be either radians per second^2 or millimeters per second^2
 /// 
 /// ```
-/// use stepper_lib::units::*;
+/// use syact::units::*;
 /// 
 /// assert_eq!(Omega(5.0), Alpha(2.5) * Time(2.0));
 /// assert_eq!(Alpha(2.5), Omega(5.0) / Time(2.0));

@@ -2,7 +2,7 @@ use crate::{StepperConst, SyncComp, SyncCompGroup};
 use crate::math::{CurveBuilder, PathBuilder, PathNode};
 use crate::units::*;
 
-pub use stepper_macros::StepperCompGroup;
+pub use syact_macros::StepperCompGroup;
 
 /// A component based on a stepper motor
 pub trait StepperComp : SyncComp {

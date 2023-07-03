@@ -1,5 +1,5 @@
 #![doc = include_str!("../README.md")]
-#![crate_name = "stepper_lib"]
+#![crate_name = "syact"]
 #![cfg_attr(not(feature = "std"), no_std)]
 #![warn(missing_docs)]
 
@@ -18,7 +18,7 @@ compile_error!("No-Std currently not available!");
     #[cfg(feature = "std")]
     pub use comp::asyn::{AsyncComp, Direction};
     
-    pub use stepper_macros::SyncCompGroup;
+    pub use syact_macros::SyncCompGroup;
 
     /// Collection of structs and functions for controlling Stepper Motors
     pub mod ctrl;

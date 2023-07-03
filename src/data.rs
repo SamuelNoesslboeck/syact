@@ -18,7 +18,7 @@ pub use var::CompVars;
 
 /// A collection of the most relevant variables Unit stepper calculation 
 /// ```
-/// use stepper_lib::StepperConst;
+/// use syact::StepperConst;
 ///
 /// // Create the data from an standard motor
 /// let mut data = StepperConst::MOT_17HE15_1504S;
@@ -56,7 +56,7 @@ impl StepperConst
     pub const GEN : Self = Self::MOT_17HE15_1504S;
 
     /// ### Stepper motor 17HE15-1504S
-    /// Values for standard stepper motor, see <https://github.com/SamuelNoesslboeck/stepper_lib/docs/datasheets/17HE15_1504S.pdf>
+    /// Values for standard stepper motor, see <https://github.com/SamuelNoesslboeck/syact/docs/datasheets/17HE15_1504S.pdf>
     pub const MOT_17HE15_1504S : Self = Self {
         i_max: 1.5, 
         l: 0.004, 
@@ -98,8 +98,8 @@ impl StepperConst
     /// ```rust 
     /// use core::f32::consts::PI;
     /// 
-    /// use stepper_lib::data::StepperConst;
-    /// use stepper_lib::units::*;
+    /// use syact::data::StepperConst;
+    /// use syact::units::*;
     /// 
     /// let data = StepperConst::GEN;
     /// 
@@ -178,8 +178,8 @@ impl StepperConst
         /// Panics if either the given motor torque `t_s` or load torque `t_load` are negative, zero (-0.0 included), infinite or NAN
         /// 
         /// ```rust
-        /// use stepper_lib::data::StepperConst;
-        /// use stepper_lib::units::*;
+        /// use syact::data::StepperConst;
+        /// use syact::units::*;
         /// 
         /// // Base torque of the motor
         /// const BASE : Force = Force(1.0);

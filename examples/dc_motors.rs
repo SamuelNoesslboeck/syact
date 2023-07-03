@@ -10,7 +10,7 @@ The cargo.toml file specified below is when running the example on a raspberry p
 
 [dependencies]
 # Include the library configured for the raspberry pi
-stepper_lib = { version = \"0.11\", features = [ \"rasp\" ] } 
+syact = { version = \"0.11\", features = [ \"rasp\" ] } 
 
 # ...
 ```
@@ -19,7 +19,7 @@ stepper_lib = { version = \"0.11\", features = [ \"rasp\" ] }
 use core::time::Duration;
 use std::thread::sleep;
 
-use stepper_lib::prelude::*;
+use syact::prelude::*;
 
 // Pin declerations
 /// Pin for PWM-Signal in clockwise direction
@@ -30,7 +30,7 @@ const PIN_CCW : u8 = 19;
 /// Defines the frequency of the PWM Signal
 const FREQ : Omega = Omega(100.0);
 
-fn main() -> Result<(), stepper_lib::Error> {
+fn main() -> Result<(), syact::Error> {
     // Create the motor with the constants above
     let mut motor = DcMotor::new(PIN_CW, PIN_CCW, FREQ);
     // Setup the PWM signals

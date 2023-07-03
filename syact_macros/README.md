@@ -1,15 +1,15 @@
-# stepper_macros
+# syact_macros
 
-[stepper_lib]: https://github.com/SamueLNoesslboeck/stepper_lib
+[syact]: https://github.com/SamueLNoesslboeck/syact
 
-A helper crate for proc-macros used by the [stepper_lib].
+A helper crate for proc-macros used by the [syact].
 
 ## SyncCompGroup
 
 Includes a derive proc-macro to implement `SyncCompGroup` for a struct consisting of only fields that include `SyncComp`.
 
 ```rust
-use stepper_lib::prelude::*;
+use syact::prelude::*;
 
 // Simple group of components that consists of multiple fields
 #[derive(SyncCompGroup)]        // Automatically implements SyncCompGroup

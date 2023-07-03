@@ -39,7 +39,7 @@ impl ServoConst
     }; 
 
     /// Constants for a MG996R servo motor. 
-    /// See [datasheet](https://github.com/SamuelNoesslboeck/stepper_lib/blob/master/docs/datasheets/MG996R.pdf)
+    /// See [datasheet](https://github.com/SamuelNoesslboeck/syact/blob/master/docs/datasheets/MG996R.pdf)
     pub const MG996R : Self = Self {
         t_max: Force(1.08),
         omega_max: Omega(8.5),

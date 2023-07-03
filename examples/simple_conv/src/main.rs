@@ -1,6 +1,6 @@
 //! Demonstration of different ways to implement a conveyor
 
-use stepper_lib::prelude::*;
+use syact::prelude::*;
 
 const PIN_DIR : u8 = 17;        // Pin of the directional signal
 const PIN_STEP : u8 = 26;       // Pin of the step signal
@@ -13,7 +13,7 @@ fn sleep(secs : f32) {
     std::thread::sleep(core::time::Duration::from_secs_f32(secs))
 }
 
-fn main() -> Result<(), stepper_lib::Error> {
+fn main() -> Result<(), syact::Error> {
     #[cfg(feature = "predef")]
     predefined::predefined()?;
 
@@ -31,7 +31,7 @@ mod predefined {
     // Define the radius of the powered conveyor roll as a constant with 5 millimeters
     const R_ROLL : f32 = 10.0;
     
-    pub fn predefined() -> Result<(), stepper_lib::Error> {
+    pub fn predefined() -> Result<(), syact::Error> {
         // First we crate our conveyor using a stepper motor and the radius of the roll that connects the belt to the motor
         let mut conv = Conveyor::new(
             Stepper::new(StepperConst::MOT_17HE15_1504S, PIN_DIR, PIN_STEP),        // The stepper motor
@@ -103,7 +103,7 @@ mod direct {
         // R_ROLL has units millimeter, therefore a factor of 10^6 is required for conversion from kg to kgm^2
     }
 
-    pub fn direct_approach() -> Result<(), stepper_lib::Error> {
+    pub fn direct_approach() -> Result<(), syact::Error> {
         let mut ctrl = Stepper::new(StepperConst::MOT_17HE15_1504S, PIN_DIR, PIN_STEP);
         ctrl.write_link(LinkedData::GEN);
         ctrl.setup()?;

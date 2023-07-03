@@ -52,9 +52,9 @@ pub trait SyncComp : Setup {
         /// Returns the variables of the component, such as load force, inertia, limits ...
         /// 
         /// ```rust
-        /// use stepper_lib::{SyncComp, Stepper, StepperConst};
-        /// use stepper_lib::comp::GearJoint;
-        /// use stepper_lib::units::*;
+        /// use syact::{SyncComp, Stepper, StepperConst};
+        /// use syact::comp::GearJoint;
+        /// use syact::units::*;
         /// 
         /// // Limits
         /// const LIM_MAX : Gamma = Gamma(1.0);
@@ -92,7 +92,7 @@ pub trait SyncComp : Setup {
         /// A super component would for example be the stepper motor for a cylinder (See [Cylinder])
         /// 
         /// ```rust
-        /// use stepper_lib::prelude::*;
+        /// use syact::prelude::*;
         /// 
         /// // Create a new cylinder (implements SyncComp)
         /// let mut cylinder = Cylinder::new(
@@ -119,7 +119,7 @@ pub trait SyncComp : Setup {
         /// A super component would for example be the stepper motor for a cylinder (See [Cylinder])
         /// 
         /// ```rust
-        /// use stepper_lib::prelude::*;
+        /// use syact::prelude::*;
         /// 
         /// // Create a new cylinder (implements SyncComp)
         /// let mut cylinder = Cylinder::new(
@@ -146,7 +146,7 @@ pub trait SyncComp : Setup {
         /// this function will return a super distance *four times higher* than the input distance.
         /// 
         /// ```rust
-        /// use stepper_lib::prelude::*;
+        /// use syact::prelude::*;
         /// 
         /// // Create a new cylinder (implements SyncComp)
         /// let mut cylinder = Cylinder::new(
@@ -169,7 +169,7 @@ pub trait SyncComp : Setup {
         /// this function will return a distance *four times higher* than the input super distance
         /// 
         /// ```rust
-        /// use stepper_lib::prelude::*;
+        /// use syact::prelude::*;
         /// 
         /// // Create a new cylinder (implements SyncComp)
         /// let mut cylinder = Cylinder::new(
@@ -193,7 +193,7 @@ pub trait SyncComp : Setup {
         /// this function will return a distance *four times higher* than the input super distance
         /// 
         /// ```rust
-        /// use stepper_lib::prelude::*;
+        /// use syact::prelude::*;
         /// 
         /// // Create a new cylinder (implements SyncComp)
         /// let mut cylinder = Cylinder::new(
@@ -222,7 +222,7 @@ pub trait SyncComp : Setup {
         /// this function will return a [Delta] *twice as high* than the input [Delta]
         /// 
         /// ```rust
-        /// use stepper_lib::prelude::*;
+        /// use syact::prelude::*;
         /// 
         /// // Position of components
         /// const POS : Gamma = Gamma(10.0);
@@ -250,7 +250,7 @@ pub trait SyncComp : Setup {
         /// this function will return a [Delta] *half in value* than the input [Delta].
         /// 
         /// ```rust
-        /// use stepper_lib::prelude::*;
+        /// use syact::prelude::*;
         /// 
         /// // Position of components
         /// const POS : Gamma = Gamma(10.0);
@@ -418,7 +418,7 @@ pub trait SyncComp : Setup {
         /// Returns the **absolute** position of the component.
         /// 
         /// ```rust
-        /// use stepper_lib::prelude::*;
+        /// use syact::prelude::*;
         /// 
         /// // Position of components
         /// const POS : Gamma = Gamma(10.0);
@@ -451,7 +451,7 @@ pub trait SyncComp : Setup {
         /// small tolerance has to be considered, as the value written won't be the exact gamma value given.
         /// 
         /// ```rust
-        /// use stepper_lib::prelude::*;
+        /// use syact::prelude::*;
         /// 
         /// // Position of components
         /// const POS : Gamma = Gamma(10.0);
@@ -528,7 +528,7 @@ pub trait SyncComp : Setup {
         /// # Example 
         /// 
         /// ```rust
-        /// use stepper_lib::prelude::*;
+        /// use syact::prelude::*;
         /// 
         /// // Limits
         /// const LIM_MAX : Gamma = Gamma(1.0);
@@ -579,7 +579,7 @@ pub trait SyncComp : Setup {
         /// gamma value. The component is then not allowed to move in the current direction anymore. 
         /// 
         /// ```rust
-        /// use stepper_lib::prelude::*;
+        /// use syact::prelude::*;
         /// 
         /// const GAMMA : Gamma = Gamma(1.0); 
         /// 
@@ -617,7 +617,7 @@ pub trait SyncComp : Setup {
         /// are set to `None`. 
         /// 
         /// ```rust
-        /// use stepper_lib::prelude::*;
+        /// use syact::prelude::*;
         /// 
         /// // Limits
         /// const LIM_MAX : Gamma = Gamma(1.0);
@@ -674,9 +674,9 @@ pub trait SyncComp : Setup {
         /// The difference to [SyncComp::set_limit()] is that this function **overwrites** the current limits set.
         /// 
         /// ```rust
-        /// use stepper_lib::{SyncComp, Stepper, StepperConst};
-        /// use stepper_lib::comp::GearJoint;
-        /// use stepper_lib::units::*;
+        /// use syact::{SyncComp, Stepper, StepperConst};
+        /// use syact::comp::GearJoint;
+        /// use syact::units::*;
         /// 
         /// // Limits
         /// const LIM_MAX : Gamma = Gamma(1.0);
@@ -732,9 +732,9 @@ pub trait SyncComp : Setup {
         /// Apply a load force to the component, slowing down movements 
         /// 
         /// ```rust
-        /// use stepper_lib::{SyncComp, Stepper, StepperConst};
-        /// use stepper_lib::comp::GearJoint;
-        /// use stepper_lib::units::*;
+        /// use syact::{SyncComp, Stepper, StepperConst};
+        /// use syact::comp::GearJoint;
+        /// use syact::units::*;
         /// 
         /// // Force to act upon the component
         /// const FORCE : Force = Force(0.2);
@@ -769,9 +769,9 @@ pub trait SyncComp : Setup {
         /// Panics if no super component or override of the function has been provided.
         /// 
         /// ```rust
-        /// use stepper_lib::{SyncComp, Stepper, StepperConst};
-        /// use stepper_lib::comp::GearJoint;
-        /// use stepper_lib::units::*;
+        /// use syact::{SyncComp, Stepper, StepperConst};
+        /// use syact::comp::GearJoint;
+        /// use syact::units::*;
         /// 
         /// // Inertia to act upon the component
         /// const INERTIA : Inertia = Inertia(4.0);

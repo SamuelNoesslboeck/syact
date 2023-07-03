@@ -10,17 +10,17 @@ The cargo.toml file specified below is when running the example on a raspberry p
 # ...
 
 [dependencies]
-stepper_lib = { version = \"0.11.6\" } 
+syact = { version = \"0.11.6\" } 
 
 [features]
-rasp = [ \"stepper_lib/rasp\" ]
+rasp = [ \"syact/rasp\" ]
 
 # ...
 ```
 "]
 
 // Include library
-use stepper_lib::prelude::*;
+use syact::prelude::*;
 
 // Pin declerations (BCM on raspberry pi)
 const PIN_DIR : u8 = 27;
@@ -44,7 +44,7 @@ impl MyComp {
 }
 
 impl Setup for MyComp {
-    fn setup(&mut self) -> Result<(), stepper_lib::Error> {
+    fn setup(&mut self) -> Result<(), syact::Error> {
         self.ctrl.setup()?;  // Setting up the super component
         Ok(())      
     }
@@ -52,7 +52,7 @@ impl Setup for MyComp {
 
 impl SyncComp for MyComp {
     // Required memebers
-        fn vars<'a>(&'a self) -> &'a stepper_lib::data::CompVars {
+        fn vars<'a>(&'a self) -> &'a syact::data::CompVars {
             todo!()     // Not required in this example
         }
 
@@ -83,7 +83,7 @@ impl SyncComp for MyComp {
         }
     // 
 
-    fn drive_rel(&mut self, delta : Delta, speed_f : f32) -> Result<Delta, stepper_lib::Error> {
+    fn drive_rel(&mut self, delta : Delta, speed_f : f32) -> Result<Delta, syact::Error> {
         println!("Now driving!"); // Our custom message
 
         let delta_real = self.ctrl.drive_rel(
@@ -95,7 +95,7 @@ impl SyncComp for MyComp {
     }
 }
 
-fn main() -> Result<(), stepper_lib::Error> {
+fn main() -> Result<(), syact::Error> {
     // Create the controls for a stepper motor
     let mut comp = MyComp::new(
         Stepper::new(StepperConst::MOT_17HE15_1504S, PIN_DIR, PIN_STEP),

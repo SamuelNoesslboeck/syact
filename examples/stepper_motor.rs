@@ -12,7 +12,7 @@ The cargo.toml file specified below is when running the example on a raspberry p
 
 [dependencies]
 # Include the library configured for the raspberry pi
-stepper_lib = { version = \"0.11.6\", features = [ \"rasp\" ] } 
+syact = { version = \"0.11.6\", features = [ \"rasp\" ] } 
 
 # ...
 ```
@@ -21,7 +21,7 @@ stepper_lib = { version = \"0.11.6\", features = [ \"rasp\" ] }
 use core::f32::consts::PI;
 
 // Include the library
-use stepper_lib::prelude::*;
+use syact::prelude::*;
 
 // Pin declerations (BCM on raspberry pi)
 const PIN_DIR : u8 = 27;
@@ -31,7 +31,7 @@ const PIN_STEP : u8 = 19;
 const DELTA : Delta = Delta(2.0 * PI);
 const OMEGA : Omega = Omega(10.0);
 
-fn main() -> Result<(), stepper_lib::Error> {
+fn main() -> Result<(), syact::Error> {
     // Create the controls for a stepper motor
     let mut ctrl = Stepper::new(StepperConst::MOT_17HE15_1504S, PIN_DIR, PIN_STEP);
     // Link the component to a system

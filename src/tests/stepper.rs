@@ -44,9 +44,8 @@ mod single_motor
 }
 
 #[cfg(feature = "std")]
-mod curves
-{
-    use crate::{StepperConst};
+mod curves {
+    use crate::StepperConst;
     use crate::data::{CompVars, LinkedData};
     use crate::math;
     use crate::units::*;

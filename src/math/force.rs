@@ -14,9 +14,9 @@ use crate::units::*;
 /// Panics if the given omega is not finite
 /// 
 /// ```rust
-/// use stepper_lib::StepperConst;
-/// use stepper_lib::math::force::torque_dyn;
-/// use stepper_lib::units::*;
+/// use syact::StepperConst;
+/// use syact::math::force::torque_dyn;
+/// use syact::units::*;
 /// 
 /// let data = StepperConst::GEN;   // Using generic stepper motor data
 /// 
@@ -75,7 +75,7 @@ pub fn torque_dyn_approx(consts : &StepperConst, mut omega : Omega, max_omega : 
 /// - `f_j` being the force acting on the joint (center point, position reference point)
 /// 
 /// ```rust
-/// use stepper_lib::math::force::forces_segment;
+/// use syact::math::force::forces_segment;
 /// 
 /// use glam::Vec3;
 /// 
@@ -121,7 +121,7 @@ pub fn forces_segment(actors : &Vec<(Vec3, Vec3)>, mut torque : Vec3, a_s : Vec3
 /// Returns the resulting torque and the resulting joint force (`torque`, `f_j`)
 /// 
 /// ```rust
-/// use stepper_lib::math::force::forces_joint;
+/// use syact::math::force::forces_joint;
 /// 
 /// use glam::Vec3;
 /// 

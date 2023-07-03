@@ -5,13 +5,13 @@
 For installation, just type
 
 ```sh
-cargo add stepper_lib
+cargo add syact
 ```
 
 in your project command line, or add
 
 ```toml
-stepper_lib = "0.11.6"
+syact = "0.12.0"
 ```
 
 to your dependencies.Depending on which platform you are using, the build command for the library changes. It is not recommended to add a feature directly to the dependency, as the library will cause build errors if platforms are switched.
@@ -20,11 +20,11 @@ Without any platform feature supplied, the library will automatically enter "sim
 
 ```toml
 [dependencies]
-stepper_lib = "0.11.6"
+syact = "0.12.0"
 # ...
 
 [features]
-rasp = [ "stepper_lib/rasp" ]
+rasp = [ "syact/rasp" ]
 # ... 
 ```
 
@@ -49,10 +49,10 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-stepper_lib = "0.11.6"          # Importing the library
+syact = "0.12.0"          # Importing the library
 
 [features]
-rasp = [ "stepper_lib/rasp" ]   # Creating the platform feature for our raspberry pi
+rasp = [ "syact/rasp" ]   # Creating the platform feature for our raspberry pi
 ```
 
 Our stepper motor of the conveyor is connected a stepper motor controller, which itself is connected to a `Raspberry Pi`. Such connections usually have a logical signal for controlling the direction and another that sends a pulse for each step. In our programm, they are best defined as constants.
@@ -77,7 +77,7 @@ The easiest approch for this example would be using the predefined component fro
 // Define the radius of the powered conveyor roll as a constant with 5 millimeters
 const R_ROLL : f32 = 10.0;
 
-pub fn predefined() -> Result<(), stepper_lib::Error> {
+pub fn predefined() -> Result<(), syact::Error> {
     // First we crate our conveyor using a stepper motor and the radius of the roll that connects the belt to the motor
     let mut conv = Conveyor::new(
         Stepper::new(StepperConst::MOT_17HE15_1504S, PIN_DIR, PIN_STEP),        // The stepper motor
@@ -150,7 +150,7 @@ fn inertia_for_motor(inertia_conv : Inertia) -> Inertia {
     // R_ROLL has units millimeter, therefore a factor of 10^6 is required for conversion from kg to kgm^2
 }
 
-pub fn direct_approach() -> Result<(), stepper_lib::Error> {
+pub fn direct_approach() -> Result<(), syact::Error> {
     let mut ctrl = Stepper::new(StepperConst::MOT_17HE15_1504S, PIN_DIR, PIN_STEP);
     ctrl.write_link(LinkedData::GEN);
     ctrl.setup()?;

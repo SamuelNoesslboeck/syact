@@ -1,5 +1,5 @@
 use crate::prelude::*;
-use crate as stepper_lib;
+use crate as syact;
 
 #[derive(SyncCompGroup)]
 #[derive(StepperCompGroup)]

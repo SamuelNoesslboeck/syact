@@ -74,7 +74,7 @@ fn sync_comp_group_impl(ast : DeriveInput) -> proc_macro::TokenStream {
 
             quote::quote! {
                 impl Setup for #name {
-                    fn setup(&mut self) -> Result<(), stepper_lib::Error> {
+                    fn setup(&mut self) -> Result<(), syact::Error> {
                         #setup_stream
                         Ok(())
                     }
@@ -132,19 +132,19 @@ fn stepper_comp_group_impl(ast : DeriveInput) -> proc_macro::TokenStream {
             }
 
             quote::quote! {
-                impl StepperCompGroup<#fields_count> for #name { 
-                    fn create_path_builder(&self, omega_0 : [stepper_lib::units::Omega; #fields_count]) 
-                    -> stepper_lib::math::path::PathBuilder<#fields_count> {
+                impl syact::comp::stepper::StepperCompGroup<#fields_count> for #name { 
+                    fn create_path_builder(&self, omega_0 : [syact::units::Omega; #fields_count]) 
+                    -> syact::math::path::PathBuilder<#fields_count> {
                         PathBuilder::new([
                             #builder_stream
                         ])
                     }
 
                     fn drive_nodes(&mut self, 
-                        nodes_0 : &[stepper_lib::math::path::PathNode; #fields_count], 
-                        omega_tar : [stepper_lib::units::Omega; #fields_count], 
-                        corr : &mut [(stepper_lib::units::Delta, stepper_lib::units::Time); #fields_count],
-                    ) -> Result<(), stepper_lib::Error> {
+                        nodes_0 : &[syact::math::path::PathNode; #fields_count], 
+                        omega_tar : [syact::units::Omega; #fields_count], 
+                        corr : &mut [(syact::units::Delta, syact::units::Time); #fields_count],
+                    ) -> Result<(), syact::Error> {
                         #drive_stream
                         Ok(())
                     }

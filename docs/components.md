@@ -18,7 +18,7 @@ In this example we drive a cylinder by a certain amount of millimeters.
 
 [dependencies]
 # Include the library configured for the raspberry pi
-stepper_lib = { version = "0.11.6", features = [ "rasp" ] } 
+syact = { version = "0.12.0", features = [ "rasp" ] } 
 
 # ...
 ```
@@ -28,11 +28,11 @@ stepper_lib = { version = "0.11.6", features = [ "rasp" ] }
 
 ```rust
 // Include components and data
-use stepper_lib::{Stepper, StepperConst, SyncComp, Setup};
-use stepper_lib::comp::Cylinder;
-use stepper_lib::data::LinkedData;
+use syact::{Stepper, StepperConst, SyncComp, Setup};
+use syact::comp::Cylinder;
+use syact::data::LinkedData;
 // Include the unit system
-use stepper_lib::units::*;
+use syact::units::*;
 
 // Pin declerations (BCM on raspberry pi)
 const PIN_DIR : u8 = 27;
@@ -42,7 +42,7 @@ const PIN_STEP : u8 = 19;
 const DELTA : Delta = Delta(10.0);      // 10 millimeters
 const OMEGA : Omega = Omega(20.0);      // 20 millimeters per second
 
-fn main() -> Result<(), stepper_lib::Error> {
+fn main() -> Result<(), syact::Error> {
     // Create the controls for a stepper motor
     let mut cylinder = Cylinder::new(
         Stepper::new(
@@ -99,7 +99,7 @@ Click to show Cargo.toml
 
 [dependencies]
 # Include the library configured for the raspberry pi
-stepper_lib = { version = "0.11.6", features = [ "rasp" ] } 
+syact = { version = "0.12.0", features = [ "rasp" ] } 
 
 # ...
 ```
@@ -109,7 +109,7 @@ stepper_lib = { version = "0.11.6", features = [ "rasp" ] }
 
 ```rust
 // Include library
-use stepper_lib::prelude::*;
+use syact::prelude::*;
 
 // Pin declerations (BCM on raspberry pi)
 const PIN_DIR : u8 = 27;
@@ -133,7 +133,7 @@ impl MyComp {
 }
 
 impl Setup for MyComp {
-    fn setup(&mut self) -> Result<(), stepper_lib::Error> {
+    fn setup(&mut self) -> Result<(), syact::Error> {
         self.ctrl.setup()?;  // Setting up the super component
         Ok(())      
     }
@@ -141,7 +141,7 @@ impl Setup for MyComp {
 
 impl SyncComp for MyComp {
     // Required memebers
-        fn vars<'a>(&'a self) -> &'a stepper_lib::data::CompVars {
+        fn vars<'a>(&'a self) -> &'a syact::data::CompVars {
             todo!()     // Not required in this example
         }
 
@@ -172,7 +172,7 @@ impl SyncComp for MyComp {
         }
     // 
 
-    fn drive_rel(&mut self, delta : Delta, speed_f : f32) -> Result<Delta, stepper_lib::Error> {
+    fn drive_rel(&mut self, delta : Delta, speed_f : f32) -> Result<Delta, syact::Error> {
         println!("Now driving!"); // Our custom message
 
         let delta_real = self.ctrl.drive_rel(
@@ -184,7 +184,7 @@ impl SyncComp for MyComp {
     }
 }
 
-fn main() -> Result<(), stepper_lib::Error> {
+fn main() -> Result<(), syact::Error> {
     // Create the controls for a stepper motor
     let mut comp = MyComp::new(
         Stepper::new(StepperConst::MOT_17HE15_1504S, PIN_DIR, PIN_STEP),
