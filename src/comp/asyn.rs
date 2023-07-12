@@ -1,15 +1,5 @@
 use crate::Setup;
-
-/// Direction of movement
-#[derive(Clone, Copy, PartialEq, PartialOrd, Eq)]
-pub enum Direction {
-    /// Clockwise
-    CW, 
-    /// Counterclockwise
-    CCW, 
-    /// No movement
-    None
-}
+use crate::ctrl::Direction;
 
 /// A component which is asynchronous because of its hardware properties, e.g. a simple DC-Motors
 pub trait AsyncComp : Setup{

@@ -7,31 +7,35 @@
 #[cfg(feature = "std")]
 extern crate alloc;
 
-#[cfg(not(feature = "std"))]
-compile_error!("No-Std currently not available!");
-
 // Submodules
     #[doc = include_str!("../docs/components.md")]
+    #[cfg(features = "std")]
     pub mod comp;
+    #[cfg(features = "std")]
     pub use comp::{SyncComp, SyncCompGroup, Tool};
+    #[cfg(features = "std")]
     pub use comp::tool::SimpleTool;
     #[cfg(feature = "std")]
-    pub use comp::asyn::{AsyncComp, Direction};
+    pub use comp::asyn::AsyncComp;
     
     pub use syact_macros::SyncCompGroup;
 
     /// Collection of structs and functions for controlling Stepper Motors
     pub mod ctrl;
-    pub use ctrl::Stepper;
+    pub use ctrl::{Direction, Stepper};
 
     /// Structs for storing characteristics of stepper motors and devices
+    #[cfg(feature = "std")]
     pub mod data;
+    #[cfg(feature = "std")]
     pub use data::{StepperConst, LinkedData};
 
     /// Functions and Structs for calculating Stepper Motor procedures and operations
+    #[cfg(feature = "std")]
     pub mod math;
 
     /// Functions and Structs for taking measurements with a robot for e.g. position calculation
+    #[cfg(feature = "std")]
     pub mod meas;
 
     /// Easy import of the functionalities
@@ -42,6 +46,7 @@ compile_error!("No-Std currently not available!");
 
     /// Module with all the tests required to assure the library funcitons as intended
     #[cfg(test)]
+    #[cfg(feature = "std")]
     mod tests;
 // 
 
@@ -72,6 +77,7 @@ pub trait Setup {
     }
 }
 
+#[cfg(feature = "std")]
 #[inline(always)]
 fn lib_error<E>(error : E) -> crate::Error 
 where

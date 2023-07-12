@@ -1,5 +1,6 @@
 use crate::Setup;
-use crate::comp::asyn::{Direction, AsyncComp};
+use crate::comp::asyn::AsyncComp;
+use crate::ctrl::Direction;
 use crate::ctrl::pwm::PWMOutput;
 use crate::units::Omega;
 
