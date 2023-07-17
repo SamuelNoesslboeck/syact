@@ -48,7 +48,10 @@ impl<T : AsRef<dyn StepperComp> + AsMut<dyn StepperComp> + AsRef<dyn SyncComp> +
 }
 
 /// A group of stepper motor based components
-pub trait StepperCompGroup<const C : usize> : SyncCompGroup<C> {
+pub trait StepperCompGroup<const C : usize> : SyncCompGroup<C> 
+where 
+    Self::Comp : StepperComp 
+{
     /// Create a new pathbuilder for the given stepper component group
     fn create_path_builder(&self, omega_0 : [Omega; C]) -> PathBuilder<C>;
 

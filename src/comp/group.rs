@@ -1,43 +1,56 @@
 use crate::{Setup, SyncComp};
 use crate::units::*;
 
-/// A group of synchronous components that can be implemented for any type of array, vector or list as long as it can be indexed.
-/// This trait then allows a lot of functions to be used to execute functions for all components at once.
+/// A group of synchronous components  
+/// This trait allows a lot of functions to be used for all components at once.
 pub trait SyncCompGroup<const C : usize> : Setup {
-    // Index 
-        /// Returns the component at the given index
-        fn index<'a>(&'a self, index : usize) -> &'a dyn SyncComp;
+    /// Type that generalizes all componenents, e.g. `dyn SyncComp`
+    type Comp : SyncComp;
 
-        /// Returns the component at the given index
-        fn index_mut<'a>(&'a mut self, index : usize) -> &'a mut dyn SyncComp;
+    // Iteration
+        fn for_each<F, R>(&self, func : F) -> [R; C]
+        where 
+            F : FnMut(&Self::Comp, usize) -> R,
+            R : Copy + Default;
+
+        fn for_each_mut<F, R>(&mut self, func : F) -> [R; C]
+        where 
+            F : FnMut(&mut Self::Comp, usize) -> R,
+            R : Copy + Default;
+
+        fn try_for_each<F, R, E>(&self, func : F) -> Result<[R; C], E>
+        where 
+            F : FnMut(&Self::Comp, usize) -> Result<R, E>,
+            R : Copy + Default;
+
+        fn try_for_each_mut<F, R, E>(&mut self, func : F) -> Result<[R; C], E>
+        where 
+            F : FnMut(&mut Self::Comp, usize) -> Result<R, E>,
+            R : Copy + Default;
     //
 
     // Data
         /// Runs [SyncComp::write_data()] for all components in the group. Note that the function is using the same 
         /// [CompData](crate::data::CompData) for all components
         fn write_data(&mut self, data : crate::data::CompData) {
-            for i in 0 .. C {
-                self.index_mut(i).write_data(data.clone())
-            }
+            self.for_each_mut(move |comp, _| {
+                comp.write_data(data.clone());
+            });
         } 
     //
 
     /// Runs [SyncComp::drive_rel()] for all components
     fn drive_rel(&mut self, deltas : [Delta; C], speed_f : f32) -> Result<[Delta; C], crate::Error> {
-        let mut res = [Delta::ZERO; C];
-        for i in 0 .. C {
-            res[i] = self.index_mut(i).drive_rel(deltas[i], speed_f)?;
-        }
-        Ok(res)
+        self.try_for_each_mut(|comp, index| {
+            comp.drive_rel(deltas[index], speed_f)  
+        })
     }
 
     /// Runs [SyncComp::drive_abs()] for all components
     fn drive_abs(&mut self, gamma : [Gamma; C], speed_f : f32) -> Result<[Delta; C], crate::Error>  {
-        let mut res = [Delta::ZERO; C];
-        for i in 0 .. C {
-            res[i] = self.index_mut(i).drive_abs(gamma[i], speed_f)?;
-        }
-        Ok(res)
+        self.try_for_each_mut(|comp, index| {
+            comp.drive_abs(gamma[index], speed_f)
+        })
     }
 
     // Async
@@ -48,9 +61,9 @@ pub trait SyncCompGroup<const C : usize> : Setup {
         /// Only available if the "std" feature is enabled
         #[cfg(feature = "std")]
         fn drive_rel_async(&mut self, deltas : [Delta; C], speed_f : f32) -> Result<(), crate::Error> {
-            for i in 0 .. C {
-                self.index_mut(i).drive_rel_async(deltas[i], speed_f)?;
-            }
+            self.try_for_each_mut(|comp, index| {
+                comp.drive_rel_async(deltas[index], speed_f)
+            })?; 
             Ok(())
         }
 
@@ -61,9 +74,9 @@ pub trait SyncCompGroup<const C : usize> : Setup {
         /// Only available if the "std" feature is enabled
         #[cfg(feature = "std")]
         fn drive_abs_async(&mut self, gamma : [Gamma; C], speed_f : f32) -> Result<(), crate::Error> {
-            for i in 0 .. C {
-                self.index_mut(i).drive_abs_async(gamma[i], speed_f)?;
-            }
+            self.try_for_each_mut(|comp, index| {
+                comp.drive_abs_async(gamma[index], speed_f)
+            })?;
             Ok(())
         }   
 
@@ -74,13 +87,9 @@ pub trait SyncCompGroup<const C : usize> : Setup {
         /// Only available if the "std" feature is enabled
         #[cfg(feature = "std")]
         fn await_inactive(&mut self) -> Result<[Delta; C], crate::Error> {
-            let mut delta = [Delta::NAN; C];
-
-            for i in 0 .. C {
-                delta[i] = self.index_mut(i).await_inactive()?;
-            }
-
-            Ok(delta)
+            self.try_for_each_mut(|comp, index| {
+                comp.await_inactive()
+            })
         }
     // 
 
@@ -88,19 +97,17 @@ pub trait SyncCompGroup<const C : usize> : Setup {
         /// Runs [SyncComp::gamma()] for all components
         #[inline(always)]
         fn gammas(&self) -> [Gamma; C] {
-            let mut dists = [Gamma::ZERO; C];
-            for i in 0 .. C {
-                dists[i] = self.index(i).gamma();
-            }
-            dists
+            self.for_each(|comp, index| {
+                comp.gamma()
+            })
         }
         
         /// Runs [SyncComp::write_gamma()] for all components
         #[inline(always)]
         fn write_gammas(&mut self, gammas : &[Gamma; C]) {
-            for i in 0 .. C {
-                self.index_mut(i).write_gamma(gammas[i])
-            }
+            self.for_each_mut(|comp, index| {
+                comp.write_gamma(gammas[index])
+            });
         }
 
         /// Runs [SyncComp::lim_for_gamma()] for all components 
@@ -205,13 +212,53 @@ impl<T : SyncComp, const C : usize> Setup for [T; C] {
 }
 
 impl<T : SyncComp, const C : usize> SyncCompGroup<C> for [T; C] { 
-    #[inline]
-    fn index<'a>(&'a self, index : usize) -> &'a dyn SyncComp {
-        &self[index]
+    type Comp = T;
+
+    fn for_each<F, R>(&self, mut func : F) -> [R; C]
+    where 
+        F : FnMut(&Self::Comp, usize) -> R,
+        R : Copy + Default 
+    {   
+        let mut res = [R::default(); C];
+        for i in 0 .. C {
+            res[i] = func(&self[i], i);
+        }
+        res
     }
 
-    #[inline]
-    fn index_mut<'a>(&'a mut self, index : usize) -> &'a mut dyn SyncComp {
-        &mut self[index]
+    fn for_each_mut<F, R>(&mut self, mut func : F) -> [R; C]
+    where 
+        F : FnMut(&mut Self::Comp, usize) -> R,
+        R : Copy + Default 
+    {
+        let mut res = [R::default(); C];
+        for i in 0 .. C {
+            res[i] = func(&mut self[i], i);
+        }
+        res
+    }
+
+    fn try_for_each<F, R, E>(&self, mut func : F) -> Result<[R; C], E>
+    where 
+        F : FnMut(&Self::Comp, usize) -> Result<R, E>,
+        R : Copy + Default 
+    {
+        let mut res = [R::default(); C];
+        for i in 0 .. C {
+            res[i] = func(&self[i], i)?;
+        }
+        Ok(res)
+    }
+
+    fn try_for_each_mut<F, R, E>(&mut self, mut func : F) -> Result<[R; C], E>
+    where 
+        F : FnMut(&mut Self::Comp, usize) -> Result<R, E>,
+        R : Copy + Default 
+    {
+        let mut res = [R::default(); C];
+        for i in 0 .. C {
+            res[i] = func(&mut self[i], i)?;
+        }
+        Ok(res)
     }
 }

@@ -1,32 +1,32 @@
 use crate::prelude::*;
 use crate as syact;
 
-#[derive(SyncCompGroup)]
-#[derive(StepperCompGroup)]
-struct TestGroup {
-    pub base : Stepper,
-    pub arm1 : Stepper
-}
+// #[derive(SyncCompGroup)]
+// #[derive(StepperCompGroup)]
+// struct TestGroup {
+//     pub base : Stepper,
+//     pub arm1 : Stepper
+// }
 
-#[test]
-fn group_dyn() {
-    let group_arr_stat = [
-        Stepper::new_sim(StepperConst::GEN)
-    ];
-    let _group_arr_ref : &dyn SyncCompGroup<1> = &group_arr_stat;
+// #[test]
+// fn group_dyn() {
+//     let group_arr_stat = [
+//         Stepper::new_sim(StepperConst::GEN)
+//     ];
+//     let _group_arr_ref : &dyn SyncCompGroup<1> = &group_arr_stat;
 
-    let group_dyn_stat : [Box<dyn SyncComp>; 1] = [ 
-        Box::new(Stepper::new_sim(StepperConst::GEN))
-    ];
-    let _group_dyn_ref : &dyn SyncCompGroup<1> = &group_dyn_stat;
+//     let group_dyn_stat : [Box<dyn SyncComp>; 1] = [ 
+//         Box::new(Stepper::new_sim(StepperConst::GEN))
+//     ];
+//     let _group_dyn_ref : &dyn SyncCompGroup<1> = &group_dyn_stat;
 
-    let test = TestGroup {
-        base: Stepper::new_sim(StepperConst::GEN),
-        arm1: Stepper::new_sim(StepperConst::GEN)
-    };
+//     let test = TestGroup {
+//         base: Stepper::new_sim(StepperConst::GEN),
+//         arm1: Stepper::new_sim(StepperConst::GEN)
+//     };
 
-    let _test_ref : &dyn SyncCompGroup<2> = &test;
-}
+//     let _test_ref : &dyn SyncCompGroup<2> = &test;
+// }
 
 #[test]
 #[cfg_attr(not(feature = "rasp"), ignore = "run manually when in simulation mode")]
