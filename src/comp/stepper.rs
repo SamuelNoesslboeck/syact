@@ -22,7 +22,7 @@ pub trait StepperComp : SyncComp {
 
     /// Creates a new curve builder for the stepper motor
     fn create_curve_builder(&self, omega_0 : Omega) -> CurveBuilder {
-        CurveBuilder::new(self.consts(), self.vars(), self.link(), omega_0, self.micro())
+        CurveBuilder::new(self.consts(), self.vars(), self.data(), omega_0, self.micro())
     }
 
     /// Drive from node to node (used for path algorithms, use as a normal drive function is not recommended)

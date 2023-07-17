@@ -46,8 +46,8 @@ impl<C : SyncComp> Setup for Cylinder<C> {
 
 impl<C : SyncComp> SyncComp for Cylinder<C> {
     // Data
-        fn link<'a>(&'a self) -> &'a crate::data::LinkedData {
-            self.ctrl.link()
+        fn data<'a>(&'a self) -> &'a crate::data::CompData {
+            self.ctrl.data()
         }
 
         fn vars<'a>(&'a self) -> &'a crate::data::CompVars {
@@ -74,8 +74,8 @@ impl<C : SyncComp> SyncComp for Cylinder<C> {
     // 
 
     // Link
-        fn write_link(&mut self, lk : crate::data::LinkedData) {
-            self.ctrl.write_link(lk);    
+        fn write_data(&mut self, data : crate::data::CompData) {
+            self.ctrl.write_data(data);    
         }
     //
 

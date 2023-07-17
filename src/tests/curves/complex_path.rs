@@ -6,7 +6,7 @@ use crate::math::PathNode;
 fn complex_path() {
     let consts = StepperConst::GEN;
     let mut vars = CompVars::ZERO;
-    let lk = LinkedData::GEN;
+    let data = CompData::GEN;
 
     // let delta = Delta(0.5 * (2.0 * PI));
     // let omega_max = Omega(4.0 * PI);
@@ -14,7 +14,7 @@ fn complex_path() {
     vars.j_load = Inertia(0.1);
     vars.f_bend = 0.1;
     
-    let mut builder = CurveBuilder::new(&consts, &vars, &lk, Omega::ZERO);
+    let mut builder = CurveBuilder::new(&consts, &vars, &data, Omega::ZERO);
     let dstack = vec![ Delta(1.0), Delta(2.0), Delta(1.0), Delta(3.0), Delta(4.0), Delta(0.5) ];
     let mut tstack = [ Time(1.0), Time(1.0), Time(1.0), Time(1.0), Time(1.0), Time(1.0) ];
 

@@ -4,7 +4,7 @@ mod single_motor
     use core::f32::consts::PI;
 
     use crate::{Stepper, StepperConst, SyncComp};
-    use crate::data::LinkedData;
+    use crate::data::CompData;
     use crate::units::*;
 
     const PIN_DIR : u8 = 27;
@@ -16,7 +16,7 @@ mod single_motor
     #[test]
     fn step() -> Result<(), crate::Error> {
         let mut ctrl = Stepper::new(StepperConst::MOT_17HE15_1504S, PIN_DIR, PIN_STEP);
-        ctrl.write_link(LinkedData { u: 12.0, s_f: 1.5 }); 
+        ctrl.write_data(CompData { u: 12.0, s_f: 1.5 }); 
     
         ctrl.apply_inertia(Inertia(0.000_1));
     
@@ -30,7 +30,7 @@ mod single_motor
     #[test]
     fn drive() -> Result<(), crate::Error> {
         let mut ctrl = Stepper::new(StepperConst::MOT_17HE15_1504S, PIN_DIR, PIN_STEP);
-        ctrl.write_link(LinkedData::GEN); 
+        ctrl.write_data(CompData::GEN); 
     
         ctrl.apply_inertia(Inertia(0.4));
         ctrl.apply_force(Force(0.10));
@@ -46,7 +46,7 @@ mod single_motor
 #[cfg(feature = "std")]
 mod curves {
     use crate::StepperConst;
-    use crate::data::{CompVars, LinkedData};
+    use crate::data::{CompVars, CompData};
     use crate::math;
     use crate::units::*;
    
@@ -54,13 +54,13 @@ mod curves {
     fn simple() {
         let data = StepperConst::GEN;
         let vars = CompVars { t_load: Force(0.1), j_load: Inertia(1.0), ..Default::default() };
-        let lk = LinkedData::GEN;
+        let data = CompData::GEN;
 
         let delta = Delta(0.62);
         let omega = Omega(10.0);
 
         dbg!(
-            math::curve::create_simple_curve(&data, &vars, &lk, delta, omega)
+            math::curve::create_simple_curve(&data, &vars, &data, delta, omega)
         );
     }
 }

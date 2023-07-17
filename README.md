@@ -68,7 +68,7 @@ fn main() -> Result<(), syact::Error> {
     // Create the controls for a stepper motor
     let mut ctrl = Stepper::new(StepperConst::MOT_17HE15_1504S, PIN_DIR, PIN_STEP);
     // Link the component to a system
-    ctrl.write_link(LinkedData { 
+    ctrl.write_data(CompData { 
         u: 12.0,    // System voltage in volts
         s_f: 1.5    // System safety factor, should be at least 1.0
     }); 

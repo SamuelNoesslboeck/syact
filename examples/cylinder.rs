@@ -35,7 +35,7 @@ fn main() -> Result<(), syact::Error> {
                     // this factor calculates out of the pitch per revolve (8mm) divided by 2*PI (for radians) 
     );
     // Link the component to a system
-    cylinder.write_link(LinkedData { 
+    cylinder.write_data(CompData { 
         u: 12.0,    // System voltage in volts
         s_f: 1.5    // System safety factor, should be at least 1.0
     }); 

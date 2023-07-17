@@ -26,7 +26,7 @@ compile_error!("No-Std currently not available!");
 
     /// Structs for storing characteristics of stepper motors and devices
     pub mod data;
-    pub use data::{StepperConst, LinkedData};
+    pub use data::{StepperConst, CompData};
 
     /// Functions and Structs for calculating Stepper Motor procedures and operations
     pub mod math;

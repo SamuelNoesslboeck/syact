@@ -13,11 +13,11 @@ pub trait SyncCompGroup<const C : usize> : Setup {
     //
 
     // Data
-        /// Runs [SyncComp::write_link()] for all components in the group. Note that the function is using the same 
-        /// [LinkedData](crate::data::LinkedData) for all components
-        fn write_link(&mut self, lk : crate::data::LinkedData) {
+        /// Runs [SyncComp::write_data()] for all components in the group. Note that the function is using the same 
+        /// [CompData](crate::data::CompData) for all components
+        fn write_data(&mut self, data : crate::data::CompData) {
             for i in 0 .. C {
-                self.index_mut(i).write_link(lk.clone())
+                self.index_mut(i).write_data(data.clone())
             }
         } 
     //

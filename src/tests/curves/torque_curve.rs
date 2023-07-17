@@ -6,7 +6,7 @@ use crate::prelude::*;
 fn torque_curve() -> Result<(), Box<dyn std::error::Error>> {
     let consts = StepperConst::GEN;
     let mut vars = CompVars::ZERO;
-    let lk = LinkedData::GEN;
+    let data = CompData::GEN;
 
     let scalar : f32 = 10.0;
 
@@ -14,7 +14,7 @@ fn torque_curve() -> Result<(), Box<dyn std::error::Error>> {
     vars.f_bend = 0.1;
 
     let curve : Vec<Force> = (0 .. 1000).map(
-        |index| force::torque_dyn(&consts, Omega(index as f32 / scalar), lk.u)).collect();
+        |index| force::torque_dyn(&consts, Omega(index as f32 / scalar), data.u)).collect();
     
     let root = 
         SVGBackend::new("test/example-data/torque_curve.svg", (640, 480)).into_drawing_area();
@@ -44,7 +44,7 @@ fn torque_curve() -> Result<(), Box<dyn std::error::Error>> {
     root.present()?;
 
     // Console output
-    println!(" -> Tau: {}", consts.tau(lk.u));
+    println!(" -> Tau: {}", consts.tau(data.u));
     
     Ok(())
 }

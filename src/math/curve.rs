@@ -3,7 +3,7 @@ use alloc::vec::Vec;
 
 use core::f32::consts::PI;
 
-use crate::data::{StepperConst, CompVars, LinkedData};
+use crate::data::{StepperConst, CompVars, CompData};
 use crate::units::*;
 
 use crate::math::CurveBuilder;
@@ -85,10 +85,10 @@ pub fn mirror_curve(cur : &mut [Time]) {
 /// # Panics
 /// 
 /// Panics if the given bend or safety factor is invalid
-pub fn write_simple_move(consts : &StepperConst, var : &CompVars, lk : &LinkedData, cur : &mut [Time], omega_max : Omega, micro : u8) {
+pub fn write_simple_move(consts : &StepperConst, var : &CompVars, data : &CompData, cur : &mut [Time], omega_max : Omega, micro : u8) {
     let cur_len = cur.len(); 
 
-    let mut builder = CurveBuilder::new(consts, var, lk, Omega::ZERO, micro);
+    let mut builder = CurveBuilder::new(consts, var, data, Omega::ZERO, micro);
 
     for i in 0 .. cur_len / 2 {
         let time = builder.next_step_pos(None);
@@ -105,12 +105,12 @@ pub fn write_simple_move(consts : &StepperConst, var : &CompVars, lk : &LinkedDa
 
 /// Create a new simple acceleration curve that can be used by a stepper motor to drive safely from standstill
 #[inline]
-pub fn create_simple_curve(consts : &StepperConst, vars : &CompVars, lk : &LinkedData, delta : Delta, omega_max : Omega, micro : u8) 
+pub fn create_simple_curve(consts : &StepperConst, vars : &CompVars, data : &CompData, delta : Delta, omega_max : Omega, micro : u8) 
         -> Vec<Time> {
     let steps = consts.steps_from_ang_abs(delta, micro);
 
     let mut cur = crate_plain_curve(consts, steps as usize, omega_max, micro);
-    write_simple_move(consts, vars, lk, cur.as_mut_slice(), omega_max, micro);
+    write_simple_move(consts, vars, data, cur.as_mut_slice(), omega_max, micro);
 
     cur
 }

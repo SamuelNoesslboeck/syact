@@ -1,7 +1,7 @@
 #[cfg(feature = "std")]
 use serde::{Serialize, Deserialize}; 
 
-use crate::{Stepper, SyncComp, Setup, StepperConst, LinkedData, AsyncComp};
+use crate::{Stepper, SyncComp, Setup, StepperConst, CompData, AsyncComp};
 use crate::comp::CompVars;
 use crate::comp::stepper::StepperComp;
 use crate::units::*;
@@ -40,8 +40,8 @@ impl<C : SyncComp> SyncComp for Conveyor<C> {
         self.ctrl.vars()
     }
 
-    fn link<'a>(&'a self) -> &'a LinkedData {
-        self.ctrl.link() 
+    fn data<'a>(&'a self) -> &'a CompData {
+        self.ctrl.data() 
     }
 
     // Super component

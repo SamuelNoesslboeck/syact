@@ -35,12 +35,12 @@ fn torque_dyn_approx_speed() {
 #[ignore = "benchmark, run manually"]
 fn create_curve_speed() {
     let consts = StepperConst::GEN;
-    let lk = LinkedData::GEN;
+    let data = CompData::GEN;
     let vars = CompVars::ZERO;
 
     let inst = Instant::now();
 
-    let c = curve::create_simple_curve(&consts, &vars, &lk, Delta(100_000.0), Omega(1_000.0), 1);
+    let c = curve::create_simple_curve(&consts, &vars, &data, Delta(100_000.0), Omega(1_000.0), 1);
 
     println!(" => Created curve with {} nodes", c.len());
     println!("Elapsed: {}s", inst.elapsed().as_secs_f32());

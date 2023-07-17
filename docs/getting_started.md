@@ -84,9 +84,9 @@ pub fn predefined() -> Result<(), syact::Error> {
         R_ROLL
     );
 
-    // Now we write the `LinkedData` to our component. The `LinkedData` is often data that is the same for 
+    // Now we write the `CompData` to our component. The `CompData` is often data that is the same for 
     // all components, e.g. supply voltage
-    conv.write_link(LinkedData {
+    conv.write_data(CompData {
         u: 12.0,        // Voltage
         s_f: 1.5        // Safety factor, the higher the factor, the safer is the stepper to not jump over steps,
                         // however the performance suffers from very high safety factors
@@ -152,7 +152,7 @@ fn inertia_for_motor(inertia_conv : Inertia) -> Inertia {
 
 pub fn direct_approach() -> Result<(), syact::Error> {
     let mut ctrl = Stepper::new(StepperConst::MOT_17HE15_1504S, PIN_DIR, PIN_STEP);
-    ctrl.write_link(LinkedData::GEN);
+    ctrl.write_data(CompData::GEN);
     ctrl.setup()?;
     
     // Apply a inertia to the conveyor (possible masses on the belt)

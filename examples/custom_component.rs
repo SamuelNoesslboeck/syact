@@ -56,7 +56,7 @@ impl SyncComp for MyComp {
             todo!()     // Not required in this example
         }
 
-        fn link<'a>(&'a self) -> &'a LinkedData {
+        fn data<'a>(&'a self) -> &'a CompData {
             todo!()     // Not required in this example
         }
     //
@@ -102,7 +102,7 @@ fn main() -> Result<(), syact::Error> {
         2.0 // Example ratio
     );
     // Link the component to a system
-    comp.write_link(LinkedData { 
+    comp.write_data(CompData { 
         u: 12.0,    // System voltage in volts
         s_f: 1.5    // System safety factor, should be at least 1.0
     }); 

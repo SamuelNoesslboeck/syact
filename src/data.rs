@@ -5,8 +5,8 @@ use serde::{Serialize, Deserialize};
 use crate::{units::*, lib_error};
 
 // Submodules
-mod lk;
-pub use lk::LinkedData;
+mod comp;
+pub use comp::CompData;
 
 /// Crate for servo motor data
 pub mod servo;

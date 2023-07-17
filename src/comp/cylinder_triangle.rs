@@ -3,7 +3,7 @@ use crate::{SyncComp, Setup, StepperConst, Stepper};
 use crate::comp::Cylinder;
 use crate::comp::stepper::StepperComp;
 use crate::ctrl::Interrupter;
-use crate::data::LinkedData;
+use crate::data::CompData;
 use crate::meas::MeasData;
 use crate::units::*;
 
@@ -92,8 +92,8 @@ impl<C : SyncComp> Setup for CylinderTriangle<C> {
 
 impl<C : SyncComp> SyncComp for CylinderTriangle<C> {
     // Data
-        fn link<'a>(&'a self) -> &'a crate::data::LinkedData {
-            self.cylinder.link()
+        fn data<'a>(&'a self) -> &'a crate::data::CompData {
+            self.cylinder.data()
         }
 
         fn vars<'a>(&'a self) -> &'a crate::data::CompVars {
@@ -126,8 +126,8 @@ impl<C : SyncComp> SyncComp for CylinderTriangle<C> {
     // 
 
     // Link
-        fn write_link(&mut self, lk : LinkedData) {
-            self.cylinder.write_link(lk);
+        fn write_data(&mut self, data : CompData) {
+            self.cylinder.write_data(data);
         }
     //
 

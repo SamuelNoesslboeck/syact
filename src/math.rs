@@ -1,5 +1,5 @@
 use crate::StepperConst;
-use crate::data::{LinkedData, CompVars};
+use crate::data::{CompData, CompVars};
 use crate::units::*;
 
 // Submodules
@@ -43,18 +43,18 @@ pub struct CurveBuilder<'a> {
 
     consts : &'a StepperConst,
     var : &'a CompVars,
-    lk : &'a LinkedData
+    data : &'a CompData
 }
 
 impl<'a> CurveBuilder<'a> {
     /// Creates a new `CurveBuilder`
-    pub fn new(consts : &'a StepperConst, var : &'a CompVars, lk : &'a LinkedData, omega_0 : Omega, micro : u8) -> Self {
+    pub fn new(consts : &'a StepperConst, var : &'a CompVars, data : &'a CompData, omega_0 : Omega, micro : u8) -> Self {
         if !var.f_bend.is_normal() {
             panic!("Invaild bend factor! ({})", var.f_bend);
         }
     
-        if !lk.s_f.is_normal() {
-            panic!("Invalid safety factor! ({})", lk.s_f);
+        if !data.s_f.is_normal() {
+            panic!("Invalid safety factor! ({})", data.s_f);
         }
 
         Self {
@@ -71,7 +71,7 @@ impl<'a> CurveBuilder<'a> {
 
             consts,
             var,
-            lk
+            data
         }
     }
 
@@ -95,7 +95,7 @@ impl<'a> CurveBuilder<'a> {
     /// Max speed that the curve will be generated for
     #[inline(always)]
     pub fn max_speed(&self) -> Omega {
-        self.consts.max_speed(self.lk.u)
+        self.consts.max_speed(self.data.u)
     }
 
     /// Checks whether the motor accelerated when travelling the last node
@@ -131,7 +131,7 @@ impl<'a> CurveBuilder<'a> {
         } else {
             self.alpha = self.consts.alpha_max_dyn(
                 force::torque_dyn(self.consts, 
-                        (self.omega /* + omega_tar */).abs() /* / 2.0 */ / self.var.f_bend, self.lk.u, self.micro) / self.lk.s_f * self.var.f_bend, 
+                        (self.omega /* + omega_tar */).abs() /* / 2.0 */ / self.var.f_bend, self.data.u, self.micro) / self.data.s_f * self.var.f_bend, 
                     self.var
             ).unwrap();
     
@@ -279,9 +279,9 @@ impl<'a> CurveBuilder<'a> {
         }
 
         // Debug! TODO: Remove
-        if alpha.abs() > self.consts.alpha_max_dyn(force::torque_dyn(self.consts, (omega_0 + omega_tar) / 2.0, self.lk.u, self.micro), self.var)? {
+        if alpha.abs() > self.consts.alpha_max_dyn(force::torque_dyn(self.consts, (omega_0 + omega_tar) / 2.0, self.data.u, self.micro), self.var)? {
             panic!("Acceleration reached! {} max: {}", alpha, 
-            self.consts.alpha_max_dyn(force::torque_dyn(self.consts, (omega_0 + omega_tar) / 2.0, self.lk.u, self.micro), self.var)?);
+            self.consts.alpha_max_dyn(force::torque_dyn(self.consts, (omega_0 + omega_tar) / 2.0, self.data.u, self.micro), self.var)?);
         }
 
         let mut curve = vec![]; 

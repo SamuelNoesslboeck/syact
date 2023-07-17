@@ -6,14 +6,14 @@ use crate::prelude::*;
 fn complex_curve() -> Result<(), Box<dyn std::error::Error>> {
     let consts = StepperConst::GEN;
     let mut vars = CompVars::ZERO;
-    let lk = LinkedData::GEN;
+    let data = CompData::GEN;
 
     let omega_max = Omega(10.0);
 
     vars.j_load = Inertia(0.000_25);
     vars.f_bend = 0.1;
 
-    let mut builder = CurveBuilder::new(&consts, &vars, &lk, Omega::ZERO);
+    let mut builder = CurveBuilder::new(&consts, &vars, &data, Omega::ZERO);
     let mut curve : Vec<Omega> = builder.to_speed(omega_max * 0.5)?.iter().map(
         |t| consts.omega(*t)
     ).collect();

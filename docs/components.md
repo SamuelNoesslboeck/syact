@@ -30,7 +30,7 @@ syact = { version = "0.12.0", features = [ "rasp" ] }
 // Include components and data
 use syact::{Stepper, StepperConst, SyncComp, Setup};
 use syact::comp::Cylinder;
-use syact::data::LinkedData;
+use syact::data::CompData;
 // Include the unit system
 use syact::units::*;
 
@@ -54,7 +54,7 @@ fn main() -> Result<(), syact::Error> {
         // of the pitch per revolve (8mm) divided by 2*PI (for radians) 
     );
     // Link the component to a system
-    cylinder.write_link(LinkedData { 
+    cylinder.write_data(CompData { 
         u: 12.0,    // System voltage in volts
         s_f: 1.5    // System safety factor, should be at least 1.0
     }); 
@@ -145,7 +145,7 @@ impl SyncComp for MyComp {
             todo!()     // Not required in this example
         }
 
-        fn link<'a>(&'a self) -> &'a LinkedData {
+        fn data<'a>(&'a self) -> &'a CompData {
             todo!()     // Not required in this example
         }
     //
@@ -191,7 +191,7 @@ fn main() -> Result<(), syact::Error> {
         2.0 // Example ratio
     );
     // Link the component to a system
-    comp.write_link(LinkedData { 
+    comp.write_data(CompData { 
         u: 12.0,    // System voltage in volts
         s_f: 1.5    // System safety factor, should be at least 1.0
     }); 

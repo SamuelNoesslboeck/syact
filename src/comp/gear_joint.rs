@@ -35,8 +35,8 @@ impl<C : SyncComp> Setup for GearJoint<C> {
 
 impl<C : SyncComp> SyncComp for GearJoint<C> {
     // Data
-        fn link<'a>(&'a self) -> &'a crate::data::LinkedData {
-            self.ctrl.link()
+        fn data<'a>(&'a self) -> &'a crate::data::CompData {
+            self.ctrl.data()
         }
 
         fn vars<'a>(&'a self) -> &'a crate::data::CompVars {

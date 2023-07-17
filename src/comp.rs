@@ -3,7 +3,7 @@ use core::any::type_name;
 use crate::ctrl::Interrupter;
 use crate::meas::MeasData;
 use crate::Setup;
-use crate::data::{CompVars, LinkedData};
+use crate::data::{CompVars, CompData};
 use crate::units::*;
 
 // Submodules
@@ -23,7 +23,7 @@ use crate::units::*;
     pub use gear_joint::{GearJoint, StepperGearJoint};
 
     /// A module for component groups, as they are used in various robots. The components are all sharing the same 
-    /// [LinkedData](crate::data::LinkedData) and their movements are coordinated. 
+    /// [CompData](crate::data::CompData) and their movements are coordinated. 
     pub mod group;
     pub use group::SyncCompGroup;
 
@@ -71,14 +71,14 @@ pub trait SyncComp : Setup {
         /// ```
         fn vars<'a>(&'a self) -> &'a CompVars;
 
-        /// Returns the [LinkedData](crate::data::LinkedData) of the component
-        fn link<'a>(&'a self) -> &'a LinkedData;
+        /// Returns the [CompData](crate::data::CompData) of the component
+        fn data<'a>(&'a self) -> &'a CompData;
         
-        /// Write the [LinkedData](crate::data::LinkedData) to the component
+        /// Write the [CompData](crate::data::CompData) to the component
         #[inline(always)]
-        fn write_link(&mut self, lk : crate::data::LinkedData) {
+        fn write_data(&mut self, data : crate::data::CompData) {
             if let Some(s_comp) = self.super_comp_mut() {
-                s_comp.write_link(lk);
+                s_comp.write_data(data);
             }
         }
     // 
@@ -588,7 +588,7 @@ pub trait SyncComp : Setup {
         ///     // Stepper Motor as subcomponent (also implements SyncComp)
         ///     Stepper::new_sim(StepperConst::GEN), 
         /// 0.5);    // Ratio is set to 0.5, which means for each radian the motor moves, the bearing moves for half a radian
-        /// gear.write_link(LinkedData::GEN);           // Link component for driving
+        /// gear.write_data(CompData::GEN);           // Link component for driving
         /// 
         /// gear.set_omega_max(Omega(5.0));
         /// gear.drive_rel(Delta(-0.1), 1.0).unwrap();    // Drive component in negative direction
@@ -841,13 +841,13 @@ impl<T : AsRef<dyn SyncComp> + AsMut<dyn SyncComp>> SyncComp for T {
             self.as_ref().vars()
         }
 
-        fn link<'a>(&'a self) -> &'a crate::LinkedData {
-            self.as_ref().link()
+        fn data<'a>(&'a self) -> &'a crate::CompData {
+            self.as_ref().data()
         }
     // 
 
-    fn write_link(&mut self, lk : crate::data::LinkedData) {
-        self.as_mut().write_link(lk)
+    fn write_data(&mut self, data : crate::data::CompData) {
+        self.as_mut().write_data(data)
     }
 
     fn super_comp(&self) -> Option<&dyn SyncComp> {

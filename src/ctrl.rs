@@ -12,7 +12,7 @@ use std::sync::mpsc::{Receiver, Sender, channel};
 use crate::comp::stepper::StepperComp;
 use crate::meas::MeasData;
 use crate::{SyncComp, Setup, lib_error};
-use crate::data::{LinkedData, StepperConst, CompVars}; 
+use crate::data::{CompData, StepperConst, CompVars}; 
 use crate::math::{self, CurveBuilder};
 use crate::units::*;
 
@@ -110,7 +110,7 @@ pub struct Stepper {
 
     omega_max : Omega,
 
-    lk : LinkedData,
+    data : CompData,
 
     #[cfg(feature = "std")]
     sys : Arc<Mutex<Pins>>,
@@ -151,7 +151,7 @@ impl Stepper {
             micro: 1,
             omega_max: Omega::ZERO,
 
-            lk: LinkedData { u: 0.0, s_f: 0.0 },
+            data: CompData { u: 0.0, s_f: 0.0 },
 
             sys: Arc::new(Mutex::new(Pins {
                 dir: sys_dir,
@@ -175,7 +175,7 @@ impl Stepper {
             pos: 0,
             omega_max: Omega::ZERO,
 
-            lk: LinkedData { u: 0.0, s_f: 0.0 },
+            data: CompData { u: 0.0, s_f: 0.0 },
 
             sys: Pins {
                 dir: sys_dir,
@@ -333,7 +333,7 @@ impl Stepper {
 
         let omega_max = self.omega_max() * speed_f;
 
-        let cur = math::curve::create_simple_curve(&self.consts, &self.vars, &self.lk, delta, omega_max, self.micro);
+        let cur = math::curve::create_simple_curve(&self.consts, &self.vars, &self.data, delta, omega_max, self.micro);
         self.drive_curve(&cur);
 
         Ok(delta)
@@ -351,7 +351,7 @@ impl Stepper {
         
         self.setup_drive(delta)?;
 
-        let cur = math::curve::create_simple_curve(&self.consts, &self.vars, &self.lk, delta, self.omega_max() * speed_f, self.micro);
+        let cur = math::curve::create_simple_curve(&self.consts, &self.vars, &self.data, delta, self.omega_max() * speed_f, self.micro);
         let (steps, interrupted) = self.drive_curve_int(&cur, intr, intr_data);
 
         if self.dir {
@@ -467,7 +467,7 @@ impl Stepper {
         self.setup_drive(delta)?;
 
         let omega_max = self.omega_max() * speed_f;
-        let cur = math::curve::create_simple_curve(&self.consts, &self.vars, &self.lk, delta, omega_max, self.micro);
+        let cur = math::curve::create_simple_curve(&self.consts, &self.vars, &self.data, delta, omega_max, self.micro);
 
         self.drive_curve_async(cur, false, t_const)
     }
@@ -595,11 +595,11 @@ impl Stepper {
 
 impl Setup for Stepper {
     fn setup(&mut self) -> Result<(), crate::Error> {
-        if self.lk.u == 0.0 {
-            return Err("Link the construction to vaild data! (`LinkedData` is invalid)".into());
+        if self.data.u == 0.0 {
+            return Err("Link the construction to vaild data! (`CompData` is invalid)".into());
         }
 
-        self.omega_max = self.consts.max_speed(self.lk.u);
+        self.omega_max = self.consts.max_speed(self.data.u);
 
         #[cfg(feature = "std")]
         self.setup_async();
@@ -614,13 +614,13 @@ impl SyncComp for Stepper {
             &self.vars
         }
 
-        fn link<'a>(&'a self) -> &'a LinkedData {
-            &self.lk
+        fn data<'a>(&'a self) -> &'a CompData {
+            &self.data
         }
 
         #[inline]
-        fn write_link(&mut self, lk : LinkedData) {
-            self.lk = lk;
+        fn write_data(&mut self, data : CompData) {
+            self.data = data;
         }  
     // 
 
@@ -702,9 +702,9 @@ impl SyncComp for Stepper {
         }
 
         fn set_omega_max(&mut self, omega_max : Omega) {
-            if omega_max > self.consts.max_speed(self.lk.u) {
+            if omega_max > self.consts.max_speed(self.data.u) {
                 #[cfg(feature = "std")]
-                panic!("Maximum omega must not be greater than recommended! (Given: {}, Rec: {})", omega_max, self.consts.max_speed(self.lk.u));
+                panic!("Maximum omega must not be greater than recommended! (Given: {}, Rec: {})", omega_max, self.consts.max_speed(self.data.u));
             }
 
             self.omega_max = omega_max;
@@ -821,7 +821,7 @@ impl AsyncComp for Stepper {
         // println!(" => Building curve: o_max: {}, o_0: {}, o_tar: {}, spf_0: {}, spf: {}", 
         //     self.omega_max, omega_0, omega_tar, self.speed_f, speed_f);
 
-        let mut builder = CurveBuilder::new(&self.consts, &self.vars, &self.lk, omega_0, self.micro);
+        let mut builder = CurveBuilder::new(&self.consts, &self.vars, &self.data, omega_0, self.micro);
         let t_const = if omega_tar != Omega::ZERO {
             Some(self.consts.step_time(omega_tar, self.micro))
         } else {

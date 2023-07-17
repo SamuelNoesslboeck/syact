@@ -35,7 +35,7 @@ fn gear_bearing() -> Result<(), crate::Error> {
     const PIN_STEP : u8 = 19;
 
     let mut gear = GearJoint::new(Stepper::new(StepperConst::MOT_17HE15_1504S, PIN_DIR, PIN_STEP), 0.1);
-    gear.write_link(LinkedData::GEN);
+    gear.write_data(CompData::GEN);
     gear.setup()?;
 
     // gear.set_omega_max(Omega(0.5)); 
@@ -51,7 +51,7 @@ fn cylinder() -> Result<(), crate::Error> {
     const PIN_STEP : u8 = 11;
 
     let mut cylinder = Cylinder::new(Stepper::new(StepperConst::MOT_17HE15_1504S, PIN_DIR, PIN_STEP), 1.27);
-    cylinder.write_link(LinkedData::GEN);
+    cylinder.write_data(CompData::GEN);
     cylinder.setup()?;
     
 
@@ -69,7 +69,7 @@ fn cylinder_tri() -> Result<(), crate::Error> {
 
     let mut cyl_tri = CylinderTriangle::new(
         Cylinder::new(Stepper::new(StepperConst::MOT_17HE15_1504S, PIN_DIR, PIN_STEP), 1.27), 200.0, 200.0);
-    cyl_tri.write_link(LinkedData::GEN);
+    cyl_tri.write_data(CompData::GEN);
     cyl_tri.setup()?;
 
     cyl_tri.set_omega_max(Omega(25.0));
