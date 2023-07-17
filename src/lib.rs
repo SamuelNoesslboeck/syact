@@ -9,15 +9,16 @@ extern crate alloc;
 
 // Submodules
     #[doc = include_str!("../docs/components.md")]
-    #[cfg(features = "std")]
+    #[cfg(feature = "std")]
     pub mod comp;
-    #[cfg(features = "std")]
+    #[cfg(feature = "std")]
     pub use comp::{SyncComp, SyncCompGroup, Tool};
-    #[cfg(features = "std")]
+    #[cfg(feature = "std")]
     pub use comp::tool::SimpleTool;
     #[cfg(feature = "std")]
     pub use comp::asyn::AsyncComp;
     
+    #[cfg(feature = "std")]
     pub use syact_macros::SyncCompGroup;
 
     /// Collection of structs and functions for controlling Stepper Motors
@@ -42,6 +43,7 @@ extern crate alloc;
     pub mod prelude;
 
     /// Self defined units for mathematical operations
+    #[cfg(feature = "std")]
     pub mod units;
 
     /// Module with all the tests required to assure the library funcitons as intended
@@ -55,18 +57,15 @@ extern crate alloc;
 #[cfg(feature = "std")]
 pub type Error = Box<dyn std::error::Error>;
 
+/// The general error type of the crate
 #[cfg(not(feature = "std"))]
 pub type Error = ErrorKind;
 
-
+/// Enum for different error types
 #[cfg(not(feature = "std"))]
 #[derive(Debug)]
 pub enum ErrorKind {
-    // Components
-    NoSuper,
-    
-    // Load
-    Overload
+    // TODO
 }
 
 /// A trait that provides a universal setup function

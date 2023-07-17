@@ -25,7 +25,7 @@ impl DcMotor {
             sig_cw: PWMOutput::new(pin_cw),
             sig_ccw: PWMOutput::new(pin_ccw),
 
-            dir: Direction::None,
+            dir: Direction::default(),
             speed_f: 0.0,
 
             freq
@@ -67,10 +67,6 @@ impl AsyncComp for DcMotor {
                 self.sig_cw.set_freq(self.freq, 0.0);
                 self.sig_ccw.set_freq(self.freq, speed_f);
             },
-            Direction::None => {
-                self.sig_cw.set_freq(self.freq, 0.0);
-                self.sig_ccw.set_freq(self.freq, 0.0);
-            }
         };
 
         Ok(())

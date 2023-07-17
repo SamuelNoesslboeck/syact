@@ -1,3 +1,5 @@
+use crate::meas::MeasData;
+
 // Submodules
 /// Basic DC-Motors
 #[cfg(feature = "std")]
@@ -32,24 +34,36 @@ pub mod pwm;
 #[cfg(feature = "std")]
 pub mod servo;
 
+/// Stepper motors and controllers in different resolutions
 pub mod stepper;
 pub use stepper::{Stepper, Controller};
 // 
 
+/// A function that can be used to interrupt the movement process of a component
+pub type Interrupter<'a> = fn (&mut dyn MeasData) -> bool;
+
 /// Direction of movement
-#[derive(Clone, Copy, PartialEq, PartialOrd, Eq)]
+#[derive(Clone, Copy, PartialEq, PartialOrd, Eq, Debug, Default)]
 pub enum Direction {
-    /// Clockwise
-    CW, 
-    /// Counterclockwise
-    CCW
+    /// Counterclockwise (`false`)
+    CCW,
+    /// Clockwise (`true`)
+    #[default]
+    CW
 }
 
 impl Direction {
+    pub fn from_bool(b : bool) -> Direction {
+        if b { Direction::CW } else { Direction::CCW }
+    }
+
+    /// Converts the given direction into a bool value for logic signals
+    /// - `CW` is `true`
+    /// - `CCW` is `false` 
     pub fn as_bool(self) -> bool {
         match self {
-            Direction::CW => true, 
-            Direction::CCW => false
+            Direction::CCW => false,
+            Direction::CW => true
         }
     }
 }

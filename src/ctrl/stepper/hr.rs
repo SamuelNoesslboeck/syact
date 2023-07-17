@@ -1,4 +1,4 @@
-use core::ops::{AddAssign, DerefMut, MulAssign};
+use core::ops::{AddAssign, DerefMut, MulAssign, Deref};
 
 // Include stuff for embedded threading if the feature is enabled
 cfg_if::cfg_if! {
@@ -11,27 +11,23 @@ cfg_if::cfg_if! {
     } 
 }
 
-use crate::{SyncComp, Setup, lib_error};
+use crate::{SyncComp, Setup, lib_error, Direction};
 use crate::comp::stepper::StepperComp;
-use crate::ctrl::Controller;
+use crate::ctrl::{Controller, Interrupter};
 use crate::data::{LinkedData, StepperConst, CompVars}; 
-use crate::math::{StepTimeBuilder, CurveBuilder};
+use crate::math::{StepTimeBuilder, CurveBuilder, CtrlStepTimeBuilder};
 use crate::meas::MeasData;
 use crate::units::*;
 
 /// Elements are:
 /// - the curve to drive : `Vec<Time>`
-/// - direction : `bool`
 /// - interuptable : `bool`
 /// - constant time to drive after curve : `Option<Time>`
 #[cfg(feature = "std")]
-type AsyncMsg = (Vec<Time>, bool, bool, Option<Time>);
+type AsyncMsg = (Vec<Time>, bool, Option<Time>);
 /// Steps moved by the thread
 #[cfg(feature = "std")]
 type AsyncRes = i64;
-
-/// A function that can be used to interrupt the movement process of a component
-pub type Interrupter<'a> = fn (&mut dyn MeasData) -> bool;
 
 /// Error that is used if the async thread of the component has not been setup yet
 #[cfg(feature = "std")]
@@ -52,7 +48,7 @@ fn not_active() -> crate::Error {
 /// Controlled by two pins, one giving information about the direction, the other about the step signal (PWM)
 #[derive(Debug)]
 #[cfg(feature = "embed-thread")]
-pub struct HRStepper<C : Controller> {
+pub struct HRStepper<C : Controller + Send + Send> {
     /// Underlying controller of the stepper motor
     ctrl : Arc<Mutex<C>>,
 
@@ -81,7 +77,7 @@ pub struct HRStepper<C : Controller> {
 }
 
 #[cfg(not(feature = "embed-thread"))]
-pub struct HRStepper<C : Controller> {
+pub struct HRStepper<C : Controller + Send> {
     /// Underlying controller of the stepper motor
     ctrl : C,
 
@@ -100,48 +96,44 @@ pub struct HRStepper<C : Controller> {
 }
 
 // Inits
-impl<C : Controller> HRStepper<C> {   
+impl<C : Controller + Send> HRStepper<C> {   
     /// Creates a new stepper controller with the given stepper motor constants `consts`
     pub fn new(ctrl : C, consts : StepperConst) -> Self {
-        #[cfg(feature = "embed-thread")]
-        let mut stepper = Self { 
-            ctrl: Arc::new(Mutex::new(ctrl)),
-            consts, 
-            vars: CompVars::ZERO, 
-
-            pos : Arc::new(Mutex::new(0)),
-            micro: 1,
-            omega_max: Omega::ZERO,
-
-            lk: LinkedData { u: 0.0, s_f: 0.0 },
-
-            thr: None,
-            sender: None,
-            receiver: None,
-
-            active: false,
-            speed_f: 0.0
-        };
-
-        #[cfg(not(feature = "embed-thread"))]
-        let mut stepper = Self { 
-            consts, 
-            vars: CompVars::ZERO, 
-
-            pos: 0,
-            omega_max: Omega::ZERO,
-
-            lk: LinkedData { u: 0.0, s_f: 0.0 },
-
-            sys: Pins {
-                dir: sys_dir,
-                step: sys_step
+        cfg_if::cfg_if!(if #[cfg(feature = "embed-thread")] {
+            Self { 
+                ctrl: Arc::new(Mutex::new(ctrl)),
+                consts, 
+                vars: CompVars::ZERO, 
+    
+                pos : Arc::new(Mutex::new(0)),
+                micro: 1,
+                omega_max: Omega::ZERO,
+    
+                lk: LinkedData { u: 0.0, s_f: 0.0 },
+    
+                thr: None,
+                sender: None,
+                receiver: None,
+    
+                active: false,
+                speed_f: 0.0
             }
-        };
-
-        stepper.set_dir(stepper.dir);
-
-        stepper
+        } else {
+            Self { 
+                consts, 
+                vars: CompVars::ZERO, 
+    
+                pos: 0,
+                omega_max: Omega::ZERO,
+    
+                lk: LinkedData { u: 0.0, s_f: 0.0 },
+    
+                sys: Pins {
+                    dir: sys_dir,
+                    step: sys_step
+                }
+            }
+        })
     }
 
     /// Creates a new structure with both pins set to [pin::ERR_PIN] just for simulation and testing purposes
@@ -149,95 +141,89 @@ impl<C : Controller> HRStepper<C> {
     pub fn new_sim(ctrl : C, data : StepperConst) -> Self {
         Self::new(ctrl, data)
     }
+
+    pub fn use_ctrl<F, R>(&mut self, mut func : F) -> R
+    where F: FnMut(&mut C) -> R {
+        cfg_if::cfg_if!(if #[cfg(feature = "embed-thread")] {
+            let ctrl = self.ctrl.lock().unwrap().deref_mut();
+        } else {
+            let ctrl = &mut ctrl;
+        });
+
+        func(ctrl)
+    }
+
+    pub fn pos(&self) -> i64 {
+        cfg_if::cfg_if!(if #[cfg(feature = "embed-thread")] {
+            return self.pos.lock().unwrap().clone();
+        } else {
+            return self.pos;
+        })
+    }
+
+    pub fn dir(&self) -> Direction {
+        cfg_if::cfg_if!(if #[cfg(feature = "embed-thread")] {
+            return self.ctrl.lock().unwrap().dir();
+        } else {
+            return self.ctrl.dir();
+        })
+    }
+
+    pub fn set_pos(&mut self, pos : i64) {
+        cfg_if::cfg_if!(if #[cfg(feature = "embed-thread")] {
+            *self.pos.lock().unwrap().deref_mut() = pos;
+        } else {
+            self.pos = pos;
+        })
+    }
 }
 
 // Basic functions
-impl<C : Controller> HRStepper<C> {
+impl<C : Controller + Send> HRStepper<C> {
     /// Write a curve of signals to the output pin
-    #[cfg(feature = "embed-thread")]
     pub fn drive_curve<I : Iterator<Item = Time>>(&mut self, cur : I) -> i64 {
-        use core::ops::Deref;
+        self.use_ctrl(|ctrl| {
+            let mut pos_0 = self.pos();
+    
+            for point in cur {
+                ctrl.step(point);
+                self.set_pos(self.pos() + if self.dir().as_bool() { 1 } else { -1 });
+            }
 
-        let mut ctrl = self.ctrl.lock().unwrap();
-        let mut pos_0 = *self.pos.lock().unwrap().deref();
-
-        for point in cur {
-            ctrl.step(point);
-
-            let mut pos = self.pos.lock().unwrap();
-            pos.add_assign(if ctrl.dir() { 1 } else { -1 });
-        }
-    }
-
-    /// Write a curve of signals to the output pin
-    #[cfg(not(feature = "std"))]
-    fn drive_curve(&mut self, cur : &[Time]) {
-        let pins = &mut self.sys;
-
-        HRStepper::drive_curve_sig(cur, pins);
-
-        self.pos += if self.dir { 
-            cur.len() as i64 
-        } else { 
-            -(cur.len() as i64) 
-        };
+            self.pos() - pos_0
+        })
     }
 
     /// Drive the given curve with a possibility to interrupt the movement by e.g. a measurement
     fn drive_curve_int<I : Iterator<Item = Time>>(&mut self, mut cur : I, intr : Interrupter, intr_data : &mut dyn MeasData) -> (usize, bool) {
-        #[cfg(feature = "std")]
-        let mut pins = self.sys.lock().unwrap();
+        self.use_ctrl(|ctrl| {
+            let mut trav = 0;
 
-        #[cfg(not(feature = "std"))]
-        let pins = &mut self.sys;
+            for point in cur {
+                if intr(intr_data) {
+                    break;
+                }
 
-        let mut trav = 0;
-
-        for point in cur {
-            #[cfg(feature = "std")]
-            if intr(intr_data) {
-                break;
-            }
-
-            #[cfg(not(feature = "std"))]
-            if intr(pins) {
-                break;
+                ctrl.step(point);
+                self.set_pos(self.pos() + if self.dir().as_bool() { 1 } else { -1 });
+                trav += 1;
             }
     
-            #[cfg(feature = "std")]
-            HRStepper::step_sig(point, &mut pins);
-
-            #[cfg(not(feature = "std"))]
-            HRStepper::step_sig(*point, pins);
-
-            #[cfg(not(feature = "std"))] {
-                self.pos += if self.dir { 1 } else { -1 };
-            }
-
-            #[cfg(feature = "std")] {
-                let mut pos = self.pos.lock().unwrap();
-
-                pos.add_assign(if self.dir { 1 } else { -1 });
-            }
-
-            trav += 1;
-        }
-
-        ( trav, cur.next().is_some() )
+            ( trav, cur.next().is_some() )  
+        })
     }
 
     fn setup_drive(&mut self, delta : Delta) -> Result<(), crate::Error> {
         let limit = self.lim_for_gamma(self.gamma() + delta);
 
         if limit.is_normal() {
-            #[cfg(feature = "std")]
             return Err(lib_error("The delta given is not valid"))
         }
 
         if delta > Delta::ZERO {
-            self.set_dir(true);
+            self.set_dir(Direction::CW);
         } else if delta < Delta::ZERO {
-            self.set_dir(false);
+            self.set_dir(Direction::CCW);
         }
 
         Ok(())
@@ -275,7 +261,7 @@ impl<C : Controller> HRStepper<C> {
         let cur = self.create_builder(Omega::ZERO, self.omega_max() * speed_f);
         let (steps, interrupted) = self.drive_curve_int(cur, intr, intr_data);
 
-        if self.dir {
+        if self.dir().as_bool() {
             Ok((steps as f32 * self.consts.step_ang(self.micro), interrupted))
         } else {
             Ok((steps as f32 * -self.consts.step_ang(self.micro), interrupted))
@@ -283,25 +269,23 @@ impl<C : Controller> HRStepper<C> {
     }
 }
 
-impl<C : Controller> HRStepper<C> {
+impl<C : Controller + Send> HRStepper<C> {
     /// Makes the component move a single step with the given `time`
     /// 
     /// # Error
     /// 
     /// Returns an error if `setup_drive()` fails
     pub fn step(&mut self, time : Time) -> Result<(), crate::Error> {
-        let delta = if self.dir { self.consts.step_ang(self.micro) } else { -self.consts.step_ang(self.micro) };
+        let delta = if self.dir().as_bool() { 
+            self.consts.step_ang(self.micro) 
+        } else { 
+            -self.consts.step_ang(self.micro) 
+        };
         self.setup_drive(delta)?;
 
-        #[cfg(feature = "std")]
-        let mut pins = self.sys.lock().unwrap(); 
-        #[cfg(not(feature = "std"))]
-        let pins = &mut self.sys;
-
-        #[cfg(feature = "std")]
-        HRStepper::step_sig(time, &mut pins);
-        #[cfg(not(feature = "std"))]
-        HRStepper::step_sig(time, pins);
+        self.use_ctrl(|ctrl| {
+            ctrl.step(time);
+        });
 
         Ok(())
     }
@@ -309,37 +293,16 @@ impl<C : Controller> HRStepper<C> {
     /// Sets the driving direction of the component. Note that the direction of the motor depends on the connection of the cables.
     /// The "dir"-pin is directly set to the value given
     #[inline(always)]
-    pub fn set_dir(&mut self, dir : bool) {
-        #[cfg(feature = "std")]
-        let mut pins = self.sys.lock().unwrap();
-        #[cfg(not(feature = "std"))]
-        let pins = &mut self.sys;
-
-        #[cfg(feature = "std")]
-        HRStepper::dir_sig(&mut pins, dir);
-        #[cfg(not(feature = "std"))]
-        HRStepper::dir_sig(pins, dir);
-
-        self.dir = dir;
+    pub fn set_dir(&mut self, dir : Direction) {
+        self.use_ctrl(|ctrl| {
+            ctrl.set_dir(dir);
+        }); 
     }
-
-    // Debug
-        /// Prints out all pins to the console in dbg! style
-        /// 
-        /// # Features
-        /// 
-        /// Only available if the "std"-feature is active
-        #[cfg(feature = "std")]
-        #[inline(always)]
-        pub fn debug_pins(&self) {
-            dbg!(&self.sys);
-        }
-    // 
 }
 
 // Async helper functions
-#[cfg(feature = "std")]
-impl<C : Controller> HRStepper<C> {
+#[cfg(feature = "embed-thread")]
+impl<C : Controller + Send> HRStepper<C> {
     fn clear_active_status(&mut self) {
         let recv : &Receiver<AsyncRes>;
 
@@ -365,7 +328,7 @@ impl<C : Controller> HRStepper<C> {
 
         if let Some(sender) = &self.sender {
             self.active = true;
-            sender.send(Some((curve, self.dir, intr, t_const)))?; 
+            sender.send(Some((curve, intr, t_const)))?; 
             Ok(())
         } else {
             Err(no_async())
@@ -396,12 +359,11 @@ impl<C : Controller> HRStepper<C> {
         let (sender_com, receiver_thr) : (Sender<Option<AsyncMsg>>, Receiver<Option<AsyncMsg>>) = channel();
         let (sender_thr, receiver_com) : (Sender<AsyncRes>, Receiver<AsyncRes>) = channel();
 
-        let sys = self.sys.clone();
+        let ctrl_mut = self.ctrl.clone();
         let pos = self.pos.clone();
 
         self.thr = Some(std::thread::spawn(move || {
             let mut curve : Vec<Time>;
-            let mut dir : bool;
             let mut intr : bool;
             let mut cont : Option<Time>;
 
@@ -424,9 +386,8 @@ impl<C : Controller> HRStepper<C> {
                 }
 
                 match msg {
-                    Some((msg_curve, msg_dir, msg_intr, msg_cont)) => {
+                    Some((msg_curve, msg_intr, msg_cont)) => {
                         curve = msg_curve;
-                        dir = msg_dir;
                         intr = msg_intr;
                         cont = msg_cont;
                     },
@@ -435,14 +396,14 @@ impl<C : Controller> HRStepper<C> {
                     }
                 };
 
-                let mut pins = sys.lock().unwrap();
+                let mut ctrl = ctrl_mut.lock().unwrap();
                 let mut index : usize = 0;
                 let curve_len = curve.len();
 
                 loop {
                     if index < curve_len {
-                        Self::step_sig(curve[index], &mut pins);
-                        pos.lock().unwrap().add_assign(if dir { 1 } else { -1 });
+                        ctrl.step(curve[index]);
+                        pos.lock().unwrap().add_assign(if ctrl.dir().as_bool() { 1 } else { -1 });
                         index += 1;
 
                         if intr {
@@ -456,7 +417,7 @@ impl<C : Controller> HRStepper<C> {
                         }
 
                         if index == curve_len {
-                            sender_thr.send(if dir {
+                            sender_thr.send(if ctrl.dir().as_bool() {
                                 index as i64
                             } else {
                                 -(index as i64)
@@ -466,7 +427,7 @@ impl<C : Controller> HRStepper<C> {
                         }
                     } else if let Some(t_cont) = cont {
                         if !msg_sent {
-                            sender_thr.send(if dir {
+                            sender_thr.send(if ctrl.dir().as_bool() {
                                 index as i64
                             } else {
                                 -(index as i64)
@@ -476,8 +437,8 @@ impl<C : Controller> HRStepper<C> {
                         }
 
                         loop {
-                            Self::step_sig(t_cont, &mut pins);
-                            pos.lock().unwrap().add_assign(if dir { 1 } else { -1 });
+                            ctrl.step(t_cont);
+                            pos.lock().unwrap().add_assign(if ctrl.dir().as_bool() { 1 } else { -1 });
                             index += 1;
 
                             match receiver_thr.try_recv() {
@@ -492,7 +453,7 @@ impl<C : Controller> HRStepper<C> {
                         break;
                     } else {
                         if !msg_sent {
-                            sender_thr.send(if dir {
+                            sender_thr.send(if ctrl.dir().as_bool() {
                                 index as i64
                             } else {
                                 -(index as i64)
@@ -513,7 +474,7 @@ impl<C : Controller> HRStepper<C> {
     }
 }
 
-impl<C : Controller> Setup for HRStepper<C> {
+impl<C : Controller + Send> Setup for HRStepper<C> {
     fn setup(&mut self) -> Result<(), crate::Error> {
         if self.lk.u == 0.0 {
             return Err("Link the construction to vaild data! (`LinkedData` is invalid)".into());
@@ -528,7 +489,7 @@ impl<C : Controller> Setup for HRStepper<C> {
     }
 }
 
-impl<C : Controller> SyncComp for HRStepper<C> {
+impl<C : Controller + Send> SyncComp for HRStepper<C> {
     // Data
         fn vars<'a>(&'a self) -> &'a CompVars {
             &self.vars
@@ -684,8 +645,8 @@ impl<C : Controller> SyncComp for HRStepper<C> {
             }
     
             self.set_limit(
-                if self.dir { self.vars.lim.min } else { Some(set_gamma) },
-                if self.dir { Some(set_gamma) } else { self.vars.lim.max }
+                if self.dir().as_bool() { self.vars.lim.min } else { Some(set_gamma) },
+                if self.dir().as_bool() { Some(set_gamma) } else { self.vars.lim.max }
             )
         }
     //
@@ -715,7 +676,7 @@ impl<C : Controller> SyncComp for HRStepper<C> {
 }
 
 #[cfg(feature = "std")]
-impl AsyncComp for HRStepper {
+impl<C : Controller + Send> AsyncComp for HRStepper<C> {
     fn drive(&mut self, dir : Direction, mut speed_f : f32) -> Result<(), crate::Error> {
         if (0.0 > speed_f) | (1.0 < speed_f) {
             panic!("Bad speed_f! {}", speed_f);
@@ -725,15 +686,6 @@ impl AsyncComp for HRStepper {
             return Err(crate::lib_error("The component is already active!"));
         }
 
-        let bdir = match dir {
-            Direction::CW => true,
-            Direction::CCW => false,
-            Direction::None => { 
-                speed_f = 0.0; 
-                self.dir
-            }
-        };
-
         let omega_max = self.omega_max();
         let omega_0 = omega_max * self.speed_f;
         let omega_tar = omega_max * speed_f;
@@ -741,7 +693,10 @@ impl AsyncComp for HRStepper {
         // println!(" => Building curve: o_max: {}, o_0: {}, o_tar: {}, spf_0: {}, spf: {}", 
         //     self.omega_max, omega_0, omega_tar, self.speed_f, speed_f);
 
-        let mut builder = self.create_builder(Omega::ZERO, self.omega_max() * speed_f);
+        let mut builder = CtrlStepTimeBuilder::from_builder(
+            self.create_builder(Omega::ZERO, self.omega_max() * speed_f)
+        );
+
         let t_const = if omega_tar != Omega::ZERO {
             Some(self.consts.step_time(omega_tar, self.micro))
         } else {
@@ -751,7 +706,7 @@ impl AsyncComp for HRStepper {
         let curve; 
         let curve_sec; 
 
-        if bdir == self.dir {
+        if dir == self.dir() {
             curve = builder.to_speed(omega_tar)?;
             curve_sec = vec![];
         } else {
@@ -761,13 +716,13 @@ impl AsyncComp for HRStepper {
 
         drop(builder);
 
-        if bdir == self.dir {
+        if dir == self.dir() {
             self.drive_curve_async(curve, true, t_const)?;
         } else {
             self.drive_curve_async(curve, true, None)?;
 
             self.await_inactive()?;
-            self.set_dir(bdir);
+            self.set_dir(dir);
 
             self.drive_curve_async(curve_sec, true, t_const)?;
         }
@@ -778,13 +733,7 @@ impl AsyncComp for HRStepper {
     }
 
     fn dir(&self) -> Direction {
-        if !self.speed_f.is_normal() {
-            Direction::None
-        } else if self.dir {
-            Direction::CW 
-        } else {
-            Direction::CCW
-        }
+        self.dir()
     }
 
     fn speed_f(&self) -> f32 {
@@ -792,7 +741,7 @@ impl AsyncComp for HRStepper {
     }
 }
 
-impl StepperComp for HRStepper {
+impl<C : Controller + Send> StepperComp for HRStepper<C> {
     fn consts(&self) -> &StepperConst {
         &self.consts
     }
@@ -812,12 +761,12 @@ impl StepperComp for HRStepper {
     fn drive_nodes(&mut self, delta : Delta, omega_0 : Omega, omega_tar : Omega, corr : &mut (Delta, Time)) -> Result<(), crate::Error> {
         self.setup_drive(delta)?;
 
-        let mut builder = self.create_curve_builder(omega_0);
+        let mut builder = self.create_builder(omega_0, self.omega_max());
         let curve = builder.to_speed_lim(delta, omega_0, omega_tar, corr)?;
 
         // dbg!(self.consts.steps_from_ang(delta));
         // dbg!(2.0 * delta / (omega_0 + omega_tar));
-        // dbg!(curve.len());
+        // dbg!(curve.len());a
         // dbg!(curve.iter().map(|x| x.0).sum::<f32>());
 
         drop(builder);
