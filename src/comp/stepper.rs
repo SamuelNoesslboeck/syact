@@ -65,6 +65,9 @@ pub trait StepperCompGroup<const C : usize> : SyncCompGroup<C> {
 
         self.drive_nodes(nodes_0, omegas, corr)
     } 
+
+    /// Sets the amount of microsteps for each motor 
+    fn set_micro(&mut self, micro : [u8; C]);
 }
 
 impl<T : StepperComp, const C : usize> StepperCompGroup<C> for [T; C] {
@@ -82,5 +85,11 @@ impl<T : StepperComp, const C : usize> StepperCompGroup<C> for [T; C] {
         }
 
         Ok(())
+    }
+
+    fn set_micro(&mut self, micro : [u8; C]) {
+        for i in 0 .. C {
+            self[i].set_micro(micro[i]);
+        }
     }
 }

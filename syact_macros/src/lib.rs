@@ -110,6 +110,7 @@ fn stepper_comp_group_impl(ast : DeriveInput) -> proc_macro::TokenStream {
 
             let mut builder_stream = TokenStream::new();
             let mut drive_stream = TokenStream::new();
+            let mut micro_stream = TokenStream::new();
 
             let mut f_index : usize  = 0;
             for field in fields {
@@ -126,6 +127,12 @@ fn stepper_comp_group_impl(ast : DeriveInput) -> proc_macro::TokenStream {
                 } else {
                     TokenStream::from_str(&format!("self.{}.drive_nodes(nodes_0[{}].delta, nodes_0[{}].omega_0, omega_tar[{}], &mut corr[{}])?;", 
                         f_index, f_index, f_index, f_index, f_index)).unwrap()
+                });
+
+                micro_stream.extend::<TokenStream>(if let Some(n) = field_name.clone() {
+                    quote::quote! { self.#n.set_micro(micro[#f_index]); }
+                } else {
+                    TokenStream::from_str(&format!("self.{}.set_micro(micro[{}]);", f_index, f_index)).unwrap()
                 });
 
                 f_index += 1;
@@ -147,6 +154,10 @@ fn stepper_comp_group_impl(ast : DeriveInput) -> proc_macro::TokenStream {
                     ) -> Result<(), syact::Error> {
                         #drive_stream
                         Ok(())
+                    }
+
+                    fn set_micro(&mut self, micro : [u8; #fields_count]) {
+                        #micro_stream
                     }
                 }
             }.into()
