@@ -17,13 +17,14 @@ name = "syact"
 path = "src/lib.rs"
 
 [dependencies]
-syact_macros = { path = "syact_macros", version = "0.1.0" }
+cfg-if = "1.0.0"
+glam = { version = "0.24.0", optional = true }
+serde = { version = "1.0.104", features = [ "derive" ], optional = true }
+serde_json = { version = "1.0.48", optional = true }
+spin_sleep = { version = "1.1.1", optional = true }
 
-gcode = "0.6.1"
-glam = "0.24.0"
-serde = { version = "1.0.104", features = [ "derive" ] }
-serde_json = "1.0.48"
-spin_sleep = "1.1.1"
+# Subcrates
+syact_macros = { path = "syact_macros", version = "0.1.0", optional = true }
 
 # Raspberry
 rppal = { version = "0.14.1", optional = true }
@@ -32,8 +33,10 @@ rppal = { version = "0.14.1", optional = true }
 plotters = "0.3.4"
 
 [features]
-default = [ "std" ]
-std = [ ]
+default = [ "std", "safe-move", "embed-thread" ]
+std = [ "dep:glam", "dep:serde", "dep:serde_json", "dep:spin_sleep", "dep:syact_macros" ]
+safe-move = [ ]
+embed-thread = [ "std" ]
 
 # Platform features
 rasp = [ "std", "dep:rppal" ]

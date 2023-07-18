@@ -7,41 +7,48 @@
 #[cfg(feature = "std")]
 extern crate alloc;
 
-#[cfg(not(feature = "std"))]
-compile_error!("No-Std currently not available!");
-
 // Submodules
     #[doc = include_str!("../docs/components.md")]
+    #[cfg(feature = "std")]
     pub mod comp;
+    #[cfg(feature = "std")]
     pub use comp::{SyncComp, SyncCompGroup, Tool};
+    #[cfg(feature = "std")]
     pub use comp::tool::SimpleTool;
     #[cfg(feature = "std")]
-    pub use comp::asyn::{AsyncComp, Direction};
+    pub use comp::asyn::AsyncComp;
     
+    #[cfg(feature = "std")]
     pub use syact_macros::SyncCompGroup;
 
     /// Collection of structs and functions for controlling Stepper Motors
     pub mod ctrl;
-    pub use ctrl::Stepper;
+    pub use ctrl::{Direction, Stepper};
 
     /// Structs for storing characteristics of stepper motors and devices
+    #[cfg(feature = "std")]
     pub mod data;
-    pub use data::{StepperConst, CompData};
+    #[cfg(feature = "std")]
+    pub use data::{StepperConst, LinkedData};
 
     /// Functions and Structs for calculating Stepper Motor procedures and operations
+    #[cfg(feature = "std")]
     pub mod math;
 
     /// Functions and Structs for taking measurements with a robot for e.g. position calculation
+    #[cfg(feature = "std")]
     pub mod meas;
 
     /// Easy import of the functionalities
     pub mod prelude;
 
     /// Self defined units for mathematical operations
+    #[cfg(feature = "std")]
     pub mod units;
 
     /// Module with all the tests required to assure the library funcitons as intended
     #[cfg(test)]
+    #[cfg(feature = "std")]
     mod tests;
 // 
 
@@ -50,18 +57,15 @@ compile_error!("No-Std currently not available!");
 #[cfg(feature = "std")]
 pub type Error = Box<dyn std::error::Error>;
 
+/// The general error type of the crate
 #[cfg(not(feature = "std"))]
 pub type Error = ErrorKind;
 
-
+/// Enum for different error types
 #[cfg(not(feature = "std"))]
 #[derive(Debug)]
 pub enum ErrorKind {
-    // Components
-    NoSuper,
-    
-    // Load
-    Overload
+    // TODO
 }
 
 /// A trait that provides a universal setup function
@@ -72,6 +76,7 @@ pub trait Setup {
     }
 }
 
+#[cfg(feature = "std")]
 #[inline(always)]
 fn lib_error<E>(error : E) -> crate::Error 
 where

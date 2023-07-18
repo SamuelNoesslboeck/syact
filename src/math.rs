@@ -4,6 +4,9 @@ use crate::units::*;
 
 // Submodules
 // pub mod actors;
+/// Iterators for different curve building application cases
+mod builders;
+pub use builders::*;
 
 /// Methods for calculating stepper motor acceleration curves
 pub mod curve;
@@ -14,6 +17,9 @@ pub use force::{forces_joint, forces_segment};
 
 /// Methods for calculating inertias of assemblies
 pub mod inertia;
+
+/// Functions describing general kinematic processes
+pub mod kin;
 
 /// Methods for calculating paths and movements
 pub mod path;
@@ -38,9 +44,6 @@ pub struct CurveBuilder<'a> {
     /// Total time of the curve processing
     pub time_total : Time,
 
-    /// Microstepping
-    pub micro : u8, 
-
     consts : &'a StepperConst,
     var : &'a CompVars,
     data : &'a CompData
@@ -48,10 +51,9 @@ pub struct CurveBuilder<'a> {
 
 impl<'a> CurveBuilder<'a> {
     /// Creates a new `CurveBuilder`
-    pub fn new(consts : &'a StepperConst, var : &'a CompVars, data : &'a CompData, omega_0 : Omega, micro : u8) -> Self {
+    pub fn new(consts : &'a StepperConst, var : &'a CompVars, data : &'a CompData, omega_0 : Omega) -> Self {
         if !var.f_bend.is_normal() {
             panic!("Invaild bend factor! ({})", var.f_bend);
-        }
     
         if !data.s_f.is_normal() {
             panic!("Invalid safety factor! ({})", data.s_f);
@@ -66,8 +68,6 @@ impl<'a> CurveBuilder<'a> {
 
             time: Time::ZERO,
             time_total: Time::ZERO,
-
-            micro,
 
             consts,
             var,
@@ -131,7 +131,7 @@ impl<'a> CurveBuilder<'a> {
         } else {
             self.alpha = self.consts.alpha_max_dyn(
                 force::torque_dyn(self.consts, 
-                        (self.omega /* + omega_tar */).abs() /* / 2.0 */ / self.var.f_bend, self.data.u, self.micro) / self.data.s_f * self.var.f_bend, 
+                        (self.omega /* + omega_tar */).abs() /* / 2.0 */ / self.var.f_bend, self.data.u) / self.data.s_f * self.var.f_bend, 
                     self.var
             ).unwrap();
     
@@ -180,21 +180,21 @@ impl<'a> CurveBuilder<'a> {
     }
 
     /// Calculates the next step in an acceleration curve and returns the step-time
-    pub fn next_step_pos(&mut self, alpha : Option<Alpha>) -> Time {
-        self.next(self.consts.step_ang(self.micro), self.max_speed(), alpha).0
+    pub fn next_step_pos(&mut self, alpha : Option<Alpha>, micro : u8) -> Time {
+        self.next(self.consts.step_ang(micro), self.max_speed(), alpha).0
     }
 
     /// Calculates the next step in an decceleration curve and returns the step-time
-    pub fn next_step_neg(&mut self, alpha : Option<Alpha>) -> Time {
-        self.next(self.consts.step_ang(self.micro), -self.max_speed(), alpha).0
+    pub fn next_step_neg(&mut self, alpha : Option<Alpha>, micro : u8) -> Time {
+        self.next(self.consts.step_ang(micro), -self.max_speed(), alpha).0
     }
 
     #[inline(always)]
-    fn next_step(&mut self, omega : Omega, time : &mut Time, alpha : Option<Alpha>) -> bool {
+    fn next_step(&mut self, omega : Omega, time : &mut Time, alpha : Option<Alpha>, micro : u8) -> bool {
         let step_delta = if (self.omega + omega) >= Omega::ZERO {
-            self.consts.step_ang(self.micro)
+            self.consts.step_ang(micro)
         } else {
-            -self.consts.step_ang(self.micro)
+            -self.consts.step_ang(micro)
         };
 
         if omega > self.omega {
@@ -213,7 +213,7 @@ impl<'a> CurveBuilder<'a> {
     /// # Errors
     /// 
     /// Returns an error if the given `omega` is higher than the `max_speed()` of the `CurveBuilder` 
-    pub fn to_speed(&mut self, omega : Omega) -> Result<Vec<Time>, crate::Error> {
+    pub fn to_speed(&mut self, omega : Omega, micro : u8) -> Result<Vec<Time>, crate::Error> {
         if omega.abs() > self.max_speed() {
             return Err(crate::lib_error(format!("The given omega is too high! {}", omega)))
         }
@@ -222,7 +222,7 @@ impl<'a> CurveBuilder<'a> {
 
         loop {
             let mut time : Time = Time::ZERO;
-            if self.next_step(omega, &mut time, None) {
+            if self.next_step(omega, &mut time, None, micro) {
                 break;
             }
             curve.push(time);
@@ -237,13 +237,13 @@ impl<'a> CurveBuilder<'a> {
     /// # Errors
     /// 
     /// Returns an error if the given `omega` is higher than the `max_speed()` of the `CurveBuilder` 
-    pub fn to_speed_buffer(&mut self, curve : &mut [Time], omega : Omega) -> Result<(), crate::Error> {
+    pub fn to_speed_buffer(&mut self, curve : &mut [Time], omega : Omega, micro : u8) -> Result<(), crate::Error> {
         if omega > self.max_speed() {
             return Err(crate::lib_error(format!("The given omega is too high! {}", omega)))
         }
 
         for elem in curve {
-            if self.next_step(omega, elem, None) {
+            if self.next_step(omega, elem, None, micro) {
                 break;
             }
         }
@@ -252,7 +252,7 @@ impl<'a> CurveBuilder<'a> {
     }
     
     /// Drive
-    pub fn to_speed_lim(&mut self, mut delta : Delta, omega_0 : Omega, omega_tar : Omega, corr : &mut (Delta, Time)) -> Result<Vec<Time>, crate::Error> {
+    pub fn to_speed_lim(&mut self, mut delta : Delta, omega_0 : Omega, omega_tar : Omega, corr : &mut (Delta, Time), micro : u8) -> Result<Vec<Time>, crate::Error> {
         dbg!(delta, omega_0, omega_tar);
 
         if delta == Delta::ZERO {
@@ -263,8 +263,8 @@ impl<'a> CurveBuilder<'a> {
             }
         }   // TODO: Handle more cases
         
-        let steps = self.consts.steps_from_ang(delta, self.micro);
-        corr.0 = delta - self.consts.ang_from_steps(steps, self.micro);
+        let steps = self.consts.steps_from_ang(delta, micro);
+        corr.0 = delta - self.consts.ang_from_steps(steps, micro);
         delta = delta - corr.0;
 
         if steps == 0 {
@@ -279,9 +279,9 @@ impl<'a> CurveBuilder<'a> {
         }
 
         // Debug! TODO: Remove
-        if alpha.abs() > self.consts.alpha_max_dyn(force::torque_dyn(self.consts, (omega_0 + omega_tar) / 2.0, self.data.u, self.micro), self.var)? {
+        if alpha.abs() > self.consts.alpha_max_dyn(force::torque_dyn(self.consts, (omega_0 + omega_tar) / 2.0, self.data.u), self.var)? {
             panic!("Acceleration reached! {} max: {}", alpha, 
-            self.consts.alpha_max_dyn(force::torque_dyn(self.consts, (omega_0 + omega_tar) / 2.0, self.data.u, self.micro), self.var)?);
+            self.consts.alpha_max_dyn(force::torque_dyn(self.consts, (omega_0 + omega_tar) / 2.0, self.data.u), self.var)?);
         }
 
         let mut curve = vec![]; 
@@ -293,7 +293,7 @@ impl<'a> CurveBuilder<'a> {
         
         loop {
             let mut time : Time = Time::ZERO;
-            if self.next_step(omega_tar, &mut time, Some(alpha)) {
+            if self.next_step(omega_tar, &mut time, Some(alpha), micro) {
                 if curve.len() < (steps.abs() as usize) {
                     curve.push(time);   
                 }

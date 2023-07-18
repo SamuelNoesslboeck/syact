@@ -22,7 +22,7 @@ fn torque_dyn_approx_speed() {
     let consts = StepperConst::GEN;
 
     let inst = Instant::now();
-    let max_omega = consts.max_speed(12.0);
+    let max_omega = consts.omega_max(12.0);
 
     for i in 0 .. 1_000_000 {
         force::torque_dyn_approx(&consts, Omega(0.01 * (i as f32)), max_omega);

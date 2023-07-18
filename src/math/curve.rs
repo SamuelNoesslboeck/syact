@@ -88,7 +88,7 @@ pub fn mirror_curve(cur : &mut [Time]) {
 pub fn write_simple_move(consts : &StepperConst, var : &CompVars, data : &CompData, cur : &mut [Time], omega_max : Omega, micro : u8) {
     let cur_len = cur.len(); 
 
-    let mut builder = CurveBuilder::new(consts, var, data, Omega::ZERO, micro);
+    let mut builder = CurveBuilder::new(consts, var, data, Omega::ZERO);
 
     for i in 0 .. cur_len / 2 {
         let time = builder.next_step_pos(None);

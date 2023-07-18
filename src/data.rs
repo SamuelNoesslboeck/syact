@@ -2,7 +2,8 @@ use core::f32::consts::PI;
 
 use serde::{Serialize, Deserialize};
 
-use crate::{units::*, lib_error};
+use crate::lib_error;
+use crate::units::*;
 
 // Submodules
 mod comp;
@@ -26,8 +27,7 @@ pub use var::CompVars;
 /// ``` 
 /// Supports JSON-Serialize and Deserialize with the `serde_json` library
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct StepperConst
-{
+pub struct StepperConst {
     /// Max phase current [Unit A]
     pub i_max : f32,
     /// Motor inductence [Unit H]
@@ -41,8 +41,7 @@ pub struct StepperConst
     pub j_s : Inertia
 }
 
-impl StepperConst
-{
+impl StepperConst {
     /// Error stepperdata with all zeros
     pub const ERROR : Self = Self {
         i_max: 0.0,
@@ -74,7 +73,7 @@ impl StepperConst
     /// The maximum angular acceleration of the motor, with a modified torque t_s
     #[inline(always)]
     pub fn alpha_max_dyn(&self, t_s : Force, var : &CompVars) -> Result<Alpha, crate::Error> {
-        Ok(Self::t_dyn(t_s, var.t_load)? / self.j(var.j_load))
+        Ok(Self::t_dyn(t_s, var.t_load)? / self.j(var.j_load) * var.bend_f)
     }
 
     /// The inductivity constant [Unit s]
@@ -85,7 +84,7 @@ impl StepperConst
 
     /// Maximum speed for a stepper motor where it can be guarantied that it works properly
     #[inline(always)]
-    pub fn max_speed(&self, u : f32) -> Omega {
+    pub fn omega_max(&self, u : f32) -> Omega {
         2.0 * PI / self.tau(u) / self.n_s as f32
     }
 
@@ -118,7 +117,11 @@ impl StepperConst
         /// Get the angular distance of a step Unit rad [Unit 1]
         #[inline(always)]
         pub fn step_ang(&self, micro : u8) -> Delta {
-            Delta(2.0 * PI / self.n_s as f32 / micro as f32)
+            self.full_step_ang() / micro as f32
+        }
+
+        pub fn full_step_ang(&self) -> Delta {
+            Delta(2.0 * PI / self.n_s as f32)
         }
 
         /// Time per step for the given omega [Unit s]
@@ -133,6 +136,14 @@ impl StepperConst
             }
 
             self.step_ang(micro) / omega
+        }
+
+        pub fn full_step_time(&self, omega : Omega) -> Time {
+            if (omega == Omega(0.0)) | (omega == Omega(-0.0)) {
+                panic!("The given omega ({}) is zero!", omega);
+            }
+
+            self.full_step_ang() / omega
         }
     // 
 

@@ -23,7 +23,7 @@ pub struct CompVars {
     pub j_load : Inertia,
 
     /// Bend factor for stepper 
-    pub f_bend : f32,
+    pub bend_f : f32,
 
     /// Limits of the component
     pub lim : Limits
@@ -35,7 +35,7 @@ impl CompVars  {
         t_load: Force::ZERO, 
         j_load: Inertia::ZERO, 
 
-        f_bend: 1.0,
+        bend_f: 1.0,
 
         lim: Limits::NONE 
     };

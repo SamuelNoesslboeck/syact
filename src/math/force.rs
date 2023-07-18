@@ -29,7 +29,7 @@ use crate::units::*;
 /// // The curve has to be symmetrical
 /// assert_eq!(torque_dyn(&data, Omega(10.0), 12.0, 1), torque_dyn(&data, Omega(10.0), 12.0, 1));
 /// ```
-pub fn torque_dyn(consts : &StepperConst, mut omega : Omega, u : f32, micro : u8) -> Force {
+pub fn torque_dyn(consts : &StepperConst, mut omega : Omega, u : f32) -> Force {
     omega = omega.abs();
 
     if !omega.is_finite() {
@@ -40,7 +40,7 @@ pub fn torque_dyn(consts : &StepperConst, mut omega : Omega, u : f32, micro : u8
         return consts.t_s;
     }
 
-    let t = consts.step_time(omega, micro);
+    let t = consts.full_step_time(omega);
     let pow = E.powf( -t / consts.tau(u) );
 
     (1.0 - pow) / (1.0 + pow) * consts.t_s

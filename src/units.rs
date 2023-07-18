@@ -1,3 +1,9 @@
+/// ####################
+/// #   UNIT SYSTEM    #
+/// ####################
+/// 
+/// For more specific implementations to the units see the math module (especially math::kin)
+
 use core::fmt::Display;
 // Units
 use core::ops::{Add, Sub, Div, Mul, Neg, AddAssign};
@@ -488,6 +494,12 @@ basic_unit!(Alpha);
 additive_unit!(Alpha);
 derive_units!(Omega, Alpha, Time);
 derive_units!(Force, Alpha, Inertia);
+
+#[derive(Clone, Copy, Debug, Default, Serialize, Deserialize, PartialEq, PartialOrd)]
+pub struct Jolt(pub f32); 
+basic_unit!(Jolt);
+additive_unit!(Jolt);
+derive_units!(Alpha, Jolt, Time);
 
 /// Represents an inertia, slowing down movement processes
 /// 
