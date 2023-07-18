@@ -1,7 +1,6 @@
 use crate::prelude::*;
 use crate as syact;
 
-#[derive(SyncCompGroup)]
 #[derive(StepperCompGroup)]
 struct TestGroup {
     pub base : Stepper,
@@ -13,19 +12,25 @@ fn group_dyn() {
     let group_arr_stat = [
         Stepper::new_sim(StepperConst::GEN)
     ];
-    let _group_arr_ref : &dyn SyncCompGroup<1> = &group_arr_stat;
+    let _group_arr_ref = &group_arr_stat;
 
     let group_dyn_stat : [Box<dyn SyncComp>; 1] = [ 
         Box::new(Stepper::new_sim(StepperConst::GEN))
     ];
-    let _group_dyn_ref : &dyn SyncCompGroup<1> = &group_dyn_stat;
+    let _group_dyn_ref = &group_dyn_stat;
+
+    let _gammas = group_arr_stat.gammas();
 
     let test = TestGroup {
         base: Stepper::new_sim(StepperConst::GEN),
         arm1: Stepper::new_sim(StepperConst::GEN)
     };
 
-    let _test_ref : &dyn SyncCompGroup<2> = &test;
+    let _gammas = test.gammas();
+
+    let _test_ref = &test;
+    
+    let _micro = _test_ref.micro();
 }
 
 #[test]
