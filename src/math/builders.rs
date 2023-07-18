@@ -125,6 +125,7 @@ use crate::units::*;
         type Item = Time;
 
         fn next(&mut self) -> Option<Self::Item> {
+            // Max speed reached
             if self.omega_0.abs() >= self.omega_max.abs() {
                 self.reason = StopReason::MaxSpeed;
                 return None;

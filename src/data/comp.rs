@@ -14,6 +14,13 @@ impl CompData {
     pub const GEN : Self = Self {
         u: 12.0,
         s_f: 1.5
+    };  
+
+    /// Comp data that will case an error in calculations as it has not been yet initialized.  
+    /// (Has to be overwritten)
+    pub const ERROR : Self = Self {
+        u: 0.0,
+        s_f: 0.0
     };
 
     /// Creates a new CompData instance

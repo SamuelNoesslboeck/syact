@@ -23,14 +23,14 @@ use crate::units::*;
 /// - the curve to drive : `Vec<Time>`
 /// - interuptable : `bool`
 /// - constant time to drive after curve : `Option<Time>`
-#[cfg(feature = "std")]
-type AsyncMsg = (Vec<Time>, bool, Option<Time>);
+#[cfg(feature = "embed-thread")]
+type AsyncMsg = (CtrlStepTimeBuilder, bool, Option<Time>);
 /// Steps moved by the thread
-#[cfg(feature = "std")]
+#[cfg(feature = "embed-thread")]
 type AsyncRes = i64;
 
 /// Error that is used if the async thread of the component has not been setup yet
-#[cfg(feature = "std")]
+#[cfg(feature = "embed-thread")]
 #[inline(always)]
 fn no_async() -> crate::Error {
     lib_error("Async has not been setup yet!")
@@ -109,7 +109,7 @@ impl<C : Controller + Send> HRStepper<C> {
                 micro: 1,
                 omega_max: Omega::ZERO,
     
-                data: CompData { u: 0.0, s_f: 0.0 },
+                data: CompData::ERROR,
     
                 thr: None,
                 sender: None,
@@ -126,7 +126,7 @@ impl<C : Controller + Send> HRStepper<C> {
                 pos: 0,
                 omega_max: Omega::ZERO,
     
-                data: CompData { u: 0.0, s_f: 0.0 },
+                data: CompData::ERROR,
     
                 sys: Pins {
                     dir: sys_dir,
@@ -137,6 +137,7 @@ impl<C : Controller + Send> HRStepper<C> {
     }
 
     cfg_if::cfg_if! { if #[cfg(feature = "embed-thread")] {
+        /// Function for accessing the ctrl substruct of a stepper motor with the embed-thread feature being enabled
         pub(crate) fn use_ctrl<F, R>(raw_ctrl : &mut Arc<Mutex<C>>, func : F) -> R 
         where F: FnOnce(&mut C) -> R {
             let mut ctrl_ref = raw_ctrl.lock().unwrap();
@@ -145,12 +146,14 @@ impl<C : Controller + Send> HRStepper<C> {
             func(ctrl)
         }
     } else {
+        /// Function for accessing the ctrl substruct of a stepper motor with the embed-thread feature being enabled
         pub(crate) fn use_ctrl<F, R>(raw_ctrl : C, func : F) -> R 
         where F: FnOnce(&mut C) -> R {
             func(raw_ctrl)
         }
     } }
 
+    /// Returns the position of the stepper motors in steps 
     pub fn pos(&self) -> i64 {
         cfg_if::cfg_if! { if #[cfg(feature = "embed-thread")] {
             return self.pos.lock().unwrap().clone();
@@ -159,6 +162,7 @@ impl<C : Controller + Send> HRStepper<C> {
         }}
     }
 
+    /// Returns the current direction of the motor
     pub fn dir(&self) -> Direction {
         cfg_if::cfg_if!{ if #[cfg(feature = "embed-thread")] {
             return self.ctrl.lock().unwrap().dir();
@@ -167,6 +171,8 @@ impl<C : Controller + Send> HRStepper<C> {
         }}
     }
 
+    /// Overwrite the position of the motor with the given amount of steps.  
+    /// This function *does not move the motor*, see `drive` functions for movements
     pub fn set_pos(&mut self, pos : i64) {
         cfg_if::cfg_if! { if #[cfg(feature = "embed-thread")] {
             *self.pos.lock().unwrap().deref_mut() = pos;
@@ -182,6 +188,7 @@ impl<C : Controller + Send + 'static> HRStepper<C> {
     pub fn drive_curve<I : Iterator<Item = Time>>(&mut self, cur : I) -> i64 {
         let pos_0 = self.pos();
 
+        // Drive each point in the curve
         for point in cur {
             Self::use_ctrl(&mut self.ctrl, |ctrl| {
                 ctrl.step(point);
@@ -323,7 +330,7 @@ impl<C : Controller + Send + 'static> HRStepper<C> {
         self.active = false;
     }
 
-    fn drive_curve_async(&mut self, curve : Vec<Time>, intr : bool, t_const : Option<Time>) -> Result<(), crate::Error> {
+    fn drive_curve_async(&mut self, curve : CtrlStepTimeBuilder, intr : bool, t_const : Option<Time>) -> Result<(), crate::Error> {
         self.clear_active_status();
 
         // println!(" => Curve: {}; Last: {:?}; t_const: {:?}", curve.len(), curve.last(), t_const);
@@ -352,9 +359,13 @@ impl<C : Controller + Send + 'static> HRStepper<C> {
         
         self.setup_drive(delta)?;
 
-        let cur = self.create_builder(Omega::ZERO, self.omega_max() * speed_f);
+        let mut cur = CtrlStepTimeBuilder::from_builder(
+            self.create_builder(Omega::ZERO, self.omega_max())
+        );
 
-        self.drive_curve_async(cur.collect::<Vec<Time>>(), false, t_const)
+        cur.set_omega_tar(self.omega_max() * speed_f)?;
+
+        self.drive_curve_async(cur, false, t_const)
     }
 
     fn setup_async(&mut self) {
@@ -365,11 +376,9 @@ impl<C : Controller + Send + 'static> HRStepper<C> {
         let pos = self.pos.clone();
 
         self.thr = Some(std::thread::spawn(move || {
-            let mut curve : Vec<Time>;
+            let mut curve : CtrlStepTimeBuilder;
             let mut intr : bool;
             let mut cont : Option<Time>;
-
-            let mut msg_sent = false;
 
             let mut msg_opt : Option<_> = None;
             let mut msg : Option<AsyncMsg>;
@@ -377,6 +386,7 @@ impl<C : Controller + Send + 'static> HRStepper<C> {
             loop {
                 if let Some(msg_r) = msg_opt { 
                     msg = msg_r;
+                    msg_opt = None;
                 } else {
                     msg = match receiver_thr.recv() {
                         Ok(msg_opt) => msg_opt,
@@ -399,73 +409,48 @@ impl<C : Controller + Send + 'static> HRStepper<C> {
                 };
 
                 let mut ctrl = ctrl_mut.lock().unwrap();
-                let mut index : usize = 0;
-                let curve_len = curve.len();
+                let mut index = 0;
 
-                loop {
-                    if index < curve_len {
-                        ctrl.step(curve[index]);
+                for step  in curve{
+                    ctrl.step(step);
+                    pos.lock().unwrap().add_assign(if ctrl.dir().as_bool() { 1 } else { -1 });
+
+                    if intr {
+                        match receiver_thr.try_recv() {
+                            Ok(msg) => { 
+                                msg_opt = Some(msg); 
+                                break;
+                            },
+                            Err(_) => { }
+                        };
+                    }
+
+                    index += 1;
+                }
+
+                if msg_opt.is_some() {
+                    continue;
+                }
+
+                sender_thr.send(if ctrl.dir().as_bool() {
+                    index as i64
+                } else {
+                    -(index as i64)
+                }).unwrap();
+
+                if let Some(t_cont) = cont {
+                    loop {
+                        ctrl.step(t_cont);
                         pos.lock().unwrap().add_assign(if ctrl.dir().as_bool() { 1 } else { -1 });
                         index += 1;
 
-                        if intr {
-                            match receiver_thr.try_recv() {
-                                Ok(msg) => { 
-                                    msg_opt = Some(msg); 
-                                    break;
-                                },
-                                Err(_) => { }
-                            };
-                        }
-
-                        if index == curve_len {
-                            sender_thr.send(if ctrl.dir().as_bool() {
-                                index as i64
-                            } else {
-                                -(index as i64)
-                            }).unwrap();
-
-                            msg_sent = true;
-                        }
-                    } else if let Some(t_cont) = cont {
-                        if !msg_sent {
-                            sender_thr.send(if ctrl.dir().as_bool() {
-                                index as i64
-                            } else {
-                                -(index as i64)
-                            }).unwrap();
-
-                            msg_sent = true;
-                        }
-
-                        loop {
-                            ctrl.step(t_cont);
-                            pos.lock().unwrap().add_assign(if ctrl.dir().as_bool() { 1 } else { -1 });
-                            index += 1;
-
-                            match receiver_thr.try_recv() {
-                                Ok(msg) => { 
-                                    msg_opt = Some(msg); 
-                                    break;
-                                },
-                                Err(_) => { }
-                            };
-                        }
-
-                        break;
-                    } else {
-                        if !msg_sent {
-                            sender_thr.send(if ctrl.dir().as_bool() {
-                                index as i64
-                            } else {
-                                -(index as i64)
-                            }).unwrap();
-                        }
-
-                        msg_opt = None;
-                        msg_sent = false;
-
-                        break;
+                        match receiver_thr.try_recv() {
+                            Ok(msg) => { 
+                                msg_opt = Some(msg); 
+                                break;
+                            },
+                            Err(_) => { }
+                        };
                     }
                 }
             };
@@ -679,7 +664,7 @@ impl<C : Controller + Send + 'static> SyncComp for HRStepper<C> {
 
 #[cfg(feature = "embed-thread")]
 impl<C : Controller + Send + 'static> AsyncComp for HRStepper<C> {
-    fn drive(&mut self, dir : Direction, mut speed_f : f32) -> Result<(), crate::Error> {
+    fn drive(&mut self, dir : Direction, speed_f : f32) -> Result<(), crate::Error> {
         if (0.0 > speed_f) | (1.0 < speed_f) {
             panic!("Bad speed_f! {}", speed_f);
         }
@@ -696,7 +681,7 @@ impl<C : Controller + Send + 'static> AsyncComp for HRStepper<C> {
         //     self.omega_max, omega_0, omega_tar, self.speed_f, speed_f);
 
         let mut builder = CtrlStepTimeBuilder::from_builder(
-            self.create_builder(Omega::ZERO, self.omega_max() * speed_f)
+            self.create_builder(omega_0, omega_max)
         );
 
         let t_const = if omega_tar != Omega::ZERO {
@@ -704,30 +689,24 @@ impl<C : Controller + Send + 'static> AsyncComp for HRStepper<C> {
         } else {
             None
         }; 
-        
-        // let curve; 
-        // let curve_sec; 
 
-        // if dir == self.dir() {
-        //     curve = builder.to_speed(omega_tar)?;
-        //     curve_sec = vec![];
-        // } else {
-        //     curve = builder.to_speed(Omega::ZERO)?; 
-        //     curve_sec = builder.to_speed(omega_tar)?;
-        // }
+        if dir == self.dir() {
+            builder.set_omega_tar(omega_tar)?;
+            self.drive_curve_async(builder, true, t_const)?;
+        } else {
+            builder.set_omega_tar(Omega::ZERO)?;
+            self.drive_curve_async(builder, true, None)?;
 
-        // drop(builder);
+            self.await_inactive()?;
+            self.set_dir(dir);
 
-        // if dir == self.dir() {
-        //     self.drive_curve_async(curve, true, t_const)?;
-        // } else {
-        //     self.drive_curve_async(curve, true, None)?;
+            builder = CtrlStepTimeBuilder::from_builder(
+                self.create_builder(Omega::ZERO, omega_max)
+            );    
 
-        //     self.await_inactive()?;
-        //     self.set_dir(dir);
-
-        //     self.drive_curve_async(curve_sec, true, t_const)?;
-        // }
+            builder.set_omega_tar(omega_tar)?;
+            self.drive_curve_async(builder, true, t_const)?;
+        }
 
         self.speed_f = speed_f;
 
