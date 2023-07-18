@@ -5,28 +5,66 @@ use crate::units::*;
 /// This trait allows a lot of functions to be used for all components at once.
 pub trait SyncCompGroup<const C : usize> : Setup {
     /// Type that generalizes all componenents, e.g. `dyn SyncComp`
-    type Comp : SyncComp;
+    type Comp : SyncComp + ?Sized;
 
     // Iteration
-        fn for_each<F, R>(&self, func : F) -> [R; C]
+        /// Execute a given function `func` for every element given by a readonly reference and it's index in the component group.
+        /// 
+        /// # Returns
+        /// 
+        /// Returns a fixed-sized array of the result type of the closure. The closure may not fail, see `try_for_each()` if a `Result` is required
+        fn for_each<'a, F, R>(&'a self, func : F) -> [R; C]
         where 
-            F : FnMut(&Self::Comp, usize) -> R,
+            F : FnMut(&'a Self::Comp, usize) -> R,
             R : Copy + Default;
 
+        /// Execute a given function `func` for every element given by a mutable reference and it's index in the component group 
+        /// 
+        /// # Returns
+        /// 
+        /// Returns a fixed-sized array of the result type of the closure. The closure may not fail, see `try_for_each_mut()` if a `Result` is required
         fn for_each_mut<F, R>(&mut self, func : F) -> [R; C]
         where 
             F : FnMut(&mut Self::Comp, usize) -> R,
             R : Copy + Default;
 
-        fn try_for_each<F, R, E>(&self, func : F) -> Result<[R; C], E>
+        /// Execute a given function `func` for every element given by a mutable reference and it's index in the component group 
+        /// 
+        /// # Returns
+        /// 
+        /// Returns a fixed-sized array of the result type of the closure, wrapped into a `Result`, the closure has to return a `Result`
+        /// 
+        /// # Error
+        /// 
+        /// Stops executing if one of the components throws an error
+        fn try_for_each<'a, F, R, E>(&'a self, func : F) -> Result<[R; C], E>
         where 
-            F : FnMut(&Self::Comp, usize) -> Result<R, E>,
+            F : FnMut(&'a Self::Comp, usize) -> Result<R, E>,
             R : Copy + Default;
 
+        /// Execute a given function `func` for every element given by a mutable reference and it's index in the component group 
+        /// 
+        /// # Returns
+        /// 
+        /// Returns a fixed-sized array of the result type of the closure, wrapped into a `Result`, the closure has to return a `Result`
+        /// 
+        /// # Error
+        /// 
+        /// Stops executing if one of the components throws an error
         fn try_for_each_mut<F, R, E>(&mut self, func : F) -> Result<[R; C], E>
         where 
             F : FnMut(&mut Self::Comp, usize) -> Result<R, E>,
             R : Copy + Default;
+
+        /// Execute a given function `func` for every element given by a readonly reference and it's index in the component group.
+        /// 
+        /// # Returns
+        /// 
+        /// Returns a dynamically sized array of the return time. The advantage is that the value does not have to implement `Copy` nor `Default`.
+        /// The closure may not fail, see `try_for_each()` if a `Result` is required.
+        fn for_each_dyn<'a, F, R>(&'a self, func : F) -> Vec<R>
+        where 
+            F : FnMut(&'a Self::Comp, usize) -> R;
     //
 
     // Data
@@ -87,7 +125,7 @@ pub trait SyncCompGroup<const C : usize> : Setup {
         /// Only available if the "std" feature is enabled
         #[cfg(feature = "std")]
         fn await_inactive(&mut self) -> Result<[Delta; C], crate::Error> {
-            self.try_for_each_mut(|comp, index| {
+            self.try_for_each_mut(|comp, _| {
                 comp.await_inactive()
             })
         }
@@ -97,7 +135,7 @@ pub trait SyncCompGroup<const C : usize> : Setup {
         /// Runs [SyncComp::gamma()] for all components
         #[inline(always)]
         fn gammas(&self) -> [Gamma; C] {
-            self.for_each(|comp, index| {
+            self.for_each(|comp, _| {
                 comp.gamma()
             })
         }
@@ -113,47 +151,41 @@ pub trait SyncCompGroup<const C : usize> : Setup {
         /// Runs [SyncComp::lim_for_gamma()] for all components 
         #[inline(always)]
         fn lims_for_gammas(&self, gammas : &[Gamma; C]) -> [Delta; C] {
-            let mut limits = [Delta::ZERO; C]; 
-            for i in 0 .. C {
-                limits[i] = self.index(i).lim_for_gamma(gammas[i]);
-            }
-            limits
+            self.for_each(|comp, index| {
+                comp.lim_for_gamma(gammas[index])
+            })
         }
 
         /// Checks if the given gammas are vaild, which means they are finite and in range of the components
         #[inline(always)]
         fn valid_gammas(&self, gammas : &[Gamma; C]) -> bool {
-            let mut res = true;
-            for i in 0 .. C {
-                res = res & ((!self.index(i).lim_for_gamma(gammas[i]).is_normal()) & gammas[i].is_finite()); 
-            }
-            res
+            self.for_each(|comp, index| {
+                !comp.lim_for_gamma(gammas[index]).is_normal() & gammas[index].is_finite()
+            }).iter().all(|v| *v)
         }
 
         /// Same as [SyncCompGroup::valid_gammas()], but it evaluates the check for each component and returns seperated results for analysis
         #[inline(always)]
         fn valid_gammas_verb(&self, gammas : &[Gamma; C]) -> [bool; C] {
-            let mut res = [true; C];
-            for i in 0 .. C {
-                res[i] = (!self.index(i).lim_for_gamma(gammas[i]).is_normal()) & gammas[i].is_finite(); 
-            }
-            res
+            self.for_each(|comp, index| {
+                !comp.lim_for_gamma(gammas[index]).is_normal() & gammas[index].is_finite()
+            })
         }
 
         /// Runs [SyncComp::set_end()] for all components
         #[inline(always)]
         fn set_ends(&mut self, set_dist : &[Gamma; C]) {
-            for i in 0 .. C {
-                self.index_mut(i).set_end(set_dist[i]);
-            }
+            self.for_each_mut(|comp, index| {
+                comp.set_end(set_dist[index]);
+            });
         }
         
         /// Runs [SyncComp::set_limit()] for all components
         #[inline(always)]
         fn set_limits(&mut self, min : &[Option<Gamma>; C], max : &[Option<Gamma>; C]) {
-            for i in 0 .. C {
-                self.index_mut(i).set_limit(min[i], max[i]);
-            }
+            self.for_each_mut(|comp, index| {
+                comp.set_limit(min[index], max[index]);
+            }); 
         }
     //
 
@@ -161,41 +193,39 @@ pub trait SyncCompGroup<const C : usize> : Setup {
         /// Runs [SyncComp::apply_inertia()] for all components
         #[inline(always)]
         fn apply_inertias(&mut self, inertias : &[Inertia; C]) {
-            for i in 0 .. C {
-                self.index_mut(i).apply_inertia(inertias[i]);
-            }
+            self.for_each_mut(|comp, index| {
+                comp.apply_inertia(inertias[index]);
+            }); 
         }
 
         /// Runs [SyncComp::apply_force()] for all components
         #[inline(always)]
         fn apply_forces(&mut self, forces : &[Force; C]) {
-            for i in 0 .. C {
-                self.index_mut(i).apply_force(forces[i]);
-            }
+            self.for_each_mut(|comp, index| {
+                comp.apply_force(forces[index]);
+            });
         }
 
         /// Runs [SyncComp::apply_bend_f()] for all components. Note that the same factor is applied to all components
         #[inline(always)]
         fn apply_bend_f(&mut self, f_bend : f32) {
-            for i in 0 .. C {
-                self.index_mut(i).apply_bend_f(f_bend);
-            }
+            self.for_each_mut(|comp, _| {
+                comp.apply_bend_f(f_bend);
+            }); 
         }
 
         /// Returns the maximum omegas for each component of the group
         fn omega_max(&self) -> [Omega; C] {
-            let mut omegas = [Omega::ZERO; C]; 
-            for i in 0 .. C {
-                omegas[i] = self.index(i).omega_max()
-            }
-            omegas
+            self.for_each(|comp, _| {
+                comp.omega_max()
+            })
         }
 
         /// Set the maximum omega of the components
         fn set_omega_max(&mut self, omega_max : [Omega; C]) {
-            for i in 0 .. C {
-                self.index_mut(i).set_omega_max(omega_max[i])
-            }
+            self.for_each_mut(|comp, index| {
+                comp.set_omega_max(omega_max[index]);
+            });
         }
     // 
 }
@@ -214,9 +244,9 @@ impl<T : SyncComp, const C : usize> Setup for [T; C] {
 impl<T : SyncComp, const C : usize> SyncCompGroup<C> for [T; C] { 
     type Comp = T;
 
-    fn for_each<F, R>(&self, mut func : F) -> [R; C]
+    fn for_each<'a, F, R>(&'a self, mut func : F) -> [R; C]
     where 
-        F : FnMut(&Self::Comp, usize) -> R,
+        F : FnMut(&'a Self::Comp, usize) -> R,
         R : Copy + Default 
     {   
         let mut res = [R::default(); C];
@@ -238,9 +268,9 @@ impl<T : SyncComp, const C : usize> SyncCompGroup<C> for [T; C] {
         res
     }
 
-    fn try_for_each<F, R, E>(&self, mut func : F) -> Result<[R; C], E>
+    fn try_for_each<'a, F, R, E>(&'a self, mut func : F) -> Result<[R; C], E>
     where 
-        F : FnMut(&Self::Comp, usize) -> Result<R, E>,
+        F : FnMut(&'a Self::Comp, usize) -> Result<R, E>,
         R : Copy + Default 
     {
         let mut res = [R::default(); C];
@@ -260,5 +290,16 @@ impl<T : SyncComp, const C : usize> SyncCompGroup<C> for [T; C] {
             res[i] = func(&mut self[i], i)?;
         }
         Ok(res)
+    }
+
+    fn for_each_dyn<'a, F, R>(&'a self, mut func : F) -> Vec<R>
+    where 
+        F : FnMut(&'a Self::Comp, usize) -> R 
+    {
+        let mut res = Vec::with_capacity(C);
+        for i in 0 .. C {
+            res.push(func(&self[i], i));
+        }
+        res
     }
 }

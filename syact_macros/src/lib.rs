@@ -3,171 +3,159 @@ use core::str::FromStr;
 use proc_macro2::TokenStream;
 use syn::DeriveInput;
 
-fn sync_comp_group_impl(ast : DeriveInput) -> proc_macro::TokenStream {
-    match ast.data {
-        syn::Data::Struct(data) => {
-            let name = ast.ident;
-            let fields = data.fields;
-            let fields_count = fields.len();
+// SyncCompGroup
+    fn sync_comp_group_impl(ast : DeriveInput, comp_type : TokenStream) -> proc_macro::TokenStream {
+        match ast.data {
+            // Macro works only on structs
+            syn::Data::Struct(data) => {
+                // Struct metadata
+                let name = ast.ident;
+                let fields = data.fields;
+                let fields_count = fields.len();
 
-            let mut setup_stream = TokenStream::new();
-            let mut index_stream = TokenStream::new();
-            let mut index_stream_mut = TokenStream::new();
+                // Streams for different functions
+                let mut setup_s = TokenStream::new();
+                let mut for_each_s = TokenStream::new();
+                let mut for_each_mut_s = TokenStream::new();
+                let mut try_for_each_s = TokenStream::new();
+                let mut try_for_each_mut_s = TokenStream::new();
+                let mut for_each_dyn_s = TokenStream::new();
 
-            let mut f_index : usize  = 0;
-            for field in fields {
-                let field_name = field.ident;
-                let field_stream = if let Some(n) = field_name.clone() {
-                    quote::quote! { &self.#n }
-                } else {
-                    TokenStream::from_str(&format!("&self.{}", f_index)).unwrap()
-                };
+                let mut findex : usize  = 0;
+                for field in fields {
+                    // Name of current field
+                    let fname = if let Some(ident) = field.ident {
+                        quote::quote! { #ident }
+                    } else {
+                        TokenStream::from_str(&format!("{}", findex)).unwrap()
+                    };  
 
-                index_stream.extend::<TokenStream>(
-                    quote::quote! {
-                        if index == #f_index {
-                            return #field_stream;
-                        }
-                    }.into()
-                );
+                    // Extend streams
+                        setup_s.extend(quote::quote! {
+                            self.#fname.setup()?;
+                        });
 
-                let field_stream = if let Some(n) = field_name.clone() {
-                    quote::quote! { &mut self.#n }
-                } else {
-                    TokenStream::from_str(&format!("&mut self.{}", f_index)).unwrap()
-                };
+                        for_each_s.extend(quote::quote! {
+                            res[#findex] = func(&self.#fname, #findex);
+                        }); 
 
-                index_stream_mut.extend::<TokenStream>(
-                    quote::quote! {
-                        if index == #f_index {
-                            return #field_stream;
-                        }
-                    }.into()
-                );
+                        for_each_mut_s.extend(quote::quote! {
+                            res[#findex] = func(&mut self.#fname, #findex);
+                        }); 
 
-                let field_stream = if let Some(n) = field_name.clone() {
-                    quote::quote! { self.#n }
-                } else {
-                    TokenStream::from_str(&format!("self.{}", f_index)).unwrap()
-                };
+                        try_for_each_s.extend(quote::quote! {
+                            res[#findex] = func(&self.#fname, #findex)?;
+                        }); 
 
-                setup_stream.extend::<TokenStream>(
-                    quote::quote! {
-                        #field_stream.setup()?;
-                    }.into()
-                );
+                        try_for_each_mut_s.extend(quote::quote! {
+                            res[#findex] = func(&mut self.#fname, #findex)?;
+                        }); 
 
-                f_index += 1;
-            }
+                        for_each_dyn_s.extend(quote::quote! {
+                            res.push(func(&self.#fname, #findex));
+                        }); 
+                    // 
 
-            index_stream.extend::<TokenStream>(
+                    findex += 1;
+                }
+
                 quote::quote! {
-                    panic!("Index {} is out of bounds", index)
-                }.into()
-            );
+                    impl syact::Setup for #name {
+                        fn setup(&mut self) -> Result<(), syact::Error> {
+                            #setup_s
+                            Ok(())
+                        }
+                    }
 
-            index_stream_mut.extend::<TokenStream>(
+                    impl syact::comp::group::SyncCompGroup<#fields_count> for #name { 
+                        type Comp = #comp_type;
+
+                        fn for_each<'a, F, R>(&'a self, mut func : F) -> [R; #fields_count]
+                        where 
+                            F : FnMut(&'a Self::Comp, usize) -> R,
+                            R : Copy + Default 
+                        {   
+                            let mut res = [R::default(); #fields_count];
+                            #for_each_s             // Insert stream
+                            res
+                        }
+                    
+                        fn for_each_mut<F, R>(&mut self, mut func : F) -> [R; #fields_count]
+                        where 
+                            F : FnMut(&mut Self::Comp, usize) -> R,
+                            R : Copy + Default 
+                        {
+                            let mut res = [R::default(); #fields_count];
+                            #for_each_mut_s         // Insert stream
+                            res
+                        }
+                    
+                        fn try_for_each<'a, F, R, E>(&'a self, mut func : F) -> Result<[R; #fields_count], E>
+                        where 
+                            F : FnMut(&'a Self::Comp, usize) -> Result<R, E>,
+                            R : Copy + Default 
+                        {
+                            let mut res = [R::default(); #fields_count];
+                            #try_for_each_s         // Insert stream
+                            Ok(res)
+                        }
+                    
+                        fn try_for_each_mut<F, R, E>(&mut self, mut func : F) -> Result<[R; #fields_count], E>
+                        where 
+                            F : FnMut(&mut Self::Comp, usize) -> Result<R, E>,
+                            R : Copy + Default 
+                        {
+                            let mut res = [R::default(); #fields_count];
+                            #try_for_each_mut_s     // Insert stream
+                            Ok(res)
+                        }
+                    
+                        fn for_each_dyn<'a, F, R>(&'a self, mut func : F) -> Vec<R>
+                        where 
+                            F : FnMut(&'a Self::Comp, usize) -> R 
+                        {
+                            let mut res = Vec::with_capacity(#fields_count);
+                            #for_each_dyn_s
+                            res
+                        }
+                    }
+                }.into()
+            },
+            _ => panic!("This macro can only be used on structs")
+        }
+    }
+
+    #[proc_macro_derive(SyncCompGroup)]
+    pub fn sync_comp_group_derive(input : proc_macro::TokenStream) -> proc_macro::TokenStream {
+        let ast : DeriveInput = syn::parse(input).unwrap();
+        sync_comp_group_impl(ast, TokenStream::from_str("dyn syact::comp::SyncComp").unwrap())
+    }
+// 
+
+// StepperCompGroup
+    /// Implementation for the `StepperCompGroup` trait
+    fn stepper_comp_group_impl(ast : DeriveInput) -> proc_macro::TokenStream {
+        match ast.data {
+            syn::Data::Struct(data) => {
+                // The macro only works on structs
+                let name = ast.ident;
+                let fields = data.fields;
+                let fields_count = fields.len();
+
+                // Create an empty implementation
                 quote::quote! {
-                    panic!("Index {} is out of bounds", index)
+                    impl syact::comp::stepper::StepperCompGroup<#fields_count> for #name { }
                 }.into()
-            );
-
-            quote::quote! {
-                impl Setup for #name {
-                    fn setup(&mut self) -> Result<(), syact::Error> {
-                        #setup_stream
-                        Ok(())
-                    }
-                }
-
-                impl SyncCompGroup<#fields_count> for #name { 
-                    fn index(&self, index : usize) -> &dyn SyncComp {
-                        #index_stream
-                    }
-
-                    fn index_mut(&mut self, index : usize) -> &mut dyn SyncComp {
-                        #index_stream_mut
-                    }
-                }
-            }.into()
-        },
-        _ => panic!("This macro can only be used on structs")
+            },
+            _ => panic!("This macro can only be used on structs")
+        }
     }
-}
 
-#[proc_macro_derive(SyncCompGroup)]
-pub fn sync_comp_group_derive(input : proc_macro::TokenStream) -> proc_macro::TokenStream {
-    let ast : DeriveInput = syn::parse(input).unwrap();
-    sync_comp_group_impl(ast)
-}
-
-fn stepper_comp_group_impl(ast : DeriveInput) -> proc_macro::TokenStream {
-    match ast.data {
-        syn::Data::Struct(data) => {
-            let name = ast.ident;
-            let fields = data.fields;
-            let fields_count = fields.len();
-
-            let mut builder_stream = TokenStream::new();
-            let mut drive_stream = TokenStream::new();
-            let mut micro_stream = TokenStream::new();
-
-            let mut f_index : usize  = 0;
-            for field in fields {
-                let field_name = field.ident;
-                
-                builder_stream.extend::<TokenStream>(if let Some(n) = field_name.clone() {
-                    quote::quote! { self.#n.create_curve_builder(omega_0[#f_index]), }
-                } else {
-                    TokenStream::from_str(&format!("self.{}.create_curve_builder(omega_0[{}]),", f_index, f_index)).unwrap()
-                });
-
-                drive_stream.extend::<TokenStream>(if let Some(n) = field_name.clone() {
-                    quote::quote! { self.#n.drive_nodes(nodes_0[#f_index].delta, nodes_0[#f_index].omega_0, omega_tar[#f_index], &mut corr[#f_index])?; }
-                } else {
-                    TokenStream::from_str(&format!("self.{}.drive_nodes(nodes_0[{}].delta, nodes_0[{}].omega_0, omega_tar[{}], &mut corr[{}])?;", 
-                        f_index, f_index, f_index, f_index, f_index)).unwrap()
-                });
-
-                micro_stream.extend::<TokenStream>(if let Some(n) = field_name.clone() {
-                    quote::quote! { self.#n.set_micro(micro[#f_index]); }
-                } else {
-                    TokenStream::from_str(&format!("self.{}.set_micro(micro[{}]);", f_index, f_index)).unwrap()
-                });
-
-                f_index += 1;
-            }
-
-            quote::quote! {
-                impl syact::comp::stepper::StepperCompGroup<#fields_count> for #name { 
-                    fn create_path_builder(&self, omega_0 : [syact::units::Omega; #fields_count]) 
-                    -> syact::math::path::PathBuilder<#fields_count> {
-                        PathBuilder::new([
-                            #builder_stream
-                        ])
-                    }
-
-                    fn drive_nodes(&mut self, 
-                        nodes_0 : &[syact::math::path::PathNode; #fields_count], 
-                        omega_tar : [syact::units::Omega; #fields_count], 
-                        corr : &mut [(syact::units::Delta, syact::units::Time); #fields_count],
-                    ) -> Result<(), syact::Error> {
-                        #drive_stream
-                        Ok(())
-                    }
-
-                    fn set_micro(&mut self, micro : [u8; #fields_count]) {
-                        #micro_stream
-                    }
-                }
-            }.into()
-        },
-        _ => panic!("This macro can only be used on structs")
+    #[proc_macro_derive(StepperCompGroup)]
+    pub fn stepper_comp_group_derive(input : proc_macro::TokenStream) -> proc_macro::TokenStream {
+        let ast : DeriveInput = syn::parse(input).unwrap();
+        let mut derive = sync_comp_group_impl(ast.clone(), TokenStream::from_str("dyn syact::comp::stepper::StepperComp").unwrap()); 
+        derive.extend(stepper_comp_group_impl(ast));
+        derive
     }
-}
-
-#[proc_macro_derive(StepperCompGroup)]
-pub fn stepper_comp_group_derive(input : proc_macro::TokenStream) -> proc_macro::TokenStream {
-    let ast : DeriveInput = syn::parse(input).unwrap();
-    stepper_comp_group_impl(ast)
-}
+// 
