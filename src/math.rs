@@ -1,15 +1,11 @@
-use crate::StepperConst;
-use crate::data::{CompData, CompVars};
-use crate::units::*;
-
 // Submodules
 // pub mod actors;
 /// Iterators for different curve building application cases
 mod builders;
 pub use builders::*;
 
-/// Methods for calculating stepper motor acceleration curves
-pub mod curve;
+// /// Methods for calculating stepper motor acceleration curves
+// pub mod curve;
 
 /// Methods for calculating forces acting upon components and motors
 pub mod force;
@@ -21,10 +17,11 @@ pub mod inertia;
 /// Functions describing general kinematic processes
 pub mod kin;
 
-/// Methods for calculating paths and movements
-pub mod path;
-pub use path::{PathBuilder, PathNode};
+// /// Methods for calculating paths and movements
+// pub mod path;
+// pub use path::{PathBuilder, PathNode};
 
+/* 
 /// Helper struct for creating stepper motor curves
 #[derive(Debug, Clone)]
 pub struct CurveBuilder<'a> {
@@ -323,3 +320,5 @@ impl<'a> CurveBuilder<'a> {
         self.omega = node.omega_0;
     } 
 }
+
+*/

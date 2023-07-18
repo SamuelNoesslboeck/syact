@@ -10,7 +10,7 @@ fn torque_dyn_exact_speed() {
     let inst = Instant::now();
 
     for i in 0 .. 1_000_000 {
-        force::torque_dyn(&consts, Omega(0.01 * (i as f32)), 12.0, 1);
+        force::torque_dyn(&consts, Omega(0.01 * (i as f32)), 12.0);
     }
 
     println!("Elapsed: {}s", inst.elapsed().as_secs_f32());

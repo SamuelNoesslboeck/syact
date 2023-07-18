@@ -23,14 +23,14 @@ impl TryFrom<StepperDes> for Stepper {
 }
 
 impl Into<StepperDes> for &Stepper {
-    fn into(mut self) -> StepperDes {
-        self.use_ctrl(|ctrl| {
-            StepperDes { 
-                consts: self.consts().clone(), 
-                pin_dir: ctrl.pin_dir(),
-                pin_step: ctrl.pin_step()
-            }
-        })
+    fn into(self) -> StepperDes {
+        let ctrl = self.ctrl.lock().unwrap();
+
+        StepperDes { 
+            consts: self.consts().clone(), 
+            pin_dir: ctrl.pin_dir(),
+            pin_step: ctrl.pin_step()
+        }
     }
 }
 

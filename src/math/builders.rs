@@ -1,4 +1,6 @@
-use crate::{units::*, StepperConst, LinkedData, prelude::CompVars};
+use crate::StepperConst;
+use crate::data::{CompData, CompVars};
+use crate::units::*;
 
 // Basic builders
     /// - Very unsafe, just runs basic calculations
@@ -66,14 +68,14 @@ use crate::{units::*, StepperConst, LinkedData, prelude::CompVars};
     /// - Accelerate and deccelerate
     /// - Only positive deltas
     #[derive(Clone, Debug)]
-    pub struct StepTimeBuilder<'a> {
+    pub struct StepTimeBuilder {
         pub delta : Delta,
         pub omega_0 : Omega,
         pub alpha : Alpha,
 
-        pub consts : &'a StepperConst,
-        pub vars : &'a CompVars,
-        pub lk : &'a LinkedData,
+        pub consts : StepperConst,
+        pub vars : CompVars,
+        pub data : CompData,
 
         pub deccel : bool,
         pub omega_max : Omega,
@@ -82,8 +84,8 @@ use crate::{units::*, StepperConst, LinkedData, prelude::CompVars};
         pub reason : StopReason
     }
 
-    impl<'a> StepTimeBuilder<'a> {
-        pub fn new(omega_0 : Omega, consts : &'a StepperConst, vars : &'a CompVars, lk : &'a LinkedData, omega_max : Omega, micro : u8) -> Self {
+    impl StepTimeBuilder {
+        pub fn new(omega_0 : Omega, consts : StepperConst, vars : CompVars, data : CompData, omega_max : Omega, micro : u8) -> Self {
             Self {
                 delta: consts.step_ang(micro),
                 omega_0: omega_0.abs(),
@@ -91,7 +93,7 @@ use crate::{units::*, StepperConst, LinkedData, prelude::CompVars};
 
                 consts, 
                 vars,
-                lk,
+                data,
 
                 deccel: false,
                 omega_max,
@@ -109,7 +111,7 @@ use crate::{units::*, StepperConst, LinkedData, prelude::CompVars};
         }
     }
 
-    impl<'a> Into<TimeBuilder> for StepTimeBuilder<'a> {
+    impl Into<TimeBuilder> for StepTimeBuilder {
         fn into(self) -> TimeBuilder {
             TimeBuilder {
                 delta: self.delta,
@@ -119,7 +121,7 @@ use crate::{units::*, StepperConst, LinkedData, prelude::CompVars};
         }
     }
 
-    impl<'a> Iterator for StepTimeBuilder<'a> {
+    impl Iterator for StepTimeBuilder {
         type Item = Time;
 
         fn next(&mut self) -> Option<Self::Item> {
@@ -130,7 +132,7 @@ use crate::{units::*, StepperConst, LinkedData, prelude::CompVars};
 
             // Apply new alpha for speed
             if let Ok(alpha) = self.consts.alpha_max_dyn(
-                crate::math::force::torque_dyn(self.consts, self.omega_0, self.lk.u) / self.lk.s_f, self.vars
+                crate::math::force::torque_dyn(&self.consts, self.omega_0, self.data.u) / self.data.s_f, &self.vars
             ) {
                 self.alpha = alpha;     // Update the alpha
 
@@ -165,16 +167,16 @@ use crate::{units::*, StepperConst, LinkedData, prelude::CompVars};
     }
 
     #[derive(Clone, Debug)]
-    pub struct CtrlStepTimeBuilder<'a> {
-        builder : StepTimeBuilder<'a>,
+    pub struct CtrlStepTimeBuilder {
+        builder : StepTimeBuilder,
         omega_tar : Omega
     }
     
-    impl<'a> CtrlStepTimeBuilder<'a> {
-        pub fn new(omega_0 : Omega, consts : &'a StepperConst, vars : &'a CompVars, lk : &'a LinkedData, 
+    impl CtrlStepTimeBuilder {
+        pub fn new(omega_0 : Omega, consts : StepperConst, vars : CompVars, data : CompData, 
         omega_max : Omega, micro : u8) -> Self {
             Self {
-                builder: StepTimeBuilder::new(omega_0, consts, vars, lk, omega_max, micro),
+                builder: StepTimeBuilder::new(omega_0, consts, vars, data, omega_max, micro),
                 omega_tar: Omega::ZERO
             }
         }
@@ -208,19 +210,19 @@ use crate::{units::*, StepperConst, LinkedData, prelude::CompVars};
         }
     }
 
-    impl<'a> AsRef<StepTimeBuilder<'a>> for CtrlStepTimeBuilder<'a> {
-        fn as_ref(&self) -> &StepTimeBuilder<'a> {
+    impl AsRef<StepTimeBuilder> for CtrlStepTimeBuilder {
+        fn as_ref(&self) -> &StepTimeBuilder {
             &self.builder
         }
     }
 
-    impl<'a> AsMut<StepTimeBuilder<'a>> for CtrlStepTimeBuilder<'a> {
-        fn as_mut(&mut self) -> &mut StepTimeBuilder<'a> {
+    impl AsMut<StepTimeBuilder> for CtrlStepTimeBuilder {
+        fn as_mut(&mut self) -> &mut StepTimeBuilder {
             &mut self.builder
         }
     }
 
-    impl<'a> Iterator for CtrlStepTimeBuilder<'a> {
+    impl Iterator for CtrlStepTimeBuilder {
         type Item = Time;
 
         fn next(&mut self) -> Option<Self::Item> {

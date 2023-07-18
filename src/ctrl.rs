@@ -36,7 +36,7 @@ pub mod servo;
 
 /// Stepper motors and controllers in different resolutions
 pub mod stepper;
-pub use stepper::{Stepper, Controller};
+pub use stepper::{Stepper, Controller, GenericPWM};
 // 
 
 /// A function that can be used to interrupt the movement process of a component

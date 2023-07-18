@@ -1,6 +1,7 @@
 use core::time::Duration;
 
 use crate::Direction;
+use crate::StepperConst;
 use crate::units::*;
 
 // Submodules
@@ -12,6 +13,7 @@ pub use hr::*;
 mod lr;
 pub use lr::*;
 
+use super::pin::ERR_PIN;
 use super::pin::UniOutPin;
 use super::pin::UniPin;
 // 
@@ -23,6 +25,14 @@ cfg_if::cfg_if! {
     if #[cfg(feature = "std")] {
         /// Default `Stepper` type for high-performance systems (high resolution stepper)
         pub type Stepper = HRStepper<GenericPWM>;
+
+        impl Stepper {
+            /// Creates a new structure with both pins set to [pin::ERR_PIN] just for simulation and testing purposes
+            #[inline]
+            pub fn new_sim() -> Self {
+                Self::new(GenericPWM::new_sim(), StepperConst::GEN)
+            }
+        }
     } else {
         /// Default `Stepper` type for low-level, no-std hardware environments (low resolution stepper)
         pub type Stepper = LRStepper;
@@ -53,6 +63,10 @@ impl GenericPWM {
             pin_step: UniPin::new(pin_step)?.into_output(),
             pin_dir: UniPin::new(pin_dir)?.into_output()
         }) 
+    }
+
+    pub fn new_sim() -> Self {
+        Self::new(ERR_PIN, ERR_PIN).unwrap()
     }
 
     pub fn pin_step(&self) -> u8 {

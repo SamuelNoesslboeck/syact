@@ -1,3 +1,4 @@
+use crate::ctrl::GenericPWM;
 use crate::prelude::*;
 use crate as syact;
 
@@ -10,20 +11,20 @@ struct TestGroup {
 #[test]
 fn group_dyn() {
     let group_arr_stat = [
-        Stepper::new_sim(StepperConst::GEN)
+        Stepper::new_sim()
     ];
     let _group_arr_ref = &group_arr_stat;
 
     let group_dyn_stat : [Box<dyn SyncComp>; 1] = [ 
-        Box::new(Stepper::new_sim(StepperConst::GEN))
+        Box::new(Stepper::new_sim())
     ];
     let _group_dyn_ref = &group_dyn_stat;
 
     let _gammas = group_arr_stat.gammas();
 
     let test = TestGroup {
-        base: Stepper::new_sim(StepperConst::GEN),
-        arm1: Stepper::new_sim(StepperConst::GEN)
+        base: Stepper::new_sim(),
+        arm1: Stepper::new_sim()
     };
 
     let _gammas = test.gammas();
@@ -39,7 +40,7 @@ fn gear_bearing() -> Result<(), crate::Error> {
     const PIN_DIR : u8 = 27;
     const PIN_STEP : u8 = 19;
 
-    let mut gear = GearJoint::new(Stepper::new(StepperConst::MOT_17HE15_1504S, PIN_DIR, PIN_STEP), 0.1);
+    let mut gear = GearJoint::new(Stepper::new(GenericPWM::new(PIN_STEP, PIN_DIR)?, StepperConst::MOT_17HE15_1504S), 0.1);
     gear.write_data(CompData::GEN);
     gear.setup()?;
 
@@ -55,7 +56,7 @@ fn cylinder() -> Result<(), crate::Error> {
     const PIN_DIR : u8 = 22;
     const PIN_STEP : u8 = 11;
 
-    let mut cylinder = Cylinder::new(Stepper::new(StepperConst::MOT_17HE15_1504S, PIN_DIR, PIN_STEP), 1.27);
+    let mut cylinder = Cylinder::new(Stepper::new(GenericPWM::new(PIN_STEP, PIN_DIR)?, StepperConst::MOT_17HE15_1504S), 1.27);
     cylinder.write_data(CompData::GEN);
     cylinder.setup()?;
     
@@ -73,7 +74,7 @@ fn cylinder_tri() -> Result<(), crate::Error> {
     const PIN_STEP : u8 = 11;
 
     let mut cyl_tri = CylinderTriangle::new(
-        Cylinder::new(Stepper::new(StepperConst::MOT_17HE15_1504S, PIN_DIR, PIN_STEP), 1.27), 200.0, 200.0);
+        Cylinder::new(Stepper::new(GenericPWM::new(PIN_STEP, PIN_DIR)?, StepperConst::MOT_17HE15_1504S), 1.27), 200.0, 200.0);
     cyl_tri.write_data(CompData::GEN);
     cyl_tri.setup()?;
 
