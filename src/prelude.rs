@@ -2,10 +2,9 @@
 
 cfg_if::cfg_if! {
     if #[cfg(feature = "std")] {
-        pub use crate::{AsyncComp, Direction, Setup, Stepper, SimpleTool, SyncComp, SyncCompGroup};
+        pub use crate::{AsyncComp, Direction, Setup, Stepper, SimpleTool, SyncComp, SyncCompGroup, Tool};
 
-        pub use crate::comp::{Conveyor, Cylinder, CylinderTriangle, GearJoint, Tool};
-        pub use crate::comp::tool;
+        pub use crate::comp::{Conveyor, Cylinder, CylinderTriangle, GearJoint};
         pub use crate::comp::stepper::*;
 
         pub use crate::ctrl::{DcMotor, GenericPWM};

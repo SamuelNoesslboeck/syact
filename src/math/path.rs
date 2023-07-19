@@ -1,6 +1,3 @@
-
-
-use crate::math::CurveBuilder;
 use crate::units::*;
 
 /// A node for describing a path driven by a stepper motor
@@ -23,14 +20,14 @@ impl Default for PathNode {
 
 /// A structure that helps building paths for multiple stepper motors
 #[derive(Debug, Clone)]
-pub struct PathBuilder<'a, const N : usize> {
-    builders : [CurveBuilder<'a>; N],
+pub struct PathBuilder<const N : usize> {
+    builders : [CurveBuilder; N],
     nstack : Vec<[PathNode; N]>
 }
 
-impl<'a, const N : usize> PathBuilder<'a, N> {
+impl<const N : usize> PathBuilder<N> {
     /// Create a new pathbuilder from a set of curvebuilders
-    pub fn new(builders : [CurveBuilder<'a>; N]) -> Self {
+    pub fn new(builders : [CurveBuilder; N]) -> Self {
         Self {
             builders, 
             nstack: vec![ ]

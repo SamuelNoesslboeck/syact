@@ -18,8 +18,6 @@
 
 A library for all types of components used in robots, including controlls for stepper motors, servo motors and more complex assemblies using said motors. Currently all implementations are made for the raspberry pi, though new implementations for more controllers are currently being made.
 
-Basis library for the [sybot_lib]("https://github.com/SamuelNoesslboeck/sybot_lib)
-
 - [Getting started](docs/getting_started.md)
 
 ## Goal
@@ -98,7 +96,9 @@ fn main() -> Result<(), syact::Error> {
     - [x] Absolute/relative movements
     - [x] Continuous movements
     - [ ] Microstepping
-    - [ ] Inverting logical signals
+      - [x] Preconfigured
+      - [ ] With signals to set by the control
+    - [ ] Inverting logical signals if desired
   - [x] [Servo motors](/docs/motors/servos.md)
   - [x] [DC motors](/docs/motors/dc_motors.md)
 - [x] [Components](/docs/components.md)
@@ -118,10 +118,10 @@ fn main() -> Result<(), syact::Error> {
   - [x] Simple switch
   - [ ] Rotary resolver
   - [x] Trait for custom measurements
-- [ ] Extendable
+- [x] Extendable
   - [x] [Custom components](/docs/components.md#custom-components)
   - [x] Custom tools
-  - [ ] Custom meaurement systems
+  - [x] Custom meaurement systems
 - [x] [Unit system](/docs/unit_system.md)
 - [ ] Minimal
   - [ ] Fully supports `no_std` environment

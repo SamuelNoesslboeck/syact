@@ -22,7 +22,9 @@ use crate::units::*;
         type Item = Time;
 
         fn next(&mut self) -> Option<Self::Item> {
+            // If there is a solution for the quadratic equation, the iterator will yield a value
             if let Some(time) = Time::positive_travel_time(self.delta, self.omega_0, self.alpha) {
+                // Constant velocity, will be incremented
                 self.omega_0 += self.alpha * time;
                 Some(time)
             } else {
@@ -51,6 +53,7 @@ use crate::units::*;
 // 
 
 // Stepper motor builders
+    /// Reasons why the iterators stopped yielding values
     #[derive(Default, Clone, Copy, Debug)]
     pub enum StopReason {
         #[default]
@@ -66,6 +69,7 @@ use crate::units::*;
         TravelProblems
     }   
 
+    /// 
     /// - Considers loads, changing torque etc.
     /// - Accelerate and deccelerate
     /// - Only positive deltas
@@ -231,9 +235,7 @@ use crate::units::*;
             self.builder.next()
         }
     }
-// 
 
-// Advanced builders 
     pub struct LimitedStepTimeBuilder {
         builder : CtrlStepTimeBuilder,
         steps_max : i64,
@@ -319,9 +321,40 @@ use crate::units::*;
             }
         }
     }
+//
 
-    // pub struct ComplexBuilder<D : Iterator<Item = Delta>, T : Iterator<Item = Time>> {
-    //     deltas : D,
-    //     times : T
-    // }
-// 
+// Advanced builders
+    pub struct Path<D : Iterator<Item = [Delta; N]>, T : Iterator<Item = Time>, const N : usize> {
+        iter_d : D,
+        iter_t : T,
+
+        stack_d : Vec<[Delta; N]>,
+        stack_t : Vec<Time>,
+
+        stack_size : usize
+    }
+
+    impl<D : Iterator<Item = [Delta; N]>, T : Iterator<Item = Time>, const N : usize> Path<D, T, N> {
+        pub fn new(iter_d : D, iter_t : T, stack_size : usize) -> Self {
+            Self {
+                iter_d,
+                iter_t,
+
+                stack_d: vec![[Delta::ZERO; N]; stack_size],
+                stack_t: vec![Time::ZERO; stack_size],
+
+                stack_size
+            }
+        }
+
+        #[inline]
+        fn stack_d(&self, i : usize, n : usize) -> Delta {
+            self.stack_d[i][n]
+        }
+
+        #[inline]
+        fn stack_t(&self, i : usize) -> Time {
+            self.stack_t[i]
+        }
+    }
+//

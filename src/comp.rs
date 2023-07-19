@@ -30,10 +30,6 @@ use crate::units::*;
     /// Stepper motors and their unique methods and traits
     pub mod stepper;
     pub use stepper::StepperComp;
-
-    #[doc = "../docs/tools.md"]
-    pub mod tool;
-    pub use tool::Tool;
 //
 
 #[cfg(not(feature = "std"))]

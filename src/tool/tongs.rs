@@ -1,8 +1,7 @@
 use glam::Vec3;
 use serde::{Serialize, Deserialize};
 
-use crate::Tool;
-use crate::comp::tool::SimpleTool;
+use crate::{Tool, SimpleTool};
 use crate::ctrl::servo::ServoDriver;
 use crate::units::*;
 

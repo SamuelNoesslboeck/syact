@@ -33,12 +33,12 @@ pub trait Tool {
     // Setup / Shutdown
         /// Mounts the component.
         /// 
-        /// Comparable to a "setup" / "activate" function
+        /// Similar to a "setup" / "activate" function
         fn mount(&mut self);
 
         /// Dismounts the component.
         /// 
-        /// Comparable to a "deactivate" function
+        /// Similar to a "deactivate" function
         fn dismount(&mut self);
     // 
 

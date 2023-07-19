@@ -28,7 +28,7 @@ const PIN_PWM : u8 = 27;
 
 fn main() -> Result<(), syact::Error> {
     // Create the tongs controller
-    let mut tongs = tool::Tongs::new(
+    let mut tongs = syact::tool::Tongs::new(
         ServoDriver::new(ServoConst::MG996R, PIN_PWM),    // The tongs use a MG996R servo connected to the BCM pin 27   
         0.2,        // when the pwm signal is at 20%, the tongs are open
         0.8,        // when the pwm signal is at 80%, the tongs are closed

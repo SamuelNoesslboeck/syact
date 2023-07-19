@@ -18,6 +18,7 @@ path = "src/lib.rs"
 
 [dependencies]
 cfg-if = "1.0.0"
+clap = { version = "4.3.16", features = [ "cargo" ] }
 glam = { version = "0.24.0", optional = true }
 serde = { version = "1.0.104", features = [ "derive" ], optional = true }
 serde_json = { version = "1.0.48", optional = true }

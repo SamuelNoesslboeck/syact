@@ -1,7 +1,7 @@
 use serde::{Serialize, Deserialize};
 
 use crate::Tool;
-use crate::comp::tool::{SimpleTool, AxisTool, Tongs};
+use crate::tool::{SimpleTool, AxisTool, Tongs};
 use crate::units::*;
 
 use super::AxialJoint;

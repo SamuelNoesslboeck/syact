@@ -21,8 +21,7 @@ extern crate alloc;
     cfg_if::cfg_if! { if #[cfg(feature = "std")] {
         #[doc = include_str!("../docs/components.md")]
         pub mod comp;
-        pub use comp::{SyncComp, SyncCompGroup, Tool};
-        pub use comp::tool::SimpleTool;
+        pub use comp::{SyncComp, SyncCompGroup};
         pub use comp::asyn::AsyncComp;
         
         // Include proc_macro
@@ -38,9 +37,12 @@ extern crate alloc;
         /// Functions and Structs for taking measurements with a robot for e.g. position calculation
         pub mod meas;
 
+        #[doc = "../docs/tools.md"]
+        pub mod tool;
+        pub use tool::{Tool, SimpleTool};
+
         /// Self defined units for mathematical operations
         pub mod units;
-
     }}
 
     /// Module with all the tests required to assure the library funcitons as intended
