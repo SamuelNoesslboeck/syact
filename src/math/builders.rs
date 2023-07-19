@@ -58,6 +58,8 @@ use crate::units::*;
         
         // Operational
         MaxSpeed,
+        MaxDelta,
+        MaxSteps,
 
         // Error
         Overload,
@@ -209,17 +211,9 @@ use crate::units::*;
         pub fn stop_reason(&self) -> StopReason {
             self.builder.reason
         }
-    }
 
-    impl AsRef<StepTimeBuilder> for CtrlStepTimeBuilder {
-        fn as_ref(&self) -> &StepTimeBuilder {
-            &self.builder
-        }
-    }
-
-    impl AsMut<StepTimeBuilder> for CtrlStepTimeBuilder {
-        fn as_mut(&mut self) -> &mut StepTimeBuilder {
-            &mut self.builder
+        pub fn t_tar(&self) -> Time {
+            self.builder.delta / self.omega_tar
         }
     }
 
@@ -240,5 +234,94 @@ use crate::units::*;
 // 
 
 // Advanced builders 
+    pub struct LimitedStepTimeBuilder {
+        builder : CtrlStepTimeBuilder,
+        steps_max : i64,
+        steps_curr : i64,
 
+        last_val : Time,
+        reach_dist : Option<i64>
+    }
+
+    impl LimitedStepTimeBuilder {
+        pub fn new(omega_0 : Omega, consts : StepperConst, vars : CompVars, data : CompData, 
+        omega_max : Omega, micro : u8) -> Self {
+            Self {
+                builder: CtrlStepTimeBuilder::new(omega_0, consts, vars, data, omega_max, micro),
+                steps_max: 0,
+                steps_curr: 0,
+
+                last_val: Time::ZERO,
+                reach_dist: None
+            }
+        }
+
+        pub fn from_builder(builder : StepTimeBuilder) -> Self {
+            Self {
+                builder: CtrlStepTimeBuilder::from_builder(builder),
+                steps_max: 0,
+                steps_curr: 0,
+
+                last_val: Time::ZERO,
+                reach_dist: None
+            }
+        }
+
+        pub fn set_omega_tar(&mut self, omega_tar : Omega) -> Result<(), crate::Error> {
+            self.builder.set_omega_tar(omega_tar)
+        }
+
+        pub fn set_steps_max(&mut self, steps_max : u64) {
+            self.steps_max = steps_max as i64;
+        }
+
+        pub fn stop_reason(&self) -> StopReason {
+            self.builder.stop_reason()
+        }
+    }
+
+    impl Iterator for LimitedStepTimeBuilder {
+        type Item = Time;
+
+        fn next(&mut self) -> Option<Self::Item> {
+            self.steps_curr += 1;
+
+            if self.steps_curr > self.steps_max {
+                self.builder.builder.reason = StopReason::MaxSteps;
+                return None;
+            }
+
+            if self.steps_curr > (self.steps_max / 2) {
+                if (self.steps_max % 2) == 1 {
+                    return Some(self.last_val)
+                }
+
+                self.set_omega_tar(Omega::ZERO).unwrap();  
+
+                if let Some(dist) = self.reach_dist {
+                    if (self.steps_max / 2 - dist) >= (self.steps_curr - self.steps_max / 2) {
+                        return Some(self.last_val)
+                    }
+                }
+            }
+
+            if let Some(val) = self.builder.next() {
+                self.last_val = val;
+                Some(val)
+            } else {
+                if self.reach_dist.is_none() {
+                    self.reach_dist = Some(self.steps_curr);
+                    self.last_val = self.builder.t_tar();
+                    Some(self.last_val)
+                } else {
+                    None
+                }
+            }
+        }
+    }
+
+    // pub struct ComplexBuilder<D : Iterator<Item = Delta>, T : Iterator<Item = Time>> {
+    //     deltas : D,
+    //     times : T
+    // }
 // 

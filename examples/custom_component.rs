@@ -10,10 +10,7 @@ The cargo.toml file specified below is when running the example on a raspberry p
 # ...
 
 [dependencies]
-syact = { version = \"0.11.6\" } 
-
-[features]
-rasp = [ \"syact/rasp\" ]
+syact = { version = \"0.12.1\", features = [ \"rasp\" ] } 
 
 # ...
 ```
@@ -98,7 +95,7 @@ impl SyncComp for MyComp {
 fn main() -> Result<(), syact::Error> {
     // Create the controls for a stepper motor
     let mut comp = MyComp::new(
-        Stepper::new(StepperConst::MOT_17HE15_1504S, PIN_DIR, PIN_STEP),
+        Stepper::new(GenericPWM::new(PIN_STEP, PIN_DIR)?, StepperConst::MOT_17HE15_1504S),
         2.0 // Example ratio
     );
     // Link the component to a system

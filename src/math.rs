@@ -19,7 +19,6 @@ pub mod kin;
 
 // /// Methods for calculating paths and movements
 // pub mod path;
-// pub use path::{PathBuilder, PathNode};
 
 /* 
 /// Helper struct for creating stepper motor curves

@@ -8,17 +8,23 @@ The library does include some standard components commonly used
 - *GearJoint*, a motor connected to a gear that translates the movement with a certain ratio
 - *Cylinder-triangle*, a cylinder being the hypotenuse in a triangular shape, creating a high torque/slow movement joint
 
+## Example 
+
 In this example we drive a cylinder by a certain amount of millimeters.
 
 <details>
 <summary>Click to show Cargo.toml</summary>
+
+### Note
+
+The cargo.toml file specified below is when running the example on a raspberry pi
 
 ```toml
 # ...
 
 [dependencies]
 # Include the library configured for the raspberry pi
-syact = { version = "0.12.0", features = [ "rasp" ] } 
+syact = { version = \"0.12.1\", features = [ \"rasp\" ] } 
 
 # ...
 ```
@@ -26,13 +32,9 @@ syact = { version = "0.12.0", features = [ "rasp" ] }
 </details>
 <p></p>
 
-```rust
-// Include components and data
-use syact::{Stepper, StepperConst, SyncComp, Setup};
-use syact::comp::Cylinder;
-use syact::data::CompData;
-// Include the unit system
-use syact::units::*;
+```rust ,ignore
+// Include the library
+use syact::prelude::*;
 
 // Pin declerations (BCM on raspberry pi)
 const PIN_DIR : u8 = 27;
@@ -45,32 +47,24 @@ const OMEGA : Omega = Omega(20.0);      // 20 millimeters per second
 fn main() -> Result<(), syact::Error> {
     // Create the controls for a stepper motor
     let mut cylinder = Cylinder::new(
-        Stepper::new(
-            StepperConst::MOT_17HE15_1504S, 
-            PIN_DIR, 
-            PIN_STEP
-        ),  1.273 // Spindle pitch of the cylinder, per radian the cylinder 
-        // extends for 1.273 millimeters, this factor calculates out 
-        // of the pitch per revolve (8mm) divided by 2*PI (for radians) 
+        Stepper::new(GenericPWM::new(PIN_STEP, PIN_DIR)?, StepperConst::MOT_17HE15_1504S),
+        1.273       // Spindle pitch of the cylinder, per radian the cylinder extends for 1.273 millimeters,
+                    // this factor calculates out of the pitch per revolve (8mm) divided by 2*PI (for radians) 
     );
     // Link the component to a system
     cylinder.write_data(CompData { 
         u: 12.0,    // System voltage in volts
         s_f: 1.5    // System safety factor, should be at least 1.0
     }); 
-
-    cylinder.setup();
+    cylinder.setup()?;
 
     // Apply some loads
     cylinder.apply_inertia(Inertia(0.2));
     cylinder.apply_force(Force(0.10));
 
-    cylinder.set_omega_max(OMEGA);
-
     println!("Staring to move ... ");
     let delta_real = cylinder.drive_rel(DELTA, 1.0)?;         // Move the cylinder
-    println!("Distance {}mm with max speed {:?}mm/s done", 
-        delta_real, OMEGA);
+    println!("Distance {}mm with max speed {:?}mm/s done", delta_real, OMEGA);
 
     Ok(())
 }
@@ -99,7 +93,7 @@ Click to show Cargo.toml
 
 [dependencies]
 # Include the library configured for the raspberry pi
-syact = { version = "0.12.0", features = [ "rasp" ] } 
+syact = { version = "0.12.1", features = [ "rasp" ] } 
 
 # ...
 ```
@@ -107,7 +101,8 @@ syact = { version = "0.12.0", features = [ "rasp" ] }
 </details>
 <p></p>
 
-```rust
+```rust ,ignore
+
 // Include library
 use syact::prelude::*;
 
@@ -187,7 +182,7 @@ impl SyncComp for MyComp {
 fn main() -> Result<(), syact::Error> {
     // Create the controls for a stepper motor
     let mut comp = MyComp::new(
-        Stepper::new(StepperConst::MOT_17HE15_1504S, PIN_DIR, PIN_STEP),
+        Stepper::new(GenericPWM::new(PIN_STEP, PIN_DIR)?, StepperConst::MOT_17HE15_1504S),
         2.0 // Example ratio
     );
     // Link the component to a system

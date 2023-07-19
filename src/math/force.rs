@@ -21,13 +21,13 @@ use crate::units::*;
 /// let data = StepperConst::GEN;   // Using generic stepper motor data
 /// 
 /// // Without speed (in stall) the torque has to equal the stall torque
-/// assert_eq!(torque_dyn(&data, Omega::ZERO, 12.0, 1), data.t_s);    
+/// assert_eq!(torque_dyn(&data, Omega::ZERO, 12.0), data.t_s);    
 /// // The torque has to reduce with increasing speed 
-/// assert!(torque_dyn(&data, Omega(10.0), 12.0, 1) < data.t_s);
+/// assert!(torque_dyn(&data, Omega(10.0), 12.0) < data.t_s);
 /// // The curve has to go down
-/// assert!(torque_dyn(&data, Omega(20.0), 12.0, 1) < torque_dyn(&data, Omega(10.0), 12.0, 1));
+/// assert!(torque_dyn(&data, Omega(20.0), 12.0) < torque_dyn(&data, Omega(10.0), 12.0));
 /// // The curve has to be symmetrical
-/// assert_eq!(torque_dyn(&data, Omega(10.0), 12.0, 1), torque_dyn(&data, Omega(10.0), 12.0, 1));
+/// assert_eq!(torque_dyn(&data, Omega(10.0), 12.0), torque_dyn(&data, Omega(10.0), 12.0));
 /// ```
 pub fn torque_dyn(consts : &StepperConst, mut omega : Omega, u : f32) -> Force {
     omega = omega.abs();

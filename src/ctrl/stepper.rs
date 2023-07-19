@@ -48,6 +48,7 @@ pub trait Controller {
     fn set_dir(&mut self, dir : Direction);
 }
 
+#[derive(Debug)]
 pub struct GenericPWM {
     dir : Direction,
 

@@ -15,7 +15,7 @@ use crate::{SyncComp, Setup, lib_error, Direction};
 use crate::comp::stepper::StepperComp;
 use crate::ctrl::{Controller, Interrupter};
 use crate::data::{CompData, StepperConst, CompVars}; 
-use crate::math::{StepTimeBuilder, CtrlStepTimeBuilder};
+use crate::math::{StepTimeBuilder, CtrlStepTimeBuilder, LimitedStepTimeBuilder};
 use crate::meas::MeasData;
 use crate::units::*;
 
@@ -189,9 +189,9 @@ impl<C : Controller + Send + 'static> HRStepper<C> {
         let pos_0 = self.pos();
 
         // Drive each point in the curve
-        for point in cur {
+        for point in cur.enumerate() {
             Self::use_ctrl(&mut self.ctrl, |ctrl| {
-                ctrl.step(point);
+                ctrl.step(point.1);
             });
             self.set_pos(self.pos() + if self.dir().as_bool() { 1 } else { -1 });
         }
@@ -249,7 +249,12 @@ impl<C : Controller + Send + 'static> HRStepper<C> {
         
         self.setup_drive(delta)?;
 
-        let cur = self.create_builder(Omega::ZERO, self.omega_max() * speed_f);
+        let mut cur = LimitedStepTimeBuilder::from_builder(
+            self.create_builder(Omega::ZERO, self.omega_max())
+        );
+        cur.set_omega_tar(self.omega_max() * speed_f)?;
+        cur.set_steps_max(self.consts.steps_from_ang_abs(delta, self.micro));
+        
         self.drive_curve(cur);
 
         Ok(delta)
@@ -267,7 +272,12 @@ impl<C : Controller + Send + 'static> HRStepper<C> {
         
         self.setup_drive(delta)?;
 
-        let cur = self.create_builder(Omega::ZERO, self.omega_max() * speed_f);
+        let mut cur = LimitedStepTimeBuilder::from_builder(
+            self.create_builder(Omega::ZERO, self.omega_max())
+        );
+        cur.set_omega_tar(self.omega_max() * speed_f)?;
+        cur.set_steps_max(self.consts.steps_from_ang_abs(delta, self.micro));
+
         let (steps, interrupted) = self.drive_curve_int(cur, intr, intr_data);
 
         if self.dir().as_bool() {

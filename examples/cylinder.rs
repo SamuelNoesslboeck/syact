@@ -10,7 +10,7 @@ The cargo.toml file specified below is when running the example on a raspberry p
 
 [dependencies]
 # Include the library configured for the raspberry pi
-syact = { version = \"0.11\", features = [ \"rasp\" ] } 
+syact = { version = \"0.12.1\", features = [ \"rasp\" ] } 
 
 # ...
 ```
@@ -30,7 +30,7 @@ const OMEGA : Omega = Omega(20.0);      // 20 millimeters per second
 fn main() -> Result<(), syact::Error> {
     // Create the controls for a stepper motor
     let mut cylinder = Cylinder::new(
-        Stepper::new(StepperConst::MOT_17HE15_1504S, PIN_DIR, PIN_STEP),
+        Stepper::new(GenericPWM::new(PIN_STEP, PIN_DIR)?, StepperConst::MOT_17HE15_1504S),
         1.273       // Spindle pitch of the cylinder, per radian the cylinder extends for 1.273 millimeters,
                     // this factor calculates out of the pitch per revolve (8mm) divided by 2*PI (for radians) 
     );

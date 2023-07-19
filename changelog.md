@@ -1,5 +1,13 @@
 # Changelogs
 
+## Introduction for publishing a new version
+
+- Check examples
+- Update examples in all docs
+- Run cargo test
+- Run cargo package --allow-dirty
+
+
 ## Version 0.11.2
 
 ### Enhancements

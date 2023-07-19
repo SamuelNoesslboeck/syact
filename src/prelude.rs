@@ -8,7 +8,7 @@ cfg_if::cfg_if! {
         pub use crate::comp::tool;
         pub use crate::comp::stepper::*;
 
-        pub use crate::ctrl::DcMotor;
+        pub use crate::ctrl::{DcMotor, GenericPWM};
         pub use crate::ctrl::pwm::PWMOutput;
         pub use crate::ctrl::pin::*;
         pub use crate::ctrl::servo::ServoDriver;

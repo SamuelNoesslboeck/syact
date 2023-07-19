@@ -1,5 +1,7 @@
 use crate::units::*;
 
+pub const ROOT_EPSILON : f32 = -1.0e-4;
+
 impl Delta {
     #[inline]
     pub fn from_omega_start_end(omega_0 : Omega, omega : Omega, time : Time) -> Delta {
@@ -24,14 +26,14 @@ pub fn travel_times(delta : Delta, omega : Omega, alpha : Alpha) -> (Time, Time)
     }
 
     let p = omega / alpha;
-    let q = 2.0 * delta.0 / alpha.0;
+    let q = 2.0 * delta.0 / alpha.0; 
 
     let inner = p.0.powi(2) + q;
-    let root = if inner.abs() > f32::EPSILON {
-        Time(inner.sqrt())
-    } else {
-        Time::ZERO
-    };
+    let mut root = Time(inner.sqrt());
+
+    if inner.is_sign_negative() & (inner > ROOT_EPSILON) {
+        root = Time::ZERO;
+    }
 
     ( -p + root, -p - root )
 }

@@ -51,10 +51,6 @@ opt-level = 3
 # #  Examples  #
 # ##############
 [[example]]
-name = "stepper_motor"
-path = "examples/stepper_motor.rs"
-
-[[example]]
 name = "cylinder"
 path = "examples/cylinder.rs"
 
@@ -82,6 +78,10 @@ path = "examples/dc_motors.rs"
   [[example]]
   name = "hardware-comps-cylinder"
   path = "examples/hardware/comps/cylinder.rs"
+
+  [[example]]
+  name = "hardware-comps-stepper"
+  path = "examples/hardware/comps/stepper.rs"
 #
 
 # Math

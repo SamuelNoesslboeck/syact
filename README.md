@@ -1,19 +1,19 @@
 # syact
 
-[![Rust]]([Rust-Workflow])
+[![Rust]]([rust-workflow])
 [![Crates.io version]][syact: crates.io]
 [![syact: rustc 1.68+]][Rust 1.68]
 
 [Rust]: https://github.com/SamuelNoesslboeck/syact/actions/workflows/rust.yml/badge.svg
-[Rust-Workflow]: https://github.com/SamuelNoesslboeck/syact/actions/workflows/rust.yml
+[rust-workflow]: https://github.com/SamuelNoesslboeck/syact/actions/workflows/rust.yml
 [Crates.io version]: https://img.shields.io/crates/v/syact.svg?style=flat-square
 [syact: crates.io]: https://crates.io/crates/syact
 [syact: rustc 1.68+]: https://img.shields.io/badge/syact-rustc_1.68+-lightgray.svg
 [Rust 1.68]: https://blog.rust-lang.org/2023/03/09/Rust-1.68.0.html
 
-> **Note** 
-> 
-> Many aspects of the library (for example the documentation) are not fully finished yet! 
+> **Note**
+>
+> Many aspects of the library (for example the documentation) are not fully finished yet!
 > (Though I try to update it as frequent as possible)
 
 A library for all types of components used in robots, including controlls for stepper motors, servo motors and more complex assemblies using said motors. Currently all implementations are made for the raspberry pi, though new implementations for more controllers are currently being made.
@@ -22,7 +22,7 @@ Basis library for the [sybot_lib]("https://github.com/SamuelNoesslboeck/sybot_li
 
 - [Getting started](docs/getting_started.md)
 
-### Goal
+## Goal
 
 - Create an all-in-one library to control motors, read sensors and do basic calculations in rust.
 - Keep it as easy to use as possible
@@ -47,10 +47,11 @@ syact = { version = "0.12.0", features = [ "rasp" ] }
 
 # ...
 ```
+
 </details>
 <p></p>
 
-```rust
+```rust ,ignore
 use core::f32::consts::PI;
 
 // Include the library
@@ -66,7 +67,7 @@ const OMEGA : Omega = Omega(10.0);
 
 fn main() -> Result<(), syact::Error> {
     // Create the controls for a stepper motor
-    let mut ctrl = Stepper::new(StepperConst::MOT_17HE15_1504S, PIN_DIR, PIN_STEP);
+    let mut ctrl = Stepper::new(GenericPWM::new(PIN_STEP, PIN_DIR)?, StepperConst::MOT_17HE15_1504S);
     // Link the component to a system
     ctrl.write_data(CompData { 
         u: 12.0,    // System voltage in volts
