@@ -1,6 +1,7 @@
 // Submodules
 // pub mod actors;
 /// Iterators for different curve building application cases
+#[allow(dead_code)]
 mod builders;
 pub use builders::*;
 
@@ -16,6 +17,8 @@ pub mod inertia;
 
 /// Functions describing general kinematic processes
 pub mod kin;
+
+pub mod movements;
 
 // /// Methods for calculating paths and movements
 // pub mod path;

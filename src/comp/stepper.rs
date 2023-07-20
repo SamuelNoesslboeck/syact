@@ -4,56 +4,102 @@ use crate::units::*;
 
 pub use syact_macros::StepperCompGroup;
 
-/// A component based on a stepper motor
-pub trait StepperComp : SyncComp {
-    /// Returns the constants of the stepper motor
-    fn consts(&self) -> &StepperConst;
+/// All path and curve calculations are designed for the 
+pub trait StepperMotor : StepperComp {
+    // Calculation
+        fn torque_at_speed(&self, omega : Omega) -> Force;
 
-    // Microstepping
-        /// The amount of microsteps in a full step
-        fn micro(&self) -> u8;
+        fn alpha_at_speed(&self, omega : Omega) -> Result<Alpha, crate::Error>;
 
-        /// Set the amount of microsteps in a full step
-        fn set_micro(&mut self, micro : u8);
+        /// The approximate travel time for a point-to-point movement
+        fn approx_time_ptp(&self, delta : Delta, speed_f : f32, acc : usize) -> Result<Time, crate::Error>;
+
+        fn alpha_av(&self, omega_0 : Omega, omega_tar : Omega, acc : usize) -> Result<Alpha, crate::Error>;
     //
 
-    /// The angle of a step
-    fn step_ang(&self) -> Delta {
-        self.consts().step_ang(self.micro())
-    }
-
     /// Creates a new curve builder for the stepper motor
-    fn create_builder(&self, omega_0 : Omega, omega_max : Omega) -> StepTimeBuilder {
-        StepTimeBuilder::new(omega_0, self.consts().clone(), self.vars().clone(), self.data().clone(), omega_max, self.micro())
-    }
-
+    fn create_builder(&self, omega_0 : Omega, omega_max : Omega) -> StepTimeBuilder;
     /// Drive from node to node (used for path algorithms, use as a normal drive function is not recommended)
     fn drive_nodes(&mut self, delta : Delta, omega_0 : Omega, omega_tar : Omega, corr : &mut (Delta, Time)) -> Result<(), crate::Error>;
 }
 
+/// A component based on a stepper motor
+pub trait StepperComp : SyncComp {
+    // Super comp
+        #[inline]
+        fn super_stepper_comp(&self) -> Option<&dyn StepperComp> {
+            None
+        }
+
+        #[inline]
+        fn super_stepper_comp_mut(&mut self) -> Option<&mut dyn StepperComp> {
+            None
+        }
+
+        fn motor(&self) -> &dyn StepperMotor;
+
+        fn motor_mut(&mut self) -> &mut dyn StepperMotor;
+    // 
+
+    /// Returns the constants of the stepper motor
+    #[inline]
+    fn consts(&self) -> &StepperConst {
+        self.super_stepper_comp()
+            .expect("Provide a super component or an override for this function!")
+            .consts()
+    }
+
+    // Microstepping
+        /// The amount of microsteps in a full step
+        #[inline]
+        fn micro(&self) -> u8 {
+            self.super_stepper_comp()
+                .expect("Provide a super component or an override for this function!")
+                .micro()
+        }
+
+        /// Set the amount of microsteps in a full step
+        fn set_micro(&mut self, micro : u8) {
+            self.super_stepper_comp_mut()
+                .expect("Provide a super component or an override for this function!")
+                .set_micro(micro)
+        }
+    //
+
+    // Math
+        /// The angular distance of a step considering microstepping
+        fn step_ang(&self) -> Delta {
+            self.super_stepper_comp()
+                .expect("Provide a super component or an override for this function!")
+                .step_ang()
+        }
+    // 
+}
+
 // Helper implementation
 impl<T : AsRef<dyn StepperComp> + AsMut<dyn StepperComp> + AsRef<dyn SyncComp> + AsMut<dyn SyncComp>> StepperComp for T {
-    fn consts(&self) -> &StepperConst {
-        <T as AsRef<dyn StepperComp>>::as_ref(self).consts()
-    }
+    // Super Component
+        fn super_stepper_comp(&self) -> Option<&dyn StepperComp> {
+            <T as AsRef<dyn StepperComp>>::as_ref(self).super_stepper_comp()
+        }
 
-    fn micro(&self) -> u8 {
-        <T as AsRef<dyn StepperComp>>::as_ref(self).micro()
-    }
+        fn super_stepper_comp_mut(&mut self) -> Option<&mut dyn StepperComp> {
+            <T as AsMut<dyn StepperComp>>::as_mut(self).super_stepper_comp_mut()
+        }
 
-    fn set_micro(&mut self, micro : u8) {
-        <T as AsMut<dyn StepperComp>>::as_mut(self).set_micro(micro)
-    }
+        fn motor(&self) -> &dyn StepperMotor {
+            <T as AsRef<dyn StepperComp>>::as_ref(self).motor()
+        }
 
-    fn drive_nodes(&mut self, delta : Delta, omega_0 : Omega, omega_tar : Omega, corr : &mut (Delta, Time)) -> Result<(), crate::Error> {
-        <T as AsMut<dyn StepperComp>>::as_mut(self).drive_nodes(delta, omega_0, omega_tar, corr)
-    }
+        fn motor_mut(&mut self) -> &mut dyn StepperMotor {
+            <T as AsMut<dyn StepperComp>>::as_mut(self).motor_mut()
+        }
+    // 
 }
 
 /// A group of stepper motor based components
-pub trait StepperCompGroup<const C : usize> : SyncCompGroup<C> 
-where 
-    Self::Comp : StepperComp
+pub trait StepperCompGroup<T, const C : usize> : SyncCompGroup<T, C> 
+where T: StepperComp + ?Sized + 'static
 {
     // /// Create a new pathbuilder for the given stepper component group
     // fn create_path_builder(&self, omega_0 : [Omega; C]) -> PathBuilder<C> {
@@ -97,4 +143,6 @@ where
     }
 }
 
-impl<T : StepperComp, const C : usize> StepperCompGroup<C> for [T; C] { }
+
+
+impl<T : StepperComp + 'static, const C : usize> StepperCompGroup<T, C> for [T; C] { }

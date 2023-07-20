@@ -3,10 +3,9 @@ use crate::units::*;
 
 /// A group of synchronous components  
 /// This trait allows a lot of functions to be used for all components at once.
-pub trait SyncCompGroup<const C : usize> : Setup {
-    /// Type that generalizes all componenents, e.g. `dyn SyncComp`
-    type Comp : SyncComp + ?Sized;
-
+pub trait SyncCompGroup<T, const C : usize> : Setup 
+where T : SyncComp + ?Sized + 'static
+{
     // Iteration
         /// Execute a given function `func` for every element given by a readonly reference and it's index in the component group.
         /// 
@@ -15,7 +14,7 @@ pub trait SyncCompGroup<const C : usize> : Setup {
         /// Returns a fixed-sized array of the result type of the closure. The closure may not fail, see `try_for_each()` if a `Result` is required
         fn for_each<'a, F, R>(&'a self, func : F) -> [R; C]
         where 
-            F : FnMut(&'a Self::Comp, usize) -> R,
+            F : FnMut(&'a T, usize) -> R,
             R : Copy + Default;
 
         /// Execute a given function `func` for every element given by a mutable reference and it's index in the component group 
@@ -25,7 +24,7 @@ pub trait SyncCompGroup<const C : usize> : Setup {
         /// Returns a fixed-sized array of the result type of the closure. The closure may not fail, see `try_for_each_mut()` if a `Result` is required
         fn for_each_mut<F, R>(&mut self, func : F) -> [R; C]
         where 
-            F : FnMut(&mut Self::Comp, usize) -> R,
+            F : FnMut(&mut T, usize) -> R,
             R : Copy + Default;
 
         /// Execute a given function `func` for every element given by a mutable reference and it's index in the component group 
@@ -39,7 +38,7 @@ pub trait SyncCompGroup<const C : usize> : Setup {
         /// Stops executing if one of the components throws an error
         fn try_for_each<'a, F, R, E>(&'a self, func : F) -> Result<[R; C], E>
         where 
-            F : FnMut(&'a Self::Comp, usize) -> Result<R, E>,
+            F : FnMut(&'a T, usize) -> Result<R, E>,
             R : Copy + Default;
 
         /// Execute a given function `func` for every element given by a mutable reference and it's index in the component group 
@@ -53,7 +52,7 @@ pub trait SyncCompGroup<const C : usize> : Setup {
         /// Stops executing if one of the components throws an error
         fn try_for_each_mut<F, R, E>(&mut self, func : F) -> Result<[R; C], E>
         where 
-            F : FnMut(&mut Self::Comp, usize) -> Result<R, E>,
+            F : FnMut(&mut T, usize) -> Result<R, E>,
             R : Copy + Default;
 
         /// Execute a given function `func` for every element given by a readonly reference and it's index in the component group.
@@ -64,7 +63,7 @@ pub trait SyncCompGroup<const C : usize> : Setup {
         /// The closure may not fail, see `try_for_each()` if a `Result` is required.
         fn for_each_dyn<'a, F, R>(&'a self, func : F) -> Vec<R>
         where 
-            F : FnMut(&'a Self::Comp, usize) -> R;
+            F : FnMut(&'a T, usize) -> R;
     //
 
     // Data
@@ -241,12 +240,10 @@ impl<T : SyncComp, const C : usize> Setup for [T; C] {
     }
 }
 
-impl<T : SyncComp, const C : usize> SyncCompGroup<C> for [T; C] { 
-    type Comp = T;
-
+impl<T : SyncComp + 'static, const C : usize> SyncCompGroup<T, C> for [T; C] { 
     fn for_each<'a, F, R>(&'a self, mut func : F) -> [R; C]
     where 
-        F : FnMut(&'a Self::Comp, usize) -> R,
+        F : FnMut(&'a T, usize) -> R,
         R : Copy + Default 
     {   
         let mut res = [R::default(); C];
@@ -258,7 +255,7 @@ impl<T : SyncComp, const C : usize> SyncCompGroup<C> for [T; C] {
 
     fn for_each_mut<F, R>(&mut self, mut func : F) -> [R; C]
     where 
-        F : FnMut(&mut Self::Comp, usize) -> R,
+        F : FnMut(&mut T, usize) -> R,
         R : Copy + Default 
     {
         let mut res = [R::default(); C];
@@ -270,7 +267,7 @@ impl<T : SyncComp, const C : usize> SyncCompGroup<C> for [T; C] {
 
     fn try_for_each<'a, F, R, E>(&'a self, mut func : F) -> Result<[R; C], E>
     where 
-        F : FnMut(&'a Self::Comp, usize) -> Result<R, E>,
+        F : FnMut(&'a T, usize) -> Result<R, E>,
         R : Copy + Default 
     {
         let mut res = [R::default(); C];
@@ -282,7 +279,7 @@ impl<T : SyncComp, const C : usize> SyncCompGroup<C> for [T; C] {
 
     fn try_for_each_mut<F, R, E>(&mut self, mut func : F) -> Result<[R; C], E>
     where 
-        F : FnMut(&mut Self::Comp, usize) -> Result<R, E>,
+        F : FnMut(&mut T, usize) -> Result<R, E>,
         R : Copy + Default 
     {
         let mut res = [R::default(); C];
@@ -294,7 +291,7 @@ impl<T : SyncComp, const C : usize> SyncCompGroup<C> for [T; C] {
 
     fn for_each_dyn<'a, F, R>(&'a self, mut func : F) -> Vec<R>
     where 
-        F : FnMut(&'a Self::Comp, usize) -> R 
+        F : FnMut(&'a T, usize) -> R 
     {
         let mut res = Vec::with_capacity(C);
         for i in 0 .. C {

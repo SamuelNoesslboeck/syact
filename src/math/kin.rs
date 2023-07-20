@@ -56,3 +56,11 @@ impl Time {
         Some(t_1.min(t_2))
     }
 }
+
+pub fn accel_from_zero(delta : Delta, alpha : Alpha) -> Time {
+    Time((2.0 * delta.0 / alpha.0).sqrt())
+}
+
+pub fn alpha_req_for_dist(delta : Delta, omega : Omega) -> Alpha {
+    Alpha(omega.0 * omega.0 / 2.0 / delta.0)
+}

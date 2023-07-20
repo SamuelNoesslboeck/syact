@@ -1,5 +1,5 @@
 use serde::{Serialize, Deserialize};
-use crate::{SyncComp, Setup, StepperConst, Stepper};
+use crate::{SyncComp, Setup, Stepper};
 use crate::comp::Cylinder;
 use crate::comp::stepper::StepperComp;
 use crate::ctrl::Interrupter;
@@ -184,19 +184,23 @@ impl<C : SyncComp> SyncComp for CylinderTriangle<C> {
 }
 
 impl<C : StepperComp> StepperComp for CylinderTriangle<C> {
-    fn consts(&self) -> &StepperConst {
-        self.cylinder.consts()
+    #[inline]
+    fn super_stepper_comp(&self) -> Option<&dyn StepperComp> {
+        Some(&self.cylinder)
     }
 
-    fn micro(&self) -> u8 {
-        self.cylinder.micro()
+    #[inline]
+    fn super_stepper_comp_mut(&mut self) -> Option<&mut dyn StepperComp> {
+        Some(&mut self.cylinder)
     }
 
-    fn set_micro(&mut self, micro : u8) {
-        self.cylinder.set_micro(micro)
+    #[inline]
+    fn motor(&self) -> &dyn crate::prelude::StepperMotor {
+        self.cylinder.motor()
     }
 
-    fn drive_nodes(&mut self, delta : Delta, omega_0 : Omega, omega_tar : Omega, corr : &mut (Delta, Time)) -> Result<(), crate::Error> {
-        self.cylinder.drive_nodes(delta, omega_0, omega_tar, corr)
+    #[inline]
+    fn motor_mut(&mut self) -> &mut dyn crate::prelude::StepperMotor {
+        self.cylinder.motor_mut()
     }
 }

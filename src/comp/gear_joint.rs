@@ -1,6 +1,6 @@
 use serde::{Serialize, Deserialize};
 
-use crate::{SyncComp, Stepper, Setup, StepperConst};
+use crate::{SyncComp, Stepper, Setup};
 use crate::comp::stepper::StepperComp;
 use crate::units::*;
 
@@ -66,19 +66,23 @@ impl<C : SyncComp> SyncComp for GearJoint<C> {
 }
 
 impl<C : StepperComp> StepperComp for GearJoint<C> {
-    fn consts(&self) -> &StepperConst {
-        self.ctrl.consts()   
+    #[inline]
+    fn super_stepper_comp(&self) -> Option<&dyn StepperComp> {
+        Some(&self.ctrl)
     }
 
-    fn micro(&self) -> u8 {
-        self.ctrl.micro()
+    #[inline]
+    fn super_stepper_comp_mut(&mut self) -> Option<&mut dyn StepperComp> {
+        Some(&mut self.ctrl)
     }
 
-    fn set_micro(&mut self, micro : u8) {
-        self.ctrl.set_micro(micro)
+    #[inline]
+    fn motor(&self) -> &dyn crate::prelude::StepperMotor {
+        self.ctrl.motor()
     }
 
-    fn drive_nodes(&mut self, delta : Delta, omega_0 : Omega, omega_tar : Omega, corr : &mut (Delta, Time)) -> Result<(), crate::Error> {
-        self.ctrl.drive_nodes(delta, omega_0, omega_tar, corr)
+    #[inline]
+    fn motor_mut(&mut self) -> &mut dyn crate::prelude::StepperMotor {
+        self.ctrl.motor_mut()
     }
 }

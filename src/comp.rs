@@ -280,6 +280,14 @@ pub trait SyncComp : Setup {
         fn omega_for_this(&self, super_omega : Omega, this_gamma : Gamma) -> Omega {
             Omega(self.gamma_for_this(Gamma(super_omega.into())).into())
         }
+
+        fn alpha_for_this(&self, super_alpha : Alpha) -> Alpha {
+            Alpha(self.gamma_for_this(Gamma(super_alpha.0)).0)
+        }
+
+        fn force_for_this(&self, super_force : Force) -> Force {
+            Force(self.gamma_for_super(Gamma(super_force.0)).0)
+        }
     // 
 
     // Movement
@@ -817,8 +825,7 @@ pub trait SyncComp : Setup {
 
 // Implementations
 
-impl dyn SyncComp 
-{
+impl dyn SyncComp {
     /// Returns the type name of the component as [String]. Used for configuration file parsing.
     #[inline(always)]
     pub fn get_type_name(&self) -> &str {

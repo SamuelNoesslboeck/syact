@@ -11,11 +11,13 @@ cfg_if::cfg_if! {
     } 
 }
 
+use crate::math::force::torque_dyn;
+use crate::prelude::StepperMotor;
 use crate::{SyncComp, Setup, lib_error, Direction};
 use crate::comp::stepper::StepperComp;
 use crate::ctrl::{Controller, Interrupter};
 use crate::data::{CompData, StepperConst, CompVars}; 
-use crate::math::{StepTimeBuilder, CtrlStepTimeBuilder, LimitedStepTimeBuilder};
+use crate::math::{CtrlStepTimeBuilder, LimitedStepTimeBuilder, StepTimeBuilder, kin};
 use crate::meas::MeasData;
 use crate::units::*;
 
@@ -733,26 +735,87 @@ impl<C : Controller + Send + 'static> AsyncComp for HRStepper<C> {
 }
 
 impl<C : Controller + Send + 'static> StepperComp for HRStepper<C> {
-    fn consts(&self) -> &StepperConst {
-        &self.consts
-    }
-
-    fn micro(&self) -> u8 {
-        self.micro
-    }
-
-    fn set_micro(&mut self, micro : u8) {
-        if cfg!(feature = "std") {
-            self.pos.lock().unwrap().mul_assign((micro / self.micro) as i64);
+    // Motor
+        fn motor(&self) -> &dyn StepperMotor {
+            self
         }
 
-        self.micro = micro;
+        fn motor_mut(&mut self) -> &mut dyn StepperMotor {
+            self
+        }
+    // 
+
+    // Data
+        fn consts(&self) -> &StepperConst {
+            &self.consts
+        }
+
+        fn micro(&self) -> u8 {
+            self.micro
+        }
+
+        fn set_micro(&mut self, micro : u8) {
+            if cfg!(feature = "std") {
+                self.pos.lock().unwrap().mul_assign((micro / self.micro) as i64);
+            }
+
+            self.micro = micro;
+        }
+    //
+
+    fn step_ang(&self) -> Delta {
+        self.consts.step_ang(self.micro)
+    }
+}
+
+impl<C : Controller + Send + 'static> StepperMotor for HRStepper<C> {
+    // Calculations
+        fn torque_at_speed(&self, omega : Omega) -> Force {
+            torque_dyn(self.consts(), omega, self.data.u)
+        }
+
+        fn alpha_at_speed(&self, omega : Omega) -> Result<Alpha, crate::Error> {
+            self.consts().alpha_max_dyn(self.torque_at_speed(omega), self.vars())
+        }
+
+        fn approx_time_ptp(&self, delta : Delta, speed_f : f32, acc : usize) -> Result<Time, crate::Error> {
+            let omega_max = self.omega_max() * speed_f;
+    
+            let alpha_av = self.alpha_av(Omega::ZERO, omega_max, acc)?;
+    
+            let time_min = delta / omega_max;       // * 2.0 for average, / 2.0 for one side => * 1.0
+            let time_accel = omega_max / alpha_av;
+            
+            if time_accel > time_min {
+                // Maximum omega is not reached
+                Ok(kin::accel_from_zero(delta / 2.0, alpha_av) * 2.0)
+            } else {
+                // Maximum omega is reached
+                let accel_dist = time_accel * omega_max / 2.0;
+                Ok(time_accel * 2.0 + (delta - accel_dist * 2.0) / omega_max)
+            }
+        }
+
+        fn alpha_av(&self, omega_0 : Omega, omega_tar : Omega, acc : usize) -> Result<Alpha, crate::Error> {
+            let mut alpha_sum = self.alpha_at_speed(omega_0)? + self.alpha_at_speed(omega_tar)?;
+            let omega_diff = (omega_tar - omega_0) / (acc as f32);
+    
+            for i in 1 .. acc {
+                alpha_sum += self.alpha_at_speed(omega_0 + omega_diff * (i as f32))?;
+            }
+    
+            Ok(alpha_sum / (2.0 + acc as f32))
+        }
+    // 
+
+    fn create_builder(&self, omega_0 : Omega, omega_max : Omega) -> StepTimeBuilder {
+        StepTimeBuilder::new(omega_0, self.consts().clone(), self.vars().clone(), self.data().clone(), omega_max, self.micro())
     }
 
-    fn drive_nodes(&mut self, delta : Delta, omega_0 : Omega, omega_tar : Omega, corr : &mut (Delta, Time)) -> Result<(), crate::Error> {
+    fn drive_nodes(&mut self, delta : Delta, omega_0 : Omega, _omega_tar : Omega, _corr : &mut (Delta, Time)) -> Result<(), crate::Error> {
         self.setup_drive(delta)?;
 
-        let mut builder = self.create_builder(omega_0, self.omega_max());
+        let mut _builder = self.create_builder(omega_0, self.omega_max());
         // let curve = builder.to_speed_lim(delta, omega_0, omega_tar, corr)?;
 
         // dbg!(self.consts.steps_from_ang(delta));
@@ -760,7 +823,7 @@ impl<C : Controller + Send + 'static> StepperComp for HRStepper<C> {
         // dbg!(curve.len());a
         // dbg!(curve.iter().map(|x| x.0).sum::<f32>());
 
-        drop(builder);
+        drop(_builder);
 
         // self.drive_curve_async(curve, false, None)?;
 

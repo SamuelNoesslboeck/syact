@@ -67,9 +67,7 @@ use syn::DeriveInput;
                         }
                     }
 
-                    impl syact::comp::group::SyncCompGroup<#fields_count> for #name { 
-                        type Comp = #comp_type;
-
+                    impl syact::comp::group::SyncCompGroup<#comp_type, #fields_count> for #name { 
                         fn for_each<'a, F, R>(&'a self, mut func : F) -> [R; #fields_count]
                         where 
                             F : FnMut(&'a Self::Comp, usize) -> R,
@@ -144,7 +142,7 @@ use syn::DeriveInput;
 
                 // Create an empty implementation
                 quote::quote! {
-                    impl syact::comp::stepper::StepperCompGroup<#fields_count> for #name { }
+                    impl syact::comp::stepper::StepperCompGroup<dyn syact::comp::stepper::StepperComp, #fields_count> for #name { }
                 }.into()
             },
             _ => panic!("This macro can only be used on structs")

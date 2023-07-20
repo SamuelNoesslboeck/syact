@@ -176,22 +176,23 @@ use crate::units::*;
     #[derive(Clone, Debug)]
     pub struct CtrlStepTimeBuilder {
         builder : StepTimeBuilder,
-        omega_tar : Omega
+        omega_tar : Omega,
+        speed_f : f32
     }
     
     impl CtrlStepTimeBuilder {
         pub fn new(omega_0 : Omega, consts : StepperConst, vars : CompVars, data : CompData, 
         omega_max : Omega, micro : u8) -> Self {
-            Self {
-                builder: StepTimeBuilder::new(omega_0, consts, vars, data, omega_max, micro),
-                omega_tar: Omega::ZERO
-            }
+            Self::from_builder(
+                StepTimeBuilder::new(omega_0, consts, vars, data, omega_max, micro)
+            )
         }
 
         pub fn from_builder(builder : StepTimeBuilder) -> Self {
             Self {
                 builder,
-                omega_tar: Omega::ZERO
+                omega_tar: Omega::ZERO,
+                speed_f: 1.0
             }
         }
 
@@ -212,12 +213,20 @@ use crate::units::*;
             Ok(())
         }
 
+        pub fn set_speed_f(&mut self, speed_f : f32) {
+            if (speed_f > 1.0) | (speed_f < 0.0) {
+                panic!("Bad speed factor! {}", speed_f);
+            }
+
+            self.speed_f = speed_f;
+        }
+
         pub fn stop_reason(&self) -> StopReason {
             self.builder.reason
         }
 
         pub fn t_tar(&self) -> Time {
-            self.builder.delta / self.omega_tar
+            self.builder.delta / self.omega_tar / self.speed_f
         }
     }
 
@@ -232,7 +241,7 @@ use crate::units::*;
                 return None;
             }
 
-            self.builder.next()
+            self.builder.next().map(|t| t / self.speed_f)
         }
     }
 
@@ -271,6 +280,10 @@ use crate::units::*;
 
         pub fn set_omega_tar(&mut self, omega_tar : Omega) -> Result<(), crate::Error> {
             self.builder.set_omega_tar(omega_tar)
+        }
+
+        pub fn set_speed_f(&mut self, speed_f : f32) {
+            self.builder.set_speed_f(speed_f)
         }
 
         pub fn set_steps_max(&mut self, steps_max : u64) {
@@ -314,10 +327,9 @@ use crate::units::*;
                 if self.reach_dist.is_none() {
                     self.reach_dist = Some(self.steps_curr);
                     self.last_val = self.builder.t_tar();
-                    Some(self.last_val)
-                } else {
-                    None
                 }
+
+                Some(self.last_val)
             }
         }
     }
@@ -349,12 +361,12 @@ use crate::units::*;
 
         #[inline]
         fn stack_d(&self, i : usize, n : usize) -> Delta {
-            self.stack_d[i][n]
+            self.stack_d[i % self.stack_size][n]
         }
 
         #[inline]
         fn stack_t(&self, i : usize) -> Time {
-            self.stack_t[i]
+            self.stack_t[i % self.stack_size]
         }
     }
 //

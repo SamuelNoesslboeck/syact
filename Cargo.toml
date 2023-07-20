@@ -42,12 +42,6 @@ embed-thread = [ "std" ]
 # Platform features
 rasp = [ "std", "dep:rppal" ]
 
-[profile.dev]
-opt-level = 0
-
-[profile.release]
-opt-level = 3
-
 # ##############
 # #  Examples  #
 # ##############
@@ -89,4 +83,8 @@ path = "examples/dc_motors.rs"
   [[example]]
   name = "math-builders"
   path = "examples/math/builders.rs"
+
+  [[example]]
+  name = "math-movements"
+  path = "examples/math/movements.rs"
 #
