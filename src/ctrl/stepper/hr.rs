@@ -17,7 +17,7 @@ use crate::{SyncComp, Setup, lib_error, Direction};
 use crate::comp::stepper::StepperComp;
 use crate::ctrl::{Controller, Interrupter};
 use crate::data::{CompData, StepperConst, CompVars}; 
-use crate::math::{CtrlStepTimeBuilder, LimitedStepTimeBuilder, StepTimeBuilder, kin};
+use crate::math::{HRCtrlStepBuilder, HRLimitedStepBuilder, HRStepBuilder, kin};
 use crate::meas::MeasData;
 use crate::units::*;
 
@@ -26,7 +26,7 @@ use crate::units::*;
 /// - interuptable : `bool`
 /// - constant time to drive after curve : `Option<Time>`
 #[cfg(feature = "embed-thread")]
-type AsyncMsg = (CtrlStepTimeBuilder, bool, Option<Time>);
+type AsyncMsg = (HRCtrlStepBuilder, bool, Option<Time>);
 /// Steps moved by the thread
 #[cfg(feature = "embed-thread")]
 type AsyncRes = i64;
@@ -251,10 +251,12 @@ impl<C : Controller + Send + 'static> HRStepper<C> {
         
         self.setup_drive(delta)?;
 
-        let mut cur = LimitedStepTimeBuilder::from_builder(
+        let mut cur = HRLimitedStepBuilder::from_builder(
             self.create_builder(Omega::ZERO, self.omega_max())
         );
-        cur.set_omega_tar(self.omega_max() * speed_f)?;
+
+        cur.set_omega_tar(self.omega_max())?;
+        cur.set_speed_f(speed_f);
         cur.set_steps_max(self.consts.steps_from_ang_abs(delta, self.micro));
         
         self.drive_curve(cur);
@@ -274,10 +276,12 @@ impl<C : Controller + Send + 'static> HRStepper<C> {
         
         self.setup_drive(delta)?;
 
-        let mut cur = LimitedStepTimeBuilder::from_builder(
+        let mut cur = HRLimitedStepBuilder::from_builder(
             self.create_builder(Omega::ZERO, self.omega_max())
         );
-        cur.set_omega_tar(self.omega_max() * speed_f)?;
+        
+        cur.set_omega_tar(self.omega_max())?;
+        cur.set_speed_f(speed_f);
         cur.set_steps_max(self.consts.steps_from_ang_abs(delta, self.micro));
 
         let (steps, interrupted) = self.drive_curve_int(cur, intr, intr_data);
@@ -342,7 +346,7 @@ impl<C : Controller + Send + 'static> HRStepper<C> {
         self.active = false;
     }
 
-    fn drive_curve_async(&mut self, curve : CtrlStepTimeBuilder, intr : bool, t_const : Option<Time>) -> Result<(), crate::Error> {
+    fn drive_curve_async(&mut self, curve : HRCtrlStepBuilder, intr : bool, t_const : Option<Time>) -> Result<(), crate::Error> {
         self.clear_active_status();
 
         // println!(" => Curve: {}; Last: {:?}; t_const: {:?}", curve.len(), curve.last(), t_const);
@@ -371,7 +375,7 @@ impl<C : Controller + Send + 'static> HRStepper<C> {
         
         self.setup_drive(delta)?;
 
-        let mut cur = CtrlStepTimeBuilder::from_builder(
+        let mut cur = HRCtrlStepBuilder::from_builder(
             self.create_builder(Omega::ZERO, self.omega_max())
         );
 
@@ -388,7 +392,7 @@ impl<C : Controller + Send + 'static> HRStepper<C> {
         let pos = self.pos.clone();
 
         self.thr = Some(std::thread::spawn(move || {
-            let mut curve : CtrlStepTimeBuilder;
+            let mut curve : HRCtrlStepBuilder;
             let mut intr : bool;
             let mut cont : Option<Time>;
 
@@ -692,7 +696,7 @@ impl<C : Controller + Send + 'static> AsyncComp for HRStepper<C> {
         // println!(" => Building curve: o_max: {}, o_0: {}, o_tar: {}, spf_0: {}, spf: {}", 
         //     self.omega_max, omega_0, omega_tar, self.speed_f, speed_f);
 
-        let mut builder = CtrlStepTimeBuilder::from_builder(
+        let mut builder = HRCtrlStepBuilder::from_builder(
             self.create_builder(omega_0, omega_max)
         );
 
@@ -712,7 +716,7 @@ impl<C : Controller + Send + 'static> AsyncComp for HRStepper<C> {
             self.await_inactive()?;
             self.set_dir(dir);
 
-            builder = CtrlStepTimeBuilder::from_builder(
+            builder = HRCtrlStepBuilder::from_builder(
                 self.create_builder(Omega::ZERO, omega_max)
             );    
 
@@ -808,8 +812,8 @@ impl<C : Controller + Send + 'static> StepperMotor for HRStepper<C> {
         }
     // 
 
-    fn create_builder(&self, omega_0 : Omega, omega_max : Omega) -> StepTimeBuilder {
-        StepTimeBuilder::new(omega_0, self.consts().clone(), self.vars().clone(), self.data().clone(), omega_max, self.micro())
+    fn create_builder(&self, omega_0 : Omega, omega_max : Omega) -> HRStepBuilder {
+        HRStepBuilder::new(omega_0, self.consts().clone(), self.vars().clone(), self.data().clone(), omega_max, self.micro())
     }
 
     fn drive_nodes(&mut self, delta : Delta, omega_0 : Omega, _omega_tar : Omega, _corr : &mut (Delta, Time)) -> Result<(), crate::Error> {

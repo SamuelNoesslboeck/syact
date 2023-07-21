@@ -29,7 +29,7 @@ extern crate alloc;
 
         /// Structs for storing characteristics of stepper motors and devices
         pub mod data;
-        pub use data::{StepperConst, CompData};
+        pub use data::{StepperConst, CompData, CompVars};
 
         /// Functions and Structs for calculating Stepper Motor procedures and operations
         pub mod math;

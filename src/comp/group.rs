@@ -77,16 +77,16 @@ where T : SyncComp + ?Sized + 'static
     //
 
     /// Runs [SyncComp::drive_rel()] for all components
-    fn drive_rel(&mut self, deltas : [Delta; C], speed_f : f32) -> Result<[Delta; C], crate::Error> {
+    fn drive_rel(&mut self, deltas : [Delta; C], speed_f : [f32; C]) -> Result<[Delta; C], crate::Error> {
         self.try_for_each_mut(|comp, index| {
-            comp.drive_rel(deltas[index], speed_f)  
+            comp.drive_rel(deltas[index], speed_f[index])  
         })
     }
 
     /// Runs [SyncComp::drive_abs()] for all components
-    fn drive_abs(&mut self, gamma : [Gamma; C], speed_f : f32) -> Result<[Delta; C], crate::Error>  {
+    fn drive_abs(&mut self, gamma : [Gamma; C], speed_f : [f32; C]) -> Result<[Delta; C], crate::Error>  {
         self.try_for_each_mut(|comp, index| {
-            comp.drive_abs(gamma[index], speed_f)
+            comp.drive_abs(gamma[index], speed_f[index])
         })
     }
 
@@ -96,10 +96,10 @@ where T : SyncComp + ?Sized + 'static
         /// # Features
         /// 
         /// Only available if the "std" feature is enabled
-        #[cfg(feature = "std")]
-        fn drive_rel_async(&mut self, deltas : [Delta; C], speed_f : f32) -> Result<(), crate::Error> {
+        #[cfg(feature = "embed-thread")]
+        fn drive_rel_async(&mut self, deltas : [Delta; C], speed_f : [f32; C]) -> Result<(), crate::Error> {
             self.try_for_each_mut(|comp, index| {
-                comp.drive_rel_async(deltas[index], speed_f)
+                comp.drive_rel_async(deltas[index], speed_f[index])
             })?; 
             Ok(())
         }
@@ -109,10 +109,10 @@ where T : SyncComp + ?Sized + 'static
         /// # Features
         /// 
         /// Only available if the "std" feature is enabled
-        #[cfg(feature = "std")]
-        fn drive_abs_async(&mut self, gamma : [Gamma; C], speed_f : f32) -> Result<(), crate::Error> {
+        #[cfg(feature = "embed-thread")]
+        fn drive_abs_async(&mut self, gamma : [Gamma; C], speed_f : [f32; C]) -> Result<(), crate::Error> {
             self.try_for_each_mut(|comp, index| {
-                comp.drive_abs_async(gamma[index], speed_f)
+                comp.drive_abs_async(gamma[index], speed_f[index])
             })?;
             Ok(())
         }   
@@ -122,7 +122,7 @@ where T : SyncComp + ?Sized + 'static
         /// # Features
         /// 
         /// Only available if the "std" feature is enabled
-        #[cfg(feature = "std")]
+        #[cfg(feature = "embed-thread")]
         fn await_inactive(&mut self) -> Result<[Delta; C], crate::Error> {
             self.try_for_each_mut(|comp, _| {
                 comp.await_inactive()

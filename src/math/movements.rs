@@ -1,5 +1,5 @@
 use crate::comp::stepper::{StepperComp, StepperCompGroup};
-use crate::math::LimitedStepTimeBuilder;
+use crate::math::HRLimitedStepBuilder;
 use crate::units::*;
 
 /// More calculation intense, no additional memory
@@ -8,7 +8,7 @@ pub fn ptp_exact_unbuffered<S : StepperCompGroup<T, C>, T : StepperComp + ?Sized
         // Curves are built for motors
         let comp = p_comp.motor();
 
-        let mut builder = LimitedStepTimeBuilder::from_builder(
+        let mut builder = HRLimitedStepBuilder::from_builder(
             comp.create_builder(Omega::ZERO, comp.omega_max())
         );
 

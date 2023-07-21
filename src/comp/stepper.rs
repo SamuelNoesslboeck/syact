@@ -1,5 +1,5 @@
 use crate::{StepperConst, SyncComp, SyncCompGroup};
-use crate::math::StepTimeBuilder;
+use crate::math::HRStepBuilder;
 use crate::units::*;
 
 pub use syact_macros::StepperCompGroup;
@@ -18,7 +18,7 @@ pub trait StepperMotor : StepperComp {
     //
 
     /// Creates a new curve builder for the stepper motor
-    fn create_builder(&self, omega_0 : Omega, omega_max : Omega) -> StepTimeBuilder;
+    fn create_builder(&self, omega_0 : Omega, omega_max : Omega) -> HRStepBuilder;
     /// Drive from node to node (used for path algorithms, use as a normal drive function is not recommended)
     fn drive_nodes(&mut self, delta : Delta, omega_0 : Omega, omega_tar : Omega, corr : &mut (Delta, Time)) -> Result<(), crate::Error>;
 }

@@ -36,6 +36,28 @@ impl Tongs {
 
         tongs
     }
+
+    /// Checks wheiter the tongs are closed 
+    /// 
+    /// # Note
+    /// 
+    /// This function just checks the set state by the software, it will not check the real state of the tongs!
+    #[inline]
+    pub fn closed(&self) -> bool {
+        self.servo.perc() == self.perc_close
+    }
+
+    /// Opens the tongs by modifying the PWM Signal
+    #[inline]
+    pub fn open(&mut self) {
+        self.servo.set_perc(self.perc_open)
+    }
+
+    /// Closes the tongs by modifying the PWM Signal
+    #[inline]
+    pub fn close(&mut self) {
+        self.servo.set_perc(self.perc_close)
+    }
 }
 
 impl Tool for Tongs {
@@ -77,15 +99,18 @@ impl Tool for Tongs {
 }
 
 impl SimpleTool for Tongs {
+    /// Expands to `close()`
     fn activate(&mut self) {
-        self.servo.set_perc(self.perc_close)
+        self.close()
     }
 
+    /// Expands to `open()` 
     fn deactivate(&mut self) {
-        self.servo.set_perc(self.perc_open)
+        self.open()
     }
 
+    /// Expands to `is_closed()`
     fn is_active(&self) -> bool {
-        self.servo.perc() == self.perc_close
+        self.closed()
     }
 }

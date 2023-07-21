@@ -8,7 +8,7 @@
 use std::time::Instant;
 
 // Simple include of many library features
-use syact::{prelude::*, math::{CtrlStepTimeBuilder, LimitedStepTimeBuilder}};
+use syact::{prelude::*, math::{HRCtrlStepBuilder, HRLimitedStepBuilder}};
 
 fn main() -> Result<(), syact::Error> {
     // Initialize a new stepper motor with generic values (simple NEMA 17 motor with 12V ...)
@@ -75,7 +75,7 @@ fn main() -> Result<(), syact::Error> {
 
         println!("To 30rad/s ... ");
 
-        let mut builder = CtrlStepTimeBuilder::from_builder(
+        let mut builder = HRCtrlStepBuilder::from_builder(
             stepper.create_builder(Omega::ZERO, stepper.omega_max())
         );
 
@@ -87,7 +87,7 @@ fn main() -> Result<(), syact::Error> {
 
         println!("To 10rad/s ... ");
 
-        let mut builder = CtrlStepTimeBuilder::from_builder(
+        let mut builder = HRCtrlStepBuilder::from_builder(
             stepper.create_builder(Omega(30.0), stepper.omega_max())
         );
 
@@ -117,7 +117,7 @@ fn main() -> Result<(), syact::Error> {
         println!("Predicted time: {}; Calculation time: {}", time, el);
 
         let bench = Instant::now();
-        let mut builder = LimitedStepTimeBuilder::from_builder(
+        let mut builder = HRLimitedStepBuilder::from_builder(
             stepper.create_builder(Omega::ZERO, stepper.omega_max())
         );
 
@@ -134,7 +134,7 @@ fn main() -> Result<(), syact::Error> {
 
         let scale = 0.5;
 
-        let mut builder = LimitedStepTimeBuilder::from_builder(
+        let mut builder = HRLimitedStepBuilder::from_builder(
             stepper.create_builder(Omega::ZERO, stepper.omega_max())
         );
 
@@ -145,7 +145,7 @@ fn main() -> Result<(), syact::Error> {
 
         println!("Iterated time: {}", sum);
 
-        let mut builder = LimitedStepTimeBuilder::from_builder(
+        let mut builder = HRLimitedStepBuilder::from_builder(
             stepper.create_builder(Omega::ZERO, stepper.omega_max())
         );
 

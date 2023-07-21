@@ -62,21 +62,29 @@ name = "dc_motors"
 path = "examples/dc_motors.rs"
 
 # Hardware 
-  [[example]]
-  name = "hardware-comps-conv"
-  path = "examples/hardware/comps/conv.rs"
+  # Comps
+    [[example]]
+    name = "hardware-comps-conv"
+    path = "examples/hardware/comps/conv.rs"
 
-  [[example]]
-  name = "hardware-comps-cyl_tri"
-  path = "examples/hardware/comps/cyl_tri.rs"
+    [[example]]
+    name = "hardware-comps-cyl_tri"
+    path = "examples/hardware/comps/cyl_tri.rs"
 
-  [[example]]
-  name = "hardware-comps-cylinder"
-  path = "examples/hardware/comps/cylinder.rs"
+    [[example]]
+    name = "hardware-comps-cylinder"
+    path = "examples/hardware/comps/cylinder.rs"
 
-  [[example]]
-  name = "hardware-comps-stepper"
-  path = "examples/hardware/comps/stepper.rs"
+    [[example]]
+    name = "hardware-comps-stepper"
+    path = "examples/hardware/comps/stepper.rs"
+  #
+
+  # Tools
+    [[example]]
+    name = "hardware-tools-tongs"
+    path = "examples/hardware/tools/tongs.rs"
+  # 
 #
 
 # Math

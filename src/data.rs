@@ -66,14 +66,14 @@ impl StepperConst {
 
     /// The maximum angular acceleration of the motor (in stall) in consideration of the current loads
     #[inline(always)]
-    pub fn alpha_max(&self, var : &CompVars) -> Result<Alpha, crate::Error> {
-        Ok(self.t(var.t_load)? / self.j(var.j_load))
+    pub fn alpha_max(&self, vars : &CompVars) -> Result<Alpha, crate::Error> {
+        Ok(self.t(vars.t_load)? / self.j(vars.j_load))
     }
 
     /// The maximum angular acceleration of the motor, with a modified torque t_s
     #[inline(always)]
-    pub fn alpha_max_dyn(&self, t_s : Force, var : &CompVars) -> Result<Alpha, crate::Error> {
-        Ok(Self::t_dyn(t_s, var.t_load)? / self.j(var.j_load) * var.bend_f)
+    pub fn alpha_max_dyn(&self, t_s : Force, vars : &CompVars) -> Result<Alpha, crate::Error> {
+        Ok(Self::t_dyn(t_s, vars.t_load)? / self.j(vars.j_load) * vars.bend_f)
     }
 
     /// The inductivity constant [Unit s]
