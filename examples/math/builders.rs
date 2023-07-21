@@ -8,7 +8,7 @@
 use std::time::Instant;
 
 // Simple include of many library features
-use syact::{prelude::*, math::{HRCtrlStepBuilder, HRLimitedStepBuilder}};
+use syact::{prelude::*, math::{HRCtrlStepBuilder, HRLimitedStepBuilder, HRStepBuilder}};
 
 fn main() -> Result<(), syact::Error> {
     // Initialize a new stepper motor with generic values (simple NEMA 17 motor with 12V ...)
@@ -33,9 +33,9 @@ fn main() -> Result<(), syact::Error> {
             println!("\n[StepTimeBuilder - Unloaded]");
 
             // Create a new `StepTimeBuilder`
-            let builder = stepper.create_builder(
-                Omega::ZERO,    // The start velocity of the component
-                stepper.omega_max()     // The maximum velocity of the component
+            let builder = HRStepBuilder::from_motor(
+                &stepper,       // The stepper motor
+                Omega::ZERO    // The start velocity of the component
             ); 
 
             // Iterate through
@@ -51,7 +51,7 @@ fn main() -> Result<(), syact::Error> {
             stepper.apply_inertia(Inertia(0.0001));
 
             // Create a new `StepTimeBuilder`
-            let builder = stepper.create_builder(
+            let builder = stepper.create_hr_builder(
                 Omega::ZERO,    // The start velocity of the component
                 stepper.omega_max()     // The maximum velocity of the component
             ); 
@@ -76,7 +76,10 @@ fn main() -> Result<(), syact::Error> {
         println!("To 30rad/s ... ");
 
         let mut builder = HRCtrlStepBuilder::from_builder(
-            stepper.create_builder(Omega::ZERO, stepper.omega_max())
+            HRStepBuilder::from_motor(
+                &stepper,           // The stepper motor
+                Omega::ZERO       // The start velocity of the component
+            )
         );
 
         builder.set_omega_tar(Omega(30.0))?;
@@ -88,7 +91,10 @@ fn main() -> Result<(), syact::Error> {
         println!("To 10rad/s ... ");
 
         let mut builder = HRCtrlStepBuilder::from_builder(
-            stepper.create_builder(Omega(30.0), stepper.omega_max())
+            HRStepBuilder::from_motor(
+                &stepper,       // The stepper motor
+                Omega::ZERO    // The start velocity of the component
+            )
         );
 
         builder.set_omega_tar(Omega(10.0))?;
@@ -118,7 +124,10 @@ fn main() -> Result<(), syact::Error> {
 
         let bench = Instant::now();
         let mut builder = HRLimitedStepBuilder::from_builder(
-            stepper.create_builder(Omega::ZERO, stepper.omega_max())
+            HRStepBuilder::from_motor(
+                &stepper,       // The stepper motor
+                Omega::ZERO    // The start velocity of the component
+            )
         );
 
         builder.set_omega_tar(stepper.omega_max() * speed_f)?;
@@ -135,7 +144,10 @@ fn main() -> Result<(), syact::Error> {
         let scale = 0.5;
 
         let mut builder = HRLimitedStepBuilder::from_builder(
-            stepper.create_builder(Omega::ZERO, stepper.omega_max())
+            HRStepBuilder::from_motor(
+                &stepper,       // The stepper motor
+                Omega::ZERO    // The start velocity of the component
+            )
         );
 
         builder.set_omega_tar(stepper.omega_max())?;
@@ -146,7 +158,10 @@ fn main() -> Result<(), syact::Error> {
         println!("Iterated time: {}", sum);
 
         let mut builder = HRLimitedStepBuilder::from_builder(
-            stepper.create_builder(Omega::ZERO, stepper.omega_max())
+            HRStepBuilder::from_motor(
+                &stepper,       // The stepper motor
+                Omega::ZERO    // The start velocity of the component
+            )
         );
 
         builder.set_omega_tar(stepper.omega_max())?;

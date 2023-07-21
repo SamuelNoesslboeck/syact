@@ -9,7 +9,7 @@ pub fn ptp_exact_unbuffered<S : StepperCompGroup<T, C>, T : StepperComp + ?Sized
         let comp = p_comp.motor();
 
         let mut builder = HRLimitedStepBuilder::from_builder(
-            comp.create_builder(Omega::ZERO, comp.omega_max())
+            comp.create_hr_builder(Omega::ZERO, comp.omega_max())
         );
 
         builder.set_omega_tar(comp.omega_max()).unwrap();   // Save to unwrap

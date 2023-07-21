@@ -1,4 +1,5 @@
 use crate::StepperConst;
+use crate::comp::StepperMotor;
 use crate::data::{CompData, CompVars};
 
 use super::*;
@@ -39,6 +40,10 @@ impl HRStepBuilder {
 
             reason: StopReason::None
         }
+    }
+
+    pub fn from_motor<M : StepperMotor>(motor : &M, omega_0 : Omega) -> Self {
+        Self::new(omega_0, motor.consts().clone(), motor.vars().clone(), motor.data().clone(), motor.omega_max(), motor.micro())
     }
 
     pub fn start_accel(&mut self) {

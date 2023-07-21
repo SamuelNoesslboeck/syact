@@ -17,7 +17,8 @@ use crate::{SyncComp, Setup, lib_error, Direction};
 use crate::comp::stepper::StepperComp;
 use crate::ctrl::{Controller, Interrupter};
 use crate::data::{CompData, StepperConst, CompVars}; 
-use crate::math::{HRCtrlStepBuilder, HRLimitedStepBuilder, HRStepBuilder, kin};
+use crate::math::{HRCtrlStepBuilder, HRLimitedStepBuilder, HRStepBuilder};
+use crate::math::kin;
 use crate::meas::MeasData;
 use crate::units::*;
 
@@ -252,7 +253,7 @@ impl<C : Controller + Send + 'static> HRStepper<C> {
         self.setup_drive(delta)?;
 
         let mut cur = HRLimitedStepBuilder::from_builder(
-            self.create_builder(Omega::ZERO, self.omega_max())
+            self.create_hr_builder(Omega::ZERO, self.omega_max())
         );
 
         cur.set_omega_tar(self.omega_max())?;
@@ -277,7 +278,7 @@ impl<C : Controller + Send + 'static> HRStepper<C> {
         self.setup_drive(delta)?;
 
         let mut cur = HRLimitedStepBuilder::from_builder(
-            self.create_builder(Omega::ZERO, self.omega_max())
+            self.create_hr_builder(Omega::ZERO, self.omega_max())
         );
         
         cur.set_omega_tar(self.omega_max())?;
@@ -376,7 +377,7 @@ impl<C : Controller + Send + 'static> HRStepper<C> {
         self.setup_drive(delta)?;
 
         let mut cur = HRCtrlStepBuilder::from_builder(
-            self.create_builder(Omega::ZERO, self.omega_max())
+            self.create_hr_builder(Omega::ZERO, self.omega_max())
         );
 
         cur.set_omega_tar(self.omega_max() * speed_f)?;
@@ -697,7 +698,7 @@ impl<C : Controller + Send + 'static> AsyncComp for HRStepper<C> {
         //     self.omega_max, omega_0, omega_tar, self.speed_f, speed_f);
 
         let mut builder = HRCtrlStepBuilder::from_builder(
-            self.create_builder(omega_0, omega_max)
+            self.create_hr_builder(omega_0, omega_max)
         );
 
         let t_const = if omega_tar != Omega::ZERO {
@@ -717,7 +718,7 @@ impl<C : Controller + Send + 'static> AsyncComp for HRStepper<C> {
             self.set_dir(dir);
 
             builder = HRCtrlStepBuilder::from_builder(
-                self.create_builder(Omega::ZERO, omega_max)
+                self.create_hr_builder(Omega::ZERO, omega_max)
             );    
 
             builder.set_omega_tar(omega_tar)?;
@@ -812,14 +813,14 @@ impl<C : Controller + Send + 'static> StepperMotor for HRStepper<C> {
         }
     // 
 
-    fn create_builder(&self, omega_0 : Omega, omega_max : Omega) -> HRStepBuilder {
+    fn create_hr_builder(&self, omega_0 : Omega, omega_max : Omega) -> HRStepBuilder {
         HRStepBuilder::new(omega_0, self.consts().clone(), self.vars().clone(), self.data().clone(), omega_max, self.micro())
     }
 
     fn drive_nodes(&mut self, delta : Delta, omega_0 : Omega, _omega_tar : Omega, _corr : &mut (Delta, Time)) -> Result<(), crate::Error> {
         self.setup_drive(delta)?;
 
-        let mut _builder = self.create_builder(omega_0, self.omega_max());
+        let mut _builder = self.create_hr_builder(omega_0, self.omega_max());
         // let curve = builder.to_speed_lim(delta, omega_0, omega_tar, corr)?;
 
         // dbg!(self.consts.steps_from_ang(delta));
