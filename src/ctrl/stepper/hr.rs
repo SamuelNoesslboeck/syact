@@ -209,6 +209,7 @@ impl<C : Controller + Send + 'static> HRStepper<C> {
         let mut trav = 0;
         let mut interrupred = false;
 
+        // Curve starts from
         for point in cur {
             if intr(intr_data) {
                 interrupred = true;
@@ -258,9 +259,13 @@ impl<C : Controller + Send + 'static> HRStepper<C> {
 
         cur.set_omega_tar(self.omega_max())?;
         cur.set_speed_f(speed_f);
-        cur.set_steps_max(self.consts.steps_from_ang_abs(delta, self.micro));
-        
-        self.drive_curve(cur);
+        cur.set_steps_max(self.consts.steps_from_ang_abs(delta, self.micro) - 1);
+
+        Self::use_ctrl(&mut self.ctrl, || {
+
+        });
+
+        let steps = self.drive_curve(cur) + 1;
 
         Ok(delta)
     }

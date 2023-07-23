@@ -107,6 +107,25 @@ fn main() -> Result<(), syact::Error> {
     // ###############################
     // #   LimitedStepTimeBuilder    #
     // ###############################
+        println!("\n[LimitedStepTimeBuilder - Distance]");
+
+        let delta = Delta(0.5);
+
+        let mut builder = HRLimitedStepBuilder::from_builder(
+            HRStepBuilder::from_motor(
+                &stepper,       // The stepper motor
+                Omega::ZERO    // The start velocity of the component
+            )
+        );
+
+        builder.set_omega_tar(stepper.omega_max())?;
+        builder.set_steps_max(stepper.consts().steps_from_ang_abs(delta, stepper.micro()));
+
+        for time in builder.enumerate() {
+            println!("{:?}", time);
+        }
+        
+
         println!("\n[LimitedStepTimeBuilder - Predicting]");
 
         stepper.apply_inertia(Inertia(0.001));
