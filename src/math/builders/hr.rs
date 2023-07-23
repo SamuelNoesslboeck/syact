@@ -246,11 +246,11 @@ impl Iterator for HRLimitedStepBuilder {
 
         if self.steps_curr > (self.steps_max / 2) {
             if !self.builder.builder.deccel {
+                self.set_omega_tar(Omega::ZERO).unwrap(); 
+                
                 if (self.steps_max % 2) == 1 {
                     return Some(self.last_val)
                 }
-    
-                self.set_omega_tar(Omega::ZERO).unwrap();  
             }
 
             if let Some(dist) = self.reach_dist {
