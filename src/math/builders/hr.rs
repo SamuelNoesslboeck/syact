@@ -42,7 +42,7 @@ impl HRStepBuilder {
         }
     }
 
-    pub fn from_motor<M : StepperMotor>(motor : &M, omega_0 : Omega) -> Self {
+    pub fn from_motor<M : StepperMotor + ?Sized>(motor : &M, omega_0 : Omega) -> Self {
         Self::new(omega_0, motor.consts().clone(), motor.vars().clone(), motor.data().clone(), motor.omega_max(), motor.micro())
     }
 
@@ -245,11 +245,13 @@ impl Iterator for HRLimitedStepBuilder {
         }
 
         if self.steps_curr > (self.steps_max / 2) {
-            if (self.steps_max % 2) == 1 {
-                return Some(self.last_val)
+            if !self.builder.builder.deccel {
+                if (self.steps_max % 2) == 1 {
+                    return Some(self.last_val)
+                }
+    
+                self.set_omega_tar(Omega::ZERO).unwrap();  
             }
-
-            self.set_omega_tar(Omega::ZERO).unwrap();  
 
             if let Some(dist) = self.reach_dist {
                 if (self.steps_max / 2 - dist) >= (self.steps_curr - self.steps_max / 2) {

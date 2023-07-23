@@ -2,6 +2,8 @@ use crate::comp::stepper::{StepperComp, StepperCompGroup};
 use crate::math::HRLimitedStepBuilder;
 use crate::units::*;
 
+use super::HRStepBuilder;
+
 /// More calculation intense, no additional memory
 pub fn ptp_exact_unbuffered<S : StepperCompGroup<T, C>, T : StepperComp + ?Sized + 'static, const C : usize>(group : &mut S, deltas : [Delta; C]) -> [f32; C] {
     let mut times : [f32; C] = group.for_each(|p_comp, index| {
@@ -9,7 +11,7 @@ pub fn ptp_exact_unbuffered<S : StepperCompGroup<T, C>, T : StepperComp + ?Sized
         let comp = p_comp.motor();
 
         let mut builder = HRLimitedStepBuilder::from_builder(
-            comp.create_hr_builder(Omega::ZERO, comp.omega_max())
+            HRStepBuilder::from_motor(comp, Omega::ZERO)
         );
 
         builder.set_omega_tar(comp.omega_max()).unwrap();   // Save to unwrap

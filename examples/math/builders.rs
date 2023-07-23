@@ -51,10 +51,10 @@ fn main() -> Result<(), syact::Error> {
             stepper.apply_inertia(Inertia(0.0001));
 
             // Create a new `StepTimeBuilder`
-            let builder = stepper.create_hr_builder(
-                Omega::ZERO,    // The start velocity of the component
-                stepper.omega_max()     // The maximum velocity of the component
-            ); 
+            let builder = HRStepBuilder::from_motor(
+                &stepper,       // Motor 
+                Omega::ZERO     // Start velocity
+            );
 
             // Iterate through
             for (index, step) in builder.enumerate() {
