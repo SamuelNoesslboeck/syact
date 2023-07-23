@@ -18,6 +18,8 @@ use super::pin::UniOutPin;
 use super::pin::UniPin;
 // 
 
+pub const STEP_PULSE_WIDTH : Time = Time(1.0 / 20000.0);
+
 // #####################
 // #   Stepper-Types   #
 // #####################
@@ -41,7 +43,23 @@ cfg_if::cfg_if! {
 
 /// A controller for the logics of a stepper motor
 pub trait Controller {
-    fn step(&mut self, time : Time);
+    fn step_with(&mut self, t_len : Time, t_pause : Time);
+
+    fn step(&mut self, time : Time) {
+        if time < (STEP_PULSE_WIDTH * 2.0) {
+            self.step_with(STEP_PULSE_WIDTH, STEP_PULSE_WIDTH);
+        } else {
+            self.step_with(STEP_PULSE_WIDTH, time)
+        }
+    }
+
+    fn step_no_wait(&mut self) {
+        if time < (STEP_PULSE_WIDTH * 2.0) {
+            self.step_with(STEP_PULSE_WIDTH, STEP_PULSE_WIDTH);
+        } else {
+            self.step_with(STEP_PULSE_WIDTH, time)
+        }
+    }
 
     fn dir(&self) -> Direction;
 
@@ -80,13 +98,11 @@ impl GenericPWM {
 }
 
 impl Controller for GenericPWM {
-    fn step(&mut self, time : Time) {
-        let step_time_half : Duration = (time / 2.0).into(); 
-
+    fn step_with(&mut self, t_len : Time, t_pause : Time) {
         self.pin_step.set_high();
-        spin_sleep::sleep(step_time_half);
+        spin_sleep::sleep(t_len.into());
         self.pin_step.set_low();
-        spin_sleep::sleep(step_time_half);
+        spin_sleep::sleep(t_pause.into());
     }
 
     fn dir(&self) -> Direction {
