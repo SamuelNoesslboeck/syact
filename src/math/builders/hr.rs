@@ -134,6 +134,18 @@ impl HRCtrlStepBuilder {
         }
     }
 
+    // Accel / Deccel 
+        #[inline]
+        pub fn is_accel(&self) -> bool {
+            !self.builder.deccel
+        }
+
+        #[inline]
+        pub fn is_deccel(&self) -> bool {
+            self.builder.deccel
+        }
+    // 
+
     pub fn set_omega_tar(&mut self, omega_tar : Omega) -> Result<(), crate::Error> {
         if omega_tar.abs() > self.builder.omega_max.abs() {
             return Err("Target omega is above max_speed!".into())
@@ -157,6 +169,10 @@ impl HRCtrlStepBuilder {
         }
 
         self.speed_f = speed_f;
+    }
+
+    pub fn override_delta(&mut self, delta : Delta) {
+        self.builder.delta = delta
     }
 
     pub fn stop_reason(&self) -> StopReason {

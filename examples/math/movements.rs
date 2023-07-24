@@ -13,10 +13,10 @@ fn main() -> Result<(), syact::Error> {
     println!("#################");
  
     let mut group = [
-        Stepper::new_sim(),
-        Stepper::new_sim(),
-        Stepper::new_sim(),
-        Stepper::new_sim()
+        Stepper::new_gen(),
+        Stepper::new_gen(),
+        Stepper::new_gen(),
+        Stepper::new_gen()
     ]; 
 
     group.write_data(CompData::GEN);

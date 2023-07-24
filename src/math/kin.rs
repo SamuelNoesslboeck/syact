@@ -2,6 +2,12 @@ use crate::units::*;
 
 pub const ROOT_EPSILON : f32 = -1.0e-4;
 
+impl Time {
+    pub fn from_omega_start_end(omega_0 : Omega, omega : Omega, delta : Delta) -> Self {
+        2.0 * delta / (omega_0 + omega)
+    }
+}
+
 impl Delta {
     #[inline]
     pub fn from_omega_start_end(omega_0 : Omega, omega : Omega, time : Time) -> Delta {
@@ -11,6 +17,12 @@ impl Delta {
     #[inline]
     pub fn from_omega_alpha(omega_0 : Omega, alpha : Alpha, time : Time) -> Delta {
         omega_0 * time + alpha * time * time / 2.0
+    }
+}
+
+impl Omega {
+    pub fn from_delta_time_0(omega_0 : Omega, delta : Delta, time : Time) -> Self {
+        2.0 * delta / time - omega_0
     }
 }
 

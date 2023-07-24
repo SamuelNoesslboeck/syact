@@ -76,37 +76,82 @@ use crate::units::*;
     }   
 
 // Advanced builders
-    pub struct Path<D : Iterator<Item = [Delta; N]>, T : Iterator<Item = Time>, const N : usize> {
-        iter_d : D,
-        iter_t : T,
-
+    pub struct Path<const N : usize> {
+        builders : [HRCtrlStepBuilder; N],
         stack_d : Vec<[Delta; N]>,
+        stack_o : Vec<[Omega; N]>,
         stack_t : Vec<Time>,
 
         stack_size : usize
     }
 
-    impl<D : Iterator<Item = [Delta; N]>, T : Iterator<Item = Time>, const N : usize> Path<D, T, N> {
-        pub fn new(iter_d : D, iter_t : T, stack_size : usize) -> Self {
+    impl<const N : usize> Path<N> {
+        pub fn new(builders : [HRCtrlStepBuilder; N], stack_size : usize) -> Self {
             Self {
-                iter_d,
-                iter_t,
+                builders,
 
                 stack_d: vec![[Delta::ZERO; N]; stack_size],
+                stack_o: vec![[Omega::ZERO; N]; stack_size],
                 stack_t: vec![Time::ZERO; stack_size],
 
                 stack_size
             }
         }
 
+        // Stack writing
+            #[inline]
+            pub fn index_d(&self, i : usize, n : usize) -> Delta {
+                self.stack_d[i % self.stack_size][n]
+            }   
+
+            #[inline]
+            pub fn index_o(&self, i : usize, n : usize) -> Omega {
+                self.stack_o[i & self.stack_size][n]
+            }
+
+            #[inline]
+            pub fn index_t(&self, i : usize) -> Time {
+                self.stack_t[i % self.stack_size]
+            }
+
+            pub fn write_t(&mut self, i : usize, t : Time) {
+                self.stack_t[i] = t
+            }
+
+            pub fn write_o(&mut self, i : usize, n : usize, o : Omega) {
+                self.stack_o[i][n] = o;
+            }
+        // 
+
         #[inline]
-        fn stack_d(&self, i : usize, n : usize) -> Delta {
-            self.stack_d[i % self.stack_size][n]
+        pub fn next_omega(&self, i : usize, n : usize) -> Omega {
+            Omega::from_delta_time_0(self.index_o(i, n), self.index_d(i, n), self.index_t(i))
         }
 
         #[inline]
-        fn stack_t(&self, i : usize) -> Time {
-            self.stack_t[i % self.stack_size]
+        pub fn omega_max(&self, i : usize, n : usize) -> Omega {
+            self.index_d(i, n) / self.index_t(i)
         }
+
+        #[inline]
+        pub fn omega_diff_req(&self, i : usize, n : usize) -> Omega {
+            self.omega_max(i, n) - self.index_o(i, n)
+        }
+
+        // pub fn next(&mut self, i : usize, n : usize) {
+        //     // let o_aw = 
+        //     // self.builders[n].override_delta(self.index_d(i, n));
+        //     // self.builders[n].set_omega_tar(self.index_o(i + 1, n)).unwrap();      // TODO: Handle overspeed
+
+        //     // if let Some(time) = self.builders[n].next() {
+        //     //     if time > self.index_t(i) {
+        //     //         self.write_t(i, time);
+
+        //     //         for _n in 0 .. n {
+                        
+        //     //         }
+        //     //     }
+        //     // } 
+        // }
     }
 //

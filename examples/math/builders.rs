@@ -12,7 +12,7 @@ use syact::{prelude::*, math::{HRCtrlStepBuilder, HRLimitedStepBuilder, HRStepBu
 
 fn main() -> Result<(), syact::Error> {
     // Initialize a new stepper motor with generic values (simple NEMA 17 motor with 12V ...)
-    let mut stepper = Stepper::new_sim();
+    let mut stepper = Stepper::new_gen();
     stepper.write_data(CompData::GEN);
     stepper.setup()?;
 

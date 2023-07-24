@@ -194,7 +194,7 @@ impl<C : Controller + Send + 'static> HRStepper<C> {
         // Drive each point in the curve
         for point in cur.enumerate() {
             Self::use_ctrl(&mut self.ctrl, |ctrl| {
-                ctrl.step(point.1);
+                ctrl.step_no_wait(point.1);
             });
             self.set_pos(self.pos() + if self.dir().as_bool() { 1 } else { -1 });
         }
@@ -261,13 +261,13 @@ impl<C : Controller + Send + 'static> HRStepper<C> {
         cur.set_speed_f(speed_f);
         cur.set_steps_max(self.consts.steps_from_ang_abs(delta, self.micro) - 1);
 
-        Self::use_ctrl(&mut self.ctrl, || {
-
-        });
-
         let steps = self.drive_curve(cur) + 1;
 
-        Ok(delta)
+        Self::use_ctrl(&mut self.ctrl, |ctrl| {
+            ctrl.step_no_wait(Time::ZERO);
+        });
+
+        Ok(self.consts.ang_from_steps(steps, self.micro))
     }
 
     fn drive_simple_int(&mut self, delta : Delta, speed_f : f32, intr : Interrupter, intr_data : &mut dyn MeasData) 

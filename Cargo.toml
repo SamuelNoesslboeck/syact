@@ -95,4 +95,12 @@ path = "examples/dc_motors.rs"
   [[example]]
   name = "math-movements"
   path = "examples/math/movements.rs"
+
+  [[example]]
+  name = "math-path"
+  path = "examples/math/path.rs"
+
+  [[example]]
+  name = "math-time"
+  path = "examples/math/time.rs"
 #
