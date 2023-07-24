@@ -11,20 +11,20 @@ struct TestGroup {
 #[test]
 fn group_dyn() {
     let group_arr_stat = [
-        Stepper::new_sim()
+        Stepper::new_gen()
     ];
     let _group_arr_ref = &group_arr_stat;
 
     let group_dyn_stat : [Box<dyn SyncComp>; 1] = [ 
-        Box::new(Stepper::new_sim())
+        Box::new(Stepper::new_gen())
     ];
     let _group_dyn_ref = &group_dyn_stat;
 
     let _gammas = group_arr_stat.gammas();
 
     let test = TestGroup {
-        base: Stepper::new_sim(),
-        arm1: Stepper::new_sim()
+        base: Stepper::new_gen(),
+        arm1: Stepper::new_gen()
     };
 
     let _gammas = test.gammas();

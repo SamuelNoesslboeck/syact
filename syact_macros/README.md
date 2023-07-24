@@ -21,8 +21,8 @@ struct TestGroup {
 
 fn main() {
     let test = TestGroup {
-        base: Stepper::new_sim(StepperConst::GEN),
-        arm: Stepper::new_sim(StepperConst::GEN)
+        base: Stepper::new_gen(StepperConst::GEN),
+        arm: Stepper::new_gen(StepperConst::GEN)
     };
 
     let test_ref : &dyn SyncCompGroup<2> = &test;

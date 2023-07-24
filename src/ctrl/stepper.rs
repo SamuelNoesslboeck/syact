@@ -34,7 +34,7 @@ cfg_if::cfg_if! {
             /// Creates a new generic stepper with both pins set to [pin::ERR_PIN] just for simulation and testing purposes
             #[inline]
             pub fn new_gen() -> Self {
-                Self::new(GenericPWM::new_sim(), StepperConst::GEN)
+                Self::new(GenericPWM::new_gen(), StepperConst::GEN)
             }
         }
     } else {
@@ -86,7 +86,7 @@ impl GenericPWM {
         }) 
     }
 
-    pub fn new_sim() -> Self {
+    pub fn new_gen() -> Self {
         Self::new(ERR_PIN, ERR_PIN).unwrap()
     }
 
