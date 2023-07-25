@@ -39,6 +39,9 @@ fn main() -> Result<(), syact::Error> {
     let addr : String = matches.get_one::<String>("addr").expect("A valid addr has to be provided!").clone();
 
     let mut stepper = Stepper::new(GenericPWM::new(pin_step, pin_dir)?, StepperConst::GEN);
+    stepper.write_data(CompData::GEN);
+    stepper.setup()?; 
+    
     let ctrl = syiot::remote::Control::new(Handler { stepper: &mut stepper });
 
     ctrl.listen(syiot::remote::Transport::FramedTcp, addr)?;
