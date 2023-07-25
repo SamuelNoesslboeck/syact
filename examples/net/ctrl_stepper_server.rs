@@ -13,13 +13,15 @@ impl<'a> ControlHandler<magicbox::State> for Handler<'a> {
 
     fn on_msg(&mut self, msg : Result<magicbox::State, syiot::Error>) {
         if let Ok(state) = msg {
+            dbg!(&state);
+            
             let dir = if state.joystick_x >= 0 {
                 Direction::CW
             } else {
                 Direction::CCW
             };
 
-            self.stepper.drive(dir, (state.joystick_x.abs() as f32 / 100.0).min(1.0)).unwrap();
+            self.stepper.drive(dir, (state.joystick_x as f32 / 100.0).min(1.0)).unwrap();
         } else {
             dbg!(msg.err());
         }
