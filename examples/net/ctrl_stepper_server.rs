@@ -20,6 +20,8 @@ impl<'a> ControlHandler<magicbox::State> for Handler<'a> {
             };
 
             self.stepper.drive(dir, (state.joystick_x.abs() as f32 / 100.0).min(1.0)).unwrap();
+        } else {
+            dbg!(msg.err());
         }
     }
 }
@@ -41,7 +43,7 @@ fn main() -> Result<(), syact::Error> {
     let mut stepper = Stepper::new(GenericPWM::new(pin_step, pin_dir)?, StepperConst::GEN);
     stepper.write_data(CompData::GEN);
     stepper.setup()?; 
-    
+
     let ctrl = syiot::remote::Control::new(Handler { stepper: &mut stepper });
 
     ctrl.listen(syiot::remote::Transport::FramedTcp, addr)?;

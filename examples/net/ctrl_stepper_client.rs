@@ -19,5 +19,6 @@ fn main() -> Result<(), syact::Error> {
     
     loop {
         client.send(mbox.update()?)?;
+        std::thread::sleep(core::time::Duration::from_millis(10));
     }
 }
