@@ -74,7 +74,7 @@ fn main() -> Result<(), syact::Error> {
     ctrl.setup()?;
 
     // Apply some loads
-    ctrl.apply_inertia(Inertia(0.2));
+    ctrl.apply_inertia(Inertia(0.2));     
     ctrl.apply_force(Force(0.10));
 
     ctrl.set_omega_max(OMEGA);
@@ -97,7 +97,7 @@ fn main() -> Result<(), syact::Error> {
     - [x] Continuous movements
     - [ ] Microstepping
       - [x] Preconfigured
-      - [ ] With signals to set by the control
+      - [ ] With signals to be set by the controller
     - [ ] Inverting logical signals if desired
   - [x] [Servo motors](/docs/motors/servos.md)
   - [x] [DC motors](/docs/motors/dc_motors.md)
@@ -106,11 +106,17 @@ fn main() -> Result<(), syact::Error> {
   - [x] Gear joint
   - [x] Cylinder-triangle
   - [x] [Conveyor](/examples/simple_conv/src/main.rs)
+  - [x] DC-Motor
 - [x] [Tools](/docs/tools.md)
   - [x] Tongs
   - [x] Axial joint
 - [x] Calculation
-  - [x] Complex acceleration curves
+  - [ ] Stepper motor curves
+    - [ ] Low resolution
+    - [x] High resolution
+  - [ ] Paths
+    - [x] Point-To-Point
+    - [ ] Linear
   - [x] Overloads
   - [x] Forces
   - [x] Inertias

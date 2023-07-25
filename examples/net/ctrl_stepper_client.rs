@@ -1,6 +1,6 @@
 use clap::{command, arg, value_parser};
 use syact::prelude::*;
-use syiot::remote::ControlHandler;
+use syiot::remote::{ControlHandler, ControlClient};
 
 pub struct Handler<'a> {
     stepper : &'a mut Stepper
@@ -28,21 +28,19 @@ fn main() -> Result<(), syact::Error> {
     let matches = command!() 
         .about("Moves a stepper motor with a generic PWM controller connected to the pins 'pin_step' and 'pin_dir' by the given distance 
         'delta' with the maximum speed 'omega', optionally enabling microstepping with the microstepcount 'micro'")
-        .arg(arg!([pin_step] "Pin number of the step pin").value_parser(value_parser!(u8)))
-        .arg(arg!([pin_dir] "Pin number of the direction pin").value_parser(value_parser!(u8)))
         .arg(arg!([addr] "Network address to listen at").value_parser(value_parser!(String)))
+        .arg(arg!([interface] "Local serial interface the magicbox is connected to").value_parser(value_parser!(String)))
         .get_matches();
 
-    let pin_step : u8 = *matches.get_one("pin_step").expect("A valid step pin has to be provided");
-    let pin_dir : u8 = *matches.get_one("pin_dir").expect("A valid direction pin has to be provided");
-
     let addr : String = matches.get_one::<String>("addr").expect("A valid addr has to be provided!").clone();
+    let interface : String = matches.get_one::<String>("interface").expect("A valid interface has to be provided!").clone();
 
-    let mut stepper = Stepper::new(GenericPWM::new(pin_step, pin_dir)?, StepperConst::GEN);
-    let ctrl = syiot::remote::Control::new(Handler { stepper: &mut stepper });
+    let mut mbox = magicbox::MagicBox::open(interface)?;
 
-    ctrl.listen(syiot::remote::Transport::FramedTcp, addr)?;
-    ctrl.run();
-
-    Ok(())
+    let mut client = ControlClient::new();
+    client.connect(syiot::remote::Transport::FramedTcp, addr)?;
+    
+    loop {
+        client.send(mbox.update()?)?;
+    }
 }
