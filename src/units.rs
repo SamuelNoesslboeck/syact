@@ -495,6 +495,11 @@ additive_unit!(Alpha);
 derive_units!(Omega, Alpha, Time);
 derive_units!(Force, Alpha, Inertia);
 
+/// Represents a change rate in acceleration over time
+/// 
+/// # Unit
+/// 
+/// - Can be either radians per second^3 or millimeters per second^3
 #[derive(Clone, Copy, Debug, Default, Serialize, Deserialize, PartialEq, PartialOrd)]
 pub struct Jolt(pub f32); 
 basic_unit!(Jolt);

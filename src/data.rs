@@ -114,22 +114,29 @@ impl StepperConst {
     }
 
     // Steps
-        /// Get the angular distance of a step Unit rad [Unit 1]
+        /// Get the angular distance of a step in radians, considering microstepping
+        /// - `micro` is the amount of microsteps per full step
         #[inline(always)]
         pub fn step_ang(&self, micro : u8) -> Delta {
             self.full_step_ang() / micro as f32
         }
 
+        /// A full step angle of the motor, ignoring microstepping
+        #[inline(always)]
         pub fn full_step_ang(&self) -> Delta {
             Delta(2.0 * PI / self.n_s as f32)
         }
 
-        /// Time per step for the given omega [Unit s]
+        /// Time per step for the given omega
+        /// 
+        /// # Unit
+        /// 
+        /// Returns the time in seconds
         /// 
         /// # Panics 
         /// 
         /// Panics if the given `omega` is zero 
-        #[inline(always)]
+        #[inline]
         pub fn step_time(&self, omega : Omega, micro : u8) -> Time {
             if (omega == Omega(0.0)) | (omega == Omega(-0.0)) {
                 panic!("The given omega ({}) is zero!", omega);
@@ -138,6 +145,12 @@ impl StepperConst {
             self.step_ang(micro) / omega
         }
 
+        /// Time per full step at the given velocity omega
+        /// 
+        /// # Unit
+        /// 
+        /// Returns the time in seconds
+        #[inline]
         pub fn full_step_time(&self, omega : Omega) -> Time {
             if (omega == Omega(0.0)) | (omega == Omega(-0.0)) {
                 panic!("The given omega ({}) is zero!", omega);

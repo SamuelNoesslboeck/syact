@@ -281,10 +281,14 @@ pub trait SyncComp : Setup {
             Omega(self.gamma_for_this(Gamma(super_omega.into())).into())
         }
 
+        /// Converts the given super alpha into the alpha for this component
+        #[inline]
         fn alpha_for_this(&self, super_alpha : Alpha) -> Alpha {
             Alpha(self.gamma_for_this(Gamma(super_alpha.0)).0)
-        }
+        }   
 
+        /// Converts the given super force into a force for this component
+        #[inline]
         fn force_for_this(&self, super_force : Force) -> Force {
             Force(self.gamma_for_super(Gamma(super_force.0)).0)
         }

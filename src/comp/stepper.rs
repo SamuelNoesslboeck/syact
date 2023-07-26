@@ -6,13 +6,16 @@ pub use syact_macros::StepperCompGroup;
 /// All path and curve calculations are designed for the 
 pub trait StepperMotor : StepperComp {
     // Calculation
+        /// Returns the max torque of the motor at a given speed `omega`
         fn torque_at_speed(&self, omega : Omega) -> Force;
 
+        /// Returns the max acceleration of the motor at a given speed `omega`
         fn alpha_at_speed(&self, omega : Omega) -> Result<Alpha, crate::Error>;
 
         /// The approximate travel time for a point-to-point movement
         fn approx_time_ptp(&self, delta : Delta, speed_f : f32, acc : usize) -> Result<Time, crate::Error>;
 
+        /// Average alphas in a certain acceleration range
         fn alpha_av(&self, omega_0 : Omega, omega_tar : Omega, acc : usize) -> Result<Alpha, crate::Error>;
     //
 
@@ -23,18 +26,22 @@ pub trait StepperMotor : StepperComp {
 /// A component based on a stepper motor
 pub trait StepperComp : SyncComp {
     // Super comp
+        /// The super stepper comp similar to `SyncComp::super_comp()` if the component has one, returns `None` otherwise
         #[inline]
         fn super_stepper_comp(&self) -> Option<&dyn StepperComp> {
             None
         }
 
+        /// The super stepper comp similar to `SyncComp::super_comp()` if the component has one, returns `None` otherwise
         #[inline]
         fn super_stepper_comp_mut(&mut self) -> Option<&mut dyn StepperComp> {
             None
         }
 
+        /// Returns a reference to the motor of the component (either itself or a sub/super-component)
         fn motor(&self) -> &dyn StepperMotor;
 
+        /// Returns a mutable reference to the motor of the component (either itself or a sub/super component)
         fn motor_mut(&mut self) -> &mut dyn StepperMotor;
     // 
 

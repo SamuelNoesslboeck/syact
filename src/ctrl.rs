@@ -53,6 +53,9 @@ pub enum Direction {
 }
 
 impl Direction {
+    /// Creates a new `Direction` value from a bool
+    /// - `true` is `CW`
+    /// - `false` is `CCW`
     pub fn from_bool(b : bool) -> Direction {
         if b { Direction::CW } else { Direction::CCW }
     }
@@ -65,5 +68,17 @@ impl Direction {
             Direction::CCW => false,
             Direction::CW => true
         }
+    }
+}
+
+impl Into<bool> for Direction {
+    fn into(self) -> bool {
+        self.as_bool()
+    }
+}
+
+impl From<bool> for Direction {
+    fn from(value: bool) -> Self {
+        Direction::from_bool(value)
     }
 }
