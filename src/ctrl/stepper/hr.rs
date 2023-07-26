@@ -60,6 +60,8 @@ pub struct HRStepper<C : Controller + Send + Send> {
     /// Variables of the component
     vars : CompVars,
 
+    /// The current direction of the stepper motor
+    dir : Direction,
     /// The current absolute position since set to a value
     pos : Arc<Mutex<i64>>,
     /// Amount of microsteps in a full step
@@ -107,7 +109,8 @@ impl<C : Controller + Send> HRStepper<C> {
                 ctrl: Arc::new(Mutex::new(ctrl)),
                 consts, 
                 vars: CompVars::ZERO, 
-    
+                
+                dir: Direction::default(),
                 pos : Arc::new(Mutex::new(0)),
                 micro: 1,
                 omega_max: Omega::ZERO,
@@ -162,15 +165,6 @@ impl<C : Controller + Send> HRStepper<C> {
             return self.pos.lock().unwrap().clone();
         } else {
             return self.pos;
-        }}
-    }
-
-    /// Returns the current direction of the motor
-    pub fn dir(&self) -> Direction {
-        cfg_if::cfg_if!{ if #[cfg(feature = "embed-thread")] {
-            return self.ctrl.lock().unwrap().dir();
-        } else {
-            return self.ctrl.dir();
         }}
     }
 
@@ -321,10 +315,17 @@ impl<C : Controller + Send + 'static> HRStepper<C> {
         Ok(())
     }
 
+    /// Returns the current direction of the motor
+    pub fn dir(&self) -> Direction {
+        self.dir
+    }
+
     /// Sets the driving direction of the component. Note that the direction of the motor depends on the connection of the cables.
     /// The "dir"-pin is directly set to the value given
     #[inline(always)]
     pub fn set_dir(&mut self, dir : Direction) {
+        self.dir = dir;
+
         Self::use_ctrl(&mut self.ctrl, |ctrl| {
             ctrl.set_dir(dir);
         }); 

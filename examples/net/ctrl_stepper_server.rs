@@ -1,4 +1,4 @@
-use clap::{command, arg, value_parser};
+use clap::{command, arg, value_parser, crate_authors, crate_version};
 use syact::prelude::*;
 use syiot::remote::ControlHandler;
 
@@ -26,10 +26,16 @@ impl<'a> ControlHandler<magicbox::State> for Handler<'a> {
             dbg!(msg.err());
         }
     }
+
+    fn on_disconnect(&mut self) {
+        println!(" => Controller disconnected!");
+    }
 }
 
 fn main() -> Result<(), syact::Error> {
-    let matches = command!() 
+    let matches = command!()
+        .author(crate_authors!())
+        .version(crate_version!())
         .about("Moves a stepper motor with a generic PWM controller connected to the pins 'pin_step' and 'pin_dir' by the given distance 
         'delta' with the maximum speed 'omega', optionally enabling microstepping with the microstepcount 'micro'")
         .arg(arg!([pin_step] "Pin number of the step pin").value_parser(value_parser!(u8)))
