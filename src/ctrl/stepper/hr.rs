@@ -691,10 +691,6 @@ impl<C : Controller + Send + 'static> AsyncComp for HRStepper<C> {
             panic!("Bad speed_f! {}", speed_f);
         }
 
-        if self.active {
-            return Err(crate::lib_error("The component is already active!"));
-        }
-
         let omega_max = self.omega_max();
         let omega_0 = omega_max * self.speed_f;
         let omega_tar = omega_max * speed_f;

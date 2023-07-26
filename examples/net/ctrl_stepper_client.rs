@@ -1,28 +1,5 @@
 use clap::{command, arg, value_parser};
-use syact::prelude::*;
-use syiot::remote::{ControlHandler, ControlClient};
-
-pub struct Handler<'a> {
-    stepper : &'a mut Stepper
-}
-
-impl<'a> ControlHandler<magicbox::State> for Handler<'a> {
-    fn on_accept(&mut self) {
-        println!(" => Controller accepted")
-    }
-
-    fn on_msg(&mut self, msg : Result<magicbox::State, syiot::Error>) {
-        if let Ok(state) = msg {
-            let dir = if state.joystick_x >= 0 {
-                Direction::CW
-            } else {
-                Direction::CCW
-            };
-
-            self.stepper.drive(dir, (state.joystick_x.abs() as f32 / 100.0).min(1.0)).unwrap();
-        }
-    }
-}
+use syiot::remote::ControlClient;
 
 fn main() -> Result<(), syact::Error> {
     let matches = command!() 
@@ -42,5 +19,6 @@ fn main() -> Result<(), syact::Error> {
     
     loop {
         client.send(mbox.update()?)?;
+        std::thread::sleep(core::time::Duration::from_millis(10));
     }
 }

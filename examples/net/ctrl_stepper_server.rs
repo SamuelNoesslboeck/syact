@@ -13,13 +13,17 @@ impl<'a> ControlHandler<magicbox::State> for Handler<'a> {
 
     fn on_msg(&mut self, msg : Result<magicbox::State, syiot::Error>) {
         if let Ok(state) = msg {
+            dbg!(&state);
+            
             let dir = if state.joystick_x >= 0 {
                 Direction::CW
             } else {
                 Direction::CCW
             };
 
-            self.stepper.drive(dir, (state.joystick_x.abs() as f32 / 100.0).min(1.0)).unwrap();
+            self.stepper.drive(dir, (state.joystick_x as f32 / 100.0).min(1.0)).unwrap();
+        } else {
+            dbg!(msg.err());
         }
     }
 }
@@ -39,6 +43,9 @@ fn main() -> Result<(), syact::Error> {
     let addr : String = matches.get_one::<String>("addr").expect("A valid addr has to be provided!").clone();
 
     let mut stepper = Stepper::new(GenericPWM::new(pin_step, pin_dir)?, StepperConst::GEN);
+    stepper.write_data(CompData::GEN);
+    stepper.setup()?; 
+
     let ctrl = syiot::remote::Control::new(Handler { stepper: &mut stepper });
 
     ctrl.listen(syiot::remote::Transport::FramedTcp, addr)?;
