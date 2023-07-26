@@ -111,6 +111,14 @@ path = "examples/dc_motors.rs"
 
 # Net
   [[example]]
+  name = "net-ctrl_client"
+  path = "examples/net/ctrl_client.rs"
+
+  [[example]]
+  name = "net-ctrl_server"
+  path = "examples/net/ctrl_server.rs"
+
+  [[example]]
   name = "net-ctrl_stepper_client"
   path = "examples/net/ctrl_stepper_client.rs"
 
