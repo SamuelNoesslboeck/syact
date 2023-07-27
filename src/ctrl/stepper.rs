@@ -6,10 +6,10 @@ use crate::StepperConst;
 use crate::units::*;
 
 // Submodules
-#[cfg(feature = "std")]
-mod hr;
-#[cfg(feature = "std")]
-pub use hr::*; 
+cfg_if::cfg_if! { if #[cfg(feature = "std")] {
+    mod hr;
+    pub use hr::*; 
+} }
 
 mod lr;
 pub use lr::*;

@@ -1,4 +1,5 @@
 use core::ops::{AddAssign, DerefMut, MulAssign};
+use core::sync::atomic::{AtomicBool, AtomicI64, Ordering};
 
 // Include stuff for embedded threading if the feature is enabled
 cfg_if::cfg_if! {
@@ -11,13 +12,14 @@ cfg_if::cfg_if! {
     } 
 }
 
-use crate::math::force::torque_dyn;
-use crate::prelude::StepperMotor;
+use atomic_float::AtomicF32;
+
 use crate::{SyncComp, Setup, lib_error, Direction};
-use crate::comp::stepper::StepperComp;
+use crate::comp::stepper::{StepperComp, StepperMotor};
 use crate::ctrl::{Controller, Interrupter};
 use crate::data::{CompData, StepperConst, CompVars}; 
 use crate::math::{HRCtrlStepBuilder, HRLimitedStepBuilder, HRStepBuilder};
+use crate::math::force::torque_dyn;
 use crate::math::kin;
 use crate::meas::MeasData;
 use crate::units::*;
@@ -28,6 +30,14 @@ use crate::units::*;
 /// - constant time to drive after curve : `Option<Time>`
 #[cfg(feature = "embed-thread")]
 type AsyncMsg = (HRCtrlStepBuilder, bool, Option<Time>);
+
+pub enum _AsyncMsg {
+    DriveUnfixed(HRCtrlStepBuilder),
+    DriveFixed(HRLimitedStepBuilder),
+    DriveSpeed(Omega),
+    Interrupt
+}
+
 /// Steps moved by the thread
 #[cfg(feature = "embed-thread")]
 type AsyncRes = i64;
@@ -61,14 +71,15 @@ pub struct HRStepper<C : Controller + Send + Send> {
     vars : CompVars,
 
     /// The current direction of the stepper motor
-    dir : Direction,
+    _dir : Arc<AtomicBool>,
     /// The current absolute position since set to a value
-    pos : Arc<Mutex<i64>>,
+    _pos : Arc<AtomicI64>,
     /// Amount of microsteps in a full step
     micro : u8,
 
     /// Maxium omega of the component
     omega_max : Omega,
+    omega_cur : Arc<AtomicF32>,
 
     /// Linked data shared between different components
     data : CompData,
@@ -77,7 +88,7 @@ pub struct HRStepper<C : Controller + Send + Send> {
     sender : Option<Sender<Option<AsyncMsg>>>,
     receiver : Option<Receiver<AsyncRes>>,
 
-    active : bool,
+    active : Arc<AtomicBool>,
     speed_f : f32
 }
 
@@ -110,10 +121,12 @@ impl<C : Controller + Send> HRStepper<C> {
                 consts, 
                 vars: CompVars::ZERO, 
                 
-                dir: Direction::default(),
-                pos : Arc::new(Mutex::new(0)),
+                _dir: Arc::new(AtomicBool::new(true)),
+                _pos : Arc::new(AtomicI64::new(0)),
                 micro: 1,
+
                 omega_max: Omega::ZERO,
+                omega_cur: Arc::new(AtomicF32::new(Omega::ZERO.0)),
     
                 data: CompData::ERROR,
     
@@ -121,7 +134,7 @@ impl<C : Controller + Send> HRStepper<C> {
                 sender: None,
                 receiver: None,
     
-                active: false,
+                active: Arc::new(AtomicBool::new(false)),
                 speed_f: 0.0
             }
         } else {
@@ -162,7 +175,7 @@ impl<C : Controller + Send> HRStepper<C> {
     /// Returns the position of the stepper motors in steps 
     pub fn pos(&self) -> i64 {
         cfg_if::cfg_if! { if #[cfg(feature = "embed-thread")] {
-            return self.pos.lock().unwrap().clone();
+            return self._pos.load(Ordering::Relaxed);
         } else {
             return self.pos;
         }}
@@ -172,10 +185,14 @@ impl<C : Controller + Send> HRStepper<C> {
     /// This function *does not move the motor*, see `drive` functions for movements
     pub fn set_pos(&mut self, pos : i64) {
         cfg_if::cfg_if! { if #[cfg(feature = "embed-thread")] {
-            *self.pos.lock().unwrap().deref_mut() = pos;
+            self._pos.store(pos, Ordering::Relaxed);
         } else {
             self.pos = pos;
         }}
+    }
+
+    pub fn is_active(&self) -> bool {
+        self.active.load(Ordering::Relaxed)
     }
 }
 
@@ -317,14 +334,14 @@ impl<C : Controller + Send + 'static> HRStepper<C> {
 
     /// Returns the current direction of the motor
     pub fn dir(&self) -> Direction {
-        self.dir
+        Direction::from_bool(self._dir.load(Ordering::Relaxed))
     }
 
     /// Sets the driving direction of the component. Note that the direction of the motor depends on the connection of the cables.
     /// The "dir"-pin is directly set to the value given
     #[inline(always)]
     pub fn set_dir(&mut self, dir : Direction) {
-        self.dir = dir;
+        self._dir.store(dir.as_bool(), Ordering::Relaxed);
 
         Self::use_ctrl(&mut self.ctrl, |ctrl| {
             ctrl.set_dir(dir);
@@ -335,22 +352,25 @@ impl<C : Controller + Send + 'static> HRStepper<C> {
 // Async helper functions
 #[cfg(feature = "embed-thread")]
 impl<C : Controller + Send + 'static> HRStepper<C> {
-    fn clear_active_status(&mut self) {
+    fn clear_active_status(&mut self) -> Result<(), crate::Error> {
         let recv : &Receiver<AsyncRes>;
 
         if let Some(_recv) = &self.receiver {
             recv = _recv;
         } else {
-            return; // TODO: Maybe add proper error message? 
+            return Err(no_async());
         }
 
         loop {
+            // Receive all messages
             if recv.try_recv().is_err() {
                 break;
             }
         }
 
-        self.active = false;
+        self.active.store(false, Ordering::Relaxed);
+
+        Ok(())
     }
 
     fn drive_curve_async(&mut self, curve : HRCtrlStepBuilder, intr : bool, t_const : Option<Time>) -> Result<(), crate::Error> {
@@ -359,7 +379,7 @@ impl<C : Controller + Send + 'static> HRStepper<C> {
         // println!(" => Curve: {}; Last: {:?}; t_const: {:?}", curve.len(), curve.last(), t_const);
 
         if let Some(sender) = &self.sender {
-            self.active = true;
+            self.active.store(true, Ordering::Relaxed);
             sender.send(Some((curve, intr, t_const)))?; 
             Ok(())
         } else {
@@ -396,7 +416,7 @@ impl<C : Controller + Send + 'static> HRStepper<C> {
         let (sender_thr, receiver_com) : (Sender<AsyncRes>, Receiver<AsyncRes>) = channel();
 
         let ctrl_mut = self.ctrl.clone();
-        let pos = self.pos.clone();
+        let pos = self._pos.clone();
 
         self.thr = Some(std::thread::spawn(move || {
             let mut curve : HRCtrlStepBuilder;
@@ -436,7 +456,7 @@ impl<C : Controller + Send + 'static> HRStepper<C> {
 
                 for step  in curve{
                     ctrl.step(step);
-                    pos.lock().unwrap().add_assign(if ctrl.dir().as_bool() { 1 } else { -1 });
+                    pos.fetch_add(if ctrl.dir().as_bool() { 1 } else { -1 }, Ordering::Relaxed);
 
                     if intr {
                         match receiver_thr.try_recv() {
@@ -464,7 +484,7 @@ impl<C : Controller + Send + 'static> HRStepper<C> {
                 if let Some(t_cont) = cont {
                     loop {
                         ctrl.step(t_cont);
-                        pos.lock().unwrap().add_assign(if ctrl.dir().as_bool() { 1 } else { -1 });
+                        pos.fetch_add(if ctrl.dir().as_bool() { 1 } else { -1 }, Ordering::Relaxed);
                         index += 1;
 
                         match receiver_thr.try_recv() {
@@ -549,7 +569,7 @@ impl<C : Controller + Send + 'static> SyncComp for HRStepper<C> {
                 return Err(no_async());
             }
 
-            if !self.active {
+            if !self.is_active() {
                 return Err(not_active());
             }
 
@@ -559,7 +579,8 @@ impl<C : Controller + Send + 'static> SyncComp for HRStepper<C> {
                 Delta::NAN
             };
 
-            self.active = false;
+            self.active.store(false, Ordering::Relaxed);
+
             Ok(delta)
         }
     //
@@ -567,19 +588,13 @@ impl<C : Controller + Send + 'static> SyncComp for HRStepper<C> {
     // Position
         #[inline]
         fn gamma(&self) -> Gamma {
-            #[cfg(feature = "std")] {
-                return Gamma::ZERO + self.consts.ang_from_steps(self.pos.lock().unwrap().clone(), self.micro); 
-            }
-
-            #[cfg(not(feature = "std"))] {
-                return Gamma::ZERO + self.consts.ang_from_steps(self.pos); 
-            }
+            return Gamma::ZERO + self.consts.ang_from_steps(self.pos(), self.micro); 
         }   
 
         #[inline]
         fn write_gamma(&mut self, pos : Gamma) {
             #[cfg(feature = "std")] {
-                *self.pos.lock().unwrap().deref_mut() = self.consts.steps_from_ang(pos - Gamma::ZERO, self.micro);
+                self.set_pos(self.consts.steps_from_ang(pos - Gamma::ZERO, self.micro))
             }
 
             #[cfg(not(feature = "std"))] {
@@ -646,13 +661,7 @@ impl<C : Controller + Send + 'static> SyncComp for HRStepper<C> {
         }
 
         fn set_end(&mut self, set_gamma : Gamma) {
-            #[cfg(feature = "std")] {
-                *self.pos.lock().unwrap().deref_mut() = self.consts.steps_from_ang(set_gamma - Gamma::ZERO, self.micro);
-            }
-
-            #[cfg(not(feature = "std"))] {
-                self.pos = self.consts.steps_from_ang(set_gamma - Gamma::ZERO);
-            }
+            self.set_pos(self.consts.steps_from_ang(set_gamma - Gamma::ZERO, self.micro));
     
             self.set_limit(
                 if self.dir().as_bool() { self.vars.lim.min } else { Some(set_gamma) },
@@ -668,10 +677,10 @@ impl<C : Controller + Send + 'static> SyncComp for HRStepper<C> {
         }
 
         #[inline(always)]
-        fn apply_force(&mut self, t : Force) {
+        fn apply_force(&mut self, t : Force) {      // TODO: Overloads
             if t >= self.consts.t_s {
-                #[cfg(feature = "std")]
-                println!("Load will not be applied! {}", t);
+                // TODO: Notify
+                // println!("Load will not be applied! {}", t);     
                 return;
             }
 
@@ -762,10 +771,7 @@ impl<C : Controller + Send + 'static> StepperComp for HRStepper<C> {
         }
 
         fn set_micro(&mut self, micro : u8) {
-            if cfg!(feature = "std") {
-                self.pos.lock().unwrap().mul_assign((micro / self.micro) as i64);
-            }
-
+            self.set_pos(self.pos() * micro as i64 / self.micro as i64);
             self.micro = micro;
         }
     //
