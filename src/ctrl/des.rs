@@ -24,7 +24,7 @@ impl TryFrom<StepperDes> for Stepper {
 
 impl Into<StepperDes> for &Stepper {
     fn into(self) -> StepperDes {
-        let ctrl = self.ctrl.lock().unwrap();
+        let ctrl = self._ctrl.lock().unwrap();
 
         StepperDes { 
             consts: self.consts().clone(), 

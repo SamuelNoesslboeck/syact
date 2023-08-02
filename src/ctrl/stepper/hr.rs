@@ -1,4 +1,4 @@
-use core::ops::{AddAssign, DerefMut, MulAssign};
+use core::ops::DerefMut;
 use core::sync::atomic::{AtomicBool, AtomicI64, Ordering};
 
 // Include stuff for embedded threading if the feature is enabled
@@ -24,17 +24,15 @@ use crate::math::kin;
 use crate::meas::MeasData;
 use crate::units::*;
 
-/// Elements are:
-/// - the curve to drive : `Vec<Time>`
-/// - interuptable : `bool`
-/// - constant time to drive after curve : `Option<Time>`
-#[cfg(feature = "embed-thread")]
-type AsyncMsg = (HRCtrlStepBuilder, bool, Option<Time>);
-
-pub enum _AsyncMsg {
-    DriveUnfixed(HRCtrlStepBuilder),
+/// Message sent in the thread
+enum AsyncMsg {
+    // /// 
+    // DriveUnfixed(HRCtrlStepBuilder),
+    /// Moves the stepper motor by a fixed distance 
     DriveFixed(HRLimitedStepBuilder),
-    DriveSpeed(Omega),
+    /// Moves the stepper motor at a constant speed
+    DriveSpeed(HRCtrlStepBuilder, Time),
+    /// Interrupts and stops the current movement
     Interrupt
 }
 
@@ -63,7 +61,7 @@ fn not_active() -> crate::Error {
 #[cfg(feature = "embed-thread")]
 pub struct HRStepper<C : Controller + Send + Send> {
     /// Underlying controller of the stepper motor
-    pub(crate) ctrl : Arc<Mutex<C>>,
+    pub(crate) _ctrl : Arc<Mutex<C>>,
 
     /// All constants of the stepper motor
     consts : StepperConst,
@@ -79,13 +77,13 @@ pub struct HRStepper<C : Controller + Send + Send> {
 
     /// Maxium omega of the component
     omega_max : Omega,
-    omega_cur : Arc<AtomicF32>,
+    _omega_cur : Arc<AtomicF32>,
 
     /// Linked data shared between different components
     data : CompData,
     
     thr : Option<JoinHandle<()>>,
-    sender : Option<Sender<Option<AsyncMsg>>>,
+    sender : Option<Sender<AsyncMsg>>,
     receiver : Option<Receiver<AsyncRes>>,
 
     active : Arc<AtomicBool>,
@@ -117,7 +115,7 @@ impl<C : Controller + Send> HRStepper<C> {
     pub fn new(ctrl : C, consts : StepperConst) -> Self {
         cfg_if::cfg_if! { if #[cfg(feature = "embed-thread")] {
             Self { 
-                ctrl: Arc::new(Mutex::new(ctrl)),
+                _ctrl: Arc::new(Mutex::new(ctrl)),
                 consts, 
                 vars: CompVars::ZERO, 
                 
@@ -126,7 +124,7 @@ impl<C : Controller + Send> HRStepper<C> {
                 micro: 1,
 
                 omega_max: Omega::ZERO,
-                omega_cur: Arc::new(AtomicF32::new(Omega::ZERO.0)),
+                _omega_cur: Arc::new(AtomicF32::new(Omega::ZERO.0)),
     
                 data: CompData::ERROR,
     
@@ -191,59 +189,94 @@ impl<C : Controller + Send> HRStepper<C> {
         }}
     }
 
+    /// Returns wheiter or not the stepper is actively moving
     pub fn is_active(&self) -> bool {
         self.active.load(Ordering::Relaxed)
     }
+
+    // Current omega
+        pub fn omega_cur(&self) -> Omega {
+            Omega(self._omega_cur.load(Ordering::Relaxed))
+        }
+
+        pub fn set_omega_cur(&mut self, omega_cur : Omega) {
+            self._omega_cur.store(omega_cur.0, Ordering::Relaxed)
+        }
+    // 
 }
 
 // Basic functions
 impl<C : Controller + Send + 'static> HRStepper<C> {
     /// Write a curve of signals to the output pin
-    pub fn drive_curve<I : Iterator<Item = Time>>(&mut self, cur : I) -> i64 {
-        let pos_0 = self.pos();
+    pub fn drive_curve<I : Iterator<Item = Time>>(ctrl : &mut Arc<Mutex<C>>, pos : &Arc<AtomicI64>, omega_cur : &Arc<AtomicF32>, dir : &Arc<AtomicBool>, cur : I) -> i64 {
+        let pos_0 = pos.load(Ordering::Relaxed);
+        // Operation has to move in the same direction over it's whole duration
+        let dir = dir.load(Ordering::Relaxed);      
 
         // Drive each point in the curve
-        for point in cur.enumerate() {
-            Self::use_ctrl(&mut self.ctrl, |ctrl| {
-                ctrl.step_no_wait(point.1);
+        for point in cur {
+            Self::use_ctrl(ctrl, |ctrl| {
+                ctrl.step_no_wait(point);
             });
-            self.set_pos(self.pos() + if self.dir().as_bool() { 1 } else { -1 });
+
+            // Update the current speed
+            omega_cur.store(point.0, Ordering::Relaxed);
+            
+            // Update the position after each step
+            pos.store(
+                pos.load(Ordering::Relaxed) + if dir { 1 } else { -1 }, 
+                Ordering::Relaxed
+            );
         }
 
-        self.pos() - pos_0
+        pos.load(Ordering::Relaxed) - pos_0
     }
 
     /// Drive the given curve with a possibility to interrupt the movement by e.g. a measurement
-    fn drive_curve_int<I : Iterator<Item = Time>>(&mut self, cur : I, intr : Interrupter, intr_data : &mut dyn MeasData) -> (usize, bool) {
-        let dir = self.dir().as_bool();
-
-        let mut trav = 0;
-        let mut interrupred = false;
+    pub fn drive_curve_int<I : Iterator<Item = Time>, F : FnMut() -> bool>(ctrl : &mut Arc<Mutex<C>>, pos : &Arc<AtomicI64>, 
+        omega_cur : &Arc<AtomicF32>, dir : &Arc<AtomicBool>, cur : I, mut intr : F) -> (i64, bool) 
+    {
+        let pos_0 = pos.load(Ordering::Relaxed);
+        // Operation has to move in the same direction over it's whole duration
+        let dir = dir.load(Ordering::Relaxed);      
 
         // Curve starts from
         for point in cur {
-            if intr(intr_data) {
-                interrupred = true;
-                break;
+            // Checks wheiter the interrupt function triggered
+            if intr() {
+                return ( pos.load(Ordering::Relaxed) - pos_0, true );
             }
 
-            Self::use_ctrl(&mut self.ctrl, |ctrl| {
+            Self::use_ctrl(ctrl, |ctrl| {
                 ctrl.step(point);
             });
-            self.set_pos(self.pos() + if dir { 1 } else { -1 });
-            trav += 1;
+
+            // Update the current speed
+            omega_cur.store(point.0, Ordering::Relaxed);
+
+            // Update the position after each step
+            pos.store(
+                pos.load(Ordering::Relaxed) + if dir { 1 } else { -1 }, 
+                Ordering::Relaxed
+            );
         }
 
-        ( trav, interrupred )  
+        ( pos.load(Ordering::Relaxed) - pos_0, false )  
     }
 
+    /// Setup all required parts for a fixed distance drive
+    /// - Limit checks
+    /// - Direction change
     fn setup_drive(&mut self, delta : Delta) -> Result<(), crate::Error> {
         let limit = self.lim_for_gamma(self.gamma() + delta);
 
+        // Checks if the given limit is reached 
         if limit.is_normal() {
             return Err(lib_error("The delta given is not valid"))
         }
-
+        
+        // Changes direction based on distance sign
+        //  => Stays inactive if delta == 0
         if delta > Delta::ZERO {
             self.set_dir(Direction::CW);
         } else if delta < Delta::ZERO {
@@ -251,63 +284,6 @@ impl<C : Controller + Send + 'static> HRStepper<C> {
         }
 
         Ok(())
-    }
-
-    fn drive_simple(&mut self, delta : Delta, speed_f : f32) -> Result<Delta, crate::Error> {
-        if (1.0 < speed_f) | (0.0 > speed_f) {
-            panic!("Invalid speed factor! {}", speed_f)
-        }
-
-        if !delta.is_normal() {
-            return Ok(Delta::ZERO);
-        }
-        
-        self.setup_drive(delta)?;
-
-        let mut cur = HRLimitedStepBuilder::from_builder(
-            HRStepBuilder::from_motor(self, Omega::ZERO)
-        );
-
-        cur.set_omega_tar(self.omega_max())?;
-        cur.set_speed_f(speed_f);
-        cur.set_steps_max(self.consts.steps_from_ang_abs(delta, self.micro) - 1);
-
-        let steps = self.drive_curve(cur) + 1;
-
-        Self::use_ctrl(&mut self.ctrl, |ctrl| {
-            ctrl.step_no_wait(Time::ZERO);
-        });
-
-        Ok(self.consts.ang_from_steps(steps, self.micro))
-    }
-
-    fn drive_simple_int(&mut self, delta : Delta, speed_f : f32, intr : Interrupter, intr_data : &mut dyn MeasData) 
-    -> Result<(Delta, bool), crate::Error> {
-        if (1.0 < speed_f) | (0.0 > speed_f) {
-            panic!("Invalid speed factor! {}", speed_f)
-        }
-
-        if !delta.is_normal() {
-            return Ok((Delta::ZERO, true));
-        }
-        
-        self.setup_drive(delta)?;
-
-        let mut cur = HRLimitedStepBuilder::from_builder(
-            HRStepBuilder::from_motor(self, Omega::ZERO)
-        );
-        
-        cur.set_omega_tar(self.omega_max())?;
-        cur.set_speed_f(speed_f);
-        cur.set_steps_max(self.consts.steps_from_ang_abs(delta, self.micro));
-
-        let (steps, interrupted) = self.drive_curve_int(cur, intr, intr_data);
-
-        if self.dir().as_bool() {
-            Ok((steps as f32 * self.consts.step_ang(self.micro), interrupted))
-        } else {
-            Ok((steps as f32 * -self.consts.step_ang(self.micro), interrupted))
-        }
     }
 }
 
@@ -325,7 +301,7 @@ impl<C : Controller + Send + 'static> HRStepper<C> {
         };
         self.setup_drive(delta)?;
 
-        Self::use_ctrl(&mut self.ctrl, |ctrl| {
+        Self::use_ctrl(&mut self._ctrl, |ctrl| {
             ctrl.step(time);
         });
 
@@ -343,7 +319,7 @@ impl<C : Controller + Send + 'static> HRStepper<C> {
     pub fn set_dir(&mut self, dir : Direction) {
         self._dir.store(dir.as_bool(), Ordering::Relaxed);
 
-        Self::use_ctrl(&mut self.ctrl, |ctrl| {
+        Self::use_ctrl(&mut self._ctrl, |ctrl| {
             ctrl.set_dir(dir);
         }); 
     }
@@ -352,9 +328,16 @@ impl<C : Controller + Send + 'static> HRStepper<C> {
 // Async helper functions
 #[cfg(feature = "embed-thread")]
 impl<C : Controller + Send + 'static> HRStepper<C> {
-    fn clear_active_status(&mut self) -> Result<(), crate::Error> {
+    /// Sets the active status of the component
+    fn set_active_status(&mut self) {
+        self.active.store(true, Ordering::Relaxed)
+    }
+
+    /// Cleans the "active"-status of the stepper motor, enabling new movements
+    fn reset_active_status(&mut self) -> Result<(), crate::Error> {
         let recv : &Receiver<AsyncRes>;
 
+        // Checks wheiter async has been setup yet
         if let Some(_recv) = &self.receiver {
             recv = _recv;
         } else {
@@ -368,72 +351,43 @@ impl<C : Controller + Send + 'static> HRStepper<C> {
             }
         }
 
+        // Reset the active variable
         self.active.store(false, Ordering::Relaxed);
 
         Ok(())
     }
 
-    fn drive_curve_async(&mut self, curve : HRCtrlStepBuilder, intr : bool, t_const : Option<Time>) -> Result<(), crate::Error> {
-        self.clear_active_status();
-
-        // println!(" => Curve: {}; Last: {:?}; t_const: {:?}", curve.len(), curve.last(), t_const);
-
-        if let Some(sender) = &self.sender {
-            self.active.store(true, Ordering::Relaxed);
-            sender.send(Some((curve, intr, t_const)))?; 
-            Ok(())
-        } else {
-            Err(no_async())
-        }
-    }
-
-    fn drive_simple_async(&mut self, delta : Delta, speed_f : f32, t_const : Option<Time>) -> Result<(), crate::Error> {
-        if (1.0 < speed_f) | (0.0 > speed_f) {
-            panic!("Invalid speed factor! {}", speed_f)
-        }
-        
-        if !delta.is_normal() {
-            return Ok(());
-        }
-
-        if self.sender.is_none() {
-            return Err(no_async());
-        }
-        
-        self.setup_drive(delta)?;
-
-        let mut cur = HRCtrlStepBuilder::from_builder(
-            HRStepBuilder::from_motor(self, Omega::ZERO)
-        );
-
-        cur.set_omega_tar(self.omega_max() * speed_f)?;
-
-        self.drive_curve_async(cur, false, t_const)
-    }
-
+    /// Starts the async-embedded-thread used for driving multiple movements at a time
+    /// - A thread is more practical here, as the driving process itself is pretty simple and async should be used for "many complex processes"
     fn setup_async(&mut self) {
-        let (sender_com, receiver_thr) : (Sender<Option<AsyncMsg>>, Receiver<Option<AsyncMsg>>) = channel();
+        // Create communication channels
+        let (sender_com, receiver_thr) : (Sender<AsyncMsg>, Receiver<AsyncMsg>) = channel();
         let (sender_thr, receiver_com) : (Sender<AsyncRes>, Receiver<AsyncRes>) = channel();
 
-        let ctrl_mut = self.ctrl.clone();
+        // Clone the data required for the process
+        let mut ctrl = self._ctrl.clone();
         let pos = self._pos.clone();
+        let omega_cur = self._omega_cur.clone();
+        let dir = self._dir.clone();
 
+        // Initialize the thread
         self.thr = Some(std::thread::spawn(move || {
-            let mut curve : HRCtrlStepBuilder;
-            let mut intr : bool;
-            let mut cont : Option<Time>;
-
-            let mut msg_opt : Option<_> = None;
-            let mut msg : Option<AsyncMsg>;
+            // Message of a previous iteration
+            // - Used for example when a new message is received and the old thread stops
+            let mut msg_prev : Option<_> = None;
+            let mut msg : AsyncMsg;
 
             loop {
-                if let Some(msg_r) = msg_opt { 
+                // Check if a message has been stored up
+                //  => Force to receive new one otherwise
+                if let Some(msg_r) = msg_prev { 
                     msg = msg_r;
-                    msg_opt = None;
+                    msg_prev = None;
                 } else {
                     msg = match receiver_thr.recv() {
-                        Ok(msg_opt) => msg_opt,
+                        Ok(msg_new) => msg_new,
                         Err(_) => {
+                            // TODO: Error handling
                             // println!("Error occured in thread! {}", err.to_string());   // TODO: Improve error message
                             break;
                         }
@@ -441,61 +395,89 @@ impl<C : Controller + Send + 'static> HRStepper<C> {
                 }
 
                 match msg {
-                    Some((msg_curve, msg_intr, msg_cont)) => {
-                        curve = msg_curve;
-                        intr = msg_intr;
-                        cont = msg_cont;
+                    AsyncMsg::DriveFixed(cur) => {
+                        // Drive the curve with an interrupt function, that causes it to exit once a new message has been received
+                        Self::drive_curve_int(&mut ctrl, &pos, &omega_cur, &dir, cur, || {
+                            // Check if a new message is available
+                            if let Ok(msg_new) = receiver_thr.try_recv() {
+                                // Set msg for next run
+                                msg_prev = Some(msg_new);
+            
+                                true
+                            } else {
+                                false
+                            }
+                        });
                     },
-                    None => {
-                        break;
+                    AsyncMsg::DriveSpeed(cur, omega_tar) => {
+                        // Drive the curve with an interrupt function, that causes it to exit once a new message has been received
+                        Self::drive_curve_int(&mut ctrl, &pos, &omega_cur, &dir, cur, || {
+                            // Check if a new message is available
+                            if let Ok(msg_new) = receiver_thr.try_recv() {
+                                // Set msg for next run
+                                msg_prev = Some(msg_new);
+
+                                true
+                            } else {
+                                false
+                            }
+                        });
+
+                        let t_const = 1.0 / omega_tar;
+                        loop {
+                            
+                        };
+                    },
+                    AsyncMsg::Interrupt => {
+
                     }
                 };
 
-                let mut ctrl = ctrl_mut.lock().unwrap();
-                let mut index = 0;
+                // let mut ctrl = ctrl_mut.lock().unwrap();
+                // let mut index = 0;
 
-                for step  in curve{
-                    ctrl.step(step);
-                    pos.fetch_add(if ctrl.dir().as_bool() { 1 } else { -1 }, Ordering::Relaxed);
+                // for step  in curve {
+                //     ctrl.step(step);
+                //     pos.fetch_add(if ctrl.dir().as_bool() { 1 } else { -1 }, Ordering::Relaxed);
 
-                    if intr {
-                        match receiver_thr.try_recv() {
-                            Ok(msg) => { 
-                                msg_opt = Some(msg); 
-                                break;
-                            },
-                            Err(_) => { }
-                        };
-                    }
+                //     if intr {
+                //         match receiver_thr.try_recv() {
+                //             Ok(msg) => { 
+                //                 msg_prev = Some(msg); 
+                //                 break;
+                //             },
+                //             Err(_) => { }
+                //         };
+                //     }
 
-                    index += 1;
-                }
+                //     index += 1;
+                // }
 
-                if msg_opt.is_some() {
-                    continue;
-                }
+                // if msg_prev.is_some() {
+                //     continue;
+                // }
 
-                sender_thr.send(if ctrl.dir().as_bool() {
-                    index as i64
-                } else {
-                    -(index as i64)
-                }).unwrap();
+                // sender_thr.send(if ctrl.dir().as_bool() {
+                //     index as i64
+                // } else {
+                //     -(index as i64)
+                // }).unwrap();
 
-                if let Some(t_cont) = cont {
-                    loop {
-                        ctrl.step(t_cont);
-                        pos.fetch_add(if ctrl.dir().as_bool() { 1 } else { -1 }, Ordering::Relaxed);
-                        index += 1;
+                // if let Some(t_cont) = cont {
+                //     loop {
+                //         ctrl.step(t_cont);
+                //         pos.fetch_add(if ctrl.dir().as_bool() { 1 } else { -1 }, Ordering::Relaxed);
+                //         index += 1;
 
-                        match receiver_thr.try_recv() {
-                            Ok(msg) => { 
-                                msg_opt = Some(msg); 
-                                break;
-                            },
-                            Err(_) => { }
-                        };
-                    }
-                }
+                //         match receiver_thr.try_recv() {
+                //             Ok(msg) => { 
+                //                 msg_prev = Some(msg); 
+                //                 break;
+                //             },
+                //             Err(_) => { }
+                //         };
+                //     }
+                // }
             };
         }));
 
@@ -537,30 +519,154 @@ impl<C : Controller + Send + 'static> SyncComp for HRStepper<C> {
 
     // Movement
         fn drive_rel(&mut self, delta : Delta, speed_f : f32) -> Result<Delta, crate::Error> {
-            self.drive_simple(delta, speed_f)
+            // Check for invalid speed factor (out of bounds)
+            if (1.0 < speed_f) | (0.0 >= speed_f) {
+                panic!("Invalid speed factor! {}", speed_f)
+            }
+            
+            // Check if the delta given is finite
+            if !delta.is_finite() {
+                return Err(format!("Invalid delta distance! {}", delta).into());
+            }
+
+            // If delta is zero, do nothing
+            if delta == Delta::ZERO {
+                return Ok(Delta::ZERO)   
+            }
+            
+            self.setup_drive(delta)?;
+    
+            let mut cur = HRLimitedStepBuilder::from_builder(
+                HRStepBuilder::from_motor(self, Omega::ZERO)
+            );
+    
+            cur.set_omega_tar(self.omega_max())?;
+            cur.set_speed_f(speed_f);
+
+            // The builder generates a curve with one step less then the distance required, 
+            // because for each step signal there has to be a waittime afterwars in order to move correctly.
+            // The last step is made manually, as it is the halting step to stop the curve
+            //
+            // Curve with 6 steps total
+            // Step     Waittime            Last manual step
+            // \/         \/                     \/
+            // | ----- | --- | -- | --- | --\-- |
+            cur.set_steps_max(self.consts.steps_from_ang_abs(delta, self.micro) - 1);
+    
+            let steps = Self::drive_curve(&mut self._ctrl, &self._pos, &self._omega_cur, &self._dir, cur) + 1;
+    
+            Self::use_ctrl(&mut self._ctrl, |ctrl| {
+                ctrl.step_no_wait(Time::ZERO);
+            });
+    
+            Ok(self.consts.ang_from_steps(steps, self.micro))
         }
 
         fn drive_abs(&mut self, gamma : Gamma, speed_f : f32) -> Result<Delta, crate::Error> {
             let delta = gamma - self.gamma();
-            self.drive_simple(delta, speed_f)
+            self.drive_rel(delta, speed_f)
         }
 
         fn drive_rel_int(&mut self, delta : Delta, speed_f : f32, intr : Interrupter, intr_data : &mut dyn MeasData) 
         -> Result<(Delta, bool), crate::Error> {
-            self.drive_simple_int(delta, speed_f, intr, intr_data)
+            // Check for invalid speed factor (out of bounds)
+            if (1.0 < speed_f) | (0.0 >= speed_f) {
+                panic!("Invalid speed factor! {}", speed_f)
+            }
+            
+            // Check if the delta given is finite
+            if !delta.is_finite() {
+                return Err(format!("Invalid delta distance! {}", delta).into());
+            }
+
+            // If delta is zero, do nothing
+            if delta == Delta::ZERO {
+                return Ok((Delta::ZERO, false))   
+            }
+            
+            self.setup_drive(delta)?;
+    
+            let mut cur = HRLimitedStepBuilder::from_builder(
+                HRStepBuilder::from_motor(self, Omega::ZERO)
+            );
+    
+            cur.set_omega_tar(self.omega_max())?;
+            cur.set_speed_f(speed_f);
+
+            // The builder generates a curve with one step less then the distance required, 
+            // because for each step signal there has to be a waittime afterwars in order to move correctly.
+            // The last step is made manually, as it is the halting step to stop the curve
+            //
+            // Curve with 6 steps total
+            // Step     Waittime            Last manual step
+            // \/         \/                     \/
+            // | ----- | --- | -- | --- | --\-- |
+            cur.set_steps_max(self.consts.steps_from_ang_abs(delta, self.micro) - 1);
+    
+            let ( steps, intr ) = Self::drive_curve_int(&mut self._ctrl, &mut self._pos, &self._omega_cur, &mut self._dir, cur, || { true });
+    
+            Self::use_ctrl(&mut self._ctrl, |ctrl| {
+                ctrl.step_no_wait(Time::ZERO);
+            });
+    
+            Ok( ( self.consts.ang_from_steps(steps + 1, self.micro), intr ) )
         }
     // 
 
     // Async
         #[cfg(feature = "std")]
         fn drive_rel_async(&mut self, delta : Delta, speed_f : f32) -> Result<(), crate::Error> {
-            self.drive_simple_async(delta, speed_f, None)
+            // Check for invalid speed factor (out of bounds)
+            if (1.0 < speed_f) | (0.0 >= speed_f) {
+                panic!("Invalid speed factor! {}", speed_f)
+            }
+            
+            // Check if the delta given is finite
+            if !delta.is_finite() {
+                return Err(format!("Invalid delta distance! {}", delta).into());
+            }
+
+            self.reset_active_status();
+
+            // If delta is zero, do nothing
+            if delta == Delta::ZERO {
+                return Ok(())    
+            }
+            
+            self.setup_drive(delta)?;
+    
+            let mut cur = HRLimitedStepBuilder::from_builder(
+                HRStepBuilder::from_motor(self, Omega::ZERO)
+            );
+    
+            cur.set_omega_tar(self.omega_max())?;
+            cur.set_speed_f(speed_f);
+
+            // The builder generates a curve with one step less then the distance required, 
+            // because for each step signal there has to be a waittime afterwars in order to move correctly.
+            // The last step is made manually, as it is the halting step to stop the curve
+            //
+            // Curve with 6 steps total
+            // Step     Waittime            Last manual step
+            // \/         \/                     \/
+            // | ----- | --- | -- | --- | --\-- |
+            cur.set_steps_max(self.consts.steps_from_ang_abs(delta, self.micro) - 1);
+
+            // Only execute if the async thread has been started yet
+            if let Some(sender) = &self.sender {
+                sender.send(AsyncMsg::DriveFixed(cur))?; 
+            } else {
+                return Err(no_async());
+            }
+
+            self.set_active_status();
+            
         }
 
         #[cfg(feature = "std")]
         fn drive_abs_async(&mut self, gamma : Gamma, speed_f : f32) -> Result<(), crate::Error> {
             let delta = gamma - self.gamma();
-            self.drive_simple_async(delta, speed_f, None)
+            self.drive_rel_async(delta, speed_f)
         }
         
         #[cfg(feature = "std")]
@@ -720,10 +826,10 @@ impl<C : Controller + Send + 'static> AsyncComp for HRStepper<C> {
 
         if dir == self.dir() {
             builder.set_omega_tar(omega_tar)?;
-            self.drive_curve_async(builder, true, t_const)?;
+            // self.drive_fixed_async(builder, true, t_const)?;
         } else {
             builder.set_omega_tar(Omega::ZERO)?;
-            self.drive_curve_async(builder, true, None)?;
+            // self.drive_fixed_async(builder, true, None)?;
 
             self.await_inactive()?;
             self.set_dir(dir);
@@ -733,7 +839,7 @@ impl<C : Controller + Send + 'static> AsyncComp for HRStepper<C> {
             );    
 
             builder.set_omega_tar(omega_tar)?;
-            self.drive_curve_async(builder, true, t_const)?;
+            // self.drive_fixed_async(builder, true, t_const)?;
         }
 
         self.speed_f = speed_f;
