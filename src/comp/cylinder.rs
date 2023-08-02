@@ -34,7 +34,7 @@ impl<C : SyncComp> Cylinder<C> {
 // {
 //     fn accel_dyn(&self, omega : Omega, gamma : Gamma) -> Alpha {
 //         self.alpha_for_this(
-//             self.ctrl.accel_dyn(self.omega_for_super(omega, gamma), self.gamma_for_super(gamma)), self.gamma_for_super(gamma))
+//             self.ctrl.accel_dyn(self.omega_for_parent(omega, gamma), self.gamma_for_parent(gamma)), self.gamma_for_parent(gamma))
 //     }
 // }
 
@@ -56,20 +56,20 @@ impl<C : SyncComp> SyncComp for Cylinder<C> {
     // 
 
     // Super
-        fn super_comp(&self) -> Option<&dyn SyncComp> {
+        fn parent_comp(&self) -> Option<&dyn SyncComp> {
             Some(&self.ctrl)
         }
 
-        fn super_comp_mut(&mut self) -> Option<&mut dyn SyncComp> {
+        fn parent_comp_mut(&mut self) -> Option<&mut dyn SyncComp> {
             Some(&mut self.ctrl)
         }
         
-        fn gamma_for_super(&self, this_gamma : Gamma) -> Gamma {
+        fn gamma_for_parent(&self, this_gamma : Gamma) -> Gamma {
             this_gamma / self.rte_ratio
         }
 
-        fn gamma_for_this(&self, super_gamma : Gamma) -> Gamma {
-            super_gamma * self.rte_ratio
+        fn gamma_for_this(&self, parent_gamma : Gamma) -> Gamma {
+            parent_gamma * self.rte_ratio
         }
     // 
 
@@ -92,12 +92,12 @@ impl<C : SyncComp> SyncComp for Cylinder<C> {
 
 impl<C : StepperComp> StepperComp for Cylinder<C> {
     #[inline]
-    fn super_stepper_comp(&self) -> Option<&dyn StepperComp> {
+    fn parent_stepper_comp(&self) -> Option<&dyn StepperComp> {
         Some(&self.ctrl)
     }
 
     #[inline]
-    fn super_stepper_comp_mut(&mut self) -> Option<&mut dyn StepperComp> {
+    fn parent_stepper_comp_mut(&mut self) -> Option<&mut dyn StepperComp> {
         Some(&mut self.ctrl)
     }
 

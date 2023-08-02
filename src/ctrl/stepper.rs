@@ -14,9 +14,7 @@ cfg_if::cfg_if! { if #[cfg(feature = "std")] {
 mod lr;
 pub use lr::*;
 
-use super::pin::ERR_PIN;
-use super::pin::UniOutPin;
-use super::pin::UniPin;
+use super::pin::*;
 // 
 
 pub const STEP_PULSE_WIDTH : Time = Time(1.0 / 40000.0);

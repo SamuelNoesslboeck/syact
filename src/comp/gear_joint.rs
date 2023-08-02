@@ -45,34 +45,34 @@ impl<C : SyncComp> SyncComp for GearJoint<C> {
     // 
 
     // Super
-        fn super_comp(&self) -> Option<&dyn SyncComp> {
+        fn parent_comp(&self) -> Option<&dyn SyncComp> {
             Some(&self.ctrl)
         }
 
-        fn super_comp_mut(&mut self) -> Option<&mut dyn SyncComp> {
+        fn parent_comp_mut(&mut self) -> Option<&mut dyn SyncComp> {
             Some(&mut self.ctrl)
         }  
 
         /// Returns the angle for the motor from a given bearing angle
-        fn gamma_for_super(&self, this_gamma : Gamma) -> Gamma {
+        fn gamma_for_parent(&self, this_gamma : Gamma) -> Gamma {
             this_gamma / self.ratio
         }   
 
         /// Returns the angle for the motor from a given bearing angle
-        fn gamma_for_this(&self, super_gamma : Gamma) -> Gamma {
-            super_gamma * self.ratio
+        fn gamma_for_this(&self, parent_gamma : Gamma) -> Gamma {
+            parent_gamma * self.ratio
         }
     //
 }
 
 impl<C : StepperComp> StepperComp for GearJoint<C> {
     #[inline]
-    fn super_stepper_comp(&self) -> Option<&dyn StepperComp> {
+    fn parent_stepper_comp(&self) -> Option<&dyn StepperComp> {
         Some(&self.ctrl)
     }
 
     #[inline]
-    fn super_stepper_comp_mut(&mut self) -> Option<&mut dyn StepperComp> {
+    fn parent_stepper_comp_mut(&mut self) -> Option<&mut dyn StepperComp> {
         Some(&mut self.ctrl)
     }
 

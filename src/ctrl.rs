@@ -1,4 +1,4 @@
-use crate::meas::MeasData;
+use crate::SyncComp;
 
 // Submodules
 /// Basic DC-Motors
@@ -37,10 +37,12 @@ pub mod servo;
 /// Stepper motors and controllers in different resolutions
 pub mod stepper;
 pub use stepper::{Stepper, Controller, GenericPWM};
-// 
 
-/// A function that can be used to interrupt the movement process of a component
-pub type Interrupter<'a> = fn (&mut dyn MeasData) -> bool;
+/// A trait for structs that help interrupting or watching movement processes, the most common use are measurement systems
+pub trait Interruptor {
+    /// Runs a check of the movement process
+    fn check(&mut self, comp : &mut dyn SyncComp) -> bool;
+}
 
 /// Direction of movement
 #[derive(Clone, Copy, PartialEq, PartialOrd, Eq, Debug, Default)]

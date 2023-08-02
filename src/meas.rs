@@ -5,7 +5,7 @@ use crate::units::*;
 use serde::{Serialize, Deserialize};
 
 /// A structure for taking basic measurements
-pub trait SimpleMeas : Setup {
+pub trait SimpleMeas {
     /// Measures the position given component and overwrites it's distance when it does so
     fn measure(&mut self, comp : &mut dyn SyncComp) -> Result<Delta, crate::Error>;
 }

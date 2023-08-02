@@ -2,7 +2,7 @@ use serde::{Serialize, Deserialize};
 use crate::{SyncComp, Setup, Stepper};
 use crate::comp::Cylinder;
 use crate::comp::stepper::StepperComp;
-use crate::ctrl::Interrupter;
+use crate::ctrl::Interruptor;
 use crate::data::CompData;
 use crate::meas::MeasData;
 use crate::units::*;
@@ -14,7 +14,7 @@ pub type StepperCylTriangle = CylinderTriangle<Stepper>;
 /// 
 /// # Super Component
 /// 
-/// Uses a [Cylinder] as super component and as the triangular shape makes a constant angular velocity
+/// Uses a [Cylinder] as parent component and as the triangular shape makes a constant angular velocity
 /// very calculation expensive, all maximum velocites are referencing the cylinder
 /// 
 /// # Angles and lengths
@@ -25,7 +25,7 @@ pub type StepperCylTriangle = CylinderTriangle<Stepper>;
 /// the length c, representing the 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CylinderTriangle<C : SyncComp> {
-    /// The cylinder of the triangle, being the *super component* for this one
+    /// The cylinder of the triangle, being the *parent component* for this one
     pub cylinder : Cylinder<C>,
 
     // Triangle
@@ -54,12 +54,12 @@ impl<C : SyncComp> CylinderTriangle<C> {
     // Conversions
         /// Returns the alpha angle (opposing to the a-segment) for a given gamma angle `gam`
         pub fn alpha_for_gam(&self, gam : Gamma) -> f32 {
-            (self.l_a / self.gamma_for_super(gam).0 * gam.sin()).asin()
+            (self.l_a / self.gamma_for_parent(gam).0 * gam.sin()).asin()
         }
 
         /// Returns the beta angle (opposing to the b-segment) for a given gamma angle `gam`
         pub fn beta_for_gam(&self, gam : Gamma) -> f32 {
-            (self.l_b / self.gamma_for_super(gam).0 * gam.sin()).asin()
+            (self.l_b / self.gamma_for_parent(gam).0 * gam.sin()).asin()
         }  
 
         /// Converts the given linear velocity `vel` to the angluar velocity for the given gamma angle `gam`
@@ -77,7 +77,7 @@ impl<C : SyncComp> CylinderTriangle<C> {
 // impl crate::math::MathActor for CylinderTriangle {
 //     fn accel_dyn(&self, omega : Omega, gamma : Gamma) -> Alpha {
 //         self.alpha_for_this(self.cylinder.accel_dyn(
-//             self.omega_for_super(omega, gamma), self.gamma_for_super(gamma)), self.gamma_for_super(gamma))
+//             self.omega_for_parent(omega, gamma), self.gamma_for_parent(gamma)), self.gamma_for_parent(gamma))
 //     }
 // }
 
@@ -102,16 +102,16 @@ impl<C : SyncComp> SyncComp for CylinderTriangle<C> {
     // 
 
     // Super 
-        fn super_comp(&self) -> Option<&dyn SyncComp> {
+        fn parent_comp(&self) -> Option<&dyn SyncComp> {
             Some(&self.cylinder)
         }
 
-        fn super_comp_mut(&mut self) -> Option<&mut dyn SyncComp> {
+        fn parent_comp_mut(&mut self) -> Option<&mut dyn SyncComp> {
             Some(&mut self.cylinder)
         }
 
         /// Returns the cylinder length for the given angle gamma
-        fn gamma_for_super(&self, gam : Gamma) -> Gamma {
+        fn gamma_for_parent(&self, gam : Gamma) -> Gamma {
             Gamma((self.l_a.powi(2) + self.l_b.powi(2) - 2.0 * self.l_a * self.l_b * gam.0.cos()).powf(0.5))
         }
 
@@ -120,8 +120,8 @@ impl<C : SyncComp> SyncComp for CylinderTriangle<C> {
             Gamma(((self.l_a.powi(2) + self.l_b.powi(2) - len.0.powi(2)) / 2.0 / self.l_a / self.l_b).acos())
         }
 
-        fn omega_for_this(&self, super_omega : Omega, this_gamma : Gamma) -> Omega {
-            super_omega / self.l_a * self.beta_for_gam(this_gamma).sin()
+        fn omega_for_this(&self, parent_omega : Omega, this_gamma : Gamma) -> Omega {
+            parent_omega / self.l_a * self.beta_for_gam(this_gamma).sin()
         }
     // 
 
@@ -147,17 +147,17 @@ impl<C : SyncComp> SyncComp for CylinderTriangle<C> {
     fn drive_rel(&mut self, mut delta : Delta, speed_f : f32) -> Result<Delta, crate::Error> {
         let gamma = self.gamma();
         
-        delta = self.delta_for_super(delta, gamma);
+        delta = self.delta_for_parent(delta, gamma);
         delta = self.cylinder.drive_rel(delta, speed_f)?;
 
-        Ok(self.delta_for_this(delta, self.gamma_for_super(gamma)))
+        Ok(self.delta_for_this(delta, self.gamma_for_parent(gamma)))
     }
 
     /// See [SyncComp::drive_abs]
     /// - `dist`is the angular distance to be moved (Unit radians)
     /// - `vel` is the cylinders extend velocity (Unit mm per second)
     fn drive_abs(&mut self, mut gamma : Gamma, speed_f : f32) -> Result<Delta, crate::Error> {
-        gamma = self.gamma_for_super(gamma);
+        gamma = self.gamma_for_parent(gamma);
 
         let delta = self.cylinder.drive_abs(gamma, speed_f)?;
 
@@ -167,7 +167,7 @@ impl<C : SyncComp> SyncComp for CylinderTriangle<C> {
     /// See [SyncComp::drive_rel_int]
     /// This override directly routes all values into `drive_rel_int` for the cylinder, as this function is often used to take measurements. 
     /// Delta calculations do not make sense for this component as long as it has not been measured!
-    fn drive_rel_int(&mut self, delta : Delta, speed_f : f32, intr : Interrupter, intr_data : &mut dyn MeasData) 
+    fn drive_rel_int(&mut self, delta : Delta, speed_f : f32, intr : Interruptor, intr_data : &mut dyn MeasData) 
     -> Result<(Delta, bool), crate::Error> {
         self.cylinder.drive_rel_int(delta, speed_f, intr, intr_data)
     }
@@ -185,12 +185,12 @@ impl<C : SyncComp> SyncComp for CylinderTriangle<C> {
 
 impl<C : StepperComp> StepperComp for CylinderTriangle<C> {
     #[inline]
-    fn super_stepper_comp(&self) -> Option<&dyn StepperComp> {
+    fn parent_stepper_comp(&self) -> Option<&dyn StepperComp> {
         Some(&self.cylinder)
     }
 
     #[inline]
-    fn super_stepper_comp_mut(&mut self) -> Option<&mut dyn StepperComp> {
+    fn parent_stepper_comp_mut(&mut self) -> Option<&mut dyn StepperComp> {
         Some(&mut self.cylinder)
     }
 

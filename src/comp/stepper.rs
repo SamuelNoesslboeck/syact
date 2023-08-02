@@ -26,30 +26,30 @@ pub trait StepperMotor : StepperComp {
 /// A component based on a stepper motor
 pub trait StepperComp : SyncComp {
     // Super comp
-        /// The super stepper comp similar to `SyncComp::super_comp()` if the component has one, returns `None` otherwise
+        /// The parent stepper comp similar to `SyncComp::parent_comp()` if the component has one, returns `None` otherwise
         #[inline]
-        fn super_stepper_comp(&self) -> Option<&dyn StepperComp> {
+        fn parent_stepper_comp(&self) -> Option<&dyn StepperComp> {
             None
         }
 
-        /// The super stepper comp similar to `SyncComp::super_comp()` if the component has one, returns `None` otherwise
+        /// The parent stepper comp similar to `SyncComp::parent_comp()` if the component has one, returns `None` otherwise
         #[inline]
-        fn super_stepper_comp_mut(&mut self) -> Option<&mut dyn StepperComp> {
+        fn parent_stepper_comp_mut(&mut self) -> Option<&mut dyn StepperComp> {
             None
         }
 
-        /// Returns a reference to the motor of the component (either itself or a sub/super-component)
+        /// Returns a reference to the motor of the component (either itself or a sub/parent-component)
         fn motor(&self) -> &dyn StepperMotor;
 
-        /// Returns a mutable reference to the motor of the component (either itself or a sub/super component)
+        /// Returns a mutable reference to the motor of the component (either itself or a sub/parent component)
         fn motor_mut(&mut self) -> &mut dyn StepperMotor;
     // 
 
     /// Returns the constants of the stepper motor
     #[inline]
     fn consts(&self) -> &StepperConst {
-        self.super_stepper_comp()
-            .expect("Provide a super component or an override for this function!")
+        self.parent_stepper_comp()
+            .expect("Provide a parent component or an override for this function!")
             .consts()
     }
 
@@ -57,15 +57,15 @@ pub trait StepperComp : SyncComp {
         /// The amount of microsteps in a full step
         #[inline]
         fn micro(&self) -> u8 {
-            self.super_stepper_comp()
-                .expect("Provide a super component or an override for this function!")
+            self.parent_stepper_comp()
+                .expect("Provide a parent component or an override for this function!")
                 .micro()
         }
 
         /// Set the amount of microsteps in a full step
         fn set_micro(&mut self, micro : u8) {
-            self.super_stepper_comp_mut()
-                .expect("Provide a super component or an override for this function!")
+            self.parent_stepper_comp_mut()
+                .expect("Provide a parent component or an override for this function!")
                 .set_micro(micro)
         }
     //
@@ -73,8 +73,8 @@ pub trait StepperComp : SyncComp {
     // Math
         /// The angular distance of a step considering microstepping
         fn step_ang(&self) -> Delta {
-            self.super_stepper_comp()
-                .expect("Provide a super component or an override for this function!")
+            self.parent_stepper_comp()
+                .expect("Provide a parent component or an override for this function!")
                 .step_ang()
         }
     // 
@@ -83,12 +83,12 @@ pub trait StepperComp : SyncComp {
 // Helper implementation
 impl<T : AsRef<dyn StepperComp> + AsMut<dyn StepperComp> + AsRef<dyn SyncComp> + AsMut<dyn SyncComp>> StepperComp for T {
     // Super Component
-        fn super_stepper_comp(&self) -> Option<&dyn StepperComp> {
-            <T as AsRef<dyn StepperComp>>::as_ref(self).super_stepper_comp()
+        fn parent_stepper_comp(&self) -> Option<&dyn StepperComp> {
+            <T as AsRef<dyn StepperComp>>::as_ref(self).parent_stepper_comp()
         }
 
-        fn super_stepper_comp_mut(&mut self) -> Option<&mut dyn StepperComp> {
-            <T as AsMut<dyn StepperComp>>::as_mut(self).super_stepper_comp_mut()
+        fn parent_stepper_comp_mut(&mut self) -> Option<&mut dyn StepperComp> {
+            <T as AsMut<dyn StepperComp>>::as_mut(self).parent_stepper_comp_mut()
         }
 
         fn motor(&self) -> &dyn StepperMotor {
