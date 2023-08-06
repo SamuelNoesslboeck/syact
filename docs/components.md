@@ -78,10 +78,10 @@ If a component is desired that is not included in the standard components, then 
 
 There are two ways of defining a new component
 
-- Defining a super component, which would be the motor to a gear or the cylinder in the `CylinderTriangle`, the only functions that have to be overwritten then are the functions required to communicate with the super component. Though in many cases some kind of ratio is added.
+- Defining a parent component, which would be the motor to a gear or the cylinder in the `CylinderTriangle`, the only functions that have to be overwritten then are the functions required to communicate with the parent component. Though in many cases some kind of ratio is added.
 - Completely implementing the trait, therefore defining a completely new type of motor.
 
-The following example shows a custom component with a stepper motor as super component. Additionally it prints out a message every time write drive a relative distance.
+The following example shows a custom component with a stepper motor as parent component. Additionally it prints out a message every time write drive a relative distance.
 
 <details>
 <summary>
@@ -129,7 +129,7 @@ impl MyComp {
 
 impl Setup for MyComp {
     fn setup(&mut self) -> Result<(), syact::Error> {
-        self.ctrl.setup()?;  // Setting up the super component
+        self.ctrl.setup()?;  // Setting up the parent component
         Ok(())      
     }
 }
@@ -147,23 +147,23 @@ impl SyncComp for MyComp {
     
     // Super component (motor)
         // The following two overrides give the library access to the stepper motor controller stored in our component
-        fn super_comp(&self) -> Option<&dyn SyncComp> {
+        fn parent_comp(&self) -> Option<&dyn SyncComp> {
             Some(&self.ctrl)
         }
 
-        fn super_comp_mut(&mut self) -> Option<&mut dyn SyncComp> {
+        fn parent_comp_mut(&mut self) -> Option<&mut dyn SyncComp> {
             Some(&mut self.ctrl)
         }
     // 
 
     // Ratio
         // The following two overrides cause the library to translate the distance by the ratio we defined for our component
-        fn gamma_for_super(&self, this_gamma : Gamma) -> Gamma {
+        fn gamma_for_parent(&self, this_gamma : Gamma) -> Gamma {
             this_gamma * self.ratio     // Distance is translated by the ratio
         }
 
-        fn gamma_for_this(&self, super_gamma : Gamma) -> Gamma {
-            super_gamma / self.ratio
+        fn gamma_for_this(&self, parent_gamma : Gamma) -> Gamma {
+            parent_gamma / self.ratio
         }
     // 
 
@@ -171,11 +171,11 @@ impl SyncComp for MyComp {
         println!("Now driving!"); // Our custom message
 
         let delta_real = self.ctrl.drive_rel(
-            self.delta_for_super(delta, self.gamma()), 
+            self.delta_for_parent(delta, self.gamma()), 
             speed_f
         )?;
 
-        Ok(self.delta_for_this(delta_real, self.gamma_for_super(self.gamma())))
+        Ok(self.delta_for_this(delta_real, self.gamma_for_parent(self.gamma())))
     }
 }
 

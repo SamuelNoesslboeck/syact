@@ -1,9 +1,11 @@
-use crate::meas::MeasData;
+use alloc::sync::Arc;
+use atomic_float::AtomicF32;
 
 // Submodules
 /// Basic DC-Motors
 #[cfg(feature = "std")]
 pub mod dc_motor;
+
 #[cfg(feature = "std")]
 pub use dc_motor::DcMotor;
 
@@ -37,10 +39,20 @@ pub mod servo;
 /// Stepper motors and controllers in different resolutions
 pub mod stepper;
 pub use stepper::{Stepper, Controller, GenericPWM};
-// 
 
-/// A function that can be used to interrupt the movement process of a component
-pub type Interrupter<'a> = fn (&mut dyn MeasData) -> bool;
+/// A trait for structs that help interrupting or watching movement processes, the most common use are measurement systems
+pub trait Interruptor {
+    /// Runs a check of the movement process
+    fn check(&mut self, gamma : &Arc<AtomicF32>) -> Option<InterruptReason>;
+}
+
+/// Reasons why an interrupt was triggered
+#[derive(PartialEq, Eq, PartialOrd, Ord)]
+pub enum InterruptReason {
+    EndReached,
+    Overload,
+    Error
+}
 
 /// Direction of movement
 #[derive(Clone, Copy, PartialEq, PartialOrd, Eq, Debug, Default)]

@@ -45,22 +45,22 @@ impl<C : SyncComp> SyncComp for Conveyor<C> {
     }
 
     // Super component
-        fn super_comp(&self) -> Option<&dyn SyncComp> {
+        fn parent_comp(&self) -> Option<&dyn SyncComp> {
             Some(&self.ctrl)
         }
 
-        fn super_comp_mut(&mut self) -> Option<&mut dyn SyncComp> {
+        fn parent_comp_mut(&mut self) -> Option<&mut dyn SyncComp> {
             Some(&mut self.ctrl)
         }
     // 
 
     // Conversion
-        fn gamma_for_super(&self, this_gamma : Gamma) -> Gamma {
+        fn gamma_for_parent(&self, this_gamma : Gamma) -> Gamma {
             this_gamma / self.r_roll
         }
 
-        fn gamma_for_this(&self, super_gamma : Gamma) -> Gamma {
-            super_gamma * self.r_roll
+        fn gamma_for_this(&self, parent_gamma : Gamma) -> Gamma {
+            parent_gamma * self.r_roll
         }
     // 
 
@@ -91,12 +91,12 @@ impl<C : AsyncComp + SyncComp> AsyncComp for Conveyor<C> {
 
 impl<C : StepperComp> StepperComp for Conveyor<C> {
     #[inline]
-    fn super_stepper_comp(&self) -> Option<&dyn StepperComp> {
+    fn parent_stepper_comp(&self) -> Option<&dyn StepperComp> {
         Some(&self.ctrl)
     }
 
     #[inline]
-    fn super_stepper_comp_mut(&mut self) -> Option<&mut dyn StepperComp> {
+    fn parent_stepper_comp_mut(&mut self) -> Option<&mut dyn StepperComp> {
         Some(&mut self.ctrl)
     }
 

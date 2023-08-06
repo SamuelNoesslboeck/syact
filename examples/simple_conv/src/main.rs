@@ -26,7 +26,7 @@ fn main() -> Result<(), syact::Error> {
 /// Demonstration of the approach using predefined structs
 #[cfg(feature = "predef")]
 mod predefined {
-    use super::*;
+    use parent::*;
 
     // Define the radius of the powered conveyor roll as a constant with 5 millimeters
     const R_ROLL : f32 = 10.0;
@@ -88,7 +88,7 @@ mod predefined {
 
 #[cfg(feature = "direct")]
 mod direct {
-    use super::*;
+    use parent::*;
 
     // Define the radius of the powered conveyor roll as a constant with 5 millimeters
     const R_ROLL : f32 = 10.0;
@@ -149,7 +149,7 @@ mod direct {
 }
 
 mod custom {
-    use super::*;
+    use parent::*;
 
     pub struct CustomConveyor {
         ctrl : Stepper, 
