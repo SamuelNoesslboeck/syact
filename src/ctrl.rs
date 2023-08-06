@@ -1,9 +1,11 @@
-use crate::SyncComp;
+use alloc::sync::Arc;
+use atomic_float::AtomicF32;
 
 // Submodules
 /// Basic DC-Motors
 #[cfg(feature = "std")]
 pub mod dc_motor;
+
 #[cfg(feature = "std")]
 pub use dc_motor::DcMotor;
 
@@ -41,7 +43,15 @@ pub use stepper::{Stepper, Controller, GenericPWM};
 /// A trait for structs that help interrupting or watching movement processes, the most common use are measurement systems
 pub trait Interruptor {
     /// Runs a check of the movement process
-    fn check(&mut self, comp : &mut dyn SyncComp) -> bool;
+    fn check(&mut self, gamma : &Arc<AtomicF32>) -> Option<InterruptReason>;
+}
+
+/// Reasons why an interrupt was triggered
+#[derive(PartialEq, Eq, PartialOrd, Ord)]
+pub enum InterruptReason {
+    EndReached,
+    Overload,
+    Error
 }
 
 /// Direction of movement

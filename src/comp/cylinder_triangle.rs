@@ -1,10 +1,9 @@
 use serde::{Serialize, Deserialize};
+
 use crate::{SyncComp, Setup, Stepper};
 use crate::comp::Cylinder;
 use crate::comp::stepper::StepperComp;
-use crate::ctrl::Interruptor;
 use crate::data::CompData;
-use crate::meas::MeasData;
 use crate::units::*;
 
 /// A cylinder triangle using a cylinder with a stepper motor to power itself
@@ -151,25 +150,6 @@ impl<C : SyncComp> SyncComp for CylinderTriangle<C> {
         delta = self.cylinder.drive_rel(delta, speed_f)?;
 
         Ok(self.delta_for_this(delta, self.gamma_for_parent(gamma)))
-    }
-
-    /// See [SyncComp::drive_abs]
-    /// - `dist`is the angular distance to be moved (Unit radians)
-    /// - `vel` is the cylinders extend velocity (Unit mm per second)
-    fn drive_abs(&mut self, mut gamma : Gamma, speed_f : f32) -> Result<Delta, crate::Error> {
-        gamma = self.gamma_for_parent(gamma);
-
-        let delta = self.cylinder.drive_abs(gamma, speed_f)?;
-
-        Ok(self.delta_for_this(delta, gamma))
-    }
-
-    /// See [SyncComp::drive_rel_int]
-    /// This override directly routes all values into `drive_rel_int` for the cylinder, as this function is often used to take measurements. 
-    /// Delta calculations do not make sense for this component as long as it has not been measured!
-    fn drive_rel_int(&mut self, delta : Delta, speed_f : f32, intr : Interruptor, intr_data : &mut dyn MeasData) 
-    -> Result<(Delta, bool), crate::Error> {
-        self.cylinder.drive_rel_int(delta, speed_f, intr, intr_data)
     }
 
     // Forces

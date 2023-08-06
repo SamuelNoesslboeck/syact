@@ -1,6 +1,6 @@
 use core::any::type_name;
 
-use crate::ctrl::Interruptor;
+use crate::ctrl::{Interruptor, InterruptReason};
 use crate::Setup;
 use crate::data::{CompVars, CompData};
 use crate::units::*;
@@ -34,12 +34,12 @@ use crate::units::*;
 #[cfg(not(feature = "std"))]
 #[inline(always)]
 fn no_parent() -> crate::Error {
-    crate::ErrorKind::NoSuper
+    crate::ErrorKind::NoParent
 }
 
 /// Trait for defining controls and components of synchronous actuators
 /// 
-/// # Super components
+/// # Parent components
 /// 
 /// Components can have multiple layers, for example take a stepper motor with a geaerbox attached to it. The stepper motor and both combined will be a component, the later having 
 /// the stepper motor component defined as it's parent component. (See [GearJoint])
@@ -73,19 +73,39 @@ pub trait SyncComp : Setup {
         /// Write the [CompData](crate::data::CompData) to the component
         #[inline(always)]
         fn write_data(&mut self, data : crate::data::CompData) {
-            if let Some(s_comp) = self.parent_comp_mut() {
-                s_comp.write_data(data);
+            if let Some(p_comp) = self.parent_comp_mut() {
+                p_comp.write_data(data);
+            } else {
+                panic!("Provide an implementation for 'write_data' or a parent component")
+            }
+        }
+    //
+
+    // Interruptors
+        /// Add an interruptor to the component, often used for measurements or other processes checking the movement
+        fn add_interruptor(&mut self, interruptor : Box<dyn Interruptor + Send>) {
+            if let Some(p_comp) = self.parent_comp_mut() {
+                p_comp.add_interruptor(interruptor)
             } else {
                 panic!("Provide an implementation")
             }
         }
 
-        fn add_interruptor(&mut self, interruptor : Box<dyn Interruptor>) {
-
+        /// Returns the interrupt reason if there is any (returns `None` otherwise)
+        /// 
+        /// # Note
+        /// 
+        /// Executing this function will replace the reason with `None`, so if you need to access the value multiple times, you have to store it yourself
+        fn intr_reason(&self) -> Option<InterruptReason> {
+            if let Some(p_comp) = self.parent_comp() {
+                p_comp.intr_reason()
+            } else {
+                panic!("Provide an implementation")
+            }
         }
     // 
 
-    // Super
+    // Parent
         /// Returns a readonly reference to the parent [SyncComp] if it exists, returns `None` otherwise. If not overwritten by the 
         /// trait implementation, this function returns always `None`.
         /// 
@@ -311,8 +331,8 @@ pub trait SyncComp : Setup {
 
             delta = self.delta_for_parent(delta, gamma);
 
-            let res = if let Some(s_comp) = self.parent_comp_mut() {
-                s_comp.drive_rel(delta, speed_f)?
+            let res = if let Some(p_comp) = self.parent_comp_mut() {
+                p_comp.drive_rel(delta, speed_f)?
             } else {
                 #[cfg(feature = "std")]
                 panic!("Provide a parent component or an override for this function!");
@@ -323,21 +343,9 @@ pub trait SyncComp : Setup {
 
         /// Moves the component to the given position as fast as possible, halts the script until the 
         /// movement is finished and returns the actual **relative** distance travelled.
-        fn drive_abs(&mut self, mut gamma : Gamma, speed_f : f32) -> Result<Delta, crate::Error> {
-            if (1.0 < speed_f) | (0.0 > speed_f) {
-                panic!("Invalid speed factor! {}", speed_f)
-            }
-
-            gamma = self.gamma_for_parent(gamma);
-
-            let res = if let Some(s_comp) = self.parent_comp_mut() {
-                s_comp.drive_abs(gamma, speed_f)?
-            } else {
-                #[cfg(feature = "std")]
-                panic!("Provide a parent component or an override for this function!");
-            };
-
-            Ok(self.delta_for_this(res, gamma)) 
+        fn drive_abs(&mut self, gamma : Gamma, speed_f : f32) -> Result<Delta, crate::Error> {
+            let delta = gamma - self.gamma();
+            self.drive_rel(delta, speed_f)
         }
     // 
 
@@ -354,8 +362,8 @@ pub trait SyncComp : Setup {
 
             delta = self.delta_for_parent(delta, gamma);
 
-            if let Some(s_comp) = self.parent_comp_mut() {
-                s_comp.drive_rel_async(delta, speed_f)
+            if let Some(p_comp) = self.parent_comp_mut() {
+                p_comp.drive_rel_async(delta, speed_f)
             } else {
                 #[cfg(feature = "std")]
                 panic!("Provide a parent component or an override for this function!");
@@ -366,20 +374,21 @@ pub trait SyncComp : Setup {
         /// movement is finished and returns the actual **abolute** distance traveled to. 
         #[inline(always)]
         #[cfg(feature = "std")]
-        fn drive_abs_async(&mut self, mut gamma : Gamma, speed_f : f32) -> Result<(), crate::Error> {
-            if (1.0 < speed_f) | (0.0 > speed_f) {
-                panic!("Invalid speed factor! {}", speed_f)
-            }
+        fn drive_abs_async(&mut self, gamma : Gamma, speed_f : f32) -> Result<(), crate::Error> {
+            let delta = gamma - self.gamma();
+            self.drive_rel_async(delta, speed_f)
+        }
 
-            gamma = self.gamma_for_parent(gamma);
+        fn drive_omega(&mut self, mut omega_tar : Omega) -> Result<(), crate::Error> {
+            omega_tar = self.omega_for_parent(omega_tar, self.gamma());
 
-            if let Some(s_comp) = self.parent_comp_mut() {
-                s_comp.drive_abs_async(gamma, speed_f)
+            if let Some(p_comp) = self.parent_comp_mut() {
+                p_comp.drive_omega(omega_tar)
             } else {
                 #[cfg(feature = "std")]
                 panic!("Provide a parent component or an override for this function!");
             }
-        }
+        }   
 
         /// Halts the thread until the async movement is finished
         /// 
@@ -394,8 +403,8 @@ pub trait SyncComp : Setup {
         #[inline(always)]
         #[cfg(feature = "std")]
         fn await_inactive(&mut self) -> Result<Delta, crate::Error> {
-            let delta = if let Some(s_comp) = self.parent_comp_mut() {
-                s_comp.await_inactive()?
+            let delta = if let Some(p_comp) = self.parent_comp_mut() {
+                p_comp.await_inactive()?
             } else {
                 #[cfg(feature = "std")]
                 panic!("Provide a parent component or an override for this function!");
@@ -426,8 +435,8 @@ pub trait SyncComp : Setup {
         /// ```
         #[inline(always)]
         fn gamma(&self) -> Gamma {
-            let parent_len = if let Some(s_comp) = self.parent_comp() {
-                s_comp.gamma()
+            let parent_len = if let Some(p_comp) = self.parent_comp() {
+                p_comp.gamma()
             } else {
                 #[cfg(feature = "std")]
                 panic!("Provide a parent component or an override for this function!");
@@ -461,8 +470,8 @@ pub trait SyncComp : Setup {
         fn write_gamma(&mut self, mut gamma : Gamma) {
             gamma = self.gamma_for_parent(gamma);
 
-            if let Some(s_comp) = self.parent_comp_mut() {
-                s_comp.write_gamma(gamma);
+            if let Some(p_comp) = self.parent_comp_mut() {
+                p_comp.write_gamma(gamma);
             } else {
                 #[cfg(feature = "std")]
                 panic!("Provide a parent component or an override for this function!");
@@ -477,8 +486,8 @@ pub trait SyncComp : Setup {
         /// - Panics if no parent component or an override is provided
         #[inline]
         fn omega_max(&self) -> Omega {
-            let parent_omega = if let Some(s_comp) = self.parent_comp() {
-                s_comp.omega_max()
+            let parent_omega = if let Some(p_comp) = self.parent_comp() {
+                p_comp.omega_max()
             } else {
                 #[cfg(feature = "std")]
                 panic!("Provide a parent component or an override for this function!");
@@ -497,8 +506,8 @@ pub trait SyncComp : Setup {
         fn set_omega_max(&mut self, mut omega_max : Omega) {
             omega_max = self.omega_for_parent(omega_max, self.gamma());
 
-            if let Some(s_comp) = self.parent_comp_mut() {
-                s_comp.set_omega_max(omega_max);
+            if let Some(p_comp) = self.parent_comp_mut() {
+                p_comp.set_omega_max(omega_max);
             } else {
                 #[cfg(feature = "std")]
                 panic!("Provide a parent component or an override for this function!");
@@ -555,8 +564,8 @@ pub trait SyncComp : Setup {
         fn lim_for_gamma(&self, mut gamma : Gamma) -> Delta {
             gamma = self.gamma_for_parent(gamma);
 
-            let delta = if let Some(s_comp) = self.parent_comp() {
-                s_comp.lim_for_gamma(gamma)
+            let delta = if let Some(p_comp) = self.parent_comp() {
+                p_comp.lim_for_gamma(gamma)
             } else {
                 #[cfg(feature = "std")]
                 panic!("Provide a parent component or an override for this function!");
@@ -593,8 +602,8 @@ pub trait SyncComp : Setup {
         fn set_end(&mut self, mut set_gamma : Gamma) {
             set_gamma = self.gamma_for_parent(set_gamma);
 
-            if let Some(s_comp) = self.parent_comp_mut() {
-                s_comp.set_end(set_gamma)
+            if let Some(p_comp) = self.parent_comp_mut() {
+                p_comp.set_end(set_gamma)
             } else {
                 #[cfg(feature = "std")]
                 panic!("Provide a parent component or an override for this function!");
@@ -651,8 +660,8 @@ pub trait SyncComp : Setup {
                 None => None
             };
 
-            if let Some(s_comp) = self.parent_comp_mut() {
-                s_comp.set_limit(min, max)      // If the parent component exists
+            if let Some(p_comp) = self.parent_comp_mut() {
+                p_comp.set_limit(min, max)      // If the parent component exists
             } else {
                 #[cfg(feature = "std")]
                 panic!("Provide a parent component or an override for this function!");
@@ -710,8 +719,8 @@ pub trait SyncComp : Setup {
                 None => None
             };
 
-            if let Some(s_comp) = self.parent_comp_mut() {
-                s_comp.reset_limit(min, max)
+            if let Some(p_comp) = self.parent_comp_mut() {
+                p_comp.reset_limit(min, max)
             } else {
                 #[cfg(feature = "std")]
                 panic!("Provide a parent component or an override for this function!");
@@ -745,8 +754,8 @@ pub trait SyncComp : Setup {
         fn apply_force(&mut self, mut force : Force) { // TODO: Add overload protection
             force = Force(self.gamma_for_this(Gamma(force.0)).0);
 
-            if let Some(s_comp) = self.parent_comp_mut() {
-                s_comp.apply_force(force);
+            if let Some(p_comp) = self.parent_comp_mut() {
+                p_comp.apply_force(force);
             } else {
                 #[cfg(feature = "std")]
                 panic!("Provide a parent component or an override for this function!");
@@ -783,8 +792,8 @@ pub trait SyncComp : Setup {
         fn apply_inertia(&mut self, mut inertia : Inertia) {
             inertia = Inertia(self.gamma_for_this(self.gamma_for_this(Gamma(inertia.0))).0);
 
-            if let Some(s_comp) = self.parent_comp_mut() {
-                s_comp.apply_inertia(inertia);
+            if let Some(p_comp) = self.parent_comp_mut() {
+                p_comp.apply_inertia(inertia);
             } else {
                 #[cfg(feature = "std")]
                 panic!("Provide a parent component or an override for this function!");
@@ -799,8 +808,8 @@ pub trait SyncComp : Setup {
         /// definition has not been overwritten nor has a parent component been provied.
         #[inline(always)]
         fn apply_bend_f(&mut self, f_bend : f32) {
-            if let Some(s_comp) = self.parent_comp_mut() {
-                s_comp.apply_bend_f(f_bend);
+            if let Some(p_comp) = self.parent_comp_mut() {
+                p_comp.apply_bend_f(f_bend);
             } else {
                 #[cfg(feature = "std")]
                 panic!("Provide a parent component or an override for this function!");

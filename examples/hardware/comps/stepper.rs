@@ -75,4 +75,4 @@ fn main() -> Result<(), syact::Error> {
     println!("Distance {}rad with max speed {:?}rad/s done", DELTA_DEF, OMEGA_DEF);
 
     Ok(())
-}
+}  

@@ -1,102 +1,71 @@
-use crate::{SyncComp, Setup};
-use crate::ctrl::pin::{UniInPin, UniPin};
-use crate::units::*;
+use crate::ctrl::{Interruptor, InterruptReason};
+use crate::{units::*, SyncComp, Setup};
 
 use serde::{Serialize, Deserialize};
 
+// Submodules
+    mod endswitch;
+    pub use endswitch::*;
+// 
+
 /// A structure for taking basic measurements
-pub trait SimpleMeas {
-    /// Measures the position given component and overwrites it's distance when it does so
-    fn measure(&mut self, comp : &mut dyn SyncComp) -> Result<Delta, crate::Error>;
+pub trait SimpleMeas : Interruptor + Setup { 
+    fn data(&self) -> &SimpleMeasData;
 }
 
-/// Defines basic measurement data used in a measurement process
-pub trait MeasData {
-    /// Returns a mutable reference to the main pin of the measurement 
-    fn pin<'a>(&'a self) -> Option<&'a UniInPin>;
+#[derive(Clone, Serialize, Deserialize)]
+pub struct SimpleMeasData {
+    pub set_gamma : Gamma,
+    pub max_dist : Delta,
 
-    /// Returns a mutable reference to the main pin of the measurement 
-    fn pin_mut<'a>(&'a mut self) -> Option<&'a mut UniInPin>;
+    pub meas_speed_f : f32,
+
+    pub add_samples : usize,
+    pub sample_dist : Delta
 }
 
-/// A simple endswitch that can trigger when reaching a destination
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-pub struct EndSwitch {
-    max_dist : Delta,
-    set_val : Gamma,
-    meas_speed_f : f32, 
+/// Simplest form of measurement by reference position
+pub fn take_simple_meas<C : SyncComp + ?Sized>(comp : &mut C, data : &SimpleMeasData, speed_f : f32) -> Result<(), crate::Error> {
+    let mut gammas : Vec<Gamma> = Vec::new();
 
-    pin : u8,
+    // Init measurement
+        // Drive full distance with optionally reduced speed
+        comp.drive_rel(data.max_dist, data.meas_speed_f * speed_f)?;
 
-    #[cfg_attr(feature = "std", serde(skip))]
-    sys_pin : Option<UniInPin>
-}
-
-impl EndSwitch {
-    /// Creates a new end switch
-    pub fn new(pin : u8, max_dist : Delta, meas_speed_f : f32, set_val : Gamma) -> Self {
-        Self {
-            pin, max_dist, meas_speed_f, set_val,
-            sys_pin: None
+        // Check wheiter the component has been interrupted and if it is the correct interrupt
+        if comp.intr_reason().ok_or("The measurement failed! No interrupt was triggered")? != InterruptReason::EndReached {
+            return Err("Bad interrupt reason!".into());     // TODO: Improve error message
         }
-    }
-}
 
-impl Setup for EndSwitch {
-    fn setup(&mut self) -> Result<(), crate::Error> {
-        self.sys_pin = Some(UniPin::new(self.pin)?.into_input());
-        Ok(())
-    }
-}
+        gammas.push(comp.gamma());
+    //
 
-impl SimpleMeas for EndSwitch {
-    fn measure(&mut self, comp : &mut dyn SyncComp) -> Result<Delta, crate::Error> {
-        let meas_res = comp.drive_rel_int(self.max_dist, self.meas_speed_f, |data| {
-            let pin_opt = data.pin_mut(); 
+    // Samples
+        for _ in 0 .. data.add_samples {
+            // Drive half of the sample distance back (faster)
+            comp.drive_rel(-data.sample_dist / 2.0, speed_f)?;
+            // Drive sample distance
+            comp.drive_rel(data.sample_dist, data.meas_speed_f * speed_f)?;
 
-            if let Some(pin) = pin_opt {
-                pin.is_high()
-            } else {
-                false
+            // Check wheiter the component has been interrupted and if it is the correct interrupt
+            if comp.intr_reason().ok_or("The measurement failed! No interrupt was triggered")? != InterruptReason::EndReached {
+                return Err("Bad interrupt reason!".into());     // TODO: Improve error message
             }
-        }, self)?; 
 
-        if meas_res.1 {
-            comp.write_gamma(self.set_val);
-            Ok(meas_res.0)
-        } else {
-            Err("Measurement failed! (Reached maximum distance)".into())
+            gammas.push(comp.gamma());
         }
-    }
-}
+    // 
 
-impl MeasData for EndSwitch {
-    fn pin<'a>(&'a self) -> Option<&'a UniInPin> {
-        if let Some(pin) = &self.sys_pin {
-            Some(pin) 
-        } else {
-            None
-        }
-    }
+    // The average gamma of all measurements
+    let gamma_av = Gamma(gammas.iter().map(|g| g.0).sum()) / (gammas.len() as f32);
+    // Current gamma difference considering the current position and the average taken by the measurement
+    let gamma_diff = comp.gamma() - gamma_av;
+    // The new gamma to set the components gamma to
+    let gamma_new = data.set_gamma + gamma_diff;
 
-    fn pin_mut<'a>(&'a mut self) -> Option<&'a mut UniInPin> {
-        if let Some(pin) = &mut self.sys_pin {
-            Some(pin) 
-        } else {
-            None
-        }
-    }
-}
+    // Set limits and write new distance value
+    comp.set_end(gamma_av);
+    comp.write_gamma(gamma_new);
 
-/// Struct that performs no measurement (placeholder)  \
-/// Will be removed soon!
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-pub struct NoMeas { }
-
-impl Setup for NoMeas { }
-
-impl SimpleMeas for NoMeas {
-    fn measure(&mut self, _ : &mut dyn SyncComp) -> Result<Delta, crate::Error> {
-        Ok(Delta::ZERO)
-    }
+    Ok(())
 }

@@ -17,7 +17,7 @@ pub use lr::*;
 use super::pin::*;
 // 
 
-pub const STEP_PULSE_WIDTH : Time = Time(1.0 / 40000.0);
+pub const STEP_PULSE_TIME : Time = Time(1.0 / 40000.0);
 const STEP_PULSE_DUR : Duration = Duration::from_micros(25);
 
 // #####################
@@ -46,14 +46,18 @@ pub trait Controller {
     fn step_with(&mut self, t_len : Time, t_pause : Time);
 
     fn step(&mut self, time : Time) {
-        if time < (STEP_PULSE_WIDTH * 2.0) {
-            self.step_with(STEP_PULSE_WIDTH, STEP_PULSE_WIDTH);
+        if time < (STEP_PULSE_TIME * 2.0) {
+            self.step_with(STEP_PULSE_TIME, STEP_PULSE_TIME);
         } else {
-            self.step_with(STEP_PULSE_WIDTH, time - STEP_PULSE_WIDTH)
+            self.step_with(STEP_PULSE_TIME, time - STEP_PULSE_TIME)
         }
     }
 
-    fn step_no_wait(&mut self, t_pause : Time);
+    fn step_no_wait(&mut self, t_total : Time);
+
+    fn step_final(&mut self) {
+        self.step_no_wait(2.0 * STEP_PULSE_TIME)
+    }
 
     fn dir(&self) -> Direction;
 
@@ -105,7 +109,11 @@ impl Controller for GenericPWM {
         spin_sleep::sleep(t_pause.into());
     }
 
-    fn step_no_wait(&mut self, t_total : Time) {
+    fn step_no_wait(&mut self, mut t_total : Time) {
+        if t_total == Time::ZERO {
+            t_total = STEP_PULSE_TIME;
+        }
+
         let elapsed = self.pause_stamp.elapsed();
         if elapsed < self.t_pause {
             spin_sleep::sleep(self.t_pause - elapsed);      // Makes t_pause = elapsed
@@ -120,7 +128,7 @@ impl Controller for GenericPWM {
         self.pin_step.set_low();
 
         self.pause_stamp = Instant::now();
-        self.t_pause = (t_total - STEP_PULSE_WIDTH).into();
+        self.t_pause = (t_total - STEP_PULSE_TIME).into();
     }
 
     fn dir(&self) -> Direction {

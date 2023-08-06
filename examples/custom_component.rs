@@ -28,7 +28,6 @@ const DELTA : Delta = Delta(10.0);
 const OMEGA : Omega = Omega(10.0);      
 
 // Defining component structure
-#[derive(Debug)]
 struct MyComp {
     ctrl : Stepper,     // The stepper motor built into the component
     ratio : f32             // The gear ratio, e.g. a spingle or

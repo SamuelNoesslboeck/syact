@@ -7,7 +7,7 @@ cfg_if::cfg_if! {
         pub use crate::comp::{Conveyor, Cylinder, CylinderTriangle, GearJoint};
         pub use crate::comp::stepper::*;
 
-        pub use crate::ctrl::{DcMotor, GenericPWM};
+        pub use crate::ctrl::{DcMotor, GenericPWM, Interruptor, InterruptReason};
         pub use crate::ctrl::pwm::PWMOutput;
         pub use crate::ctrl::pin::*;
         pub use crate::ctrl::servo::ServoDriver;
@@ -20,7 +20,7 @@ cfg_if::cfg_if! {
         pub use crate::math::force;
         pub use crate::math::inertia;
 
-        pub use crate::meas::SimpleMeas;
+        pub use crate::meas::{SimpleMeas, SimpleMeasData, EndSwitch, VirtualEndSwitch};
 
         pub use crate::units::*;
     } else {
