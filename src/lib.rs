@@ -75,6 +75,10 @@ cfg_if::cfg_if! { if #[cfg(feature = "std")] {
 }}
 
 /// A trait that provides a universal setup function
+/// 
+/// # Pin management
+/// 
+/// For dynamic initialization purposes all pin creations should run in a `setup()` function
 pub trait Setup {
     /// Calls all required functions to assure the components functionality
     fn setup(&mut self) -> Result<(), Error> { 

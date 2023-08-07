@@ -6,12 +6,17 @@ use crate::units::Omega;
 
 /// A simple dc motor with two pins as PWM control
 pub struct DcMotor {
+    /// Output signal for first pin
     sig_cw : PWMOutput,
+    /// Output signal for
     sig_ccw : PWMOutput,
 
+    /// Current movement direction
     dir : Direction,
+    /// Speed factor (e.g. PWM-duty-cycle of the component)
     speed_f : f32,
 
+    /// Signal frequency
     freq : Omega
 }
 
@@ -19,7 +24,7 @@ impl DcMotor {
     /// Creates a new instance of a `DcMotor` with the following parameters
     /// - `pin_cw` is the pin for driving the motor in the clockwise direction
     /// - `pin_ccw` is the pin for driving the motor in the counter-clockwise direction
-    /// - `freq` defines the PWM-frequency for 
+    /// - `freq` defines the PWM-frequency for the output signal
     pub fn new(pin_cw : u8, pin_ccw : u8, freq : Omega) -> Self {
         Self {
             sig_cw: PWMOutput::new(pin_cw),
@@ -41,6 +46,7 @@ impl DcMotor {
 
 impl Setup for DcMotor {
     fn setup(&mut self) -> Result<(), crate::Error> {
+        // Start the PWM Signals
         self.sig_cw.start();
         self.sig_ccw.start();
         

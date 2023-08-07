@@ -30,7 +30,7 @@ fn main() -> Result<(), syact::Error> {
     group.apply_inertias(&inertias);
 
     let inst = Instant::now();
-    let times = ptp_exact_unbuffered(&mut group, deltas);
+    let times = ptp_exact_unbuffered(&mut group, deltas, 1.0);
     println!("Times: {:?}; Calculation time: {}", times, inst.elapsed().as_secs_f32());
 
     Ok(())

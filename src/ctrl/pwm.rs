@@ -3,6 +3,7 @@ use std::thread;
 
 use serde::{Serialize, Deserialize};
 
+use crate::Setup;
 use crate::ctrl::pin;
 use crate::units::*;
 
@@ -24,7 +25,11 @@ pub struct PWMOutput
 
 impl PWMOutput 
 {
-    /// Create a new software PWM-signal at the given `pin`. Make sure the `pin` is not already in use
+    /// Create a new software PWM-signal at the given `pin`. Make sure the `pin` is not already in use!
+    /// 
+    /// # Setup
+    /// 
+    /// 
     pub fn new(pin : u8) -> Self {
         Self {
             pin: pin,
@@ -38,18 +43,23 @@ impl PWMOutput
         }
     }
 
-    /// Starts the thread for the signal
+    /// Starts the thread for the signal and creates the pin for the output signal
     pub fn start(&mut self) {
+        // Pin
         let mut sys_pwm = pin::UniPin::new(self.pin).unwrap().into_output();
 
+        // The thread communication structures
         let (sender, recv) : (Sender<[Time; 2]>, Receiver<[Time; 2]>) = channel();
         let (victim, murder) : (Sender<()>, Receiver<()>) = channel();
 
+        // The thread
         let thr = thread::spawn(move || {
+            // Initialize the values to errors
             let mut t_ac = Time::NAN;
             let mut t_in = Time::NAN;
 
             loop {
+                // Force the thread to wait for new values if they are error `NAN` values
                 if t_in.is_nan() {
                     let [ n_ac, n_in ] = recv.recv().unwrap();
 
@@ -181,20 +191,27 @@ impl PWMOutput
     }
 }
 
-impl Serialize for PWMOutput {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-        where
-            S: serde::Serializer {
-        serializer.serialize_u8(self.pin)
-    }
+// Setup 
+impl Setup for PWMOutput {
+    
 }
 
-impl<'de> Deserialize<'de> for PWMOutput {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-        where
-            D: serde::Deserializer<'de> {
-        Ok(PWMOutput::new(
-            Deserialize::deserialize(deserializer)?
-        ))
+// JSON Input/Output
+    impl Serialize for PWMOutput {
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+            where
+                S: serde::Serializer {
+            serializer.serialize_u8(self.pin)
+        }
     }
-}
+
+    impl<'de> Deserialize<'de> for PWMOutput {
+        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+            where
+                D: serde::Deserializer<'de> {
+            Ok(PWMOutput::new(
+                Deserialize::deserialize(deserializer)?
+            ))
+        }
+    }
+// 
