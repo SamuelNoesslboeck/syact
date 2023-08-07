@@ -1,8 +1,8 @@
 use glam::Vec3;
 use serde::{Serialize, Deserialize};
 
-use crate::Tool;
-use crate::ctrl::servo::ServoDriver;
+use crate::{Tool, Setup, Dismantle};
+use crate::ctrl::servo::Servo;
 use crate::units::*;
 
 use super::AxisTool;
@@ -10,7 +10,7 @@ use super::AxisTool;
 /// A tool for adding an additional axis to the robot
 #[derive(Debug, Serialize, Deserialize)]
 pub struct AxialJoint {
-    servo : ServoDriver,
+    servo : Servo,
 
     /// Length of the tool
     pub length : f32,
@@ -19,7 +19,7 @@ pub struct AxialJoint {
 
 impl AxialJoint {
     /// Creates a new instance of an `AxialJoint`
-    pub fn new(servo : ServoDriver, length : f32, mass : Inertia) -> Self {
+    pub fn new(servo : Servo, length : f32, mass : Inertia) -> Self {
         Self {
             servo, 
             length,
@@ -28,17 +28,20 @@ impl AxialJoint {
     }
 }
 
+// Setup and Dismantle
+impl Setup for AxialJoint {
+    fn setup(&mut self) -> Result<(), crate::Error> {
+        self.servo.setup()
+    }
+}
+
+impl Dismantle for AxialJoint {
+    fn dismantle(&mut self) -> Result<(), crate::Error> {
+        self.servo.dismantle()
+    }
+}
+
 impl Tool for AxialJoint {
-    // Setup / Shutdown
-        fn mount(&mut self) {
-            self.servo.start();
-        }
-
-        fn dismount(&mut self) {
-            self.servo.stop();
-        }
-    // 
-
     // Upgrades
         fn axis_tool(&self) -> Option<&dyn AxisTool> {
             Some(self)

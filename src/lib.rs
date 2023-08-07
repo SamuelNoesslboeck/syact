@@ -78,10 +78,22 @@ cfg_if::cfg_if! { if #[cfg(feature = "std")] {
 /// 
 /// # Pin management
 /// 
-/// For dynamic initialization purposes all pin creations should run in a `setup()` function
+/// For dynamic initialization purposes, all pin creations should run in a `setup()` function
 pub trait Setup {
     /// Calls all required functions to assure the components functionality
     fn setup(&mut self) -> Result<(), Error> { 
         Ok(()) 
+    }
+}
+
+/// A trait that provides a universal dismantle function
+/// 
+/// # Pin management
+/// 
+/// For dynamic initialization purposes, all pins that have previously been created with `setup()` should be dropped here
+pub trait Dismantle {
+    /// Calls all required functions to assure the component will not occupy any more resources like pins or network connections, without dropping the value
+    fn dismantle(&mut self) -> Result<(), Error> {
+        Ok(())
     }
 }

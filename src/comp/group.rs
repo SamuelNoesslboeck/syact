@@ -3,6 +3,12 @@ use crate::units::*;
 
 /// A group of synchronous components  
 /// This trait allows a lot of functions to be used for all components at once.
+/// 
+/// # Generic type `T`
+/// 
+/// The generic type `T` repesents the compo
+/// 
+/// # Constant generic `C`
 pub trait SyncCompGroup<T, const C : usize> : Setup 
 where T : SyncComp + ?Sized + 'static
 {

@@ -2,6 +2,8 @@ use serde::{Serialize, Deserialize};
 
 use glam::Vec3;
 
+use crate::Dismantle;
+use crate::Setup;
 use crate::Tool;
 use crate::units::*;
 
@@ -24,13 +26,12 @@ impl PencilTool {
     }
 }
 
+// Setup and dismantle
+impl Setup for PencilTool { }
+
+impl Dismantle for PencilTool { }
+
 impl Tool for PencilTool {
-    // Setup / Shutdown
-        fn mount(&mut self) { }
-
-        fn dismount(&mut self) { }
-    // 
-
     // Stats
         fn get_json(&self) -> serde_json::Value {
             serde_json::to_value(self).unwrap()

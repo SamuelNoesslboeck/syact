@@ -17,7 +17,8 @@ impl CompData {
     };  
 
     /// Comp data that will case an error in calculations as it has not been yet initialized.  
-    /// (Has to be overwritten)
+    /// 
+    /// (Has to be overwritten, will cause errors otherwise)
     pub const ERROR : Self = Self {
         u: 0.0,
         s_f: 0.0

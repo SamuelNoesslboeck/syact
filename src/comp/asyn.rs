@@ -2,7 +2,7 @@ use crate::Setup;
 use crate::ctrl::Direction;
 
 /// A component which is asynchronous because of its hardware properties, e.g. a simple DC-Motors
-pub trait AsyncComp : Setup{
+pub trait AsyncComp : Setup {
     /// Starts the movement process of the component in the given direction with a given speed factor
     /// 
     /// # Panics

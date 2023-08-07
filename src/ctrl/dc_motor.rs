@@ -47,8 +47,8 @@ impl DcMotor {
 impl Setup for DcMotor {
     fn setup(&mut self) -> Result<(), crate::Error> {
         // Start the PWM Signals
-        self.sig_cw.start();
-        self.sig_ccw.start();
+        self.sig_cw.start()?;
+        self.sig_ccw.start()?;
         
         Ok(())
     }

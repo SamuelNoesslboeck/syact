@@ -3,18 +3,19 @@ use std::thread;
 
 use serde::{Serialize, Deserialize};
 
-use crate::Setup;
+use crate::{Setup, Dismantle};
 use crate::ctrl::pin;
 use crate::units::*;
 
-/// A simple software PWM-signal 
+/// A simple software-made PWM-signal 
 #[derive(Debug)]
-pub struct PWMOutput
-{
+pub struct PWMOutput {
     /// The pin of the PWM-signal
     pub pin : u8,
 
+    /// Active time in a cycle (high)
     t_ac : Time,
+    /// Inactive time in a cycle (low)
     t_in : Time,
 
     // Thread
@@ -23,13 +24,12 @@ pub struct PWMOutput
     murderer: Option<Receiver<()>>,
 }
 
-impl PWMOutput 
-{
+impl PWMOutput {
     /// Create a new software PWM-signal at the given `pin`. Make sure the `pin` is not already in use!
     /// 
     /// # Setup
     /// 
-    /// 
+    /// Once the setup function is called, the thread and the pin will be crated
     pub fn new(pin : u8) -> Self {
         Self {
             pin: pin,
@@ -44,9 +44,9 @@ impl PWMOutput
     }
 
     /// Starts the thread for the signal and creates the pin for the output signal
-    pub fn start(&mut self) {
+    pub fn start(&mut self) -> Result<(), crate::Error> {
         // Pin
-        let mut sys_pwm = pin::UniPin::new(self.pin).unwrap().into_output();
+        let mut sys_pwm = pin::UniPin::new(self.pin)?.into_output();
 
         // The thread communication structures
         let (sender, recv) : (Sender<[Time; 2]>, Receiver<[Time; 2]>) = channel();
@@ -71,19 +71,17 @@ impl PWMOutput
                     t_in = n_in;
                 }
 
-                match recv.try_recv() {
-                    Ok([n_ac, n_in, ]) => {
+                // Checks weither a new message is available
+                if let Ok([n_ac, n_in]) = recv.try_recv() {
+                    if (n_ac.is_nan()) & (n_in.is_nan()) {
+                        break;
+                    }
 
-                        if (n_ac.is_nan()) & (n_in.is_nan()) {
-                            break;
-                        }
-
-                        t_ac = n_ac; 
-                        t_in = n_in;
-                    },
-                    _ => { }
+                    t_ac = n_ac; 
+                    t_in = n_in;
                 }
 
+                // Crates pulse
                 PWMOutput::pulse(&mut sys_pwm, t_ac, t_in);
             }
 
@@ -93,6 +91,8 @@ impl PWMOutput
         self.thr = Some(thr);
         self.sender = Some(sender);
         self.murderer = Some(murder);
+
+        Ok(())
     }
 
     /// Does a single pulse with the active time `t_ac` and inactive time `t_in`
@@ -175,25 +175,36 @@ impl PWMOutput
     }
 
     /// Stops the PWM-Signal and deletes the thread, can be started again if desired with `start()`
-    pub fn stop(&mut self) {
+    pub fn stop(&mut self) -> Result<(), crate::Error> {
         if let Some(sender) = &mut self.sender {
-            sender.send([ Time::NAN, Time::NAN ]).unwrap();
+            sender.send([ Time::NAN, Time::NAN ])?;
         }
 
         self.thr = None;
         self.sender = None;
 
+        // Waits for the thread to be "murdered"
         if let Some(murder) = &mut self.murderer {
-            murder.recv().unwrap();
+            murder.recv()?;
         }
 
         self.murderer = None;
+
+        Ok(())
     }
 }
 
-// Setup 
+// Setup and dismantle
 impl Setup for PWMOutput {
-    
+    fn setup(&mut self) -> Result<(), crate::Error> {
+        self.start()
+    }
+}
+
+impl Dismantle for PWMOutput {
+    fn dismantle(&mut self) -> Result<(), crate::Error> {
+        self.stop()
+    }
 }
 
 // JSON Input/Output

@@ -1,6 +1,6 @@
 use serde::{Serialize, Deserialize};
 
-use crate::Tool;
+use crate::{Tool, Setup, Dismantle};
 use crate::tool::{SimpleTool, AxisTool, Tongs};
 use crate::units::*;
 
@@ -15,19 +15,22 @@ pub struct AxisTongs {
     pub tongs : Tongs
 }
 
+// Setup and Dismantle
+impl Setup for AxisTongs {
+    fn setup(&mut self) -> Result<(), crate::Error> {
+        self.axis.setup()?;
+        self.tongs.setup()
+    }
+}
+
+impl Dismantle for AxisTongs {
+    fn dismantle(&mut self) -> Result<(), crate::Error> {
+        self.axis.dismantle()?;
+        self.tongs.dismantle()
+    }
+}
+
 impl Tool for AxisTongs {
-    // Setup / Shutdown
-        fn mount(&mut self) {
-            self.axis.mount();
-            self.tongs.mount();
-        }
-
-        fn dismount(&mut self) {
-            self.axis.dismount();
-            self.tongs.dismount();
-        }
-    // 
-
     // Upgrades
         #[inline]
         fn simple_tool(&self) -> Option<&dyn SimpleTool> {

@@ -14,7 +14,7 @@ fn main() -> Result<(), syact::Error> {
 
     // Create the tongs
     let mut tongs = Tongs::new(
-        ServoDriver::new(ServoConst::MG996R, pin_pwm),
+        Servo::new(ServoConst::MG996R, pin_pwm),
         0.7,
         0.4,
         50.0,

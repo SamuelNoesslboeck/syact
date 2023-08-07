@@ -19,7 +19,7 @@ use crate::units::*;
     pub use cylinder_triangle::{CylinderTriangle, StepperCylTriangle};
 
     mod gear_joint;
-    pub use gear_joint::{GearJoint, StepperGearJoint};
+    pub use gear_joint::{Gear, StepperGearJoint};
 
     /// A module for component groups, as they are used in various robots. The components are all sharing the same 
     /// [CompData](crate::data::CompData) and their movements are coordinated. 

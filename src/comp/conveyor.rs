@@ -13,14 +13,17 @@ pub type StepperConveyor = Conveyor<Stepper>;
 #[derive(Debug)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub struct Conveyor<C : SyncComp> {
+    /// The parent component (driving the conveyor)
     ctrl : C,
 
-    /// Radius of the powered conveyor roll
+    /// Radius of the powered conveyor roll in millimeters
     pub r_roll : f32
 }
 
 impl<C : SyncComp> Conveyor<C> {
     /// Creates a new instance of a conveyor
+    /// - `ctrl`: The parent component (driving the conveyor)
+    /// - `r_roll` radius of the driving roll in millimeters
     pub fn new(ctrl : C, r_roll : f32) -> Self {
         Self {
             ctrl, 
@@ -65,12 +68,14 @@ impl<C : SyncComp> SyncComp for Conveyor<C> {
     // 
 
     fn apply_force(&mut self, mut force : Force) {
-        force = force * self.r_roll / 1000.0;   // Millimeters to 
+        // Force in N to Nm, r_roll is in millimeters so factor of 1000.0 is required
+        force = force * self.r_roll / 1000.0;   
         self.ctrl.apply_force(force)
     }
 
     fn apply_inertia(&mut self, mut inertia : Inertia) {
-        inertia = inertia * self.r_roll * self.r_roll / 1_000_000.0;
+        // Inertia in kg to kg*m^2, r_roll is in millimeters so factor of 1000.0^2 => 1_000_000.0
+        inertia = inertia * self.r_roll * self.r_roll / 1_000_000.0;    
         self.ctrl.apply_inertia(inertia)
     }
 }

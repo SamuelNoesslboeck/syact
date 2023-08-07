@@ -5,11 +5,15 @@ use crate::comp::stepper::StepperComp;
 use crate::units::*;
 
 /// A gear joint using a stepper motor to power itself
-pub type StepperGearJoint = GearJoint<Stepper>;
+pub type StepperGearJoint = Gear<Stepper>;
 
-/// A bearing powered by a motor with a certain gear ratio
+/// A gear component
+/// 
+/// # Gears
+/// 
+/// 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct GearJoint<C : SyncComp> {
+pub struct Gear<C : SyncComp> {
     /// Steppercontrol for the motor of the bearing
     pub ctrl : C,
     
@@ -17,8 +21,9 @@ pub struct GearJoint<C : SyncComp> {
     pub ratio : f32
 }
 
-impl<C : SyncComp> GearJoint<C> {
+impl<C : SyncComp> Gear<C> {
     /// Creates a new `Gearbearing`
+    /// - `ctrl`: The parent component driving the cylinder
     pub fn new(ctrl : C, ratio : f32) -> Self {
         Self {
             ctrl,
@@ -27,13 +32,13 @@ impl<C : SyncComp> GearJoint<C> {
     }
 }
 
-impl<C : SyncComp> Setup for GearJoint<C> {
+impl<C : SyncComp> Setup for Gear<C> {
     fn setup(&mut self) -> Result<(), crate::Error> {
         self.ctrl.setup() 
     }
 }
 
-impl<C : SyncComp> SyncComp for GearJoint<C> {
+impl<C : SyncComp> SyncComp for Gear<C> {
     // Data
         fn data<'a>(&'a self) -> &'a crate::data::CompData {
             self.ctrl.data()
@@ -65,7 +70,7 @@ impl<C : SyncComp> SyncComp for GearJoint<C> {
     //
 }
 
-impl<C : StepperComp> StepperComp for GearJoint<C> {
+impl<C : StepperComp> StepperComp for Gear<C> {
     #[inline]
     fn parent_stepper_comp(&self) -> Option<&dyn StepperComp> {
         Some(&self.ctrl)

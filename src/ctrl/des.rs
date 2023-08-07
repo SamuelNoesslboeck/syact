@@ -5,11 +5,14 @@ use crate::data::StepperConst;
 
 use serde::{Serialize, Deserialize};
 
+/// A helper struct to enable serde IO for the `HRStepper` with a GenericPWM-Signal
 #[derive(Debug, Clone, Serialize, Deserialize)]
-struct StepperDes 
-{
+struct StepperDes {
+    /// The stepper constants
     pub consts : StepperConst,
+    /// The direction pin of the stepper motor
     pub pin_dir : u8,
+    /// The step pin of the stepper motor
     pub pin_step : u8
 }
 
@@ -18,7 +21,10 @@ impl TryFrom<StepperDes> for Stepper {
     type Error = crate::Error;
 
     fn try_from(des : StepperDes) -> Result<Self, Self::Error> {
-        Ok(Stepper::new(GenericPWM::new(des.pin_step, des.pin_dir)?, des.consts))
+        Ok(Stepper::new(
+            GenericPWM::new(des.pin_step, des.pin_dir)?, 
+            des.consts
+        ))
     }
 }
 
@@ -34,7 +40,7 @@ impl Into<StepperDes> for &Stepper {
     }
 }
 
-// JSON_
+// JSON I/O
 impl Serialize for Stepper {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
         where

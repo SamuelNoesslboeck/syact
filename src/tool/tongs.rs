@@ -1,14 +1,14 @@
 use glam::Vec3;
 use serde::{Serialize, Deserialize};
 
-use crate::{Tool, SimpleTool};
-use crate::ctrl::servo::ServoDriver;
+use crate::{Tool, SimpleTool, Setup, Dismantle};
+use crate::ctrl::servo::Servo;
 use crate::units::*;
 
 /// A pair of controllable tongs with simple closed/open state switching
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Tongs {
-    servo : ServoDriver,
+    servo : Servo,
 
     /// Servo duty cycle percent for open state
     pub perc_open : f32,
@@ -23,7 +23,7 @@ pub struct Tongs {
 
 impl Tongs {
     /// Create a new `Tongs` instance
-    pub fn new(servo : ServoDriver, perc_open : f32, perc_close : f32, length : f32, mass : Inertia) -> Self {
+    pub fn new(servo : Servo, perc_open : f32, perc_close : f32, length : f32, mass : Inertia) -> Self {
         let mut tongs = Self {
             servo,
             perc_open,
@@ -60,17 +60,20 @@ impl Tongs {
     }
 }
 
+// Setup and Dismantle
+impl Setup for Tongs {
+    fn setup(&mut self) -> Result<(), crate::Error> {
+        self.servo.setup()
+    }
+}
+
+impl Dismantle for Tongs {
+    fn dismantle(&mut self) -> Result<(), crate::Error> {
+        self.servo.dismantle()
+    }
+}
+
 impl Tool for Tongs {
-    // Setup / Shutdown
-        fn mount(&mut self) {
-            self.servo.start();
-        }
-
-        fn dismount(&mut self) {
-            self.servo.stop();
-        }
-    // 
-
     // Upgrades
         fn simple_tool(&self) -> Option<&dyn SimpleTool> {
             Some(self)

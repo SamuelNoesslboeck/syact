@@ -2,6 +2,7 @@ use core::any::type_name;
 
 use glam::Vec3;
 
+use crate::{Dismantle, Setup};
 use crate::units::*;
 
 // Tools
@@ -29,19 +30,7 @@ use crate::units::*;
 
 // Tools
 /// General tool trait
-pub trait Tool {
-    // Setup / Shutdown
-        /// Mounts the component.
-        /// 
-        /// Similar to a "setup" / "activate" function
-        fn mount(&mut self);
-
-        /// Dismounts the component.
-        /// 
-        /// Similar to a "deactivate" function
-        fn dismount(&mut self);
-    // 
-
+pub trait Tool : Setup + Dismantle {
     // Upgrade
         /// Upgrade the tool to a [SimpleTool] if possible, returns `None` otherwise
         fn simple_tool(&self) -> Option<&dyn SimpleTool> {

@@ -1,25 +1,34 @@
 use serde::{Serialize, Deserialize};
 
+use crate::{Setup, Dismantle};
 use crate::ctrl::pwm::PWMOutput;
 use crate::data::servo::ServoConst;
 use crate::units::Gamma;
 
+/// A basic servo motor with absolute position being controlled by a PWM signal
 /// 
+/// # Setup
+/// 
+/// In order to function correctly the servo has to be set up first!
+/// - No pins will be occupied until the setup function is called
 #[derive(Debug, Serialize, Deserialize)]
-pub struct ServoDriver
-{
+pub struct Servo {
+    /// The absolute position of the servo motor
     #[serde(skip)]
     gamma : Gamma,
+    /// The constants of the servo motor (depending on type)
     consts : ServoConst,
 
+    /// The PWM output signal
     pwm : PWMOutput
 }
 
-impl ServoDriver 
-{
+impl Servo {
     /// Creates a new servo driver with the given servo data `consts` connected to the `pin_pwm`
     /// 
-    /// Before any use of movement functions you must call `start()` in order to set up all the pins
+    /// # Setup
+    /// 
+    /// Before any use of movement functions you must call `start()` or `setup()` in order to set up all the pins
     pub fn new(consts : ServoConst, pin_pwm : u8) -> Self {
         Self {
             gamma: consts.default_pos(),
@@ -35,9 +44,10 @@ impl ServoDriver
     }
 
     /// Start the PWM signal and moves the servo to it's default position
-    pub fn start(&mut self) {
-        self.pwm.start();
+    pub fn start(&mut self) -> Result<(), crate::Error> {
+        self.pwm.start()?;
         self.pwm.set_period(self.consts.default_pulse(), self.consts.period_time());
+        Ok(())
     }
 
     /// Get the *aboslute* angle of the servo 
@@ -81,8 +91,21 @@ impl ServoDriver
 
     // Drop
         /// Stops the servo driver and the PWM signal, can be started again with `start()` if desired
-        pub fn stop(&mut self) {
-            self.pwm.stop();
+        pub fn stop(&mut self) -> Result<(), crate::Error> {
+            self.pwm.stop()
         }
     //  
+}
+
+// Setup and Dismantle
+impl Setup for Servo {
+    fn setup(&mut self) -> Result<(), crate::Error> {
+        self.start()
+    }
+}
+
+impl Dismantle for Servo {
+    fn dismantle(&mut self) -> Result<(), crate::Error> {
+        self.stop()
+    }
 }

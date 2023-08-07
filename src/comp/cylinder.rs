@@ -10,18 +10,26 @@ use crate::units::*;
 pub type StepperCylinder = Cylinder<Stepper>;
 
 /// Cylinder component struct
+/// 
+/// # Cylinders
+/// 
+/// Cylinders are practical for converting rotational movement into linear movement, most of the time using spindles 
+/// or straps
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Cylinder<C : SyncComp> {
-    /// Data of the connected stepper motor
+    /// The parent component driving the cylinder
     pub ctrl : C,
 
     /// Distance traveled per rad (Unit mm)   \
-    /// f_rte = pitch / (2pi)
+    /// `f_rte = pitch / (2pi)`
     pub rte_ratio : f32
 }
 
 impl<C : SyncComp> Cylinder<C> {
     /// Create a new cylinder instance
+    /// - `ctrl`: The parent component driving the cylinder
+    /// - `rte_ratio`: (radius to extension ratio), millimeters travelled per radian the spindle rotated
+    ///   - `f_rte = pitch / (2pi)`
     pub fn new(ctrl : C, rte_ratio : f32) -> Self {
         return Cylinder {
             ctrl,
@@ -29,14 +37,6 @@ impl<C : SyncComp> Cylinder<C> {
         };
     }
 }
-
-// impl crate::math::MathActor for Cylinder 
-// {
-//     fn accel_dyn(&self, omega : Omega, gamma : Gamma) -> Alpha {
-//         self.alpha_for_this(
-//             self.ctrl.accel_dyn(self.omega_for_parent(omega, gamma), self.gamma_for_parent(gamma)), self.gamma_for_parent(gamma))
-//     }
-// }
 
 impl<C : SyncComp> Setup for Cylinder<C> {
     fn setup(&mut self) -> Result<(), crate::Error> {
