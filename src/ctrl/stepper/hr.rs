@@ -132,7 +132,7 @@ impl<C : Controller + Send + 'static> HRStepper<C> {
                 _micro: 1,
 
                 _omega_max: Omega::ZERO,
-                _t_step_cur: Arc::new(AtomicF32::new(Omega::ZERO.0)),
+                _t_step_cur: Arc::new(AtomicF32::new(Time::INFINITY.0)),
     
                 _data: CompData::ERROR,
     
@@ -453,11 +453,27 @@ impl<C : Controller + Send + 'static> HRStepper<C> {
                             // Update the current speed
                             t_step_cur.store(t_const.0, Ordering::Relaxed);
 
+                            let mut intrs = intrs_mtx.lock().unwrap();
+                            let mut interrupted = false;
+
                             loop {
                                 // Check if a new message is available
                                 if let Ok(msg_new) = receiver_thr.try_recv() {
                                     // Set msg for next run
                                     msg_prev = Some(msg_new);
+                                    break;
+                                }
+
+                                // Run all interruptors
+                                for intr in intrs.iter_mut() {
+                                    if let Some(reason) = intr.check(&gamma) {
+                                        intr_reason.lock().unwrap().replace(reason);
+                                        interrupted = true;
+                                        break;
+                                    }
+                                }
+
+                                if interrupted {
                                     break;
                                 }
     

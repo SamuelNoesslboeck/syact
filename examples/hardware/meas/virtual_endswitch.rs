@@ -11,7 +11,7 @@ fn main() -> Result<(), syact::Error> {
 
     // Initialize switch
     let mut switch = VirtualEndSwitch::new(false);
-    switch.setup();
+    switch.setup()?;
 
     let vpin = switch.vpin.clone();
     stepper.add_interruptor(Box::new(switch));
@@ -22,6 +22,14 @@ fn main() -> Result<(), syact::Error> {
     std::thread::sleep(core::time::Duration::from_millis(2000));
     
     vpin.store(true, core::sync::atomic::Ordering::Relaxed);
+
+    let delta = stepper.await_inactive()?;
+
+    println!("Movement done!");
+    println!("Stats:");
+    println!("- Delta: {}", delta);
+    println!("- Gamma: {}", stepper.gamma());
+    println!("- Reason: {:?}", stepper.intr_reason());
 
     Ok(())
 }

@@ -101,7 +101,7 @@ path = "examples/dc_motors.rs"
     path = "examples/hardware/meas/endswitch.rs"
 
     [[example]]
-    name = "hardware-meas-virtual_endswitch.rs"
+    name = "hardware-meas-virtual_endswitch"
     path = "examples/hardware/meas/virtual_endswitch.rs"
   #
 

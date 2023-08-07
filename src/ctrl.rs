@@ -47,7 +47,7 @@ pub trait Interruptor {
 }
 
 /// Reasons why an interrupt was triggered
-#[derive(PartialEq, Eq, PartialOrd, Ord)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Debug, Clone, Copy)]
 pub enum InterruptReason {
     EndReached,
     Overload,

@@ -138,9 +138,9 @@ impl StepperConst {
         /// Panics if the given `omega` is zero 
         #[inline]
         pub fn step_time(&self, omega : Omega, micro : u8) -> Time {
-            if (omega == Omega(0.0)) | (omega == Omega(-0.0)) {
-                panic!("The given omega ({}) is zero!", omega);
-            }
+            // if (omega == Omega(0.0)) | (omega == Omega(-0.0)) {
+            //     panic!("The given omega ({}) is zero!", omega);
+            // }
 
             self.step_ang(micro) / omega
         }
