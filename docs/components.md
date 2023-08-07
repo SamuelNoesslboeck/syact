@@ -5,7 +5,7 @@ A component (`trait SyncComp` in the library) represents a synchronous motor, op
 The library does include some standard components commonly used
 
 - *Cylinder*, a simple cylinder translating the rotatory movements of a motor to a linear extension
-- *GearJoint*, a motor connected to a gear that translates the movement with a certain ratio
+- *Gear*, a motor connected to a gear that translates the movement with a certain ratio
 - *Cylinder-triangle*, a cylinder being the hypotenuse in a triangular shape, creating a high torque/slow movement joint
 
 ## Example 

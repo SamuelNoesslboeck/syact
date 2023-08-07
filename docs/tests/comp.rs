@@ -40,7 +40,7 @@ fn gear_bearing() -> Result<(), crate::Error> {
     const PIN_DIR : u8 = 27;
     const PIN_STEP : u8 = 19;
 
-    let mut gear = GearJoint::new(Stepper::new(GenericPWM::new(PIN_STEP, PIN_DIR)?, StepperConst::MOT_17HE15_1504S), 0.1);
+    let mut gear = Gear::new(Stepper::new(GenericPWM::new(PIN_STEP, PIN_DIR)?, StepperConst::MOT_17HE15_1504S), 0.1);
     gear.write_data(CompData::GEN);
     gear.setup()?;
 

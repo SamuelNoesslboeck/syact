@@ -42,14 +42,14 @@ fn no_parent() -> crate::Error {
 /// # Parent components
 /// 
 /// Components can have multiple layers, for example take a stepper motor with a geaerbox attached to it. The stepper motor and both combined will be a component, the later having 
-/// the stepper motor component defined as it's parent component. (See [GearJoint])
+/// the stepper motor component defined as it's parent component. (See [Gear])
 pub trait SyncComp : Setup {
     // Data
         /// Returns the variables of the component, such as load force, inertia, limits ...
         /// 
         /// ```rust
         /// use syact::{SyncComp, Stepper, StepperConst};
-        /// use syact::comp::GearJoint;
+        /// use syact::comp::Gear;
         /// use syact::units::*;
         /// 
         /// // Limits
@@ -59,7 +59,7 @@ pub trait SyncComp : Setup {
         /// const LIM_MIN_LOWER : Gamma = Gamma(-3.0);
         /// 
         /// // Create a new gear bearing (implements SyncComp)
-        /// let mut gear = GearJoint::new(
+        /// let mut gear = Gear::new(
         ///     // Stepper Motor as subcomponent (also implements SyncComp)
         ///     Stepper::new_gen(), 
         /// 0.5);    // Ratio is set to 0.5, which means for each radian the motor moves, the bearing moves for half a radian
@@ -537,7 +537,7 @@ pub trait SyncComp : Setup {
         /// const LIM_MIN_LOWER : Gamma = Gamma(-3.0);
         /// 
         /// // Create a new gear bearing (implements SyncComp)
-        /// let mut gear = GearJoint::new(
+        /// let mut gear = Gear::new(
         ///     // Stepper Motor as subcomponent (also implements SyncComp)
         ///     Stepper::new_gen(), 
         /// 0.5);    // Ratio is set to 0.5, which means for each radian the motor moves, the bearing moves for half a radian
@@ -584,7 +584,7 @@ pub trait SyncComp : Setup {
         /// const GAMMA : Gamma = Gamma(1.0); 
         /// 
         /// // Create a new gear bearing (implements SyncComp)
-        /// let mut gear = GearJoint::new(
+        /// let mut gear = Gear::new(
         ///     // Stepper Motor as subcomponent (also implements SyncComp)
         ///     Stepper::new_gen(), 
         /// 0.5);    // Ratio is set to 0.5, which means for each radian the motor moves, the bearing moves for half a radian
@@ -626,7 +626,7 @@ pub trait SyncComp : Setup {
         /// const LIM_MIN_LOWER : Gamma = Gamma(-3.0);
         /// 
         /// // Create a new gear bearing (implements SyncComp)
-        /// let mut gear = GearJoint::new(
+        /// let mut gear = Gear::new(
         ///     // Stepper Motor as subcomponent (also implements SyncComp)
         ///     Stepper::new_gen(), 
         /// 0.5);    // Ratio is set to 0.5, which means for each radian the motor moves, the bearing moves for half a radian
@@ -675,7 +675,7 @@ pub trait SyncComp : Setup {
         /// 
         /// ```rust
         /// use syact::{SyncComp, Stepper, StepperConst};
-        /// use syact::comp::GearJoint;
+        /// use syact::comp::Gear;
         /// use syact::units::*;
         /// 
         /// // Limits
@@ -685,7 +685,7 @@ pub trait SyncComp : Setup {
         /// const LIM_MIN_LOWER : Gamma = Gamma(-3.0);
         /// 
         /// // Create a new gear bearing (implements SyncComp)
-        /// let mut gear = GearJoint::new(
+        /// let mut gear = Gear::new(
         ///     // Stepper Motor as subcomponent (also implements SyncComp)
         ///     Stepper::new_gen(), 
         /// 0.5);    // Ratio is set to 0.5, which means for each radian the motor moves, the bearing moves for half a radian
@@ -733,14 +733,14 @@ pub trait SyncComp : Setup {
         /// 
         /// ```rust
         /// use syact::{SyncComp, Stepper, StepperConst};
-        /// use syact::comp::GearJoint;
+        /// use syact::comp::Gear;
         /// use syact::units::*;
         /// 
         /// // Force to act upon the component
         /// const FORCE : Force = Force(0.2);
         /// 
         /// // Create a new gear bearing (implements SyncComp)
-        /// let mut gear = GearJoint::new(
+        /// let mut gear = Gear::new(
         ///     // Stepper Motor as subcomponent (also implements SyncComp)
         ///     Stepper::new_gen(), 
         /// 0.5);    // Ratio is set to 0.5, which means for each radian the motor moves, the bearing moves for half a radian
@@ -770,14 +770,14 @@ pub trait SyncComp : Setup {
         /// 
         /// ```rust
         /// use syact::{SyncComp, Stepper, StepperConst};
-        /// use syact::comp::GearJoint;
+        /// use syact::comp::Gear;
         /// use syact::units::*;
         /// 
         /// // Inertia to act upon the component
         /// const INERTIA : Inertia = Inertia(4.0);
         /// 
         /// // Create a new gear bearing (implements SyncComp)
-        /// let mut gear = GearJoint::new(
+        /// let mut gear = Gear::new(
         ///     // Stepper Motor as subcomponent (also implements SyncComp)
         ///     Stepper::new_gen(), 
         /// 0.5);    // Ratio is set to 0.5, which means for each radian the motor moves, the bearing moves for half a radian
