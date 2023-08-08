@@ -42,6 +42,7 @@ extern crate alloc;
         pub use tool::{Tool, SimpleTool};
 
         /// Self defined units for mathematical operations
+        #[doc = include_str!("../docs/unit_system.md")]
         pub mod units;
     }}
 

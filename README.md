@@ -29,25 +29,7 @@ A library for all types of components used in robots, including controlls for st
 
 ## In Action
 
-Let us assume we want to control a simple stepper motor (in this example a [17HE15_1504_S](https://www.omc-stepperonline.com/index.php?route=product/product/get_file&file=2838/17HE15-1504S.pdf)) with a PWM controller connected to the BCM pins 27 and 19.
-
-<details>
-<summary>
-Click to show Cargo.toml
-</summary>
-
-```toml
-# ...
-
-[dependencies]
-# Include the library configured for the raspberry pi
-syact = { version = "0.12.0", features = [ "rasp" ] } 
-
-# ...
-```
-
-</details>
-<p></p>
+Let us assume we want to control a simple stepper motor (in this example a [17HE15_1504_S](https://www.omc-stepperonline.com/index.php?route=product/product/get_file&file=2838/17HE15-1504S.pdf)) with a PWM controller connected to the BCM pins 27 and 19 (e.g. on a raspberry).
 
 ```rust ,ignore
 use core::f32::consts::PI;
@@ -65,7 +47,10 @@ const OMEGA : Omega = Omega(10.0);
 
 fn main() -> Result<(), syact::Error> {
     // Create the controls for a stepper motor
-    let mut ctrl = Stepper::new(GenericPWM::new(PIN_STEP, PIN_DIR)?, StepperConst::MOT_17HE15_1504S);
+    let mut ctrl = Stepper::new(
+      GenericPWM::new(PIN_STEP, PIN_DIR)?, // Controller
+      StepperConst::MOT_17HE15_1504S    // Motor type
+    );
     // Link the component to a system
     ctrl.write_data(CompData { 
         u: 12.0,    // System voltage in volts

@@ -8,29 +8,9 @@ The library does include some standard components commonly used
 - *Gear*, a motor connected to a gear that translates the movement with a certain ratio
 - *Cylinder-triangle*, a cylinder being the hypotenuse in a triangular shape, creating a high torque/slow movement joint
 
-## Example 
+## Example
 
 In this example we drive a cylinder by a certain amount of millimeters.
-
-<details>
-<summary>Click to show Cargo.toml</summary>
-
-### Note
-
-The cargo.toml file specified below is when running the example on a raspberry pi
-
-```toml
-# ...
-
-[dependencies]
-# Include the library configured for the raspberry pi
-syact = { version = \"0.12.1\", features = [ \"rasp\" ] } 
-
-# ...
-```
-
-</details>
-<p></p>
 
 ```rust ,ignore
 // Include the library
@@ -82,24 +62,6 @@ There are two ways of defining a new component
 - Completely implementing the trait, therefore defining a completely new type of motor.
 
 The following example shows a custom component with a stepper motor as parent component. Additionally it prints out a message every time write drive a relative distance.
-
-<details>
-<summary>
-Click to show Cargo.toml
-</summary>
-
-```toml
-# ...
-
-[dependencies]
-# Include the library configured for the raspberry pi
-syact = { version = "0.12.1", features = [ "rasp" ] } 
-
-# ...
-```
-
-</details>
-<p></p>
 
 ```rust ,ignore
 

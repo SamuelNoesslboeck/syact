@@ -29,7 +29,7 @@ cfg_if::cfg_if! {
         pub type Stepper = HRStepper<GenericPWM>;
 
         impl Stepper {
-            /// Creates a new generic stepper with both pins set to [pin::ERR_PIN] just for simulation and testing purposes
+            /// Creates a new generic stepper with both pins set to [ERR_PIN](super::pin::ERR_PIN) just for simulation and testing purposes
             #[inline]
             pub fn new_gen() -> Self {
                 Self::new(GenericPWM::new_gen(), StepperConst::GEN)
@@ -104,10 +104,10 @@ impl GenericPWM {
 impl Controller for GenericPWM {
     fn step_with(&mut self, t_len : Time, t_pause : Time) {
         self.pin_step.set_high();
-        spin_sleep::sleep(t_len.into());
+            spin_sleep::sleep(t_len.into());
         self.pin_step.set_low();
-        spin_sleep::sleep(t_pause.into());
-    }
+            spin_sleep::sleep(t_pause.into());
+        }
 
     fn step_no_wait(&mut self, mut t_total : Time) {
         if t_total == Time::ZERO {
@@ -116,15 +116,15 @@ impl Controller for GenericPWM {
 
         let elapsed = self.pause_stamp.elapsed();
         if elapsed < self.t_pause {
-            spin_sleep::sleep(self.t_pause - elapsed);      // Makes t_pause = elapsed
-        }
+                spin_sleep::sleep(self.t_pause - elapsed);      // Makes t_pause = elapsed
+            }
 
         if self.t_pause < STEP_PULSE_DUR {
-            spin_sleep::sleep(STEP_PULSE_DUR - self.t_pause);
-        }
+                spin_sleep::sleep(STEP_PULSE_DUR - self.t_pause);
+            }
 
         self.pin_step.set_high();
-        spin_sleep::sleep(STEP_PULSE_DUR);
+            spin_sleep::sleep(STEP_PULSE_DUR);
         self.pin_step.set_low();
 
         self.pause_stamp = Instant::now();

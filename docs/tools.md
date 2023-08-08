@@ -4,22 +4,6 @@ The library also includes various simple tools like tongs, axial joints and so o
 
 This example controls a simple pair of tongs using a servo motor.
 
-<details>
-<summary>
-Click to show Cargo.toml
-</summary>
-
-```toml
-# ...
-
-[dependencies]
-# Include the library configured for the raspberry pi
-syact = { version = "0.12.0", features = [ "rasp" ] } 
-
-# ...
-```
-</details>
-
 ```rust
 use core::time::Duration;
 
@@ -46,7 +30,7 @@ fn main() -> Result<(), syact::Error> {
         Inertia(0.2)        // the tongs have a weight of 0.2 kg
     );
 
-    tongs.mount();
+    tongs.setup()?;
 
     tongs.activate();
     sleep(Duration::from_secs(1));

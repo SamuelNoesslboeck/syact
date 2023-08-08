@@ -3,6 +3,7 @@
 The final goal of the library is to work on as many platforms as possible, even on embedded systems. To configure the library for a specific platform, the right features have to be enabled. Note that some of the features automatically enable `std` usage.
 
 The current platforms and features enabled are
+
 - "rasp": Raspberry Pi and similar controllers
 
 ```toml

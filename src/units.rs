@@ -4,16 +4,16 @@
 /// 
 /// For more specific implementations to the units see the math module (especially math::kin)
 
-use core::fmt::Display;
 // Units
-use core::ops::{Add, Sub, Div, Mul, Neg, AddAssign};
+use core::ops::{Add, Sub, Div, AddAssign};
 use core::time::Duration;
 
 use serde::{Serialize, Deserialize}; 
 
+#[macro_export]
 macro_rules! additive_unit {
     ( $unit:ident ) => {
-        impl Add<$unit> for $unit {
+        impl core::ops::Add<$unit> for $unit {
             type Output = $unit;
         
             #[inline(always)]
@@ -22,14 +22,14 @@ macro_rules! additive_unit {
             }
         }
 
-        impl AddAssign<$unit> for $unit {
+        impl core::ops::AddAssign<$unit> for $unit {
             #[inline(always)]
             fn add_assign(&mut self, rhs: $unit) {
                 self.0 += rhs.0;
             }
         }        
         
-        impl Sub<$unit> for $unit {
+        impl core::ops::Sub<$unit> for $unit {
             type Output = $unit;
         
             #[inline(always)]
@@ -40,6 +40,7 @@ macro_rules! additive_unit {
     };
 }
 
+#[macro_export]
 macro_rules! basic_unit {
     ( $a:ident ) => {      
         impl $a {
@@ -141,13 +142,13 @@ macro_rules! basic_unit {
             }
         }
 
-        impl Display for $a {
+        impl core::fmt::Display for $a {
             fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
                 self.0.fmt(f)
             }
         }
 
-        impl Into<f32> for $a {
+        impl core::convert::Into<f32> for $a {
             #[inline(always)]
             fn into(self) -> f32 {
                 self.0
@@ -159,7 +160,7 @@ macro_rules! basic_unit {
         // 
 
         // Negation
-            impl Neg for $a {
+            impl core::ops::Neg for $a {
                 type Output = Self;
                 
                 #[inline(always)]
@@ -170,7 +171,7 @@ macro_rules! basic_unit {
         //
 
         // Multiplication
-            impl Mul<f32> for $a {
+            impl core::ops::Mul<f32> for $a {
                 type Output = $a;
                 
                 #[inline(always)]
@@ -179,7 +180,7 @@ macro_rules! basic_unit {
                 }
             }
 
-            impl Mul<$a> for f32 {
+            impl core::ops::Mul<$a> for f32 {
                 type Output = $a;
 
                 #[inline(always)]
@@ -190,7 +191,7 @@ macro_rules! basic_unit {
         // 
         
         // Division
-            impl Div<f32> for $a {
+            impl core::ops::Div<f32> for $a {
                 type Output = $a;
             
                 #[inline(always)]
@@ -199,7 +200,7 @@ macro_rules! basic_unit {
                 }
             }
 
-            impl Div<$a> for $a {
+            impl core::ops::Div<$a> for $a {
                 type Output = f32;
 
                 #[inline(always)]
@@ -211,9 +212,10 @@ macro_rules! basic_unit {
     };
 }
 
+#[macro_export]
 macro_rules! derive_units {
     ( $dist:ident, $vel:ident, $time:ident ) => {
-        impl Mul<$time> for $vel {
+        impl core::ops::Mul<$time> for $vel {
             type Output = $dist;
         
             #[inline(always)]
@@ -222,16 +224,16 @@ macro_rules! derive_units {
             }
         }
 
-        impl Mul<$vel> for $time {
+        impl core::ops::Mul<$vel> for $time {
             type Output = $dist;
-        
+            
             #[inline(always)]
             fn mul(self, rhs: $vel) -> Self::Output {
                 $dist(self.0 * rhs.0)
             }
         }
 
-        impl Div<$vel> for $dist {
+        impl core::ops::Div<$vel> for $dist {
             type Output = $time;
         
             #[inline(always)]
@@ -240,7 +242,7 @@ macro_rules! derive_units {
             }
         }
 
-        impl Div<$time> for $dist {
+        impl core::ops::Div<$time> for $dist {
             type Output = $vel;
         
             #[inline(always)]
