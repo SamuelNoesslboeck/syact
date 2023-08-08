@@ -70,7 +70,7 @@ use syn::DeriveInput;
                     impl syact::comp::group::SyncCompGroup<#comp_type, #fields_count> for #name { 
                         fn for_each<'a, F, R>(&'a self, mut func : F) -> [R; #fields_count]
                         where 
-                            F : FnMut(&'a Self::Comp, usize) -> R,
+                            F : FnMut(&'a #comp_type, usize) -> R,
                             R : Copy + Default 
                         {   
                             let mut res = [R::default(); #fields_count];
@@ -80,7 +80,7 @@ use syn::DeriveInput;
                     
                         fn for_each_mut<F, R>(&mut self, mut func : F) -> [R; #fields_count]
                         where 
-                            F : FnMut(&mut Self::Comp, usize) -> R,
+                            F : FnMut(&mut #comp_type, usize) -> R,
                             R : Copy + Default 
                         {
                             let mut res = [R::default(); #fields_count];
@@ -90,7 +90,7 @@ use syn::DeriveInput;
                     
                         fn try_for_each<'a, F, R, E>(&'a self, mut func : F) -> Result<[R; #fields_count], E>
                         where 
-                            F : FnMut(&'a Self::Comp, usize) -> Result<R, E>,
+                            F : FnMut(&'a #comp_type, usize) -> Result<R, E>,
                             R : Copy + Default 
                         {
                             let mut res = [R::default(); #fields_count];
@@ -100,7 +100,7 @@ use syn::DeriveInput;
                     
                         fn try_for_each_mut<F, R, E>(&mut self, mut func : F) -> Result<[R; #fields_count], E>
                         where 
-                            F : FnMut(&mut Self::Comp, usize) -> Result<R, E>,
+                            F : FnMut(&mut #comp_type, usize) -> Result<R, E>,
                             R : Copy + Default 
                         {
                             let mut res = [R::default(); #fields_count];
@@ -110,7 +110,7 @@ use syn::DeriveInput;
                     
                         fn for_each_dyn<'a, F, R>(&'a self, mut func : F) -> Vec<R>
                         where 
-                            F : FnMut(&'a Self::Comp, usize) -> R 
+                            F : FnMut(&'a #comp_type, usize) -> R 
                         {
                             let mut res = Vec::with_capacity(#fields_count);
                             #for_each_dyn_s
