@@ -126,7 +126,7 @@ use syn::DeriveInput;
     #[proc_macro_derive(SyncCompGroup)]
     pub fn sync_comp_group_derive(input : proc_macro::TokenStream) -> proc_macro::TokenStream {
         let ast : DeriveInput = syn::parse(input).unwrap();
-        sync_comp_group_impl(ast, TokenStream::from_str("dyn syact::comp::SyncComp").unwrap())
+        sync_comp_group_impl(ast, TokenStream::from_str("(dyn syact::comp::SyncComp + 'static)").unwrap())
     }
 // 
 
@@ -152,7 +152,7 @@ use syn::DeriveInput;
     #[proc_macro_derive(StepperCompGroup)]
     pub fn stepper_comp_group_derive(input : proc_macro::TokenStream) -> proc_macro::TokenStream {
         let ast : DeriveInput = syn::parse(input).unwrap();
-        let mut derive = sync_comp_group_impl(ast.clone(), TokenStream::from_str("dyn syact::comp::stepper::StepperComp").unwrap()); 
+        let mut derive = sync_comp_group_impl(ast.clone(), TokenStream::from_str("(dyn syact::comp::stepper::StepperComp + 'static)").unwrap()); 
         derive.extend(stepper_comp_group_impl(ast));
         derive
     }

@@ -49,7 +49,6 @@ extern crate alloc;
     /// Module with all the tests required to assure the library funcitons as intended
     #[cfg(test)]
     #[cfg(feature = "std")]
-    #[path = "../tests/mod.rs"]
     mod tests;
 // 
 
