@@ -1,116 +1,150 @@
 use crate::units::*;
 
-/// A node for describing a path driven by a stepper motor
-#[derive(Debug, Clone, Copy)]
-pub struct PathNode {
-    /// Delta distance covered in the node
-    pub delta : Delta,
-    /// Start velocity of the node
-    pub omega_0 : Omega
-}
-
-impl Default for PathNode {
-    fn default() -> Self {
-        Self {
-            delta: Delta::ZERO,
-            omega_0: Omega::INFINITY
-        }
-    }
-}
-
-/// A structure that helps building paths for multiple stepper motors
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct PathBuilder<const N : usize> {
-    builders : [CurveBuilder; N],
-    nstack : Vec<[PathNode; N]>
+    times : [Time; N],
+    deltas : [Delta; N],
+
+    omega_0 : Omega,
+    omegas_av : [Omega; N],
+    omegas_node : [Omega; N],
+
+    alphas : [Alpha; N]
 }
 
 impl<const N : usize> PathBuilder<N> {
-    /// Create a new pathbuilder from a set of curvebuilders
-    pub fn new(builders : [CurveBuilder; N]) -> Self {
+    pub fn new(times : [Time; N], deltas : [Delta; N], omega_0 : Omega) -> Self {
         Self {
-            builders, 
-            nstack: vec![ ]
+            times,
+            deltas,
+
+            omega_0,
+            omegas_av: [Omega::ZERO; N],
+            omegas_node: [Omega::ZERO; N],
+
+            alphas : [Alpha::ZERO; N]
         }
     }
 
-    /// Iterate through the path
-    pub fn next(&mut self, tstack : &mut [Time], dstack : &[[Delta; N]], omega_tar_opt : Option<Omega>, n : usize, i : usize) {
-        let time = tstack[i];
-        let delta = dstack[i][n];
-        let omega_tar = omega_tar_opt.unwrap_or(delta / time);
-        let ( time_real, fac ) = self.builders[n].next(delta, omega_tar, None);
-    
-        if (fac - 1.0) < -0.005 {               // Hysteresis
-            if self.builders[n].was_deccel() {
-                let omega_err = self.builders[n].omega - omega_tar;
-                let omega_cor = self.builders[n].omega_0 - omega_err;
-        
-                // println!(" => {}: Fac: {}; Correct: {}, Error: {}, Builder: {}", i, fac, omega_cor, omega_err, self.builders[n].omega);
-        
-                tstack[i - 1] = dstack[i - 1][n] / omega_cor;
-    
-                for _n in 0 ..=n {
-                    self.builders[_n].load_node(&self.nstack[i - 1][_n]);
-                    self.next(tstack, dstack, None, _n, i - 1);
-                }
-        
-                // let (time_res, fac_res) =  builder.next(delta, omega_tar); 
-                self.builders[n].next(delta, omega_tar, None);
+    // Indexing
+        #[inline]
+        pub fn omega_0(&self, i : usize) -> Omega {
+            if i == 0 {
+                self.omega_0
             } else {
-                // println!(" => {}: Fac: {}; Builder: {}", i, fac, self.builders[n].omega);
+                self.omegas_node[i - 1]
+            }
+        }
 
-                if time_real > tstack[i] {
-                    tstack[i] = time_real;
-                    for _n in 0 .. n {
-                        if i == 0 {
-                            self.builders[_n].reset();
-                        } else {
-                            self.builders[_n].load_node(&self.nstack[i - 1][_n]);
-                        }
-                        self.next(tstack, dstack, None, _n, i);
-                    }
+        #[inline]
+        pub fn omega_tar(&self, i : usize) -> Omega {
+            self.omegas_node[i]
+        }
+    // 
+
+    pub fn gen_omega_av(&mut self) {
+        for i in 0 .. N {
+            self.omegas_av[i] = self.deltas[i] / self.times[i];
+        }
+    }
+
+    pub fn update_omega_av(&mut self, i : usize, o : Omega) {
+        if o.abs() > self.omegas_av[i].abs() {
+            panic!("Increased omega average! from: {} to: {}", o, self.omegas_av[i]);
+        }
+
+        self.omegas_av[i] = o;
+        self.times[i] = self.deltas[i] / self.omegas_av[i];
+    }
+
+    pub fn gen_omega_nodes(&mut self, omega_end : Omega) {
+        let mut omega_next;
+        let mut omega_0 = self.omega_0;
+    
+        for i in 0 .. N {
+            if i < (N - 1) {
+                omega_next = self.omegas_av[i + 1];
+            } else {
+                omega_next = omega_end;
+            }
+            
+            // Change of sign
+            if (self.omegas_av[i].0 * omega_next.0) < 0.0 {
+                omega_next = Omega::ZERO;
+            }
+
+            let omega_av_n = (omega_next + omega_0) / 2.0;
+
+            if omega_av_n.abs() > self.omegas_av[i].abs() {
+                self.omegas_node[i] = 2.0 * self.omegas_av[i] - omega_0;
+            } else {
+                self.omegas_node[i] = omega_next;
+                self.update_omega_av(i, omega_av_n);
+            }
+
+            omega_0 = self.omegas_node[i];
+        }
+    }
+
+    pub fn gen_alphas(&mut self) {
+        let mut omega_0 = self.omega_0;
+
+        for i in 0 .. N {
+            self.alphas[i] = (self.omegas_node[i] - omega_0) / self.times[i];
+            omega_0 = self.omegas_node[i];     
+        }
+    }
+
+    pub fn check_alpha(&mut self, i : usize, max : Alpha) {
+        // Recalc alpha
+        self.alphas[i] = (self.omegas_node[i] - self.omega_0(i)) / self.times[i];   
+
+        if self.alphas[i].abs() > max.abs() {
+            let omega_0 = self.omega_0(i);
+            let omega_tar = self.omega_tar(i);
+
+            let alpha_use = if self.alphas[i] >= Alpha::ZERO {
+                max.abs()
+            } else {
+                -max.abs()
+            };
+
+            if omega_tar.abs() >= omega_0.abs() {
+                // Velocity increasing  (starting point stays fixed because it's smaller)
+                if let Some(time) = Time::positive_travel_time(self.deltas[i], omega_0, alpha_use) {
+                    self.times[i] = time;
+                    self.omegas_node[i] = omega_0 + alpha_use * time;
+                    self.omegas_av[i] = (omega_0 + self.omegas_node[i]) / 2.0;
+                } else {
+                    dbg!(&self);
+                    panic!("Travel time failed!: D: {}, O_0: {}, A: {}, A_prev: {}", self.deltas[i], omega_0, alpha_use, self.alphas[i]);
+                }
+            } else {
+                // Velocity decreasing (endpoint stays fixed because it's smaller)
+                if let Some(time) = Time::positive_travel_time(self.deltas[i], omega_0, alpha_use) {
+                    self.times[i] = time;
+                    self.omegas_node[i - 1] = omega_tar - alpha_use * time;
+                    self.omegas_av[i] = (self.omegas_node[i - 1] + self.omegas_node[i]) / 2.0;
+                } else {
+                    dbg!(&self);
+                    panic!("Travel time failed!: D: {}, O_0: {}, A: {}, A_prev: {}", self.deltas[i], omega_0, alpha_use, self.alphas[i]);
                 }
             }
-        }
-    
-        self.nstack[i][n] = self.builders[n].get_node();
-        // println!("[i: {}, n: {}] Omega_0: {}, Omega: {}, tar: {}", i, n, self.nstack[i][n].omega_0, self.builders[n].omega, omega_tar);
-    }
 
-    /// Iterate a full row through the path
-    pub fn next_all(&mut self, tstack : &mut [Time], dstack : &[[Delta; N]], omega_tar_opt : [Option<Omega>; N], i : usize) {
-        for n in 0 .. N {
-            self.next(tstack, dstack, omega_tar_opt[n], n, i);
+            self.alphas[i] = alpha_use;
         }
     }
 
-    /// Generate the complete path
-    pub fn generate(&mut self, tstack : &mut [Time], dstack : &[[Delta; N]], omega_last : [Option<Omega>; N]) {
-        if tstack.len() != dstack.len() {
-            panic!("Stacks must be equal in size!");
-        }
-
-        self.nstack = vec![ [ PathNode::default(); N ]; tstack.len() ];
-
-        for i in 0 .. (tstack.len() - 1) {
-            for n in 0 .. N {
-                self.next(tstack, dstack, None, n, i);
-            }
-        }
-
-        for n in 0 .. N {
-            self.next(tstack, dstack, omega_last[n], n, tstack.len() - 1);
+    pub fn check_all_alphas(&mut self, max : Alpha) {
+        for i in 0 .. N {
+            self.check_alpha(i, max);
         }
     }
 
-    /// Get a pathnode stored in the builder
-    pub fn get_node(&'a self, n : usize, i : usize) -> &'a PathNode {
-        &self.nstack[i][n]
-    }
-
-    /// Consumes the builder, returning it's nodes
-    pub fn unpack(self) -> Vec<[PathNode; N]> {
-        self.nstack
+    pub fn check_all_with_alpha<F : FnMut(&mut Self, usize) -> Alpha>(&mut self, mut afunc : F) {
+        for i in 0 .. N {
+            let alpha = afunc(self, i);
+            self.check_alpha(i, alpha)
+        }
     }
 }

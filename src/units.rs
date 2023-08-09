@@ -148,6 +148,12 @@ macro_rules! basic_unit {
             }
         }
 
+        impl core::fmt::Debug for $a {
+            fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+                f.write_fmt(format_args!("{}({})", stringify!($a), self.0))
+            }
+        }
+
         impl core::convert::Into<f32> for $a {
             #[inline(always)]
             fn into(self) -> f32 {
@@ -265,7 +271,7 @@ macro_rules! derive_units {
 /// // Comparisions
 /// assert!(Time(1.0) > Time(-1.0));
 /// ```
-#[derive(Clone, Copy, Debug, Default, Serialize, Deserialize, PartialEq, PartialOrd)]
+#[derive(Clone, Copy, Default, Serialize, Deserialize, PartialEq, PartialOrd)]
 pub struct Time(pub f32);
 basic_unit!(Time);
 additive_unit!(Time);
@@ -308,7 +314,7 @@ impl Div<Time> for f32 {
 /// assert_eq!(Gamma(2.0) + Delta(1.0), Gamma(3.0));
 /// assert_eq!(Gamma(2.0) - Delta(1.0), Gamma(1.0));
 /// ```
-#[derive(Clone, Copy, Debug, Default, Serialize, Deserialize, PartialEq, PartialOrd)]
+#[derive(Clone, Copy, Default, Serialize, Deserialize, PartialEq, PartialOrd)]
 pub struct Gamma(pub f32);
 basic_unit!(Gamma);
 
@@ -379,7 +385,7 @@ pub fn force_gammas_from_phis<const N : usize>(phis : [Phi; N]) -> [Gamma; N] {
 /// # Unit
 /// 
 /// - Can be either radians or millimeters
-#[derive(Clone, Copy, Debug, Default, Serialize, Deserialize, PartialEq, PartialOrd)]
+#[derive(Clone, Copy, Default, Serialize, Deserialize, PartialEq, PartialOrd)]
 pub struct Phi(pub f32);
 basic_unit!(Phi);
 
@@ -437,7 +443,7 @@ impl Sub<Phi> for Phi {
 /// assert_eq!(Delta(5.0), Delta(2.5) * 2.0);
 /// assert_eq!(Delta(2.0), Gamma(4.0) - Gamma(2.0));
 /// ```
-#[derive(Clone, Copy, Debug, Default, Serialize, Deserialize, PartialEq, PartialOrd)]
+#[derive(Clone, Copy, Default, Serialize, Deserialize, PartialEq, PartialOrd)]
 pub struct Delta(pub f32);
 basic_unit!(Delta);
 additive_unit!(Delta);
@@ -464,7 +470,7 @@ impl Add<Gamma> for Delta {
 /// # Unit
 /// 
 /// - Can be either radians per second or millimeters per second
-#[derive(Clone, Copy, Debug, Default, Serialize, Deserialize, PartialEq, PartialOrd)]
+#[derive(Clone, Copy, Default, Serialize, Deserialize, PartialEq, PartialOrd)]
 pub struct Omega(pub f32);
 basic_unit!(Omega);
 additive_unit!(Omega);
@@ -490,7 +496,7 @@ impl Div<Omega> for f32 {
 /// 
 /// assert_eq!(Omega(5.0), Alpha(2.5) * Time(2.0));
 /// assert_eq!(Alpha(2.5), Omega(5.0) / Time(2.0));
-#[derive(Clone, Copy, Debug, Default, Serialize, Deserialize, PartialEq, PartialOrd)]
+#[derive(Clone, Copy, Default, Serialize, Deserialize, PartialEq, PartialOrd)]
 pub struct Alpha(pub f32); 
 basic_unit!(Alpha);
 additive_unit!(Alpha);
@@ -502,7 +508,7 @@ derive_units!(Force, Alpha, Inertia);
 /// # Unit
 /// 
 /// - Can be either radians per second^3 or millimeters per second^3
-#[derive(Clone, Copy, Debug, Default, Serialize, Deserialize, PartialEq, PartialOrd)]
+#[derive(Clone, Copy, Default, Serialize, Deserialize, PartialEq, PartialOrd)]
 pub struct Jolt(pub f32); 
 basic_unit!(Jolt);
 additive_unit!(Jolt);
@@ -513,7 +519,7 @@ derive_units!(Alpha, Jolt, Time);
 /// # Unit
 /// 
 /// - Can be either kilogramm or kilogramm times meter^2
-#[derive(Clone, Copy, Debug, Default, Serialize, Deserialize, PartialEq, PartialOrd)]
+#[derive(Clone, Copy, Default, Serialize, Deserialize, PartialEq, PartialOrd)]
 pub struct Inertia(pub f32);
 basic_unit!(Inertia);
 additive_unit!(Inertia);
@@ -524,7 +530,7 @@ additive_unit!(Inertia);
 /// # Unit
 /// 
 /// - Can be either Newton or Newtonmeter
-#[derive(Clone, Copy, Debug, Default, Serialize, Deserialize, PartialEq, PartialOrd)]
+#[derive(Clone, Copy, Default, Serialize, Deserialize, PartialEq, PartialOrd)]
 pub struct Force(pub f32);
 basic_unit!(Force);
 additive_unit!(Force);

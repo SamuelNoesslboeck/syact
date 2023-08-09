@@ -15,10 +15,7 @@ cfg_if::cfg_if! {
         pub use crate::data::{CompVars, CompData, StepperConst};
         pub use crate::data::servo::ServoConst;
 
-        // pub use crate::math::{CurveBuilder, PathBuilder};
-        // pub use crate::math::curve;
-        pub use crate::math::force;
-        pub use crate::math::inertia;
+        pub use crate::math;
 
         pub use crate::meas::{SimpleMeas, SimpleMeasData, EndSwitch, VirtualEndSwitch};
 
