@@ -6,7 +6,7 @@ use crate::units::*;
 /// 
 /// # Generic type `T`
 /// 
-/// The generic type `T` repesents the compo
+/// The generic type `T` repesents the components in the struct
 /// 
 /// # Constant generic `C`
 pub trait SyncCompGroup<T, const C : usize> : Setup 

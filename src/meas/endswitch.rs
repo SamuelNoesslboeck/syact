@@ -11,12 +11,13 @@ use serde::{Serialize, Deserialize};
 use super::*;
 
 /// A simple endswitch that can trigger when reaching a destination
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct EndSwitch {
+    #[serde(alias = "data")]
     _data : SimpleMeasData,
     pin : u8,
 
-    #[cfg_attr(feature = "std", serde(skip))]
+    #[serde(skip)]
     sys_pin : Option<UniInPin>
 }
 
