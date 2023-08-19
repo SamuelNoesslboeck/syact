@@ -95,6 +95,12 @@ path = "examples/dc_motors.rs"
     path = "examples/hardware/comps/stepper.rs"
   #
 
+  # Devices
+    [[example]]
+    name = "hardware-devices-led"
+    path = "examples/hardware/devices/led.rs"
+  # 
+
   # Meas
     [[example]]
     name = "hardware-meas-endswitch"
