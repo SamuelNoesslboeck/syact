@@ -13,7 +13,7 @@ pub trait SimpleMeas : Interruptor + Setup {
     fn data(&self) -> &SimpleMeasData;
 }
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SimpleMeasData {
     pub set_gamma : Gamma,
     pub max_dist : Delta,

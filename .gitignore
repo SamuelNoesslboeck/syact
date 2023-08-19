@@ -6,7 +6,7 @@ target
 Cargo.lock
 
 # Article
-article/article.aux
+article.aux
 article.fdb_latexmk
 article.fls
 article.log

@@ -7,7 +7,7 @@ The library includes a basic unit system, mainly to differenciate between *relat
 All units are tuple structs with a `f32` embeded
 
 ```rust
-#[derive(Clone, Copy, Debug, Default, PartialEq, PartialOrd)]
+#[derive(Clone, Copy, Default, PartialEq, PartialOrd)]
 struct SomeUnit(pub f32);
 syact::basic_unit!(SomeUnit);
 
