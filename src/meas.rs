@@ -10,7 +10,7 @@ use serde::{Serialize, Deserialize};
 
 /// A structure for taking basic measurements
 pub trait SimpleMeas : Interruptor + Setup { 
-    fn data(&self) -> &SimpleMeasData;
+
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

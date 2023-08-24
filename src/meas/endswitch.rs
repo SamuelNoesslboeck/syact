@@ -13,8 +13,6 @@ use super::*;
 /// A simple endswitch that can trigger when reaching a destination
 #[derive(Serialize, Deserialize)]
 pub struct EndSwitch {
-    #[serde(alias = "data")]
-    _data : SimpleMeasData,
     pin : u8,
 
     #[serde(skip)]
@@ -23,12 +21,17 @@ pub struct EndSwitch {
 
 impl EndSwitch {
     /// Creates a new end switch
-    pub fn new(pin : u8, data : SimpleMeasData) -> Self {
+    pub fn new(pin : u8) -> Self {
         Self {
-            _data: data,
             pin, 
             sys_pin: None
         }
+    }
+
+    pub fn is_triggered(&self) -> bool {
+        self.sys_pin.as_ref()
+            .map(|pin| pin.is_high())
+            .unwrap_or(false)
     }
 }
 
@@ -53,11 +56,7 @@ impl Interruptor for EndSwitch {
     }
 }
 
-impl SimpleMeas for EndSwitch {
-    fn data(&self) -> &SimpleMeasData {
-        &self._data
-    }
-}
+impl SimpleMeas for EndSwitch { }
 
 // Virtual
 pub struct VirtualEndSwitch {

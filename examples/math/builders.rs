@@ -124,6 +124,8 @@ fn main() -> Result<(), syact::Error> {
         for time in builder.enumerate() {
             println!("{:?}", time);
         }
+
+        println!("Max steps: {}", stepper.consts().steps_from_ang_abs(delta, stepper.micro()));
         
 
         println!("\n[LimitedStepTimeBuilder - Predicting]");

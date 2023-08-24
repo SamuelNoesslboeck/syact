@@ -47,6 +47,10 @@ fn main() -> Result<(), syact::Error> {
     let omega : Omega = Omega(*matches.get_one("omega").unwrap_or(&OMEGA_DEF.0));
     let micro_opt : Option<&u8> = matches.get_one("micro");
 
+    // Load data
+    let inertia = std::env::var("INERTIA").ok().map(|v| v.parse::<Inertia>()).unwrap().unwrap_or(Inertia::ZERO);
+    let force = std::env::var("FORCE").ok().map(|v| Force(v.parse::<f32>().unwrap())).unwrap_or(Force::ZERO);
+
     // Create the controls for a stepper motor
     let mut ctrl = Stepper::new(
         GenericPWM::new(pin_step, pin_dir)?, 
@@ -65,14 +69,19 @@ fn main() -> Result<(), syact::Error> {
     }
 
     // Apply some loads
-    ctrl.apply_inertia(Inertia(0.01));
-    ctrl.apply_force(Force(0.10));
+    ctrl.apply_inertia(inertia);
+    ctrl.apply_force(force);
 
     ctrl.set_omega_max(omega);
 
-    println!("Staring to move");
+    print!("Staring to move ... ");
     ctrl.drive_rel(delta, 1.0)?;      // Move the motor
-    println!("Distance {}rad with max speed {:?}rad/s done", DELTA_DEF, OMEGA_DEF);
+    println!("done!");
+    println!("");
+
+    println!("Movement data");
+    println!("- Distance: {}rad", delta);
+    println!("- Speed: {}rad", omega);
 
     Ok(())
 }  

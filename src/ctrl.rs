@@ -17,6 +17,9 @@ pub use dc_motor::DcMotor;
 #[cfg(feature = "std")]
 mod des;
 
+/// LEDs and other light sources
+pub mod led;
+
 /// Universal pin structure
 pub mod pin;
 

@@ -4,7 +4,6 @@ use clap::{command, arg, value_parser};
 // Include the library
 use syact::prelude::*;
 
-
 fn prompt_enter() {
     let mut line = String::new();
     std::io::stdout().flush().unwrap();
