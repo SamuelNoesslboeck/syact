@@ -48,7 +48,7 @@ fn main() -> Result<(), syact::Error> {
     let micro_opt : Option<&u8> = matches.get_one("micro");
 
     // Load data
-    let inertia = std::env::var("INERTIA").ok().map(|v| v.parse::<Inertia>()).unwrap().unwrap_or(Inertia::ZERO);
+    let inertia = std::env::var("INERTIA").ok().map(|v| v.parse::<Inertia>().unwrap()).unwrap_or(Inertia::ZERO);
     let force = std::env::var("FORCE").ok().map(|v| Force(v.parse::<f32>().unwrap())).unwrap_or(Force::ZERO);
 
     // Create the controls for a stepper motor
