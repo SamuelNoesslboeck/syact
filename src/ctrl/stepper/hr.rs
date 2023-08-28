@@ -948,6 +948,10 @@ impl<C : Controller + Send + 'static> StepperComp for HRStepper<C> {
         }
 
         fn set_micro(&mut self, micro : u8) {
+            if micro == 0 {
+                panic!("0 is not allowed as a microstep amount")
+            }
+
             self._step_ang.store(self.step_ang().0 * (self._micro as f32) / (micro as f32), Ordering::Relaxed);
             self._micro = micro;
         }

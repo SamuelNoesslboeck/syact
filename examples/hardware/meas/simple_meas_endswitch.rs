@@ -34,7 +34,7 @@ fn main() -> Result<(), syact::Error> {
     // Load data
     let inertia = std::env::var("INERTIA").ok().map(|v| v.parse::<Inertia>().unwrap()).unwrap_or(Inertia::ZERO);
     let force = std::env::var("FORCE").ok().map(|v| v.parse::<Force>().unwrap()).unwrap_or(Force::ZERO);
-    let trigger = std::env::var("TRIGGER").ok().map(|v| v.parse::<bool>().unwrap()).unwrap_or(false);
+    let trigger = std::env::var("TRIGGER").ok().map(|v| v.parse::<bool>().unwrap()).unwrap_or(true);
 
     // Create the controls for a stepper motor
     let mut ctrl = Stepper::new(

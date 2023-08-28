@@ -35,7 +35,7 @@ pub struct SimpleMeasData {
 /// 
 /// # Measurement data and its usage
 /// 
-/// Specifing a `sample_dist` is optional, as the script will replace it with 5% of the maximum distance if not specified
+/// Specifing a `sample_dist` is optional, as the script will replace it with 10% of the maximum distance if not specified
 pub fn take_simple_meas<C : SyncComp + ?Sized>(comp : &mut C, data : &SimpleMeasData, speed_f : f32) -> Result<(), crate::Error> {
     let mut gammas : Vec<Gamma> = Vec::new();
 
@@ -53,10 +53,12 @@ pub fn take_simple_meas<C : SyncComp + ?Sized>(comp : &mut C, data : &SimpleMeas
 
     // Samples
         for _ in 0 .. data.add_samples {
+            println!("Sample");
+
             // Drive half of the sample distance back (faster)
-            comp.drive_rel(-data.sample_dist.unwrap_or(data.max_dist * 0.05) / 2.0, speed_f)?;
+            println!("Driven back by: {}", comp.drive_rel(-data.sample_dist.unwrap_or(data.max_dist * 0.1) / 2.0, speed_f)?);
             // Drive sample distance
-            comp.drive_rel(data.sample_dist.unwrap_or(data.max_dist * 0.05), data.meas_speed_f * speed_f)?;
+            comp.drive_rel(data.sample_dist.unwrap_or(data.max_dist * 0.1), data.meas_speed_f * speed_f)?;
 
             // Check wheiter the component has been interrupted and if it is the correct interrupt
             if comp.intr_reason().ok_or("The measurement failed! No interrupt was triggered")? != InterruptReason::EndReached {
