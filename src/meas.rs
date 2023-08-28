@@ -31,6 +31,13 @@ pub struct SimpleMeasData {
 // 
 
 /// Simplest form of measurement by reference position
+/// - `comp`: The component to measure
+/// - `data`: The data defining the measurement
+/// - `speed_f`: The overall speed factor of the measurement
+/// 
+/// # Measurement data and its usage
+/// 
+/// Specifing a `sample_dist` is optional, as the script will replace it with 5% of the maximum distance if not specified
 pub fn take_simple_meas<C : SyncComp + ?Sized>(comp : &mut C, data : &SimpleMeasData, speed_f : f32) -> Result<(), crate::Error> {
     let mut gammas : Vec<Gamma> = Vec::new();
 
@@ -58,6 +65,7 @@ pub fn take_simple_meas<C : SyncComp + ?Sized>(comp : &mut C, data : &SimpleMeas
                 return Err("Bad interrupt reason!".into());     // TODO: Improve error message
             }
 
+            // Add the measurement value to the list
             gammas.push(comp.gamma());
         }
     // 

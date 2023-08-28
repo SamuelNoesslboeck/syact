@@ -14,6 +14,7 @@ use super::*;
 #[derive(Serialize, Deserialize)]
 pub struct EndSwitch {
     pin : u8,
+    trigger : bool,
 
     #[serde(skip)]
     sys_pin : Option<UniInPin>
@@ -21,9 +22,11 @@ pub struct EndSwitch {
 
 impl EndSwitch {
     /// Creates a new end switch
-    pub fn new(pin : u8) -> Self {
+    pub fn new(pin : u8, trigger : bool) -> Self {
         Self {
             pin, 
+            trigger,
+
             sys_pin: None
         }
     }
@@ -31,7 +34,7 @@ impl EndSwitch {
     pub fn is_triggered(&self) -> bool {
         self.sys_pin.as_ref()
             .map(|pin| pin.is_high())
-            .unwrap_or(false)
+            .unwrap_or(false) == self.trigger
     }
 }
 
@@ -45,7 +48,7 @@ impl Setup for EndSwitch {
 impl Interruptor for EndSwitch {
     fn check(&mut self, _gamma : &Arc<AtomicF32>) -> Option<InterruptReason> {
         if let Some(pin) = &mut self.sys_pin {
-            if pin.is_high() {
+            if pin.is_high() == self.trigger {
                 Some(InterruptReason::EndReached)
             } else {
                 None
