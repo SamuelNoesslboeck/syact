@@ -655,14 +655,16 @@ impl<C : Controller + Send + 'static> SyncComp for HRStepper<C> {
                 Delta(self._step_ang.load(Ordering::Relaxed)), dir, cur,  // The curve and step angle
                 || { false }        // (Not required) helper function
             ) + Delta(self._step_ang.load(Ordering::Relaxed));
-            
-            // Final (unpaused) step
-            Self::use_ctrl(&mut self._ctrl, |ctrl| {
-                ctrl.step_final();
-            });
 
-            // Update the pos after the final step
-            self.write_gamma(self.gamma() + Delta(self._step_ang.load(Ordering::Relaxed)));
+            if self._intr_reason.lock().unwrap().is_none() {
+                // Final (unpaused) step
+                Self::use_ctrl(&mut self._ctrl, |ctrl| {
+                    ctrl.step_final();
+                });
+
+                // Update the pos after the final step
+                self.write_gamma(self.gamma() + Delta(self._step_ang.load(Ordering::Relaxed)));
+            }
 
             // Update the curret step time
             self.set_omega_cur(Omega::ZERO);

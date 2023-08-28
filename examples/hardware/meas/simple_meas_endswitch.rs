@@ -34,7 +34,8 @@ fn main() -> Result<(), syact::Error> {
     // Load data
     let inertia = std::env::var("INERTIA").ok().map(|v| v.parse::<Inertia>().unwrap()).unwrap_or(Inertia::ZERO);
     let force = std::env::var("FORCE").ok().map(|v| v.parse::<Force>().unwrap()).unwrap_or(Force::ZERO);
-    let trigger = std::env::var("TRIGGER").ok().map(|v| v.parse::<bool>().unwrap()).unwrap_or(false);
+    let trigger = std::env::var("TRIGGER").ok().map(|v| v.parse::<bool>().unwrap()).unwrap_or(true);
+    let samples = std::env::var("SAMPLES").ok().map(|v| v.parse::<usize>().unwrap()).unwrap_or(2);
 
     // Create the controls for a stepper motor
     let mut ctrl = Stepper::new(
@@ -47,7 +48,7 @@ fn main() -> Result<(), syact::Error> {
         max_dist: delta, 
         meas_speed_f: speed_f, 
 
-        add_samples: 2, 
+        add_samples: samples, 
         sample_dist: None
     };
 
@@ -77,9 +78,15 @@ fn main() -> Result<(), syact::Error> {
     // Starting the measurement
     println!("Starting measurement ... ");
 
-    syact::meas::take_simple_meas(&mut ctrl, &data, 1.0)?;
+    let res = syact::meas::take_simple_meas(&mut ctrl, &data, 1.0)?;
 
-    println!("Measurement done!");
+    println!("Measurement done!\n");
+
+    println!("{:?}", &res);
+    println!("\nAdditional values:");
+    println!(" - Gamma max: {}", res.gamma_max());
+    println!(" - Gamma min: {}", res.gamma_min());
+    println!(" - Max Inacc: {}", res.max_inacc());
 
     Ok(())
 }  

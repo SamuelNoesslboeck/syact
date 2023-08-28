@@ -124,7 +124,7 @@ impl Controller for GenericPWM {
             }
 
         self.pin_step.set_high();
-            spin_sleep::sleep(STEP_PULSE_DUR);
+        spin_sleep::sleep(STEP_PULSE_DUR);
         self.pin_step.set_low();
 
         self.pause_stamp = Instant::now();

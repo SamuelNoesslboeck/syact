@@ -28,6 +28,30 @@ pub struct SimpleMeasData {
     const fn default_add_samples() -> usize { 1 }
 // 
 
+#[derive(Debug, Clone)]
+pub struct SimpleMeasResult {
+    pub samples : usize,
+
+    // Gamma values
+    pub gammas : Vec<Gamma>,
+    pub gamma_av : Gamma,
+    pub corr : Delta
+}
+
+impl SimpleMeasResult {
+    pub fn gamma_max(&self) -> Gamma {
+        *self.gammas.iter().reduce(Gamma::max_ref).expect("Gamma array must contain a value")
+    }
+
+    pub fn gamma_min(&self) -> Gamma {
+        *self.gammas.iter().reduce(Gamma::min_ref).expect("Gamma array must contain a value")
+    }
+
+    pub fn max_inacc(&self) -> Delta {
+        self.gamma_max() - self.gamma_min()
+    }
+}
+
 /// Simplest form of measurement by reference position
 /// - `comp`: The component to measure
 /// - `data`: The data defining the measurement
@@ -36,7 +60,7 @@ pub struct SimpleMeasData {
 /// # Measurement data and its usage
 /// 
 /// Specifing a `sample_dist` is optional, as the script will replace it with 10% of the maximum distance if not specified
-pub fn take_simple_meas<C : SyncComp + ?Sized>(comp : &mut C, data : &SimpleMeasData, speed_f : f32) -> Result<(), crate::Error> {
+pub fn take_simple_meas<C : SyncComp + ?Sized>(comp : &mut C, data : &SimpleMeasData, speed_f : f32) -> Result<SimpleMeasResult, crate::Error> {
     let mut gammas : Vec<Gamma> = Vec::new();
 
     // Init measurement
@@ -53,10 +77,8 @@ pub fn take_simple_meas<C : SyncComp + ?Sized>(comp : &mut C, data : &SimpleMeas
 
     // Samples
         for _ in 0 .. data.add_samples {
-            println!("Sample");
-
             // Drive half of the sample distance back (faster)
-            println!("Driven back by: {}", comp.drive_rel(-data.sample_dist.unwrap_or(data.max_dist * 0.1) / 2.0, speed_f)?);
+            comp.drive_rel(-data.sample_dist.unwrap_or(data.max_dist * 0.1) / 2.0, speed_f)?;
             // Drive sample distance
             comp.drive_rel(data.sample_dist.unwrap_or(data.max_dist * 0.1), data.meas_speed_f * speed_f)?;
 
@@ -81,5 +103,11 @@ pub fn take_simple_meas<C : SyncComp + ?Sized>(comp : &mut C, data : &SimpleMeas
     comp.set_end(gamma_av);
     comp.write_gamma(gamma_new);
 
-    Ok(())
+    Ok(SimpleMeasResult {
+        samples: data.add_samples,
+
+        gammas: gammas,
+        gamma_av: gamma_av,
+        corr: gamma_diff
+    })
 }
