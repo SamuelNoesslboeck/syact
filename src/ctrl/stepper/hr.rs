@@ -207,7 +207,7 @@ impl<C : Controller + Send + 'static> HRStepper<C> {
     /// Write a curve of signals to the step output pins
     /// The curve can be any iterator that yields `Time`
     pub fn drive_curve<I : Iterator<Item = Time>, F : FnMut() -> bool>(ctrl_mtx : &mut Arc<Mutex<C>>, intrs_mtx : &mut Arc<Mutex<Vec<Box<dyn Interruptor + Send>>>>, 
-        gamma : &Arc<AtomicF32>, t_step_cur : &Arc<AtomicF32>, intr_reason : &Arc<Mutex<Option<InterruptReason>>>, step_ang : Delta, cur : I, mut h_func : F) -> Delta
+        gamma : &Arc<AtomicF32>, t_step_cur : &Arc<AtomicF32>, intr_reason : &Arc<Mutex<Option<InterruptReason>>>, step_ang : Delta, dir : Direction, cur : I, mut h_func : F) -> Delta
     {
         // Record start gamma to return a delta distance at the end
         let gamma_0 = gamma.load(Ordering::Relaxed);      
@@ -220,6 +220,13 @@ impl<C : Controller + Send + 'static> HRStepper<C> {
             for point in cur {
                 // Run all interruptors
                 for intr in intrs.iter_mut() {
+                    // Check if the direction is right
+                    if let Some(i_dir) = intr.dir() {
+                        if i_dir != dir {
+                            continue;
+                        }
+                    }
+
                     if let Some(reason) = intr.check(gamma) {
                         intr_reason.lock().unwrap().replace(reason);
                         return Delta(gamma.load(Ordering::Relaxed) - gamma_0); 
@@ -363,6 +370,7 @@ impl<C : Controller + Send + 'static> HRStepper<C> {
         let mut intrs_mtx = self.intrs.clone();
 
         let gamma = self._gamma.clone();
+        let dir = self._dir.clone();
         let t_step_cur = self._t_step_cur.clone();
         let active = self.active.clone();
         let step_ang = self._step_ang.clone();
@@ -401,7 +409,7 @@ impl<C : Controller + Send + 'static> HRStepper<C> {
 
                         // Drive the curve with an interrupt function, that causes it to exit once a new message has been received
                         Self::drive_curve(&mut ctrl_mtx, &mut intrs_mtx,&gamma, &t_step_cur, &intr_reason,
-                        Delta(step_ang.load(Ordering::Relaxed)), cur, || {
+                        Delta(step_ang.load(Ordering::Relaxed)), Direction::from_bool(dir.load(Ordering::Relaxed)), cur, || {
                             // Check if a new message is available
                             if let Ok(msg_new) = receiver_thr.try_recv() {
                                 // Set msg for next run
@@ -438,7 +446,7 @@ impl<C : Controller + Send + 'static> HRStepper<C> {
 
                         // Drive the curve with an interrupt function, that causes it to exit once a new message has been received
                         Self::drive_curve(&mut ctrl_mtx, &mut intrs_mtx,  &gamma, &t_step_cur, &intr_reason,
-                        Delta(step_ang.load(Ordering::Relaxed)), cur, || {
+                        Delta(step_ang.load(Ordering::Relaxed)), Direction::from_bool(dir.load(Ordering::Relaxed)), cur, || {
                             // Check if a new message is available
                             if let Ok(msg_new) = receiver_thr.try_recv() {
                                 // Set msg for next run
@@ -638,11 +646,13 @@ impl<C : Controller + Send + 'static> SyncComp for HRStepper<C> {
 
             // Set the active status to `true` 
             self.active.store(true, Ordering::Relaxed);
+
+            let dir = self.dir();
     
             let delta = Self::drive_curve(
                 &mut self._ctrl, &mut self.intrs,           // Mutexes
                 &self._gamma, &self._t_step_cur, &self._intr_reason,         // Atomics
-                Delta(self._step_ang.load(Ordering::Relaxed)), cur,  // The curve and step angle
+                Delta(self._step_ang.load(Ordering::Relaxed)), dir, cur,  // The curve and step angle
                 || { false }        // (Not required) helper function
             ) + Delta(self._step_ang.load(Ordering::Relaxed));
             
@@ -890,7 +900,7 @@ impl<C : Controller + Send + 'static> AsyncComp for HRStepper<C> {
             builder.set_omega_tar(Omega::ZERO)?;
             self.drive_speed_async(builder, Time::ZERO)?;
 
-            self.await_inactive()?;
+            self.await_inactive()?;         // TODO: Remove
             self.set_dir(dir);
 
             builder = HRCtrlStepBuilder::from_builder(

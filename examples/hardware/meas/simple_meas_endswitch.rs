@@ -16,6 +16,7 @@ fn main() -> Result<(), syact::Error> {
         .arg(arg!([pin_step] "Pin number of the step pin").value_parser(value_parser!(u8)))
         .arg(arg!([pin_dir] "Pin number of the direction pin").value_parser(value_parser!(u8)))
         .arg(arg!([pin_meas] "Pin number of the measurement pin").value_parser(value_parser!(u8)))
+        .arg(arg!([dir] "Direction of the endswitch (`1` per default => `CW`)").value_parser(value_parser!(u8)))
         .arg(arg!([micro] "Enables microstepping with the given step value (1 per default)").value_parser(value_parser!(u8)))
         .arg(arg!([delta] "Delta (distance) of the movement in rad (2pi [1 rev] per default)").value_parser(value_parser!(f32)))
         .arg(arg!([speed_f] "Omega (velocity) of the movement in rad/s (10 rad/s per default)").value_parser(value_parser!(f32)))
@@ -24,6 +25,7 @@ fn main() -> Result<(), syact::Error> {
     let pin_step : u8 = *matches.get_one("pin_step").expect("A valid step pin has to be provided");
     let pin_dir : u8 = *matches.get_one("pin_dir").expect("A valid direction pin has to be provided");
     let pin_meas : u8 = *matches.get_one("pin_meas").expect("A valid measurement pin has to be provided");
+    let dir_u8 : u8 = *matches.get_one("dir").unwrap_or(&1);
 
     let micro_opt : Option<&u8> = matches.get_one("micro");
     let delta : Delta  = Delta(*matches.get_one("delta").unwrap_or(&DELTA_DEF.0));
@@ -49,7 +51,7 @@ fn main() -> Result<(), syact::Error> {
         sample_dist: None
     };
 
-    let mut switch = EndSwitch::new(pin_meas, trigger);
+    let mut switch = EndSwitch::new(pin_meas, trigger, Some(Direction::from_u8(dir_u8)));
 
     // Link the component to a system
     ctrl.write_data(CompData { 
@@ -61,7 +63,7 @@ fn main() -> Result<(), syact::Error> {
     if let Some(&micro) = micro_opt {
         ctrl.set_micro(micro);
     }
-    
+
     // Apply some loads
     ctrl.apply_inertia(inertia);
     ctrl.apply_force(force);

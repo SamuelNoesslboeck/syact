@@ -44,7 +44,7 @@ fn main() -> Result<(), syact::Error> {
     let pin : u8 = *matches.get_one("pin").expect("A valid pin has to be provided");
     let led_pin : Option<&u8> = matches.get_one("led");
 
-    let mut switch = EndSwitch::new(pin, true);
+    let mut switch = EndSwitch::new(pin, true, None);
     switch.setup()?;
 
     let led = led_pin.map(|lpin| {

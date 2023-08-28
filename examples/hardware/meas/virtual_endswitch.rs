@@ -10,7 +10,7 @@ fn main() -> Result<(), syact::Error> {
     stepper.apply_inertia(Inertia(0.1));
 
     // Initialize switch
-    let mut switch = VirtualEndSwitch::new(false);
+    let mut switch = VirtualEndSwitch::new(false, None);
     switch.setup()?;
 
     let vpin = switch.vpin.clone();

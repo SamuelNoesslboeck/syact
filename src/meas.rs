@@ -9,9 +9,7 @@ use serde::{Serialize, Deserialize};
 // 
 
 /// A structure for taking basic measurements
-pub trait SimpleMeas : Interruptor + Setup { 
-
-}
+pub trait SimpleMeas : Interruptor + Setup { }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SimpleMeasData {

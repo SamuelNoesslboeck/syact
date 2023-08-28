@@ -1,6 +1,6 @@
 use core::sync::atomic::AtomicBool;
 
-use crate::Setup;
+use crate::{Setup, Direction};
 use crate::ctrl::{Interruptor, InterruptReason};
 use crate::ctrl::pin::{UniInPin, UniPin};
 
@@ -15,6 +15,7 @@ use super::*;
 pub struct EndSwitch {
     pin : u8,
     trigger : bool,
+    _dir : Option<Direction>,
 
     #[serde(skip)]
     sys_pin : Option<UniInPin>
@@ -22,10 +23,11 @@ pub struct EndSwitch {
 
 impl EndSwitch {
     /// Creates a new end switch
-    pub fn new(pin : u8, trigger : bool) -> Self {
+    pub fn new(pin : u8, trigger : bool, _dir : Option<Direction>) -> Self {
         Self {
             pin, 
             trigger,
+            _dir,
 
             sys_pin: None
         }
@@ -46,6 +48,10 @@ impl Setup for EndSwitch {
 }
 
 impl Interruptor for EndSwitch {
+    fn dir(&self) -> Option<Direction> {
+        self._dir
+    }
+
     fn check(&mut self, _gamma : &Arc<AtomicF32>) -> Option<InterruptReason> {
         if let Some(pin) = &mut self.sys_pin {
             if pin.is_high() == self.trigger {
@@ -63,13 +69,15 @@ impl SimpleMeas for EndSwitch { }
 
 // Virtual
 pub struct VirtualEndSwitch {
-    pub vpin : Arc<AtomicBool>
+    pub vpin : Arc<AtomicBool>,
+    _dir : Option<Direction>
 }
 
 impl VirtualEndSwitch {
-    pub fn new(def : bool) -> Self {
+    pub fn new(def : bool, _dir : Option<Direction>) -> Self {
         VirtualEndSwitch { 
-            vpin: Arc::new(AtomicBool::new(def))
+            vpin: Arc::new(AtomicBool::new(def)),
+            _dir
         }
     }
 }
@@ -77,6 +85,10 @@ impl VirtualEndSwitch {
 impl Setup for VirtualEndSwitch { }
 
 impl Interruptor for VirtualEndSwitch {
+    fn dir(&self) -> Option<Direction> {
+        self._dir
+    }
+    
     fn check(&mut self, _gamma : &Arc<AtomicF32>) -> Option<InterruptReason> {
         if self.vpin.load(core::sync::atomic::Ordering::Relaxed) {
             Some(InterruptReason::EndReached)
