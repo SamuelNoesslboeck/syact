@@ -37,8 +37,8 @@ rppal = { version = "0.14.1", optional = true }
 crossterm = "0.27.0"
 
 # Net-examples
-magicbox_mk1 = { git = "https://github.com/SamuelNoesslboeck/MagicBox_Mk1", rev = "5a113b2f" }
-syiot = { git = "https://github.com/SamuelNoesslboeck/syiot.git" }
+# magicbox_mk1 = { git = "https://github.com/SamuelNoesslboeck/MagicBox_Mk1", rev = "5a113b2f" }
+# syiot = { git = "https://github.com/SamuelNoesslboeck/syiot.git" }
 
 [target.'cfg(windows)'.dev-dependencies]
 plotters = "0.3.4"
@@ -146,19 +146,19 @@ path = "examples/dc_motors.rs"
 #
 
 # Net
-  [[example]]
-  name = "net-ctrl_client"
-  path = "examples/net/ctrl_client.rs"
+  # [[example]]
+  # name = "net-ctrl_client"
+  # path = "examples/net/ctrl_client.rs"
 
-  [[example]]
-  name = "net-ctrl_server"
-  path = "examples/net/ctrl_server.rs"
+  # [[example]]
+  # name = "net-ctrl_server"
+  # path = "examples/net/ctrl_server.rs"
 
-  [[example]]
-  name = "net-ctrl_stepper_client"
-  path = "examples/net/ctrl_stepper_client.rs"
+  # [[example]]
+  # name = "net-ctrl_stepper_client"
+  # path = "examples/net/ctrl_stepper_client.rs"
 
-  [[example]]
-  name = "net-ctrl_stepper_server"
-  path = "examples/net/ctrl_stepper_server.rs"
+  # [[example]]
+  # name = "net-ctrl_stepper_server"
+  # path = "examples/net/ctrl_stepper_server.rs"
 #
