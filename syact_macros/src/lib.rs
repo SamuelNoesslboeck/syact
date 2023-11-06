@@ -123,6 +123,10 @@ use syn::DeriveInput;
         }
     }
 
+    /// # `SyncCompGroup` - proc_macro
+    /// 
+    /// Automatically generates an implementation for the `SyncCompGroup` macro for a given struct if all the underlying compoments in the struct (all the fields)
+    /// implment `SyncComp` themselfs.
     #[proc_macro_derive(SyncCompGroup)]
     pub fn sync_comp_group_derive(input : proc_macro::TokenStream) -> proc_macro::TokenStream {
         let ast : DeriveInput = syn::parse(input).unwrap();

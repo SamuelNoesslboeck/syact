@@ -7,7 +7,7 @@ use crate::units::*;
 
 // Submodules
 mod comp;
-pub use comp::CompData;
+pub use comp::*;
 
 /// Crate for servo motor data
 pub mod servo;

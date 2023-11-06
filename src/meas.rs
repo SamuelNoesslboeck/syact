@@ -6,10 +6,28 @@ use serde::{Serialize, Deserialize};
 // Submodules
     mod endswitch;
     pub use endswitch::*;
+
+    mod sonar;
+    pub use sonar::*;
 // 
 
-/// A structure for taking basic measurements
-pub trait SimpleMeas : Interruptor + Setup { }
+// ######################
+// #    MEAS-TRAITS     #
+// ######################
+    /// A structure for taking basic measurements
+    pub trait BoolMeas : Interruptor { 
+        fn meas(&mut self) -> bool;
+    }
+
+    /// 
+    pub trait ByteMeas { 
+        fn meas(&mut self) -> u8;
+    }
+
+    pub trait ShortMeas {
+        fn meas(&mut self) -> u16;
+    }
+// 
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SimpleMeasData {
@@ -25,6 +43,7 @@ pub struct SimpleMeasData {
 }
 
 // Defaults
+    /// The default number of measurement samples to take
     const fn default_add_samples() -> usize { 1 }
 // 
 

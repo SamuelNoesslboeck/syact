@@ -1,3 +1,4 @@
+use embedded_hal::digital::v2::InputPin;
 #[cfg(feature = "rasp")]
 use rppal::gpio::InputPin;
 
@@ -8,56 +9,45 @@ pub struct UniInPin {
     #[cfg(feature = "rasp")]
     pub sys_pin : InputPin,
 
-    /// The pin number
+    /// The pin number, TODO: REMOVE, SHOULD BE HEADERLESS WRAPPER!
     pub pin : u8
 }
 
-impl UniInPin {
-    // Status
-        /// Checks if the pin is simulated
-        /// 
-        /// Returns `false` for this configuration
-        #[inline(always)]
-        #[cfg(feature = "rasp")]
-        pub fn is_sim(&self) -> bool {
-            false
+// #####################################
+// #    EMBEDDED-HAL IMPLEMENTATION    #
+// #####################################
+    // Implementation for no GPIO platforms (e.g. windows)
+    //  -> Default value for pin value is `LOW`
+    //  -> Implementation cannot fail
+    #[cfg(not(any(feature = "rasp")))]
+    impl InputPin for UniInPin {
+        type Error = ();
+
+        #[inline]
+        fn is_low(&self) -> Result<bool, Self::Error> {
+            Ok(true)
         }
 
-        /// Checks if the pin is simulated
-        /// 
-        /// Returns `true` for this configuration
-        #[inline(always)]
-        #[cfg(not(any(feature = "rasp")))]
-        pub fn is_sim(&self) -> bool {
-            true
+        #[inline]
+        fn is_high(&self) -> Result<bool, Self::Error> {
+            Ok(false)
         }
-    // 
-
-    /// Checks if the pin receives a `HIGH` signal
-    #[inline]
-    #[cfg(not(any(feature = "rasp")))]
-    pub fn is_high(&self) -> bool {
-        true
     }
 
-    /// Checks if the pin receives a `HIGH` signal
-    #[inline]
+    // Implementation for Raspberry Pi devices
+    //  -> Implementation cannot fail
     #[cfg(feature = "rasp")]
-    pub fn is_high(&self) -> bool {
-        self.sys_pin.is_high()
-    }
+    impl InputPin for UniInPin {
+        type Error = ();
 
-    /// Checks if the pin receives a `LOW` signal
-    #[inline]
-    #[cfg(not(any(feature = "rasp")))]
-    pub fn is_low(&self) -> bool {
-        false
-    }
+        #[inline]
+        fn is_low(&self) -> Result<bool, Self::Error> {
+            Ok(self.sys_pin.is_low())
+        }
 
-    /// Checks if the pin receives a `LOW` signal
-    #[inline]
-    #[cfg(feature = "rasp")]
-    pub fn is_low(&self) -> bool {
-        self.sys_pin.is_low()
+        #[inline]
+        fn is_high(&self) -> Result<bool, Self::Error> {
+            Ok(self.sys_pin.is_high())
+        }
     }
-}
+// 

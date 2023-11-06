@@ -52,7 +52,7 @@ fn main() -> Result<(), syact::Error> {
         sample_dist: None
     };
 
-    let mut switch = EndSwitch::new(pin_meas, trigger, Some(Direction::from_u8(dir_u8)));
+    let mut switch = RawEndSwitch::new(pin_meas, trigger, Some(Direction::from_u8(dir_u8)));
 
     // Link the component to a system
     ctrl.write_data(CompData { 

@@ -5,7 +5,7 @@ use serde::{Serialize, Deserialize};
 pub struct CompData {
     /// Supply voltage of the components in Volts
     pub u : f32,
-    /// Safety factor of movements, sh
+    /// Safety factor of movements
     pub s_f : f32
 }
 
@@ -46,4 +46,10 @@ impl From<(f32, f32)> for CompData {
             s_f: data.1
         }
     }
+}
+
+/// Additional information about the component like name, description, etc.
+pub struct CompInfo {
+    pub name : String,
+    pub desc : String
 }

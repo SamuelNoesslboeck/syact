@@ -17,7 +17,7 @@ cfg_if::cfg_if! {
 
         pub use crate::math;
 
-        pub use crate::meas::{SimpleMeas, SimpleMeasData, EndSwitch, VirtualEndSwitch};
+        pub use crate::meas::{BoolMeas, SimpleMeasData, RawEndSwitch, VirtualEndSwitch};
 
         pub use crate::units::*;
     } else {

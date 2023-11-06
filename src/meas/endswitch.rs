@@ -2,59 +2,52 @@ use core::sync::atomic::AtomicBool;
 
 use crate::{Setup, Direction};
 use crate::ctrl::{Interruptor, InterruptReason};
-use crate::ctrl::pin::{UniInPin, UniPin};
+use crate::ctrl::pin::{UniPin, UniInPin};
 
 use alloc::sync::Arc;
 use atomic_float::AtomicF32;
+use embedded_hal::digital::v2::InputPin;
 use serde::{Serialize, Deserialize};
 
 use super::*;
 
 /// A simple endswitch that can trigger when reaching a destination
 #[derive(Serialize, Deserialize)]
-pub struct EndSwitch {
-    pin : u8,
+pub struct RawEndSwitch<P : InputPin> {
     trigger : bool,
-    _dir : Option<Direction>,
+    _dir : Option<Direction>,       // TODO: Maybe move to interruptor?
 
     #[serde(skip)]
-    sys_pin : Option<UniInPin>
+    sys_pin : P
 }
 
-impl EndSwitch {
+impl<P : InputPin> RawEndSwitch<P> {
     /// Creates a new end switch
-    pub fn new(pin : u8, trigger : bool, _dir : Option<Direction>) -> Self {
+    pub fn new(trigger : bool, _dir : Option<Direction>, sys_pin : P) -> Self {
         Self {
-            pin, 
             trigger,
             _dir,
 
-            sys_pin: None
+            sys_pin
         }
     }
+}
 
-    pub fn is_triggered(&self) -> bool {
-        self.sys_pin.as_ref()
-            .map(|pin| pin.is_high())
-            .unwrap_or(false) == self.trigger
+impl<P : InputPin> BoolMeas for RawEndSwitch<P> {
+    fn meas(&mut self) -> bool {
+        self.sys_pin.is_high() == self.trigger
     }
 }
 
-impl Setup for EndSwitch {
-    fn setup(&mut self) -> Result<(), crate::Error> {
-        self.sys_pin = Some(UniPin::new(self.pin)?.into_input());
-        Ok(())
-    }
-}
-
-impl Interruptor for EndSwitch {
+impl<P : InputPin> Interruptor for RawEndSwitch<P> {
     fn dir(&self) -> Option<Direction> {
         self._dir
     }
 
     fn check(&mut self, _gamma : &Arc<AtomicF32>) -> Option<InterruptReason> {
         if let Some(pin) = &mut self.sys_pin {
-            if pin.is_high() == self.trigger {
+            // unwraping unsafe is safe, as no error can occur
+            if unsafe { pin.is_high().unwrap_unchecked() } == self.trigger {    
                 Some(InterruptReason::EndReached)
             } else {
                 None
@@ -64,8 +57,6 @@ impl Interruptor for EndSwitch {
         }
     }
 }
-
-impl SimpleMeas for EndSwitch { }
 
 // Virtual
 pub struct VirtualEndSwitch {
@@ -97,3 +88,33 @@ impl Interruptor for VirtualEndSwitch {
         }
     }
 }
+
+// #########################
+// #    IMPLEMENTATIONS    #
+// #########################
+    // `UniPin` - Implementation
+    pub struct EndSwitch {
+        pin : u8,
+        switch : RawEndSwitch<UniInPin>
+    }
+
+    impl EndSwitch {
+        fn new(pin : u8) -> Self {
+            Self {
+                pin,
+                switch: None
+            }
+        }
+    }
+
+    impl Setup for EndSwitch {
+        fn setup(&mut self) -> Result<(), crate::Error> {
+            self.switch = Some(
+                RawEndSwitch::new(
+
+                )
+            );
+            Ok(())
+        }
+    }
+//
