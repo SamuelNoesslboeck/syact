@@ -7,12 +7,12 @@ use syact::ctrl::led::LED;
 use syact::prelude::*;
 
 /// Plots the gamma and omega values to the console during an async movment process
-fn plot(switch : &mut RawEndSwitch, mut led_opt : Option<LED>) -> Result<(), syact::Error> {
+fn plot(switch : &mut EndSwitch, mut led_opt : Option<LED>) -> Result<(), syact::Error> {
     let mut stdout = stdout();
 
     stdout.execute(cursor::Hide).unwrap();
     loop {
-        let state = switch.is_triggered();
+        let state = switch.meas();
 
         // Plot
         stdout.queue(cursor::SavePosition).unwrap();    
@@ -44,7 +44,7 @@ fn main() -> Result<(), syact::Error> {
     let pin : u8 = *matches.get_one("pin").expect("A valid pin has to be provided");
     let led_pin : Option<&u8> = matches.get_one("led");
 
-    let mut switch = RawEndSwitch::new(pin, true, None);
+    let mut switch = EndSwitch::new(true, None, UniInPin::new(pin));
     switch.setup()?;
 
     let led = led_pin.map(|lpin| {

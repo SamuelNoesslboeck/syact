@@ -36,7 +36,6 @@ impl UniPin {
             Err(err) => return Err(lib_error(format!("{:?}", err)))
         };
         
-        println!(" -> Pin successfully setup! [Pin: {}]", pin);
         Ok(Self {
             pin,
             sys_pin

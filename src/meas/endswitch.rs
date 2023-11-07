@@ -2,7 +2,7 @@ use core::sync::atomic::AtomicBool;
 
 use crate::{Setup, Direction};
 use crate::ctrl::{Interruptor, InterruptReason};
-use crate::ctrl::pin::{UniPin, UniInPin};
+use crate::ctrl::pin::UniInPin;
 
 use alloc::sync::Arc;
 use atomic_float::AtomicF32;
@@ -23,10 +23,10 @@ pub struct RawEndSwitch<P : InputPin> {
 
 impl<P : InputPin> RawEndSwitch<P> {
     /// Creates a new end switch
-    pub fn new(trigger : bool, _dir : Option<Direction>, sys_pin : P) -> Self {
+    pub fn new(trigger : bool, dir : Option<Direction>, sys_pin : P) -> Self {
         Self {
             trigger,
-            _dir,
+            _dir: dir,
 
             sys_pin
         }
@@ -35,7 +35,7 @@ impl<P : InputPin> RawEndSwitch<P> {
 
 impl<P : InputPin> BoolMeas for RawEndSwitch<P> {
     fn meas(&mut self) -> bool {
-        self.sys_pin.is_high() == self.trigger
+        return (unsafe { self.sys_pin.is_high().unwrap_unchecked() } == self.trigger)
     }
 }
 
@@ -45,15 +45,11 @@ impl<P : InputPin> Interruptor for RawEndSwitch<P> {
     }
 
     fn check(&mut self, _gamma : &Arc<AtomicF32>) -> Option<InterruptReason> {
-        if let Some(pin) = &mut self.sys_pin {
-            // unwraping unsafe is safe, as no error can occur
-            if unsafe { pin.is_high().unwrap_unchecked() } == self.trigger {    
-                Some(InterruptReason::EndReached)
-            } else {
-                None
-            }
+        // unwraping unsafe is safe, as no error can occur
+        if unsafe { self.sys_pin.is_high().unwrap_unchecked() } == self.trigger {    
+            Some(InterruptReason::EndReached)
         } else {
-            Some(InterruptReason::Error) // TODO: add error
+            None
         }
     }
 }
@@ -93,28 +89,11 @@ impl Interruptor for VirtualEndSwitch {
 // #    IMPLEMENTATIONS    #
 // #########################
     // `UniPin` - Implementation
-    pub struct EndSwitch {
-        pin : u8,
-        switch : RawEndSwitch<UniInPin>
-    }
+    pub type EndSwitch = RawEndSwitch<UniInPin>;
 
-    impl EndSwitch {
-        fn new(pin : u8) -> Self {
-            Self {
-                pin,
-                switch: None
-            }
-        }
-    }
-
-    impl Setup for EndSwitch {
+    impl<P : InputPin + Setup> Setup for RawEndSwitch<P> {
         fn setup(&mut self) -> Result<(), crate::Error> {
-            self.switch = Some(
-                RawEndSwitch::new(
-
-                )
-            );
-            Ok(())
+            self.sys_pin.setup()
         }
-    }
+    } 
 //

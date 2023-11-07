@@ -1,5 +1,6 @@
 use crate::ctrl::{Interruptor, InterruptReason};
-use crate::{units::*, SyncComp, Setup};
+use crate::SyncComp;
+use crate::units::*;
 
 use serde::{Serialize, Deserialize};
 
@@ -19,13 +20,20 @@ use serde::{Serialize, Deserialize};
         fn meas(&mut self) -> bool;
     }
 
-    /// 
     pub trait ByteMeas { 
-        fn meas(&mut self) -> u8;
+        fn meas(&mut self) -> i8;
     }
 
     pub trait ShortMeas {
-        fn meas(&mut self) -> u16;
+        fn meas(&mut self) -> i16;
+    }
+
+    pub trait IntMeas {
+        fn meas(&mut self) -> i32;
+    }
+    
+    pub trait FloatMeas {
+        fn meas(&mut self) -> f32;
     }
 // 
 
