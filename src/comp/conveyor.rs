@@ -1,5 +1,6 @@
 #[cfg(feature = "std")]
-use serde::{Serialize, Deserialize}; 
+use serde::{Serialize, Deserialize};
+use sylo::Direction; 
 
 use crate::{Stepper, SyncComp, Setup, CompData, AsyncComp};
 use crate::comp::CompVars;
@@ -80,17 +81,19 @@ impl<C : SyncComp> SyncComp for Conveyor<C> {
     }
 }
 
-impl<C : AsyncComp + SyncComp> AsyncComp for Conveyor<C> {
-    fn drive(&mut self, dir : crate::Direction, speed_f : f32) -> Result<(), crate::Error> {
+impl<C : AsyncComp<Duty = f32> + SyncComp> AsyncComp for Conveyor<C> {
+    type Duty = f32;
+
+    fn drive(&mut self, dir : Direction, speed_f : f32) -> Result<(), crate::Error> {
         self.ctrl.drive(dir, speed_f)
     }
 
-    fn dir(&self) -> crate::Direction {
+    fn dir(&self) -> Direction {
         self.ctrl.dir()
     }
 
-    fn speed_f(&self) -> f32 {
-        self.ctrl.speed_f()
+    fn speed(&self) -> f32 {
+        self.ctrl.speed()
     }
 }
 

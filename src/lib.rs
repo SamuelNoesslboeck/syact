@@ -7,6 +7,12 @@
 #[cfg(feature = "std")]
 extern crate alloc;
 
+// ########################
+// #    PUBLIC IMPORTS    #
+// ########################
+    pub use sylo::Direction;
+// 
+
 // ####################
 // #    SUBMODULES    #
 // ####################
@@ -15,7 +21,7 @@ extern crate alloc;
     // Contains all the basic content that is available without being hosted on a operating system like raspbian on the raspberry pi
         /// Collection of structs and functions for controlling Stepper Motors
         pub mod ctrl;
-        pub use ctrl::{Direction, Stepper};
+        pub use ctrl::Stepper;
     //
 
     // # STD-Content
@@ -27,9 +33,7 @@ extern crate alloc;
             pub mod comp;
             pub use comp::{SyncComp, SyncCompGroup};
             pub use comp::asyn::AsyncComp;
-            
-            // Include proc_macro
-            pub use syact_macros::SyncCompGroup;
+        
 
             /// Structs for storing characteristics of stepper motors and devices
             pub mod data;
@@ -50,6 +54,9 @@ extern crate alloc;
             pub mod units;
         }}
     // 
+
+    // Include proc_macro
+    pub use syact_macros::{SyncCompGroup, StepperCompGroup};
 
     /// Easy import of the functionalities
     pub mod prelude;

@@ -17,7 +17,7 @@ fn main() -> Result<(), syact::Error> {
     stepper.add_interruptor(Box::new(switch));
 
     // Drive
-    stepper.drive(Direction::CW, 1.0)?;
+    stepper.drive(sylo::Direction::CW, 1.0)?;
 
     std::thread::sleep(core::time::Duration::from_millis(2000));
     

@@ -13,8 +13,9 @@ cfg_if::cfg_if! {
 }
 
 use atomic_float::AtomicF32;
+use sylo::Direction;
 
-use crate::{SyncComp, Setup, lib_error, Direction};
+use crate::{SyncComp, Setup, lib_error};
 use crate::comp::stepper::{StepperComp, StepperMotor};
 use crate::ctrl::{Controller, Interruptor, InterruptReason};
 use crate::data::{CompData, StepperConst, CompVars}; 
@@ -257,7 +258,7 @@ impl<C : Controller + Send + 'static> HRStepper<C> {
 
     /// Setup all required parts for a fixed distance drive
     /// - Limit checks
-    /// - Direction change
+    /// - sylo::Direction change
     fn setup_drive(&mut self, delta : Delta) -> Result<(), crate::Error> {
         let limit = self.lim_for_gamma(self.gamma() + delta);
 
@@ -875,6 +876,8 @@ impl<C : Controller + Send + 'static> SyncComp for HRStepper<C> {
 
 #[cfg(feature = "embed-thread")]
 impl<C : Controller + Send + 'static> AsyncComp for HRStepper<C> {
+    type Duty = f32;
+    
     fn drive(&mut self, dir : Direction, speed_f : f32) -> Result<(), crate::Error> {
         if (0.0 > speed_f) | (1.0 < speed_f) {
             panic!("Bad speed_f! {}", speed_f);
@@ -924,7 +927,7 @@ impl<C : Controller + Send + 'static> AsyncComp for HRStepper<C> {
         self.dir()
     }
 
-    fn speed_f(&self) -> f32 {
+    fn speed(&self) -> f32 {
         self.speed_f
     }
 }

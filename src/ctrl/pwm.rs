@@ -9,7 +9,7 @@ use crate::units::*;
 
 /// A simple software-made PWM-signal 
 #[derive(Debug)]
-pub struct PWMOutput {
+pub struct SoftwarePWM {
     /// The pin of the PWM-signal
     pub pin : u8,
 
@@ -24,7 +24,7 @@ pub struct PWMOutput {
     murderer: Option<Receiver<()>>,
 }
 
-impl PWMOutput {
+impl SoftwarePWM {
     /// Create a new software PWM-signal at the given `pin`. Make sure the `pin` is not already in use!
     /// 
     /// # Setup
@@ -82,7 +82,7 @@ impl PWMOutput {
                 }
 
                 // Crates pulse
-                PWMOutput::pulse(&mut sys_pwm, t_ac, t_in);
+                SoftwarePWM::pulse(&mut sys_pwm, t_ac, t_in);
             }
 
             victim.send(()).unwrap();
@@ -195,20 +195,20 @@ impl PWMOutput {
 }
 
 // Setup and dismantle
-impl Setup for PWMOutput {
+impl Setup for SoftwarePWM {
     fn setup(&mut self) -> Result<(), crate::Error> {
         self.start()
     }
 }
 
-impl Dismantle for PWMOutput {
+impl Dismantle for SoftwarePWM {
     fn dismantle(&mut self) -> Result<(), crate::Error> {
         self.stop()
     }
 }
 
 // JSON Input/Output
-    impl Serialize for PWMOutput {
+    impl Serialize for SoftwarePWM {
         fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
             where
                 S: serde::Serializer {
@@ -216,11 +216,11 @@ impl Dismantle for PWMOutput {
         }
     }
 
-    impl<'de> Deserialize<'de> for PWMOutput {
+    impl<'de> Deserialize<'de> for SoftwarePWM {
         fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
             where
                 D: serde::Deserializer<'de> {
-            Ok(PWMOutput::new(
+            Ok(SoftwarePWM::new(
                 Deserialize::deserialize(deserializer)?
             ))
         }

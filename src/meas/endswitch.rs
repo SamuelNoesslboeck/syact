@@ -1,6 +1,6 @@
 use core::sync::atomic::AtomicBool;
 
-use crate::{Setup, Direction};
+use crate::Setup;
 use crate::ctrl::{Interruptor, InterruptReason};
 use crate::ctrl::pin::UniInPin;
 
@@ -15,7 +15,7 @@ use super::*;
 #[derive(Serialize, Deserialize)]
 pub struct RawEndSwitch<P : InputPin> {
     trigger : bool,
-    _dir : Option<Direction>,       // TODO: Maybe move to interruptor?
+    _dir : Option<sylo::Direction>,       // TODO: Maybe move to interruptor?
 
     #[serde(skip)]
     sys_pin : P
@@ -23,7 +23,7 @@ pub struct RawEndSwitch<P : InputPin> {
 
 impl<P : InputPin> RawEndSwitch<P> {
     /// Creates a new end switch
-    pub fn new(trigger : bool, dir : Option<Direction>, sys_pin : P) -> Self {
+    pub fn new(trigger : bool, dir : Option<sylo::Direction>, sys_pin : P) -> Self {
         Self {
             trigger,
             _dir: dir,
@@ -40,7 +40,7 @@ impl<P : InputPin> BoolMeas for RawEndSwitch<P> {
 }
 
 impl<P : InputPin> Interruptor for RawEndSwitch<P> {
-    fn dir(&self) -> Option<Direction> {
+    fn dir(&self) -> Option<sylo::Direction> {
         self._dir
     }
 
@@ -57,11 +57,11 @@ impl<P : InputPin> Interruptor for RawEndSwitch<P> {
 // Virtual
 pub struct VirtualEndSwitch {
     pub vpin : Arc<AtomicBool>,
-    _dir : Option<Direction>
+    _dir : Option<sylo::Direction>
 }
 
 impl VirtualEndSwitch {
-    pub fn new(def : bool, _dir : Option<Direction>) -> Self {
+    pub fn new(def : bool, _dir : Option<sylo::Direction>) -> Self {
         VirtualEndSwitch { 
             vpin: Arc::new(AtomicBool::new(def)),
             _dir
@@ -72,7 +72,7 @@ impl VirtualEndSwitch {
 impl Setup for VirtualEndSwitch { }
 
 impl Interruptor for VirtualEndSwitch {
-    fn dir(&self) -> Option<Direction> {
+    fn dir(&self) -> Option<sylo::Direction> {
         self._dir
     }
     
