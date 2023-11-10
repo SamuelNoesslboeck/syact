@@ -16,7 +16,7 @@ fn main() -> Result<(), syact::Error> {
         .arg(arg!([pin_step] "Pin number of the step pin").value_parser(value_parser!(u8)))
         .arg(arg!([pin_dir] "Pin number of the direction pin").value_parser(value_parser!(u8)))
         .arg(arg!([pin_meas] "Pin number of the measurement pin").value_parser(value_parser!(u8)))
-        .arg(arg!([dir] "Direction of the endswitch (`1` per default => `CW`)").value_parser(value_parser!(u8)))
+        .arg(arg!([dir] "sylo::Direction of the endswitch (`1` per default => `CW`)").value_parser(value_parser!(u8)))
         .arg(arg!([micro] "Enables microstepping with the given step value (1 per default)").value_parser(value_parser!(u8)))
         .arg(arg!([delta] "Delta (distance) of the movement in rad (2pi [1 rev] per default)").value_parser(value_parser!(f32)))
         .arg(arg!([speed_f] "Omega (velocity) of the movement in rad/s (10 rad/s per default)").value_parser(value_parser!(f32)))
@@ -52,7 +52,7 @@ fn main() -> Result<(), syact::Error> {
         sample_dist: None
     };
 
-    let mut switch = RawEndSwitch::new(trigger, Some(Direction::from_u8(dir_u8)), UniInPin::new(pin_meas));
+    let mut switch = RawEndSwitch::new(trigger, Some(sylo::Direction::from_u8(dir_u8)), UniInPin::new(pin_meas));
 
     // Link the component to a system
     ctrl.write_data(CompData { 

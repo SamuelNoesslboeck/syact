@@ -1,7 +1,7 @@
 use serde::{Serialize, Deserialize};
 
 use crate::{Setup, Dismantle};
-use crate::ctrl::pwm::PWMOutput;
+use crate::ctrl::pwm::SoftwarePWM;
 use crate::data::servo::ServoConst;
 use crate::units::Gamma;
 
@@ -20,7 +20,7 @@ pub struct Servo {
     consts : ServoConst,
 
     /// The PWM output signal
-    pwm : PWMOutput
+    pwm : SoftwarePWM
 }
 
 impl Servo {
@@ -34,7 +34,7 @@ impl Servo {
             gamma: consts.default_pos(),
             consts,
 
-            pwm: PWMOutput::new(pin_pwm)
+            pwm: SoftwarePWM::new(pin_pwm)
         }
     }
  

@@ -1,7 +1,8 @@
 use core::time::Duration;
 use std::time::Instant;
 
-use crate::Direction;
+use sylo::Direction;
+
 use crate::StepperConst;
 use crate::units::*;
 

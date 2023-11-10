@@ -23,11 +23,11 @@ cfg-if = "1.0.0"
 clap = { version = "4.3.16", features = [ "cargo" ] }
 embedded-hal = { version = "0.2.7", features = [ "unproven" ] }
 glam = { version = "0.24.0", optional = true }
-serde = { version = "1.0.104", features = [ "derive" ], optional = true }
-serde_json = { version = "1.0.48", optional = true }
+serde = { version = "1.0.192", features = [ "derive" ], optional = true }
+serde_json = { version = "1.0.108", optional = true }
 serde_repr = { version = "0.1", optional = true }
 spin_sleep = { version = "1.1.1", optional = true }
-sylo = { path = "../sylo" }
+sylo = { path = "../sylo", features = [ "serde" ]}
 
 # #############
 # # PLATFORMS #

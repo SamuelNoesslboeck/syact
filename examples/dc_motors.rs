@@ -38,17 +38,17 @@ fn main() -> Result<(), syact::Error> {
 
     // Drive clockwise for 2 seconds with max speed
     println!("Driving CW, max speed ... ");
-    motor.drive(Direction::CW, 1.0)?;
+    motor.drive(sylo::Direction::CW, 1.0)?;
     sleep(Duration::from_secs(2));
 
     // Drive coutner-clockwise for 1 second with half speed
     println!("Driving CCW, half speed ... ");
-    motor.drive(Direction::CCW, 0.5)?;
+    motor.drive(sylo::Direction::CCW, 0.5)?;
     sleep(Duration::from_secs(1));
 
     // Drive counter-clockwise for 3 seconds with max speed
     println!("Driving CCW, full speed ... ");
-    motor.drive(Direction::CCW, 1.0)?;
+    motor.drive(sylo::Direction::CCW, 1.0)?;
     sleep(Duration::from_secs(3));
 
     Ok(())

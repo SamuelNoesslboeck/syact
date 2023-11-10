@@ -57,7 +57,7 @@ mod predefined {
         conv.set_omega_max(Omega(200.0));
     
         println!("Driving forward with 0.5 speed");
-        conv.drive(Direction::CW, 0.5)?;        // Drive with 100 mm/s speed (50%, 0.5)
+        conv.drive(sylo::Direction::CW, 0.5)?;        // Drive with 100 mm/s speed (50%, 0.5)
         conv.await_inactive()?;
     
         println!(" -> Reached speed!");
@@ -65,7 +65,7 @@ mod predefined {
         sleep(1.0);
     
         println!("Driving forward with 0.8 speed");
-        conv.drive(Direction::CW, 0.8)?;        // Drive with 160 mm/s speed (80%, 0.8)
+        conv.drive(sylo::Direction::CW, 0.8)?;        // Drive with 160 mm/s speed (80%, 0.8)
         conv.await_inactive()?;
     
         println!(" -> Reached speed!");
@@ -73,7 +73,7 @@ mod predefined {
         sleep(2.0);
     
         println!("Driving backwards with 0.2 speed");
-        conv.drive(Direction::CCW, 0.2)?;       // Drive with 40 mm/s speed in the opposite direction (20%, 0.2)
+        conv.drive(sylo::Direction::CCW, 0.2)?;       // Drive with 40 mm/s speed in the opposite direction (20%, 0.2)
         conv.await_inactive()?;
     
         println!("Reached speed!");
@@ -119,7 +119,7 @@ mod direct {
         );
     
         println!("Driving forward with 0.5 speed");
-        ctrl.drive(Direction::CW, 0.5)?;
+        ctrl.drive(sylo::Direction::CW, 0.5)?;
         ctrl.await_inactive()?;
     
         println!(" -> Reached speed!");
@@ -127,7 +127,7 @@ mod direct {
         sleep(1.0);
     
         println!("Driving forward with 0.8 speed");
-        ctrl.drive(Direction::CW, 0.8)?;
+        ctrl.drive(sylo::Direction::CW, 0.8)?;
         ctrl.await_inactive()?;
     
         println!(" -> Reached speed!");
@@ -135,7 +135,7 @@ mod direct {
         sleep(2.0);
     
         println!("Driving backwards with 0.2 speed");
-        ctrl.drive(Direction::CCW, 0.2)?;
+        ctrl.drive(sylo::Direction::CCW, 0.2)?;
         ctrl.await_inactive()?;
     
         println!("Reached speed!");
