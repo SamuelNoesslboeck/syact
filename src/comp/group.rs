@@ -10,7 +10,8 @@ use crate::units::*;
 /// 
 /// # Constant generic `C`
 pub trait SyncCompGroup<T, const C : usize> : Setup 
-where T : SyncComp + ?Sized + 'static
+where 
+    T : SyncComp + ?Sized + 'static
 {
     // Iteration
         /// Execute a given function `func` for every element given by a readonly reference and it's index in the component group.

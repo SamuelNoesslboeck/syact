@@ -2,6 +2,10 @@ use crate as syact;
 
 use syact::prelude::*;
 
+fn test<G : SyncCompGroup<T, 2>, T : SyncComp + ?Sized + 'static>(_g : &G) {
+    
+}
+
 #[derive(StepperCompGroup)]
 struct SomeComps {
     base : Gear<Stepper>,
@@ -24,6 +28,8 @@ fn groups() -> Result<(), syact::Error> {
             150.0
         )
     }; 
+
+    test(&group);
 
     group.write_data(CompData::GEN);
     group.setup()
