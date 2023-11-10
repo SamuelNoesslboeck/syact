@@ -81,25 +81,25 @@ pub trait StepperComp : SyncComp {
 }
 
 // Helper implementation
-impl<T : AsRef<dyn StepperComp> + AsMut<dyn StepperComp> + AsRef<dyn SyncComp> + AsMut<dyn SyncComp>> StepperComp for T {
-    // Super Component
-        fn parent_stepper_comp(&self) -> Option<&dyn StepperComp> {
-            <T as AsRef<dyn StepperComp>>::as_ref(self).parent_stepper_comp()
-        }
+// impl<T : AsRef<dyn StepperComp> + AsMut<dyn StepperComp> + AsRef<dyn SyncComp> + AsMut<dyn SyncComp>> StepperComp for T {
+//     // Super Component
+//         fn parent_stepper_comp(&self) -> Option<&dyn StepperComp> {
+//             <T as AsRef<dyn StepperComp>>::as_ref(self).parent_stepper_comp()
+//         }
 
-        fn parent_stepper_comp_mut(&mut self) -> Option<&mut dyn StepperComp> {
-            <T as AsMut<dyn StepperComp>>::as_mut(self).parent_stepper_comp_mut()
-        }
+//         fn parent_stepper_comp_mut(&mut self) -> Option<&mut dyn StepperComp> {
+//             <T as AsMut<dyn StepperComp>>::as_mut(self).parent_stepper_comp_mut()
+//         }
 
-        fn motor(&self) -> &dyn StepperMotor {
-            <T as AsRef<dyn StepperComp>>::as_ref(self).motor()
-        }
+//         fn motor(&self) -> &dyn StepperMotor {
+//             <T as AsRef<dyn StepperComp>>::as_ref(self).motor()
+//         }
 
-        fn motor_mut(&mut self) -> &mut dyn StepperMotor {
-            <T as AsMut<dyn StepperComp>>::as_mut(self).motor_mut()
-        }
-    // 
-}
+//         fn motor_mut(&mut self) -> &mut dyn StepperMotor {
+//             <T as AsMut<dyn StepperComp>>::as_mut(self).motor_mut()
+//         }
+//     // 
+// }
 
 /// A group of stepper motor based components
 pub trait StepperCompGroup<T, const C : usize> : SyncCompGroup<T, C> 
@@ -149,4 +149,4 @@ where T: StepperComp + ?Sized + 'static
 
 
 
-impl<T : StepperComp + 'static, const C : usize> StepperCompGroup<T, C> for [T; C] { }
+// impl<T : StepperComp + 'static, const C : usize> StepperCompGroup<T, C> for [T; C] { }

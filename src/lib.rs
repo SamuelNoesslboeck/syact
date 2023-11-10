@@ -99,7 +99,7 @@ extern crate alloc;
 // ###########################
 // #    SETUP & DISMANTLE    #
 // ###########################
-    /// A trait that provides a universal setup function
+    /// A trait that provides a universal setup function, 
     /// 
     /// # Pin management
     /// 
@@ -108,6 +108,13 @@ extern crate alloc;
         /// Calls all required functions to assure the components functionality
         fn setup(&mut self) -> Result<(), Error> { 
             Ok(()) 
+        }
+    }
+
+    impl<T : sylo::Enable> Setup for T {
+        fn setup(&mut self) -> Result<(), Error> {
+            self.enable();
+            Ok(())
         }
     }
 

@@ -4,17 +4,17 @@ The crate offers a wide set of examples that can be used to test and setup compo
 
 - [ ] Hardware
   - [ ] Components
-    - [ ] [Stepper](#hardware-comps-stepper)
+    - [ ] [Stepper](#hardware-stepper-fixed_dist)
 
-
-## hardware-comps-stepper
+## hardware-stepper-fixed_dist
 
 ```sh
-hardware-comps-stepper <PIN-STEP> <PIN-DIR> <DELTA> <OMEGA-MAX> <MICRO>
+hardware-stepper-fixed_dist <PIN-STEP> <PIN-DIR> <DELTA> <OMEGA-MAX> <MICRO>
 ```
+
 ### Description
 
-Moves a stepper motor with a generic PWM controller connected to the pins 'pin_step' and 'pin_dir' by the given distance 
+Moves a stepper motor with a generic PWM controller connected to the pins 'pin_step' and 'pin_dir' by the given distance
 'delta' with the maximum speed 'omega', optionally enabling microstepping with the microstepcount 'micro'.
 
 ### Parameters

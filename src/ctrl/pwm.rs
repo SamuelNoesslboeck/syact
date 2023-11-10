@@ -43,6 +43,11 @@ impl SoftwarePWM {
         }
     }
 
+    pub fn with_freq(mut self, freq : Omega) -> Self {
+        self.set_freq(freq, 0.0);
+        self
+    }
+
     /// Starts the thread for the signal and creates the pin for the output signal
     pub fn start(&mut self) -> Result<(), crate::Error> {
         // Pin
@@ -191,6 +196,33 @@ impl SoftwarePWM {
         self.murderer = None;
 
         Ok(())
+    }
+}
+
+// Embedded-HAL implementations
+impl embedded_hal::PwmPin for SoftwarePWM {
+    type Duty = f32;
+
+    fn enable(&mut self) {
+        // TODO: Proper communication of unwrap
+        self.setup().unwrap()
+    }
+
+    fn disable(&mut self) {
+        // TODO: Proper communication of unwrap
+        self.dismantle().unwrap()
+    }
+
+    fn get_duty(&self) -> Self::Duty {
+        self.get_freq().1
+    }
+
+    fn get_max_duty(&self) -> Self::Duty {
+        1.0
+    }
+
+    fn set_duty(&mut self, duty: Self::Duty) {
+        self.set_freq(self.get_freq().0, duty)
     }
 }
 

@@ -5,16 +5,18 @@ use serde::{Serialize, Deserialize};
 use crate::lib_error;
 use crate::units::*;
 
-// Submodules
-mod comp;
-pub use comp::*;
+// ####################
+// #    SUBMODULES    #
+// ####################
+    mod comp;
+    pub use comp::*;
 
-/// Crate for servo motor data
-pub mod servo;
+    /// Crate for servo motor data
+    pub mod servo;
 
-/// Crate for variables read and written during runtime
-mod var;
-pub use var::CompVars;
+    /// Crate for variables read and written during runtime
+    mod var;
+    pub use var::CompVars;
 //
 
 /// A collection of the most relevant variables Unit stepper calculation 

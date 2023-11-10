@@ -1,11 +1,11 @@
-use core::any::type_name;
-
 use crate::ctrl::{Interruptor, InterruptReason};
 use crate::Setup;
 use crate::data::{CompVars, CompData};
 use crate::units::*;
 
-// Submodules
+// ####################
+// #    SUBMODULES    #
+// ####################
     /// A module for async components like a basic DC-motor. These components cannot move certain distances or to absolute positions
     pub mod asyn;
 
@@ -816,136 +816,4 @@ pub trait SyncComp : Setup {
             }
         }
     // 
-}
-
-// Implementations
-
-impl dyn SyncComp {
-    /// Returns the type name of the component as [String]. Used for configuration file parsing.
-    #[inline(always)]
-    pub fn get_type_name(&self) -> &str {
-        type_name::<Self>()
-    }
-}
-
-impl<T : AsMut<dyn SyncComp>> Setup for T {
-    fn setup(&mut self) -> Result<(), crate::Error> {
-        self.as_mut().setup()
-    }
-}
-
-impl<T : AsRef<dyn SyncComp> + AsMut<dyn SyncComp>> SyncComp for T {
-    // Data
-        fn vars<'a>(&'a self) -> &'a crate::prelude::CompVars {
-            self.as_ref().vars()
-        }
-
-        fn data<'a>(&'a self) -> &'a crate::CompData {
-            self.as_ref().data()
-        }
-    // 
-
-    fn write_data(&mut self, data : crate::data::CompData) {
-        self.as_mut().write_data(data)
-    }
-
-    fn parent_comp(&self) -> Option<&dyn SyncComp> {
-        self.as_ref().parent_comp()
-    }
-
-    fn parent_comp_mut(&mut self) -> Option<&mut dyn SyncComp> {
-        self.as_mut().parent_comp_mut()
-    }
-
-    fn gamma_for_parent(&self, this_gamma : Gamma) -> Gamma {
-        self.as_ref().gamma_for_parent(this_gamma)
-    }
-
-    fn gamma_for_this(&self, parent_gamma : Gamma) -> Gamma {
-        self.as_ref().gamma_for_this(parent_gamma)
-    }
-
-    fn abs_parent_gamma(&self, this_gamma : Gamma) -> Gamma {
-        self.as_ref().abs_parent_gamma(this_gamma)
-    }
-
-    fn delta_for_parent(&self, this_delta : Delta, this_gamma : Gamma) -> Delta {
-        self.as_ref().delta_for_parent(this_delta, this_gamma)
-    }
-
-    fn delta_for_this(&self, parent_delta : Delta, parent_gamma : Gamma) -> Delta {
-        self.as_ref().delta_for_this(parent_delta, parent_gamma)
-    }
-
-    fn omega_for_parent(&self, this_omega : Omega, this_gamma : Gamma) -> Omega {
-        self.as_ref().omega_for_parent(this_omega, this_gamma)
-    }
-
-    fn omega_for_this(&self, parent_omega : Omega, this_gamma : Gamma) -> Omega {
-        self.as_ref().omega_for_this(parent_omega, this_gamma)
-    }
-
-    fn drive_rel(&mut self, delta : Delta, speed_f : f32) -> Result<Delta, crate::Error> {
-        self.as_mut().drive_rel(delta, speed_f)
-    }
-
-    fn drive_abs(&mut self, gamma : Gamma, speed_f : f32) -> Result<Delta, crate::Error> {
-        self.as_mut().drive_abs(gamma, speed_f)
-    }
-
-    fn drive_rel_async(&mut self, delta : Delta, speed_f : f32) -> Result<(), crate::Error> {
-        self.as_mut().drive_rel_async(delta, speed_f)
-    }
-
-    fn drive_abs_async(&mut self, gamma : Gamma, speed_f : f32) -> Result<(), crate::Error> {
-        self.as_mut().drive_abs_async(gamma, speed_f)
-    }
-
-    fn await_inactive(&mut self) -> Result<Delta, crate::Error> {
-        self.as_mut().await_inactive()
-    }
-
-    fn gamma(&self) -> Gamma {
-        self.as_ref().gamma()
-    }
-
-    fn write_gamma(&mut self, gamma : Gamma) {
-        self.as_mut().write_gamma(gamma)
-    }
-
-    fn omega_max(&self) -> Omega {
-        self.as_ref().omega_max()
-    }
-
-    fn set_omega_max(&mut self, omega_max : Omega) {
-        self.as_mut().set_omega_max(omega_max)
-    }
-
-    fn lim_for_gamma(&self, gamma : Gamma) -> Delta {
-        self.as_ref().lim_for_gamma(gamma)
-    }
-
-    fn set_end(&mut self, set_gamma : Gamma) {
-        self.as_mut().set_end(set_gamma)
-    }
-
-    fn set_limit(&mut self, min : Option<Gamma>, max : Option<Gamma>) {
-        self.as_mut().set_limit(min, max)
-    }
-
-    fn reset_limit(&mut self, min : Option<Gamma>, max : Option<Gamma>) {
-        self.as_mut().reset_limit(min, max)
-    }
-
-    fn apply_force(&mut self, force : Force) { 
-        self.as_mut().apply_force(force)
-    }
-
-    fn apply_inertia(&mut self, inertia : Inertia) {
-        self.as_mut().apply_inertia(inertia)
-    }
-
-    fn apply_bend_f(&mut self, f_bend : f32) {
-        self.as_mut().apply_bend_f(f_bend)
-    }
 }

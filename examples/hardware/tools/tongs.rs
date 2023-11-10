@@ -23,9 +23,9 @@ fn main() -> Result<(), syact::Error> {
 
     loop {
         if tongs.closed() {
-            println!("Open Tongs ... (Press Enter)");
+            println!("> Tongs closed (Press Enter)");
         } else {
-            println!("Close Tongs ... (Press Enter)");
+            println!("> Tongs open (Press Enter)");
         }
 
         let mut input_text = String::new();

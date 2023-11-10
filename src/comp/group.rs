@@ -235,74 +235,76 @@ where T : SyncComp + ?Sized + 'static
     // 
 }
 
-// Implementation
-impl<T : SyncComp, const C : usize> Setup for [T; C] {
-    fn setup(&mut self) -> Result<(), crate::Error> {
-        for i in 0 .. C {
-            self[i].setup()?;
-        }
 
-        Ok(())
-    }
-}
+// TODO: Fix implementation
+// // Implementation
+// impl<T : SyncComp, const C : usize> Setup for [T; C] {
+//     fn setup(&mut self) -> Result<(), crate::Error> {
+//         for i in 0 .. C {
+//             self[i].setup()?;
+//         }
+        
+//         Ok(())
+//     }
+// }
 
-impl<T : SyncComp + 'static, const C : usize> SyncCompGroup<T, C> for [T; C] { 
-    fn for_each<'a, F, R>(&'a self, mut func : F) -> [R; C]
-    where 
-        F : FnMut(&'a T, usize) -> R,
-        R : Copy + Default 
-    {   
-        let mut res = [R::default(); C];
-        for i in 0 .. C {
-            res[i] = func(&self[i], i);
-        }
-        res
-    }
+// impl<T : SyncComp + 'static, const C : usize> SyncCompGroup<T, C> for [T; C] { 
+//     fn for_each<'a, F, R>(&'a self, mut func : F) -> [R; C]
+//     where 
+//         F : FnMut(&'a T, usize) -> R,
+//         R : Copy + Default 
+//     {   
+//         let mut res = [R::default(); C];
+//         for i in 0 .. C {
+//             res[i] = func(&self[i], i);
+//         }
+//         res
+//     }
 
-    fn for_each_mut<F, R>(&mut self, mut func : F) -> [R; C]
-    where 
-        F : FnMut(&mut T, usize) -> R,
-        R : Copy + Default 
-    {
-        let mut res = [R::default(); C];
-        for i in 0 .. C {
-            res[i] = func(&mut self[i], i);
-        }
-        res
-    }
+//     fn for_each_mut<F, R>(&mut self, mut func : F) -> [R; C]
+//     where 
+//         F : FnMut(&mut T, usize) -> R,
+//         R : Copy + Default 
+//     {
+//         let mut res = [R::default(); C];
+//         for i in 0 .. C {
+//             res[i] = func(&mut self[i], i);
+//         }
+//         res
+//     }
 
-    fn try_for_each<'a, F, R, E>(&'a self, mut func : F) -> Result<[R; C], E>
-    where 
-        F : FnMut(&'a T, usize) -> Result<R, E>,
-        R : Copy + Default 
-    {
-        let mut res = [R::default(); C];
-        for i in 0 .. C {
-            res[i] = func(&self[i], i)?;
-        }
-        Ok(res)
-    }
+//     fn try_for_each<'a, F, R, E>(&'a self, mut func : F) -> Result<[R; C], E>
+//     where 
+//         F : FnMut(&'a T, usize) -> Result<R, E>,
+//         R : Copy + Default 
+//     {
+//         let mut res = [R::default(); C];
+//         for i in 0 .. C {
+//             res[i] = func(&self[i], i)?;
+//         }
+//         Ok(res)
+//     }
 
-    fn try_for_each_mut<F, R, E>(&mut self, mut func : F) -> Result<[R; C], E>
-    where 
-        F : FnMut(&mut T, usize) -> Result<R, E>,
-        R : Copy + Default 
-    {
-        let mut res = [R::default(); C];
-        for i in 0 .. C {
-            res[i] = func(&mut self[i], i)?;
-        }
-        Ok(res)
-    }
+//     fn try_for_each_mut<F, R, E>(&mut self, mut func : F) -> Result<[R; C], E>
+//     where 
+//         F : FnMut(&mut T, usize) -> Result<R, E>,
+//         R : Copy + Default 
+//     {
+//         let mut res = [R::default(); C];
+//         for i in 0 .. C {
+//             res[i] = func(&mut self[i], i)?;
+//         }
+//         Ok(res)
+//     }
 
-    fn for_each_dyn<'a, F, R>(&'a self, mut func : F) -> Vec<R>
-    where 
-        F : FnMut(&'a T, usize) -> R 
-    {
-        let mut res = Vec::with_capacity(C);
-        for i in 0 .. C {
-            res.push(func(&self[i], i));
-        }
-        res
-    }
-}
+//     fn for_each_dyn<'a, F, R>(&'a self, mut func : F) -> Vec<R>
+//     where 
+//         F : FnMut(&'a T, usize) -> R 
+//     {
+//         let mut res = Vec::with_capacity(C);
+//         for i in 0 .. C {
+//             res.push(func(&self[i], i));
+//         }
+//         res
+//     }
+// }

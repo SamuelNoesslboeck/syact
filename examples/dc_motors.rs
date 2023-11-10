@@ -32,23 +32,29 @@ const FREQ : Omega = Omega(100.0);
 
 fn main() -> Result<(), syact::Error> {
     // Create the motor with the constants above
-    let mut motor = DcMotor::new(PIN_CW, PIN_CCW, FREQ);
+    let mut motor = DcMotor::new(
+        SoftwarePWM::new(PIN_CW)
+            .with_freq(FREQ),
+        SoftwarePWM::new(PIN_CCW)
+            .with_freq(FREQ)
+    );
+    
     // Setup the PWM signals
     motor.setup()?; 
 
     // Drive clockwise for 2 seconds with max speed
     println!("Driving CW, max speed ... ");
-    motor.drive(sylo::Direction::CW, 1.0)?;
+    motor.drive(sylo::Direction::CW, 1.0);
     sleep(Duration::from_secs(2));
 
     // Drive coutner-clockwise for 1 second with half speed
     println!("Driving CCW, half speed ... ");
-    motor.drive(sylo::Direction::CCW, 0.5)?;
+    motor.drive(sylo::Direction::CCW, 0.5);
     sleep(Duration::from_secs(1));
 
     // Drive counter-clockwise for 3 seconds with max speed
     println!("Driving CCW, full speed ... ");
-    motor.drive(sylo::Direction::CCW, 1.0)?;
+    motor.drive(sylo::Direction::CCW, 1.0);
     sleep(Duration::from_secs(3));
 
     Ok(())

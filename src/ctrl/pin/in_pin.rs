@@ -1,4 +1,3 @@
-use embedded_hal::digital::v2::InputPin;
 #[cfg(feature = "rasp")]
 use rppal::gpio::InputPin;
 
@@ -41,7 +40,7 @@ pub struct UniInPin {
             }
 
             #[cfg(not(any(feature = "rasp")))]
-            impl InputPin for UniInPin {
+            impl embedded_hal::digital::v2::InputPin for UniInPin {
                 type Error = ();
 
                 #[inline]
