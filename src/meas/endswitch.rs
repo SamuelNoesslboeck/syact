@@ -34,8 +34,10 @@ impl<P : InputPin> RawEndSwitch<P> {
 }
 
 impl<P : InputPin> BoolMeas for RawEndSwitch<P> {
-    fn meas(&mut self) -> bool {
-        return (unsafe { self.sys_pin.is_high().unwrap_unchecked() } == self.trigger)
+    type Error = (); 
+
+    fn meas(&mut self) -> Result<bool, Self::Error> {
+        return Ok(unsafe { self.sys_pin.is_high().unwrap_unchecked() } == self.trigger)
     }
 }
 

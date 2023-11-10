@@ -1,12 +1,15 @@
+pub use embedded_hal::digital::v2::{InputPin, OutputPin};
+
 #[cfg(feature = "rasp")]
 use rppal::gpio::{Gpio, Pin};
 
 // Submodlues
-mod in_pin;
-pub use in_pin::UniInPin;
+    mod in_pin;
+    pub use in_pin::UniInPin;
 
-mod out_pin;
-pub use out_pin::UniOutPin;
+    mod out_pin;
+    pub use out_pin::UniOutPin;
+//
 
 /// Error pin value
 pub const ERR_PIN : u8 = 0xFF; 

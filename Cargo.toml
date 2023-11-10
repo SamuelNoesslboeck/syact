@@ -1,7 +1,7 @@
 [package]
 name = "syact"
 authors = [ "Samuel Nösslböck <samuel.noesslboeck@gmail.com>" ]
-version = "0.12.0"
+version = "0.12.1-alpha"
 description = "A library to control motors (mainly stepper motors) and components, read data from sensors and more"
 edition = "2021"
 repository = "https://github.com/SamuelNoesslboeck/syact"
@@ -27,6 +27,7 @@ serde = { version = "1.0.104", features = [ "derive" ], optional = true }
 serde_json = { version = "1.0.48", optional = true }
 serde_repr = { version = "0.1", optional = true }
 spin_sleep = { version = "1.1.1", optional = true }
+sylo = { path = "../sylo" }
 
 # #############
 # # PLATFORMS #

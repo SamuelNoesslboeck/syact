@@ -12,7 +12,7 @@ fn plot(switch : &mut EndSwitch, mut led_opt : Option<LED>) -> Result<(), syact:
 
     stdout.execute(cursor::Hide).unwrap();
     loop {
-        let state = switch.meas();
+        let state = unsafe { switch.meas().unwrap_unchecked() };
 
         // Plot
         stdout.queue(cursor::SavePosition).unwrap();    

@@ -1,8 +1,11 @@
-use crate::ctrl::{Interruptor, InterruptReason};
+use crate::ctrl::InterruptReason;
 use crate::SyncComp;
 use crate::units::*;
 
 use serde::{Serialize, Deserialize};
+
+// Public imports
+pub use sylo::{BoolMeas, ByteMeas, ShortMeas, IntMeas};
 
 // Submodules
     mod endswitch;
@@ -10,31 +13,6 @@ use serde::{Serialize, Deserialize};
 
     mod sonar;
     pub use sonar::*;
-// 
-
-// ######################
-// #    MEAS-TRAITS     #
-// ######################
-    /// A structure for taking basic measurements
-    pub trait BoolMeas : Interruptor { 
-        fn meas(&mut self) -> bool;
-    }
-
-    pub trait ByteMeas { 
-        fn meas(&mut self) -> i8;
-    }
-
-    pub trait ShortMeas {
-        fn meas(&mut self) -> i16;
-    }
-
-    pub trait IntMeas {
-        fn meas(&mut self) -> i32;
-    }
-    
-    pub trait FloatMeas {
-        fn meas(&mut self) -> f32;
-    }
 // 
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
