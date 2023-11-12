@@ -81,14 +81,7 @@ pub struct UniInPin {
 
             impl Setup for UniInPin {
                 fn setup(&mut self) -> Result<(), crate::Error> {
-                    self.sys_pin = match Gpio::new() {
-                        Ok(gp) => match gp.get(self.pin) { 
-                            Ok(pin) => pin,
-                            Err(err) => return Err(crate::lib_error(format!("{:?}", err)))
-                        },
-                        Err(err) => return Err(crate::lib_error(format!("{:?}", err)))
-                    };
-
+                    self.sys_pin = Some(Gpio::new()?.get(self.pin)?);
                     Ok(())
                 }
             }
@@ -99,7 +92,7 @@ pub struct UniInPin {
                 #[inline]
                 fn is_low(&self) -> Result<bool, Self::Error> {
                     if let Some(sys_pin) = &self.sys_pin {
-                        Ok(self.sys_pin.is_low())
+                        Ok(sys_pin.is_low())
                     } else {
                         panic!("Pin not setup yet! (Number: {})", self.pin)
                     }
@@ -108,7 +101,7 @@ pub struct UniInPin {
                 #[inline]
                 fn is_high(&self) -> Result<bool, Self::Error> {
                     if let Some(sys_pin) = &self.sys_pin {
-                        Ok(self.sys_pin.is_high())
+                        Ok(sys_pin.is_high())
                     } else {
                         panic!("Pin not setup yet! (Number: {})", self.pin)
                     }
