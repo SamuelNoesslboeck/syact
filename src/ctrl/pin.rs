@@ -60,7 +60,7 @@ impl UniPin {
     pub fn into_input(self) -> UniInPin {
         UniInPin {
             pin: self.pin,
-            sys_pin: self.sys_pin.into_input()
+            sys_pin: Some(self.sys_pin.into_input())
         }
     }
 

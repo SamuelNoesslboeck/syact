@@ -81,7 +81,7 @@ pub struct UniInPin {
 
             impl Setup for UniInPin {
                 fn setup(&mut self) -> Result<(), crate::Error> {
-                    self.sys_pin = Some(Gpio::new()?.get(self.pin)?);
+                    self.sys_pin = Some(Gpio::new()?.get(self.pin)?.into_input());
                     Ok(())
                 }
             }
