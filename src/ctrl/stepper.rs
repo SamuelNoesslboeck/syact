@@ -7,15 +7,15 @@ use crate::StepperConst;
 use crate::units::*;
 
 // Submodules
-cfg_if::cfg_if! { if #[cfg(feature = "std")] {
-    mod hr;
-    pub use hr::*; 
-} }
+    cfg_if::cfg_if! { if #[cfg(feature = "std")] {
+        mod hr;
+        pub use hr::*; 
+    } }
 
-mod lr;
-pub use lr::*;
+    mod lr;
+    pub use lr::*;
 
-use super::pin::*;
+    use super::pin::*;
 // 
 
 pub const STEP_PULSE_TIME : Time = Time(1.0 / 40000.0);

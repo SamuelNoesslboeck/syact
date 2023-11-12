@@ -1,5 +1,5 @@
 #[cfg(feature = "rasp")]
-use rppal::gpio::InputPin;
+use rppal::gpio::{Gpio, InputPin};
 
 use crate::Setup;
 use crate::ctrl::pin::ERR_PIN;
@@ -84,16 +84,16 @@ pub struct UniInPin {
                     self.sys_pin = match Gpio::new() {
                         Ok(gp) => match gp.get(self.pin) { 
                             Ok(pin) => pin,
-                            Err(err) => return Err(lib_error(format!("{:?}", err)))
+                            Err(err) => return Err(crate::lib_error(format!("{:?}", err)))
                         },
-                        Err(err) => return Err(lib_error(format!("{:?}", err)))
+                        Err(err) => return Err(crate::lib_error(format!("{:?}", err)))
                     };
 
                     Ok(())
                 }
             }
 
-            impl InputPin for UniInPin {
+            impl embedded_hal::digital::v2::InputPin for UniInPin {
                 type Error = ();
 
                 #[inline]
