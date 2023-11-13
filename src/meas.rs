@@ -85,12 +85,12 @@ pub fn take_simple_meas<C : SyncComp + ?Sized>(comp : &mut C, data : &SimpleMeas
             println!("- Gamma: {}", comp.gamma());
 
             // Drive half of the sample distance back (faster)
-            println!("- Delta {}", comp.drive_rel(-data.sample_dist.unwrap_or(data.max_dist * 0.1) / 2.0, speed_f)?);
+            println!("- Delta {}", comp.drive_rel(-data.sample_dist.unwrap_or(data.max_dist * 0.25) / 2.0, speed_f)?);
 
             println!("- Gamma: {}", comp.gamma());
 
             // Drive sample distance
-            println!("- Delta: {}", comp.drive_rel(data.sample_dist.unwrap_or(data.max_dist * 0.1), data.meas_speed_f * speed_f)?);
+            println!("- Delta: {}", comp.drive_rel(data.sample_dist.unwrap_or(data.max_dist * 0.25), data.meas_speed_f * speed_f)?);
 
             println!("- Gamma: {}", comp.gamma());
 
