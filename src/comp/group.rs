@@ -206,10 +206,11 @@ where
 
         /// Runs [SyncComp::apply_force()] for all components
         #[inline(always)]
-        fn apply_forces(&mut self, forces : &[Force; C]) {
-            self.for_each_mut(|comp, index| {
-                comp.apply_force(forces[index]);
-            });
+        fn apply_forces(&mut self, forces : &[Force; C]) -> Result<(), crate::Error> {
+            self.try_for_each_mut(|comp, index| {
+                comp.apply_gen_force(forces[index])
+            })?;
+            Ok(())
         }
 
         /// Runs [SyncComp::apply_bend_f()] for all components. Note that the same factor is applied to all components

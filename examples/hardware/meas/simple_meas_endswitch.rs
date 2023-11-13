@@ -67,7 +67,7 @@ fn main() -> Result<(), syact::Error> {
 
     // Apply some loads
     ctrl.apply_inertia(inertia);
-    ctrl.apply_force(force);
+    ctrl.apply_gen_force(force)?;
 
     // Setup the switch
     switch.setup()?;

@@ -58,10 +58,17 @@ use atomic_float::AtomicF32;
 // Interruptor
     /// A trait for structs that help interrupting or watching movement processes, the most common use are measurement systems
     pub trait Interruptor {
-        /// sylo::Direction of the interruptor
+        /// Direction of the interruptor
         /// - If `None` the interruptor is not dependent on a movement direction
         /// - If `Some` the interruptor is only active when moving in the given direction
+        /// 
+        /// ### Temporary dependence
+        /// 
+        /// If an interruptor was previously triggered by a movement, the control applies a temporary direction that lasts as long as
+        /// the interruptor is triggered. Otherwise a not direction dependent switch would block movements completely
         fn dir(&self) -> Option<sylo::Direction>;
+        
+        fn set_temp_dir(&mut self, dir_opt : Option<sylo::Direction>);
 
         fn set_temp_dir(&mut self, dir : Direction);
 

@@ -2,9 +2,9 @@
 
 The crate offers a wide set of examples that can be used to test and setup components. Here is a list with discriptions of all the examples currently in use (checkmark marks an example as stable)
 
-- [ ] Hardware
-  - [ ] Components
-    - [ ] [Stepper](#hardware-stepper-fixed_dist)
+- [ ] hardware
+  - [ ] stepper
+    - [fixed_dist] (#hardware-stepper-fixed_dist)
 
 ## hardware-stepper-fixed_dist
 

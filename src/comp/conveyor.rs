@@ -68,10 +68,10 @@ impl<C : SyncComp> SyncComp for Conveyor<C> {
         }
     // 
 
-    fn apply_force(&mut self, mut force : Force) {
+    fn apply_gen_force(&mut self, mut force : Force) -> Result<(), crate::Error> {
         // Force in N to Nm, r_roll is in millimeters so factor of 1000.0 is required
         force = force * self.r_roll / 1000.0;   
-        self.ctrl.apply_force(force)
+        self.ctrl.apply_gen_force(force)
     }
 
     fn apply_inertia(&mut self, mut inertia : Inertia) {

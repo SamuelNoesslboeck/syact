@@ -77,7 +77,7 @@ impl Iterator for HRStepBuilder {
 
         // Apply new alpha for speed
         if let Ok(alpha) = self.consts.alpha_max_dyn(
-            crate::math::force::torque_dyn(&self.consts, self.omega_0, self.data.u) / self.data.s_f, &self.vars
+            crate::math::force::torque_dyn(&self.consts, self.omega_0, self.data.u, self.consts.i) / self.data.s_f, &self.vars
         ) {
             self.alpha = alpha;     // Update the alpha
 

@@ -40,15 +40,7 @@ sylo = { path = "../sylo", features = [ "serde" ]}
 syact_macros = { path = "syact_macros", version = "0.1.0", optional = true }
 
 [dev-dependencies]
-# Plotting and displaying
 crossterm = "0.27.0"
-
-# Net-examples
-# magicbox_mk1 = { git = "https://github.com/SamuelNoesslboeck/MagicBox_Mk1", rev = "5a113b2f" }
-# syiot = { git = "https://github.com/SamuelNoesslboeck/syiot.git" }
-
-[target.'cfg(windows)'.dev-dependencies]
-plotters = "0.3.4"
 
 [features]
 default = ["std", "safe-move", "embed-thread"]
