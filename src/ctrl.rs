@@ -52,7 +52,6 @@ use atomic_float::AtomicF32;
     /// Stepper motors and controllers in different resolutions
     pub mod stepper;
     pub use stepper::{Stepper, Controller, GenericPWM};
-    use sylo::Direction;
 //
 
 // Interruptor
@@ -69,8 +68,6 @@ use atomic_float::AtomicF32;
         fn dir(&self) -> Option<sylo::Direction>;
         
         fn set_temp_dir(&mut self, dir_opt : Option<sylo::Direction>);
-
-        fn set_temp_dir(&mut self, dir : Direction);
 
         /// Runs a check of the movement process
         fn check(&mut self, gamma : &Arc<AtomicF32>) -> Option<InterruptReason>;
