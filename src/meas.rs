@@ -82,10 +82,17 @@ pub fn take_simple_meas<C : SyncComp + ?Sized>(comp : &mut C, data : &SimpleMeas
 
     // Samples
         for _ in 0 .. data.add_samples {
+            println!("- Gamma: {}", comp.gamma());
+
             // Drive half of the sample distance back (faster)
             comp.drive_rel(-data.sample_dist.unwrap_or(data.max_dist * 0.1) / 2.0, speed_f)?;
+
+            println!("- Gamma: {}", comp.gamma());
+
             // Drive sample distance
             comp.drive_rel(data.sample_dist.unwrap_or(data.max_dist * 0.1), data.meas_speed_f * speed_f)?;
+
+            println!("- Gamma: {}", comp.gamma());
 
             // Check wheiter the component has been interrupted and if it is the correct interrupt
             if comp.intr_reason().ok_or("The measurement failed! No interrupt was triggered")? != InterruptReason::EndReached {

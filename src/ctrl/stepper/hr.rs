@@ -655,10 +655,15 @@ impl<C : Controller + Send + 'static> SyncComp for HRStepper<C> {
             let dir = self.dir();
     
             let delta = Self::drive_curve(
-                &mut self._ctrl, &mut self.intrs,           // Mutexes
-                &self._gamma, &self._t_step_cur, &self._intr_reason,         // Atomics
-                Delta(self._step_ang.load(Ordering::Relaxed)), dir, cur,  // The curve and step angle
-                || { false }        // (Not required) helper function
+                &mut self._ctrl, 
+                &mut self.intrs,         
+                &self._gamma, 
+                &self._t_step_cur, 
+                &self._intr_reason,         
+                Delta(self._step_ang.load(Ordering::Relaxed)), 
+                dir, 
+                cur,  
+                || { false }    
             ) + Delta(self._step_ang.load(Ordering::Relaxed));
 
             if self._intr_reason.lock().unwrap().is_none() {
