@@ -15,7 +15,8 @@ use super::*;
 #[derive(Serialize, Deserialize)]
 pub struct RawEndSwitch<P : InputPin> {
     trigger : bool,
-    _dir : Option<sylo::Direction>,       // TODO: Maybe move to interruptor?
+    _dir : Option<sylo::Direction>, 
+    temp_dir : Option<sylo::Direction>,
 
     #[serde(skip)]
     sys_pin : P
@@ -27,6 +28,7 @@ impl<P : InputPin> RawEndSwitch<P> {
         Self {
             trigger,
             _dir: dir,
+            temp_dir: None,
 
             sys_pin
         }
@@ -43,7 +45,11 @@ impl<P : InputPin> BoolMeas for RawEndSwitch<P> {
 
 impl<P : InputPin> Interruptor for RawEndSwitch<P> {
     fn dir(&self) -> Option<sylo::Direction> {
-        self._dir
+        self._dir.or(self.temp_dir)
+    }
+
+    fn set_temp_dir(&mut self, dir_opt : Option<sylo::Direction>) {
+        self.temp_dir = dir_opt;
     }
 
     fn check(&mut self, _gamma : &Arc<AtomicF32>) -> Option<InterruptReason> {
@@ -59,14 +65,16 @@ impl<P : InputPin> Interruptor for RawEndSwitch<P> {
 // Virtual
 pub struct VirtualEndSwitch {
     pub vpin : Arc<AtomicBool>,
-    _dir : Option<sylo::Direction>
+    _dir : Option<sylo::Direction>,
+    temp_dir : Option<sylo::Direction>
 }
 
 impl VirtualEndSwitch {
     pub fn new(def : bool, _dir : Option<sylo::Direction>) -> Self {
         VirtualEndSwitch { 
             vpin: Arc::new(AtomicBool::new(def)),
-            _dir
+            _dir,
+            temp_dir: None
         }
     }
 }
@@ -75,8 +83,12 @@ impl Setup for VirtualEndSwitch { }
 
 impl Interruptor for VirtualEndSwitch {
     fn dir(&self) -> Option<sylo::Direction> {
-        self._dir
+        self._dir.or(self.temp_dir)
     }
+
+    fn set_temp_dir(&mut self, dir_opt : Option<sylo::Direction>) {
+        self.temp_dir = dir_opt;
+    } 
     
     fn check(&mut self, _gamma : &Arc<AtomicF32>) -> Option<InterruptReason> {
         if self.vpin.load(core::sync::atomic::Ordering::Relaxed) {

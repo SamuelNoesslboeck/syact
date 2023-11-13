@@ -31,9 +31,11 @@ use crate::units::*;
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct StepperConst {
     /// Max phase current [Unit A]
-    pub i_max : f32,
+    pub i : f32,
     /// Motor inductence [Unit H]
     pub l : f32,
+    /// Coil resistance [Unit Ohm]
+    pub r : f32,
 
     /// Step count per revolution [Unit (1)]
     pub n_s : u64,
@@ -44,51 +46,71 @@ pub struct StepperConst {
 }
 
 impl StepperConst {
-    /// Error stepperdata with all zeros
-    pub const ERROR : Self = Self {
-        i_max: 0.0,
-        l: 0.0,
-        n_s: 0,
-        t_s: Force::ZERO,
-        j_s: Inertia::ZERO
-    }; 
+    // Constants
+        /// Error stepperdata with all zeros
+        pub const ERROR : Self = Self {
+            i: 0.0,
+            l: 0.0,
+            r: 0.0,
+            n_s: 0,
+            t_s: Force::ZERO,
+            j_s: Inertia::ZERO
+        }; 
 
-    /// Generic stepper motor data, only in use when testing for simple syntax
-    pub const GEN : Self = Self::MOT_17HE15_1504S;
+        /// Generic stepper motor data, only in use when testing for simple syntax
+        pub const GEN : Self = Self::MOT_17HE15_1504S;
 
-    /// ### Stepper motor 17HE15-1504S
-    /// Values for standard stepper motor, see <https://github.com/SamuelNoesslboeck/syact/docs/datasheets/17HE15_1504S.pdf>
-    pub const MOT_17HE15_1504S : Self = Self {
-        i_max: 1.5, 
-        l: 0.004, 
-        n_s: 200, 
-        t_s: Force(0.42), 
-        j_s: Inertia(0.000_005_7)
-    }; 
+        /// ### Stepper motor 17HE15-1504S
+        /// Values for standard stepper motor, see <https://github.com/SamuelNoesslboeck/syact/docs/datasheets/17HE15_1504S.pdf>
+        pub const MOT_17HE15_1504S : Self = Self {
+            i: 1.5, 
+            l: 0.004, 
+            r: 2.3,
+            n_s: 200, 
+            t_s: Force(0.42), 
+            j_s: Inertia(0.000_005_7)
+        }; 
+    // 
 
-    /// The maximum angular acceleration of the motor (in stall) in consideration of the current loads
-    #[inline(always)]
-    pub fn alpha_max(&self, vars : &CompVars) -> Result<Alpha, crate::Error> {
-        Ok(self.t(vars.t_load)? / self.j(vars.j_load))
-    }
+    // Amperage
+        /// Maximum overload force with the given overload (or underload) voltage `u`
+        pub fn t_ol_max(&self, u : f32) -> Force {
+            self.t_s * u / self.r / self.i
+        }
 
-    /// The maximum angular acceleration of the motor, with a modified torque t_s
-    #[inline(always)]
-    pub fn alpha_max_dyn(&self, t_s : Force, vars : &CompVars) -> Result<Alpha, crate::Error> {
-        Ok(Self::t_dyn(t_s, vars.t_load)? / self.j(vars.j_load) * vars.bend_f)
-    }
+        /// Torque created with the given overload (or underload) current `i`
+        pub fn t_ol(&self, i : f32) -> Force {
+            self.t_s * i / self.i
+        }
+    // 
 
-    /// The inductivity constant [Unit s]
-    #[inline(always)]
-    pub fn tau(&self, u : f32) -> Time {
-        Time(2.0 * self.i_max * self.l / u)
-    }
+    // Acceleration
+        /// The maximum angular acceleration of the motor (in stall) in consideration of the current loads
+        #[inline(always)]
+        pub fn alpha_max(&self, vars : &CompVars) -> Result<Alpha, crate::Error> {
+            Ok(self.t(vars.t_load_gen)? / self.j(vars.j_load))
+        }
 
-    /// Maximum speed for a stepper motor where it can be guarantied that it works properly
-    #[inline(always)]
-    pub fn omega_max(&self, u : f32) -> Omega {
-        2.0 * PI / self.tau(u) / self.n_s as f32
-    }
+        /// The maximum angular acceleration of the motor, with a modified torque t_s
+        #[inline(always)]
+        pub fn alpha_max_dyn(&self, t_s : Force, vars : &CompVars) -> Result<Alpha, crate::Error> {
+            Ok(Self::t_dyn(t_s, vars.t_load_gen)? / self.j(vars.j_load) * vars.bend_f)
+        }
+    // 
+
+    // Speeds
+        /// The inductivity constant [Unit s]
+        #[inline(always)]
+        pub fn tau(&self) -> Time {
+            Time(self.l / self.r)
+        }
+
+        /// Maximum speed for a stepper motor where it can be guarantied that it works properly
+        #[inline(always)]
+        pub fn omega_max(&self, u : f32) -> Omega {
+            Omega(2.0 * PI * self.l * u / self.i / self.n_s as f32)
+        }
+    // 
 
     /// Omega for time per step [Unit 1/s]
     /// 
@@ -115,7 +137,7 @@ impl StepperConst {
         self.step_ang(micro) / step_time
     }
 
-    // Steps
+    // Step angles & times
         /// Get the angular distance of a step in radians, considering microstepping
         /// - `micro` is the amount of microsteps per full step
         #[inline(always)]
@@ -258,7 +280,7 @@ impl StepperConst {
         }
     //
 
-    // Conversions
+    // Steps & Angles - Conversions
         /// Converts the given angle `ang` into a absolute number of steps (always positive).
         #[inline(always)]
         pub fn steps_from_ang_abs(&self, ang : Delta, micro : u8) -> u64 {

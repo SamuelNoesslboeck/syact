@@ -80,8 +80,8 @@ impl<C : SyncComp> SyncComp for Cylinder<C> {
     //
 
     // Loads
-        fn apply_force(&mut self, force : Force) {
-            self.ctrl.apply_force(force * self.rte_ratio / 1000.0)
+        fn apply_gen_force(&mut self, force : Force) -> Result<(), crate::Error> {
+            self.ctrl.apply_gen_force(force * self.rte_ratio / 1000.0)
         }
 
         fn apply_inertia(&mut self, inertia : Inertia) {

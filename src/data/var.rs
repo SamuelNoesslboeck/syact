@@ -17,8 +17,14 @@ impl Limits {
 /// Stores variables that can change in the process of the program
 #[derive(Clone, Debug, Default)]
 pub struct CompVars {
-    /// Load torque, unit Nm
-    pub t_load : Force,
+    /// Load torque general in both directions (e.g. friction), unit Nm
+    pub t_load_gen : Force,
+
+    /// Load torque directionally dependent, unit Nm
+    pub t_load_dir : Force,
+    /// Direction for load torque
+    pub dir_load : sylo::Direction,
+
     /// Load inertia, unit kgm^2
     pub j_load : Inertia,
 
@@ -32,7 +38,11 @@ pub struct CompVars {
 impl CompVars  {
     /// Zero value component data, used for initialization
     pub const ZERO : Self = Self { 
-        t_load: Force::ZERO, 
+        t_load_gen: Force::ZERO, 
+
+        t_load_dir: Force::ZERO,
+        dir_load: sylo::Direction::CW,
+
         j_load: Inertia::ZERO, 
 
         bend_f: 1.0,

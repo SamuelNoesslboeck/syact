@@ -729,7 +729,35 @@ pub trait SyncComp : Setup {
     // 
 
     // Load calculation
+        /// Will always be positive
+        fn gen_force(&self) -> Force {
+            if let Some(p_comp) = self.parent_comp() {
+                Force(self.gamma_for_parent(Gamma(
+                    p_comp.gen_force().0
+                )).0)
+            } else {
+                #[cfg(feature = "std")]
+                panic!("Provide a parent component or an override for this function!");
+            }
+        }
+
+        /// Positive means CW direction
+        fn dir_force(&self) -> Force {
+            if let Some(p_comp) = self.parent_comp() {
+                Force(self.gamma_for_parent(Gamma(
+                    p_comp.dir_force().0
+                )).0)
+            } else {
+                #[cfg(feature = "std")]
+                panic!("Provide a parent component or an override for this function!");
+            }
+        }
+
         /// Apply a load force to the component, slowing down movements 
+        /// 
+        /// ### General force
+        /// 
+        /// Force value will always be made positive, as it will be subtracted in the calculation no matter how 
         /// 
         /// ```rust
         /// use syact::{SyncComp, Stepper, StepperConst};
@@ -751,11 +779,36 @@ pub trait SyncComp : Setup {
         /// assert_eq!(Force(0.1), gear.parent_comp().unwrap().vars().t_load);
         /// ```
         #[inline(always)]
-        fn apply_force(&mut self, mut force : Force) { // TODO: Add overload protection
+        fn apply_gen_force(&mut self, mut force : Force) -> Result<(), crate::Error> {
             force = Force(self.gamma_for_this(Gamma(force.0)).0);
 
             if let Some(p_comp) = self.parent_comp_mut() {
-                p_comp.apply_force(force);
+                p_comp.apply_gen_force(force)
+            } else {
+                #[cfg(feature = "std")]
+                panic!("Provide a parent component or an override for this function!");
+            }
+        }
+
+        /// Value positive in CW direction
+        #[inline(always)]
+        fn apply_dir_force(&mut self, mut force : Force) -> Result<(), crate::Error> {
+            force = Force(self.gamma_for_this(Gamma(force.0)).0);
+
+            if let Some(p_comp) = self.parent_comp_mut() {
+                p_comp.apply_dir_force(force)
+            } else {
+                #[cfg(feature = "std")]
+                panic!("Provide a parent component or an override for this function!");
+            }
+        }
+
+        #[inline]
+        fn inertia(&self) -> Inertia {
+            if let Some(p_comp) = self.parent_comp() {
+                Inertia(self.gamma_for_parent(self.gamma_for_parent(Gamma(
+                    p_comp.inertia().0
+                ))).0)
             } else {
                 #[cfg(feature = "std")]
                 panic!("Provide a parent component or an override for this function!");

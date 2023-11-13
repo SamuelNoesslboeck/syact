@@ -21,8 +21,9 @@ syact = { version = "0.12.1", features = [ "rasp" ] }
 use core::f32::consts::PI;
 
 use clap::{command, arg, value_parser};
-// Include the library
 use syact::prelude::*;
+
+mod helper;
 
 // Define distance and max speed defaults
 const DELTA_DEF : Delta = Delta(2.0 * PI);
@@ -70,7 +71,7 @@ fn main() -> Result<(), syact::Error> {
 
     // Apply some loads
     ctrl.apply_inertia(inertia);
-    ctrl.apply_force(force);
+    ctrl.apply_gen_force(force)?;
 
     ctrl.set_omega_max(omega);
 

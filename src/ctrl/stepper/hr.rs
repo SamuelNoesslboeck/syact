@@ -229,8 +229,12 @@ impl<C : Controller + Send + 'static> HRStepper<C> {
                     }
 
                     if let Some(reason) = intr.check(gamma) {
+                        intr.set_temp_dir(Some(dir));
                         intr_reason.lock().unwrap().replace(reason);
                         return Delta(gamma.load(Ordering::Relaxed) - gamma_0); 
+                    } else {
+                        // Clear temp direction
+                        intr.set_temp_dir(None);
                     }
                 }
 
@@ -851,20 +855,41 @@ impl<C : Controller + Send + 'static> SyncComp for HRStepper<C> {
     //
 
     // Loads
-        #[inline(always)]
-        fn apply_inertia(&mut self, j : Inertia) {
-            self._vars.j_load = j;
+        fn gen_force(&self) -> Force {
+            self._vars.t_load_gen    
+        }
+
+        fn dir_force(&self) -> Force {
+            self._vars.t_load_dir
         }
 
         #[inline(always)]
-        fn apply_force(&mut self, t : Force) {      // TODO: Overloads
+        fn apply_gen_force(&mut self, mut t : Force) -> Result<(), crate::Error> {
+            t = t.abs();
+
             if t >= self._consts.t_s {
-                // TODO: Notify
-                // println!("Load will not be applied! {}", t);     
-                return;
+                return Err("Overload!".into());     // TODO: Improve msgs
             }
 
-            self._vars.t_load = t;
+            self._vars.t_load_gen = t;
+
+            Ok(())
+        }
+
+        #[inline(always)]
+        fn apply_dir_force(&mut self, t : Force) -> Result<(), crate::Error> {
+            if t.abs() >= self._consts.t_s { 
+                return Err("Overload!".into());
+            }
+
+            self._vars.t_load_dir = t;
+
+            Ok(())
+        }
+
+        #[inline(always)]
+        fn apply_inertia(&mut self, j : Inertia) {
+            self._vars.j_load = j;
         }
 
         #[inline(always)]
@@ -970,7 +995,7 @@ impl<C : Controller + Send + 'static> StepperComp for HRStepper<C> {
 impl<C : Controller + Send + 'static> StepperMotor for HRStepper<C> {
     // Calculations
         fn torque_at_speed(&self, omega : Omega) -> Force {
-            torque_dyn(self.consts(), omega, self._data.u)
+            torque_dyn(self.consts(), omega, self._data.u, self.consts().i)
         }
 
         fn alpha_at_speed(&self, omega : Omega) -> Result<Alpha, crate::Error> {

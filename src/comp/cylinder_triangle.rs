@@ -153,8 +153,8 @@ impl<C : SyncComp> SyncComp for CylinderTriangle<C> {
     }
 
     // Forces
-        fn apply_force(&mut self, force : Force) {
-            self.cylinder.apply_force(force)
+        fn apply_gen_force(&mut self, force : Force) -> Result<(), crate::Error> {
+            self.cylinder.apply_gen_force(force)
         }
 
         fn apply_inertia(&mut self, inertia : Inertia) {

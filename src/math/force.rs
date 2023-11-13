@@ -12,24 +12,7 @@ use crate::units::*;
 /// # Panics
 /// 
 /// Panics if the given omega is not finite
-/// 
-/// ```rust
-/// use syact::StepperConst;
-/// use syact::math::force::torque_dyn;
-/// use syact::units::*;
-/// 
-/// let data = StepperConst::GEN;   // Using generic stepper motor data
-/// 
-/// // Without speed (in stall) the torque has to equal the stall torque
-/// assert_eq!(torque_dyn(&data, Omega::ZERO, 12.0), data.t_s);    
-/// // The torque has to reduce with increasing speed 
-/// assert!(torque_dyn(&data, Omega(10.0), 12.0) < data.t_s);
-/// // The curve has to go down
-/// assert!(torque_dyn(&data, Omega(20.0), 12.0) < torque_dyn(&data, Omega(10.0), 12.0));
-/// // The curve has to be symmetrical
-/// assert_eq!(torque_dyn(&data, Omega(10.0), 12.0), torque_dyn(&data, Omega(10.0), 12.0));
-/// ```
-pub fn torque_dyn(consts : &StepperConst, mut omega : Omega, u : f32) -> Force {
+pub fn torque_dyn(consts : &StepperConst, mut omega : Omega, u : f32, i_ol : f32) -> Force {
     omega = omega.abs();
 
     if !omega.is_finite() {
@@ -37,13 +20,16 @@ pub fn torque_dyn(consts : &StepperConst, mut omega : Omega, u : f32) -> Force {
     }
     
     if omega == Omega::ZERO {
-        return consts.t_s;
+        return consts.t_ol(i_ol);
     }
 
-    let t = consts.full_step_time(omega);
-    let pow = E.powf( -t / consts.tau(u) );
+    let time = consts.full_step_time(omega);
+    let pow = E.powf( -time / consts.tau() );
 
-    (1.0 - pow) / (1.0 + pow) * consts.t_s
+    let t_ol = consts.t_ol(i_ol);
+    let t = (1.0 - pow) / (1.0 + pow) * consts.t_ol_max(u);
+    
+    if t > t_ol { t_ol } else { t }
 }
 
 /// An approximate torque function

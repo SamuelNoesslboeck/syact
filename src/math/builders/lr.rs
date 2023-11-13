@@ -20,7 +20,7 @@ impl LRStepBuilder {
             delta: consts.step_ang(micro),
             omega_0,
             alpha: consts.alpha_max_dyn(
-                torque_dyn(consts, consts.omega_max(data.u), data.u), vars
+                torque_dyn(consts, consts.omega_max(data.u), data.u, 0.0), vars
             ).unwrap(),     // TODO: Handle overload
             omega_max
         }
