@@ -108,7 +108,7 @@ impl StepperConst {
         /// Maximum speed for a stepper motor where it can be guarantied that it works properly
         #[inline(always)]
         pub fn omega_max(&self, u : f32) -> Omega {
-            Omega(2.0 * PI * self.l * u / self.i / self.n_s as f32)
+            Omega(2.0 * PI * u / self.i / self.l / self.n_s as f32)
         }
     // 
 
