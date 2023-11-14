@@ -21,8 +21,7 @@ where
         /// Returns a fixed-sized array of the result type of the closure. The closure may not fail, see `try_for_each()` if a `Result` is required
         fn for_each<'a, F, R>(&'a self, func : F) -> [R; C]
         where 
-            F : FnMut(&'a T, usize) -> R,
-            R : Copy + Default;
+            F : FnMut(&'a T, usize) -> R;
 
         /// Execute a given function `func` for every element given by a mutable reference and it's index in the component group 
         /// 
@@ -31,8 +30,7 @@ where
         /// Returns a fixed-sized array of the result type of the closure. The closure may not fail, see `try_for_each_mut()` if a `Result` is required
         fn for_each_mut<F, R>(&mut self, func : F) -> [R; C]
         where 
-            F : FnMut(&mut T, usize) -> R,
-            R : Copy + Default;
+            F : FnMut(&mut T, usize) -> R;
 
         /// Execute a given function `func` for every element given by a mutable reference and it's index in the component group 
         /// 
@@ -45,8 +43,7 @@ where
         /// Stops executing if one of the components throws an error
         fn try_for_each<'a, F, R, E>(&'a self, func : F) -> Result<[R; C], E>
         where 
-            F : FnMut(&'a T, usize) -> Result<R, E>,
-            R : Copy + Default;
+            F : FnMut(&'a T, usize) -> Result<R, E>;
 
         /// Execute a given function `func` for every element given by a mutable reference and it's index in the component group 
         /// 
@@ -59,18 +56,7 @@ where
         /// Stops executing if one of the components throws an error
         fn try_for_each_mut<F, R, E>(&mut self, func : F) -> Result<[R; C], E>
         where 
-            F : FnMut(&mut T, usize) -> Result<R, E>,
-            R : Copy + Default;
-
-        /// Execute a given function `func` for every element given by a readonly reference and it's index in the component group.
-        /// 
-        /// # Returns
-        /// 
-        /// Returns a dynamically sized array of the return time. The advantage is that the value does not have to implement `Copy` nor `Default`.
-        /// The closure may not fail, see `try_for_each()` if a `Result` is required.
-        fn for_each_dyn<'a, F, R>(&'a self, func : F) -> Vec<R>
-        where 
-            F : FnMut(&'a T, usize) -> R;
+            F : FnMut(&mut T, usize) -> Result<R, E>;
     //
 
     // Data

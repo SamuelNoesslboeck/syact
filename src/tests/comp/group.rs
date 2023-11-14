@@ -28,7 +28,6 @@ fn groups() -> Result<(), syact::Error> {
             150.0
         )
     }; 
-
     test(&group);
 
     group.write_data(CompData::GEN);

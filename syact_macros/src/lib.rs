@@ -19,7 +19,6 @@ use syn::DeriveInput;
                 let mut for_each_mut_s = TokenStream::new();
                 let mut try_for_each_s = TokenStream::new();
                 let mut try_for_each_mut_s = TokenStream::new();
-                let mut for_each_dyn_s = TokenStream::new();
 
                 let mut findex : usize  = 0;
                 for field in fields {
@@ -50,10 +49,6 @@ use syn::DeriveInput;
                         try_for_each_mut_s.extend(quote::quote! {
                             res[#findex] = func(&mut self.#fname, #findex)?;
                         }); 
-
-                        for_each_dyn_s.extend(quote::quote! {
-                            res.push(func(&self.#fname, #findex));
-                        }); 
                     // 
 
                     findex += 1;
@@ -70,51 +65,38 @@ use syn::DeriveInput;
                     impl syact::comp::group::SyncCompGroup<#comp_type, #fields_count> for #name { 
                         fn for_each<'a, F, R>(&'a self, mut func : F) -> [R; #fields_count]
                         where 
-                            F : FnMut(&'a #comp_type, usize) -> R,
-                            R : Copy + Default 
+                            F : FnMut(&'a #comp_type, usize) -> R
                         {   
-                            let mut res = [R::default(); #fields_count];
+                            let mut res = unsafe { core::mem::zeroed::<[R; #fields_count]>() };
                             #for_each_s             // Insert stream
                             res
                         }
                     
                         fn for_each_mut<F, R>(&mut self, mut func : F) -> [R; #fields_count]
                         where 
-                            F : FnMut(&mut #comp_type, usize) -> R,
-                            R : Copy + Default 
+                            F : FnMut(&mut #comp_type, usize) -> R
                         {
-                            let mut res = [R::default(); #fields_count];
+                            let mut res = unsafe { core::mem::zeroed::<[R; #fields_count]>() };
                             #for_each_mut_s         // Insert stream
                             res
                         }
                     
                         fn try_for_each<'a, F, R, E>(&'a self, mut func : F) -> Result<[R; #fields_count], E>
                         where 
-                            F : FnMut(&'a #comp_type, usize) -> Result<R, E>,
-                            R : Copy + Default 
+                            F : FnMut(&'a #comp_type, usize) -> Result<R, E>
                         {
-                            let mut res = [R::default(); #fields_count];
+                            let mut res = unsafe { core::mem::zeroed::<[R; #fields_count]>() };
                             #try_for_each_s         // Insert stream
                             Ok(res)
                         }
                     
                         fn try_for_each_mut<F, R, E>(&mut self, mut func : F) -> Result<[R; #fields_count], E>
                         where 
-                            F : FnMut(&mut #comp_type, usize) -> Result<R, E>,
-                            R : Copy + Default 
+                            F : FnMut(&mut #comp_type, usize) -> Result<R, E>
                         {
-                            let mut res = [R::default(); #fields_count];
+                            let mut res = unsafe { core::mem::zeroed::<[R; #fields_count]>() };
                             #try_for_each_mut_s     // Insert stream
                             Ok(res)
-                        }
-                    
-                        fn for_each_dyn<'a, F, R>(&'a self, mut func : F) -> Vec<R>
-                        where 
-                            F : FnMut(&'a #comp_type, usize) -> R 
-                        {
-                            let mut res = Vec::with_capacity(#fields_count);
-                            #for_each_dyn_s
-                            res
                         }
                     }
                 }.into()

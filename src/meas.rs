@@ -15,7 +15,7 @@ pub use sylo::{BoolMeas, ByteMeas, ShortMeas, IntMeas};
     pub use sonar::*;
 // 
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct SimpleMeasData {
     pub set_gamma : Gamma,
     pub max_dist : Delta,
@@ -33,7 +33,7 @@ pub struct SimpleMeasData {
     const fn default_add_samples() -> usize { 1 }
 // 
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct SimpleMeasResult {
     pub samples : usize,
 

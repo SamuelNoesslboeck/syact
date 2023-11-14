@@ -109,6 +109,15 @@ extern crate alloc;
         fn setup(&mut self) -> Result<(), Error> { 
             Ok(()) 
         }
+
+        /// Points to `setup``, helper function
+        fn setup_owned(mut self) -> Result<Self, Error> 
+        where 
+            Self : Sized 
+        {
+            self.setup()?;
+            Ok(self)
+        }
     }
 
     impl<T : sylo::Enable> Setup for T {
