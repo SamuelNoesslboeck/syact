@@ -207,8 +207,20 @@ impl<C : Controller + Send + 'static> HRStepper<C> {
 impl<C : Controller + Send + 'static> HRStepper<C> {
     /// Write a curve of signals to the step output pins
     /// The curve can be any iterator that yields `Time`
-    pub fn drive_curve<I : Iterator<Item = Time>, F : FnMut() -> bool>(ctrl_mtx : &mut Arc<Mutex<C>>, intrs_mtx : &mut Arc<Mutex<Vec<Box<dyn Interruptor + Send>>>>, 
-        gamma : &Arc<AtomicF32>, t_step_cur : &Arc<AtomicF32>, intr_reason : &Arc<Mutex<Option<InterruptReason>>>, step_ang : Delta, dir : Direction, cur : I, mut h_func : F) -> Delta
+    pub fn drive_curve<I, F>(
+        ctrl_mtx : &mut Arc<Mutex<C>>,                                      // Mutex to the controller
+        intrs_mtx : &mut Arc<Mutex<Vec<Box<dyn Interruptor + Send>>>>,      // Mutex to the vector of interruptors
+        gamma : &Arc<AtomicF32>,                                            // Atomic gamma value
+        t_step_cur : &Arc<AtomicF32>,                                       // Atomic for current time
+        intr_reason : &Arc<Mutex<Option<InterruptReason>>>,                 // Atomic for interrupt reason
+        step_ang : Delta,                                                   // Current step angle used
+        dir : Direction,                                                    // Current movement direction
+        cur : I,                                                            // The curve
+        mut h_func : F                                                      // Helper function for additional functinality
+    ) -> Result<Delta, crate::Error>    
+    where
+        I : Iterator<Item = Time>,
+        F : FnMut() -> bool
     {
         // Record start gamma to return a delta distance at the end
         let gamma_0 = gamma.load(Ordering::Relaxed);      
@@ -216,7 +228,7 @@ impl<C : Controller + Send + 'static> HRStepper<C> {
         // Interruptors used for the movement process
         let mut intrs = intrs_mtx.lock().unwrap();
 
-        Self::use_ctrl(ctrl_mtx, |ctrl| {
+        Self::use_ctrl(ctrl_mtx, |ctrl| -> Result<Delta, crate::Error> {
             // Drive each point in the curve
             for point in cur {
                 // Run all interruptors
@@ -231,7 +243,7 @@ impl<C : Controller + Send + 'static> HRStepper<C> {
                     if let Some(reason) = intr.check(gamma) {
                         intr.set_temp_dir(Some(dir));
                         intr_reason.lock().unwrap().replace(reason);
-                        return Delta(gamma.load(Ordering::Relaxed) - gamma_0); 
+                        return Ok(Delta(gamma.load(Ordering::Relaxed) - gamma_0)); 
                     } else {
                         // Clear temp direction
                         intr.set_temp_dir(None);
@@ -240,7 +252,7 @@ impl<C : Controller + Send + 'static> HRStepper<C> {
 
                 // Additional helper function
                 if h_func() {
-                    return Delta(gamma.load(Ordering::Relaxed) - gamma_0); 
+                    return Ok(Delta(gamma.load(Ordering::Relaxed) - gamma_0)); 
                 }
 
                 // Run step
@@ -256,7 +268,7 @@ impl<C : Controller + Send + 'static> HRStepper<C> {
                 );
             }
 
-            Delta(gamma.load(Ordering::Relaxed) - gamma_0)
+            Ok(Delta(gamma.load(Ordering::Relaxed) - gamma_0))
         })
     }
 
@@ -423,11 +435,11 @@ impl<C : Controller + Send + 'static> HRStepper<C> {
                             } else {
                                 false
                             }
-                        });
+                        }).unwrap();    // TODO: Handle
 
                         // Final step
                         Self::use_ctrl(&mut ctrl_mtx, |ctrl| {
-                            ctrl.step_final();
+                            ctrl.step_final().unwrap();     // TODO: Handle
                         });
 
                         // Update the position after the final step
@@ -460,7 +472,7 @@ impl<C : Controller + Send + 'static> HRStepper<C> {
                             } else {
                                 false
                             }
-                        });
+                        }).unwrap();    // TODO: Handle
 
                         if t_const.is_normal() {
                             // Update the current speed
@@ -491,7 +503,7 @@ impl<C : Controller + Send + 'static> HRStepper<C> {
                                 }
     
                                 Self::use_ctrl(&mut ctrl_mtx, |ctrl| {
-                                    ctrl.step_no_wait(t_const);
+                                    ctrl.step_no_wait(t_const).unwrap();    // TODO: Handle
                                 }); 
 
                                 // Update position
@@ -664,13 +676,13 @@ impl<C : Controller + Send + 'static> SyncComp for HRStepper<C> {
                 dir, 
                 cur,  
                 || { false }    
-            ) + Delta(self._step_ang.load(Ordering::Relaxed));
+            )? + Delta(self._step_ang.load(Ordering::Relaxed));
 
             if self._intr_reason.lock().unwrap().is_none() {
                 // Final (unpaused) step
-                Self::use_ctrl(&mut self._ctrl, |ctrl| {
-                    ctrl.step_final();
-                });
+                Self::use_ctrl(&mut self._ctrl, |ctrl| -> Result<(), crate::Error> {
+                    ctrl.step_final()
+                })?;
 
                 // Update the pos after the final step
                 self.write_gamma(self.gamma() + Delta(self._step_ang.load(Ordering::Relaxed)));

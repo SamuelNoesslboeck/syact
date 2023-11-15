@@ -48,15 +48,16 @@ pub trait Controller {
 
     fn step(&mut self, time : Time) {
         if time < (STEP_PULSE_TIME * 2.0) {
+            // TODO: Notify about fallback
             self.step_with(STEP_PULSE_TIME, STEP_PULSE_TIME);
         } else {
             self.step_with(STEP_PULSE_TIME, time - STEP_PULSE_TIME)
         }
     }
 
-    fn step_no_wait(&mut self, t_total : Time);
+    fn step_no_wait(&mut self, t_total : Time) -> Result<(), crate::Error>;
 
-    fn step_final(&mut self) {
+    fn step_final(&mut self) -> Result<(), crate::Error>{
         self.step_no_wait(2.0 * STEP_PULSE_TIME)
     }
 
@@ -105,14 +106,19 @@ impl GenericPWM {
 impl Controller for GenericPWM {
     fn step_with(&mut self, t_len : Time, t_pause : Time) {
         self.pin_step.set_high();
-            spin_sleep::sleep(t_len.into());
+        spin_sleep::sleep(t_len.into());
         self.pin_step.set_low();
-            spin_sleep::sleep(t_pause.into());
+        spin_sleep::sleep(t_pause.into());
+    }
+
+    fn step_no_wait(&mut self, t_total : Time) -> Result<(), crate::Error> {
+        // TODO: Maybe create fallbacks or move to Result?
+        if t_total <= STEP_PULSE_TIME {
+            return Err(format!("Bad step time! Time given ({}) is smaller than STEP_PULSE_TIME ({})", t_total, STEP_PULSE_TIME).into());
         }
 
-    fn step_no_wait(&mut self, mut t_total : Time) {
-        if t_total == Time::ZERO {
-            t_total = STEP_PULSE_TIME;
+        if !t_total.is_normal() {
+            return Err(format!("Bad step time! Time given ({}) is invalid!", t_total).into());
         }
 
         let elapsed = self.pause_stamp.elapsed();
@@ -130,6 +136,8 @@ impl Controller for GenericPWM {
 
         self.pause_stamp = Instant::now();
         self.t_pause = (t_total - STEP_PULSE_TIME).into();
+
+        Ok(())
     }
 
     fn dir(&self) -> Direction {
@@ -141,3 +149,25 @@ impl Controller for GenericPWM {
         self.pin_dir.set(self.dir.as_bool());
     }
 }
+
+// #####################
+// #    ERROR-TYPES    #
+// #####################
+    pub enum StepError {
+        TimeTooShort(Time),
+        TimeIsIncorrect(Time),
+        Other(crate::Error)
+    }
+
+    impl Into<crate::Error> for StepError {
+        fn into(self) -> crate::Error {
+            match self {
+                Self::TimeTooShort(t) => 
+                    format!("Bad step time! Time given ({}) is smaller than STEP_PULSE_TIME ({})", t, STEP_PULSE_TIME).into(),
+                Self::TimeIsIncorrect(t) => 
+                    format!("Bad step time! Time given ({}) is invalid!", t).into(),
+                Self::Other(err) => err
+            }
+        }
+    }
+// 
