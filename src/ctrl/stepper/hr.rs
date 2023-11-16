@@ -590,6 +590,12 @@ impl<C : Controller + Send + 'static> SyncComp for HRStepper<C> {
             if delta == Delta::ZERO {
                 return Ok(Delta::ZERO)   
             }
+
+            // Logging information
+                log::debug!("[drive_rel (sync)] Delta: {:?}, Speed-Factor {:?}", delta, speed_f);
+                log::trace!(" || - t_dyn: {:?}", self.consts().t(self.vars().t_load_gen));
+                log::trace!(" || - j: {:?}", self.consts().j(self.vars().j_load));
+            // 
             
             self.setup_drive(delta)?;
     
@@ -655,6 +661,10 @@ impl<C : Controller + Send + 'static> SyncComp for HRStepper<C> {
         }
 
         fn drive_abs(&mut self, gamma : Gamma, speed_f : f32) -> Result<Delta, crate::Error> {
+            // Logging
+                log::debug!("[drive_abs (sync)] Gamma: {} (current: {}), Speed-Factor: {}", gamma, self.gamma(), speed_f);
+            // 
+
             let delta = gamma - self.gamma();
             self.drive_rel(delta, speed_f)
         }
@@ -874,9 +884,6 @@ impl<C : Controller + Send + 'static> AsyncComp for HRStepper<C> {
         let omega_max = self.omega_max();
         let omega_0 = self.omega_cur();
         let omega_tar = omega_max;
-
-        // println!(" => Building curve: o_max: {}, o_0: {}, o_tar: {}, spf_0: {}, spf: {}", 
-        //     self.omega_max, omega_0, omega_tar, self.speed_f, speed_f);
 
         let mut builder = HRCtrlStepBuilder::from_builder(
             HRStepBuilder::from_motor(self, omega_0)
