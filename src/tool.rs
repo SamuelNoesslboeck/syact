@@ -6,14 +6,10 @@ use crate::{Dismantle, Setup};
 use crate::units::*;
 
 // Tools
-    #[cfg(feature = "std")]
     mod axial_joint;
-    #[cfg(feature = "std")]
     pub use axial_joint::AxialJoint;
 
-    #[cfg(feature = "std")]
     mod axis_tongs;
-    #[cfg(feature = "std")]
     pub use axis_tongs::AxisTongs;
 
     mod pencil_tool;
@@ -22,9 +18,7 @@ use crate::units::*;
     mod relay;
     pub use relay::Relay;
 
-    #[cfg(feature = "std")]
     mod tongs;
-    #[cfg(feature = "std")]
     pub use tongs::Tongs;
 //
 

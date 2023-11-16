@@ -288,7 +288,6 @@ impl Into<Duration> for Time {
     #[inline(always)]
     fn into(mut self) -> Duration {
         if self.0.is_sign_negative() {
-            #[cfg(feature = "std")]
             println!(" -> Fallback in Time unit used! {}", self.0); // Remove fallback
             self.0 = self.0.abs();
         }

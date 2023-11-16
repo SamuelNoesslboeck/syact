@@ -1,4 +1,3 @@
-#[cfg(feature = "std")]
 use serde::{Serialize, Deserialize};
 use sylo::Direction; 
 
@@ -12,7 +11,7 @@ pub type StepperConveyor = Conveyor<Stepper>;
 
 /// A simple conveyor powered by any kind of synchronous motor
 #[derive(Debug)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct Conveyor<C : SyncComp> {
     /// The parent component (driving the conveyor)
     ctrl : C,

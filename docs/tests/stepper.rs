@@ -1,4 +1,3 @@
-#[cfg(feature = "std")]
 mod single_motor 
 {
     use core::f32::consts::PI;
@@ -43,7 +42,6 @@ mod single_motor
     }
 }
 
-#[cfg(feature = "std")]
 mod curves {
     use crate::StepperConst;
     use crate::data::{CompVars, CompData};

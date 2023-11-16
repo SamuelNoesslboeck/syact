@@ -199,6 +199,7 @@ impl Iterator for HRCtrlStepBuilder {
     }
 }
 
+#[derive(Debug)]
 pub struct HRLimitedStepBuilder {
     builder : HRCtrlStepBuilder,
     steps_max : i64,

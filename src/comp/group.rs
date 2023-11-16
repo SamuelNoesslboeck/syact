@@ -85,11 +85,6 @@ where
 
     // Async
         /// Runs [SyncComp::drive_rel_async()] for all components
-        /// 
-        /// # Features
-        /// 
-        /// Only available if the "std" feature is enabled
-        #[cfg(feature = "embed-thread")]
         fn drive_rel_async(&mut self, deltas : [Delta; C], speed_f : [f32; C]) -> Result<(), crate::Error> {
             self.try_for_each_mut(|comp, index| {
                 comp.drive_rel_async(deltas[index], speed_f[index])
@@ -98,11 +93,6 @@ where
         }
 
         /// Runs [SyncComp::drive_abs_async()] for all components
-        /// 
-        /// # Features
-        /// 
-        /// Only available if the "std" feature is enabled
-        #[cfg(feature = "embed-thread")]
         fn drive_abs_async(&mut self, gamma : [Gamma; C], speed_f : [f32; C]) -> Result<(), crate::Error> {
             self.try_for_each_mut(|comp, index| {
                 comp.drive_abs_async(gamma[index], speed_f[index])
@@ -111,11 +101,6 @@ where
         }   
 
         /// Runs [SyncComp::await_inactive()] for all components
-        /// 
-        /// # Features
-        /// 
-        /// Only available if the "std" feature is enabled
-        #[cfg(feature = "embed-thread")]
         fn await_inactive(&mut self) -> Result<[Delta; C], crate::Error> {
             self.try_for_each_mut(|comp, _| {
                 comp.await_inactive()

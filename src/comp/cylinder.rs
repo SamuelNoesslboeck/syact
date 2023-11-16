@@ -1,4 +1,3 @@
-#[cfg(feature = "std")]
 use serde::{Serialize, Deserialize};
 
 use crate::{SyncComp, Setup};

@@ -1,10 +1,8 @@
 #![doc = include_str!("../README.md")]
 #![crate_name = "syact"]
-#![cfg_attr(not(feature = "std"), no_std)]
 // #![warn(missing_docs)]
 
 // Modules
-#[cfg(feature = "std")]
 extern crate alloc;
 
 // ########################
@@ -16,43 +14,32 @@ extern crate alloc;
 // ####################
 // #    SUBMODULES    #
 // ####################
-    // # Basic
-    // 
-    // Contains all the basic content that is available without being hosted on a operating system like raspbian on the raspberry pi
-        /// Collection of structs and functions for controlling Stepper Motors
+        // Includes documentation from readme file
+        #[doc = include_str!("../docs/components.md")]
+        pub mod comp;
+        pub use comp::{SyncComp, SyncCompGroup};
+        pub use comp::asyn::AsyncComp;
+
         pub mod ctrl;
         pub use ctrl::Stepper;
-    //
+    
+        /// Structs for storing characteristics of stepper motors and devices
+        pub mod data;
+        pub use data::{StepperConst, CompData, CompVars};
 
-    // # STD-Content
-    // 
-    // Content that is only available if the library is hosted on an operating system
-        cfg_if::cfg_if! { if #[cfg(feature = "std")] {
-            // Includes documentation from readme file
-            #[doc = include_str!("../docs/components.md")]
-            pub mod comp;
-            pub use comp::{SyncComp, SyncCompGroup};
-            pub use comp::asyn::AsyncComp;
-        
+        /// Functions and Structs for calculating Stepper Motor procedures and operations
+        pub mod math;
 
-            /// Structs for storing characteristics of stepper motors and devices
-            pub mod data;
-            pub use data::{StepperConst, CompData, CompVars};
+        /// Functions and Structs for taking measurements with a robot for e.g. position calculation
+        pub mod meas;
 
-            /// Functions and Structs for calculating Stepper Motor procedures and operations
-            pub mod math;
+        #[doc = "../docs/tools.md"]
+        pub mod tool;
+        pub use tool::{Tool, SimpleTool};
 
-            /// Functions and Structs for taking measurements with a robot for e.g. position calculation
-            pub mod meas;
-
-            #[doc = "../docs/tools.md"]
-            pub mod tool;
-            pub use tool::{Tool, SimpleTool};
-
-            /// Self defined units for mathematical operations
-            #[doc = include_str!("../docs/unit_system.md")]
-            pub mod units;
-        }}
+        /// Self defined units for mathematical operations
+        #[doc = include_str!("../docs/unit_system.md")]
+        pub mod units;
     // 
 
     // Include proc_macro
@@ -63,7 +50,6 @@ extern crate alloc;
 
     /// Module with all the tests required to assure the library funcitons as intended
     #[cfg(test)]
-    #[cfg(feature = "std")]
     mod tests;
 // 
 
@@ -72,28 +58,16 @@ extern crate alloc;
 // ################
 // 
 // Different platforms require different types of errors 
-//
-    cfg_if::cfg_if! { if #[cfg(feature = "std")] {
-        // Wrapped types
-        /// The general error type used in the crate
-        pub type Error = Box<dyn std::error::Error>;
+    // Wrapped types
+    /// The general error type used in the crate
+    pub type Error = Box<dyn std::error::Error>;
 
-        #[inline(always)]
-        fn lib_error<E>(error : E) -> crate::Error 
-        where
-            E: Into<Box<dyn std::error::Error + Sync + Send>> {
-            error.into()
-        }
-    } else {
-        /// The general error type of the crate
-        pub type Error = ErrorKind;
-
-        /// Enum for different error types
-        #[derive(Debug, Clone, Copy)]
-        pub enum ErrorKind {
-            // TODO
-        }
-    }}
+    #[inline(always)]
+    fn lib_error<E>(error : E) -> crate::Error 
+    where
+        E: Into<Box<dyn std::error::Error + Sync + Send>> {
+        error.into()
+    }
 //
 
 // ###########################

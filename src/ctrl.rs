@@ -9,44 +9,22 @@ use atomic_float::AtomicF32;
 // #    SUBMODULES    #
 // ####################
     /// Basic DC-Motors
-    #[cfg(feature = "std")]         // Uses `SoftwarePWM`
     pub mod dc_motor;
-    #[cfg(feature = "std")]
     pub use dc_motor::DcMotor;
 
     /// Helper functions and structs for deserializing
-    /// 
-    /// # Features
-    /// 
-    /// Only available if the "std"-feature is available
-    #[cfg(feature = "std")]         // Uses `serde`
     mod des;
 
     /// LEDs and other light sources
-    /// 
-    /// # Features
-    /// 
-    /// Only available if the "std-feature" is available
-    #[cfg(feature = "std")]         // Uses `PWMOutput`
     pub mod led;
 
     /// Universal pin structure
     pub mod pin;
 
     /// PWM-signal 
-    /// 
-    /// # Features
-    /// 
-    /// Only available if the "std"-feature is available
-    #[cfg(feature = "std")]
     pub mod pwm;
 
     /// Structs and methods for basic servo motors
-    /// 
-    /// # Features 
-    /// 
-    /// Only available if the "std"-feature is available
-    #[cfg(feature = "std")]
     pub mod servo;
 
     /// Stepper motors and controllers in different resolutions

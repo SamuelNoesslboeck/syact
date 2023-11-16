@@ -7,10 +7,8 @@ use crate::StepperConst;
 use crate::units::*;
 
 // Submodules
-    cfg_if::cfg_if! { if #[cfg(feature = "std")] {
-        mod hr;
-        pub use hr::*; 
-    } }
+    mod hr;
+    pub use hr::*;
 
     mod lr;
     pub use lr::*;
@@ -24,21 +22,14 @@ const STEP_PULSE_DUR : Duration = Duration::from_micros(25);
 // #####################
 // #   Stepper-Types   #
 // #####################
-cfg_if::cfg_if! {
-    if #[cfg(feature = "std")] {
-        /// Default `Stepper` type for high-performance systems (high resolution stepper)
-        pub type Stepper = HRStepper<GenericPWM>;
+/// Default `Stepper` type for high-performance systems (high resolution stepper)
+pub type Stepper = HRStepper<GenericPWM>;
 
-        impl Stepper {
-            /// Creates a new generic stepper with both pins set to [ERR_PIN](super::pin::ERR_PIN) just for simulation and testing purposes
-            #[inline]
-            pub fn new_gen() -> Self {
-                Self::new(GenericPWM::new_gen(), StepperConst::GEN)
-            }
-        }
-    } else {
-        /// Default `Stepper` type for low-level, no-std hardware environments (low resolution stepper)
-        pub type Stepper = LRStepper;
+impl Stepper {
+    /// Creates a new generic stepper with both pins set to [ERR_PIN](super::pin::ERR_PIN) just for simulation and testing purposes
+    #[inline]
+    pub fn new_gen() -> Self {
+        Self::new(GenericPWM::new_gen(), StepperConst::GEN)
     }
 }
 
@@ -55,9 +46,9 @@ pub trait Controller {
         }
     }
 
-    fn step_no_wait(&mut self, t_total : Time) -> Result<(), crate::Error>;
+    fn step_no_wait(&mut self, t_total : Time) -> Result<(), StepError>;
 
-    fn step_final(&mut self) -> Result<(), crate::Error>{
+    fn step_final(&mut self) -> Result<(), StepError>{
         self.step_no_wait(2.0 * STEP_PULSE_TIME)
     }
 
@@ -111,14 +102,14 @@ impl Controller for GenericPWM {
         spin_sleep::sleep(t_pause.into());
     }
 
-    fn step_no_wait(&mut self, t_total : Time) -> Result<(), crate::Error> {
+    fn step_no_wait(&mut self, t_total : Time) -> Result<(), StepError> {
         // TODO: Maybe create fallbacks or move to Result?
         if t_total <= STEP_PULSE_TIME {
-            return Err(format!("Bad step time! Time given ({}) is smaller than STEP_PULSE_TIME ({})", t_total, STEP_PULSE_TIME).into());
+            return Err(StepError::TimeTooShort(t_total));
         }
 
         if !t_total.is_normal() {
-            return Err(format!("Bad step time! Time given ({}) is invalid!", t_total).into());
+            return Err(StepError::TimeIsIncorrect(t_total));
         }
 
         let elapsed = self.pause_stamp.elapsed();
@@ -153,21 +144,33 @@ impl Controller for GenericPWM {
 // #####################
 // #    ERROR-TYPES    #
 // #####################
+    #[derive(Debug)]
     pub enum StepError {
         TimeTooShort(Time),
         TimeIsIncorrect(Time),
         Other(crate::Error)
     }
 
-    impl Into<crate::Error> for StepError {
-        fn into(self) -> crate::Error {
+    impl StepError {
+        pub fn is_other(&self) -> bool {
             match self {
-                Self::TimeTooShort(t) => 
-                    format!("Bad step time! Time given ({}) is smaller than STEP_PULSE_TIME ({})", t, STEP_PULSE_TIME).into(),
-                Self::TimeIsIncorrect(t) => 
-                    format!("Bad step time! Time given ({}) is invalid!", t).into(),
-                Self::Other(err) => err
+                Self::Other(_) => true,
+                _ => false
             }
         }
     }
+
+    impl core::fmt::Display for StepError {
+        fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+            match self {
+                Self::TimeTooShort(t) => 
+                    f.write_fmt(format_args!("Bad step time! Time given ({}) is smaller than STEP_PULSE_TIME ({})", t, STEP_PULSE_TIME)),
+                Self::TimeIsIncorrect(t) => 
+                    f.write_fmt(format_args!("Bad step time! Time given ({}) is invalid!", t)),
+                Self::Other(err) => err.fmt(f)
+            }
+        }
+    }
+
+    impl std::error::Error for StepError { }
 // 

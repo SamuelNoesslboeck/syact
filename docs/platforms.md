@@ -8,7 +8,7 @@ The current platforms and features enabled are
 
 ```toml
 # Platform features
-rasp = [ "std", "dep:rppal" ]
+rasp = [ "dep:rppal" ]
 ```
 
 If no platform is selected the library automatically goes into simulation mode. Meaning no movements will be actually executed, no pins will be written to or checked, which can lead to problems. As the library does for example not care if the same two pins are used in simulation mode.

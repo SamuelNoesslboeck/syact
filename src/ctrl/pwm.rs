@@ -168,7 +168,6 @@ impl SoftwarePWM {
     /// The function panics if the given factor is out of range 
     #[inline]
     pub fn set_freq(&mut self, freq : Omega, factor : f32) {
-        #[cfg(feature = "std")]
         if (1.0 < factor) & (0.0 > factor) {
             panic!("Bad factor value! {}", factor);
         }
