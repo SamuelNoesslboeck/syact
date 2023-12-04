@@ -54,6 +54,8 @@ fn main() -> Result<(), syact::Error> {
 
     ctrl.set_omega_max(omega);
 
+    ctrl.debug_data();
+
     print!("Staring to move ... ");
     ctrl.drive_rel(delta, 1.0)?;      // Move the motor
     println!("done!");
