@@ -27,6 +27,8 @@ use atomic_float::AtomicF32;
     /// Structs and methods for basic servo motors
     pub mod servo;
 
+    pub mod switch;
+
     /// Stepper motors and controllers in different resolutions
     pub mod stepper;
     pub use stepper::{Stepper, Controller, GenericPWM};

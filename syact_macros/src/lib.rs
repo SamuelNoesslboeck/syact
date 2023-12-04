@@ -97,7 +97,7 @@ use syn::DeriveInput;
                             let mut res = unsafe { core::mem::zeroed::<[R; #fields_count]>() };
                             #try_for_each_mut_s     // Insert stream
                             Ok(res)
-                        }
+                        } 
                     }
                 }.into()
             },

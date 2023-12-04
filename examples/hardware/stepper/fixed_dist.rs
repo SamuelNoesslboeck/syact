@@ -1,23 +1,3 @@
-#![doc = r#"
-Let us assume we want to control a simple stepper motor (in this example a 
-[17HE15_1504_S](https://www.omc-stepperonline.com/index.php?route=product/product/get_file&file=2838/17HE15-1504S.pdf)) 
-with a PWM controller connected to the BCM pins 27 and 19.
-
-### Note 
-
-The cargo.toml file specified below is when running the example on a raspberry pi
-
-```toml
-# ...
-
-[dependencies]
-# Include the library configured for the raspberry pi
-syact = { version = "0.12.1", features = [ "rasp" ] } 
-
-# ...
-```
-"#]
-
 use core::f32::consts::PI;
 
 use clap::{command, arg, value_parser};
@@ -38,7 +18,6 @@ fn main() -> Result<(), syact::Error> {
         .arg(arg!([pin_dir] "Pin number of the direction pin").value_parser(value_parser!(u8)))
         .arg(arg!([delta] "Delta (distance) of the movement in rad (2pi [1 rev] per default)").value_parser(value_parser!(f32)))
         .arg(arg!([omega] "Omega (velocity) of the movement in rad/s (10 rad/s per default)").value_parser(value_parser!(f32)))
-        .arg(arg!([micro] "Enables microstepping with the given step value (1 per default)").value_parser(value_parser!(u8)))
         .get_matches();
 
     let pin_step : u8 = *matches.get_one("pin_step").expect("A valid step pin has to be provided");
@@ -46,11 +25,11 @@ fn main() -> Result<(), syact::Error> {
 
     let delta : Delta  = Delta(*matches.get_one("delta").unwrap_or(&DELTA_DEF.0));
     let omega : Omega = Omega(*matches.get_one("omega").unwrap_or(&OMEGA_DEF.0));
-    let micro_opt : Option<&u8> = matches.get_one("micro");
 
     // Load data
     let inertia = std::env::var("INERTIA").ok().map(|v| v.parse::<Inertia>().unwrap()).unwrap_or(Inertia::ZERO);
     let force = std::env::var("FORCE").ok().map(|v| Force(v.parse::<f32>().unwrap())).unwrap_or(Force::ZERO);
+    let micro_opt = std::env::var("MICRO").ok().map(|v| v.parse::<u8>().unwrap());
 
     // Create the controls for a stepper motor
     let mut ctrl = Stepper::new(
@@ -65,7 +44,7 @@ fn main() -> Result<(), syact::Error> {
     }); 
     ctrl.setup()?;
 
-    if let Some(&micro) = micro_opt {
+    if let Some(micro) = micro_opt {
         ctrl.set_micro(micro);
     }
 
