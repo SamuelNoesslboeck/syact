@@ -103,7 +103,7 @@ pub struct UniOutPin {
                 type Error = ();
 
                 #[inline]
-                fn set_high(&mut self) -> Result<bool, Self::Error> {
+                fn set_high(&mut self) -> Result<(), Self::Error> {
                     if let Some(sys_pin) = &mut self.sys_pin {
                         Ok(sys_pin.set_high())
                     } else {
@@ -112,7 +112,7 @@ pub struct UniOutPin {
                 }
 
                 #[inline]
-                fn set_low(&mut self) -> Result<bool, Self::Error> {
+                fn set_low(&mut self) -> Result<(), Self::Error> {
                     if let Some(sys_pin) = &mut self.sys_pin {
                         Ok(sys_pin.set_low())
                     } else {
