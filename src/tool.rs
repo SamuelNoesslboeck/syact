@@ -15,9 +15,6 @@ use crate::units::*;
     mod pencil_tool;
     pub use pencil_tool::PencilTool;
 
-    mod relay;
-    pub use relay::Relay;
-
     mod tongs;
     pub use tongs::Tongs;
 //
