@@ -1,122 +1,134 @@
 #[cfg(feature = "rasp")]
-use rppal::gpio::OutputPin;
+use rppal::gpio::{Gpio, OutputPin};
+
+use embedded_hal::digital::v2::PinState;
+
+use crate::Setup;
+use crate::ctrl::pin::ERR_PIN;
 
 /// Universal ouput pin structure for platform independency
 #[derive(Debug)]
 pub struct UniOutPin {
     /// The pin control used
     #[cfg(feature = "rasp")]
-    pub sys_pin : OutputPin,
+    pub sys_pin : Option<OutputPin>,
     #[cfg(not(any(feature = "rasp")))]
-    state : bool, 
+    state : PinState, 
 
     /// The pin number
     pub pin : u8
 }
 
-impl UniOutPin {
-    /// Create 
-    #[inline]
-    #[cfg(feature = "rasp")]
-    pub fn new(sys_pin : OutputPin, pin : u8) -> Self {
-        Self {
-            sys_pin, 
-            pin
+// #####################################
+// #    EMBEDDED-HAL IMPLEMENTATION    #
+// #####################################
+    // Implementation for no GPIO platforms (e.g. windows)
+    //  -> Default value for pin value is `LOW`
+    //  -> Implementation cannot fail
+    cfg_if::cfg_if! { 
+        if #[cfg(not(any(feature = "rasp")))] {
+            impl UniOutPin {
+                pub fn new(pin : u8) -> Self {
+                    Self { 
+                        pin,
+                        state: PinState::Low
+                    }
+                }
+            }
+
+            impl Setup for UniOutPin { }
+
+            impl Default for UniOutPin {
+                fn default() -> Self {
+                    Self {
+                        pin: ERR_PIN,
+                        state: PinState::Low
+                    }
+                }
+            }
+
+            #[cfg(not(any(feature = "rasp")))]
+            impl embedded_hal::digital::v2::OutputPin for UniOutPin {
+                type Error = ();
+
+                fn set_high(&mut self) -> Result<(), Self::Error> {
+                    self.state = PinState::High;
+                    Ok(())
+                }
+
+                fn set_low(&mut self) -> Result<(), Self::Error> {
+                    self.state = PinState::Low;
+                    Ok(())
+                }
+
+                fn set_state(&mut self, state: PinState) -> Result<(), Self::Error> {
+                    self.state = state;
+                    Ok(())
+                }
+            }
+        } 
+    }
+    //
+
+    // Implementation for Raspberry Pi devices
+    //  -> Implementation cannot fail
+    cfg_if::cfg_if! { 
+        if #[cfg(feature = "rasp")] {
+            impl UniOutPin {
+                pub fn new(pin : u8) -> Self {
+                    Self {
+                        pin,
+                        sys_pin: None
+                    }
+                }
+            }
+
+            impl Default for UniOutPin {
+                fn default() -> Self {
+                    Self {
+                        pin: ERR_PIN,
+                        sys_pin: None
+                    }
+                }
+            }
+
+            impl Setup for UniOutPin {
+                fn setup(&mut self) -> Result<(), crate::Error> {
+                    self.sys_pin = Some(Gpio::new()?.get(self.pin)?.into_output());
+                    Ok(())
+                }
+            }
+
+            impl embedded_hal::digital::v2::OutputPin for UniOutPin {
+                type Error = ();
+
+                #[inline]
+                fn set_high(&mut self) -> Result<bool, Self::Error> {
+                    if let Some(sys_pin) = &mut self.sys_pin {
+                        Ok(sys_pin.set_high())
+                    } else {
+                        panic!("Pin not setup yet! (Number: {})", self.pin)
+                    }
+                }
+
+                #[inline]
+                fn set_low(&mut self) -> Result<bool, Self::Error> {
+                    if let Some(sys_pin) = &mut self.sys_pin {
+                        Ok(sys_pin.set_low())
+                    } else {
+                        panic!("Pin not setup yet! (Number: {})", self.pin)
+                    }
+                }
+
+                #[inline]
+                fn set_state(&mut self, state: PinState) -> Result<(), Self::Error> {
+                    match state {
+                        PinState::Low => self.set_low(),
+                        PinState::High => self.set_high()
+                    }
+                }
+            }
         }
     }
-
-    /// Creates a new simulated output pin
-    #[inline]
-    #[cfg(not(any(feature = "rasp")))]
-    pub fn new(state : bool, pin : u8) -> Self {
-        Self {
-            state, 
-            pin
-        }
-    }
-
-    /// Checks if the pin is simulated
-    /// 
-    /// Returns `false` for this configuration
-    #[inline]
-    #[cfg(feature = "rasp")]
-    pub fn is_sim(&self) -> bool {
-        false
-    }
-
-    /// Checks if the pin is simulated
-    /// 
-    /// Returns `true` for this configuration
-    #[inline]
-    #[cfg(not(any(feature = "rasp")))]
-    pub fn is_sim(&self) -> bool {
-        true
-    }
-    
-    /// Checks if the pin is set to `HIGH`
-    #[inline]
-    #[cfg(not(any(feature = "rasp")))]
-    pub fn is_set_high(&self) -> bool {
-        self.state
-    }
-
-    /// Checks if the pin is set to `HIGH`
-    #[inline]
-    #[cfg(feature = "rasp")]
-    pub fn is_set_high(&self) -> bool {
-        self.sys_pin.is_set_high()
-    }
-
-    /// Checks if the pin is set to `LOW`
-    #[inline]
-    #[cfg(not(any(feature = "rasp")))]
-    pub fn is_set_low(&self) -> bool {
-        !self.state
-    }
-
-    /// Checks if the pin is set to `LOW`
-    #[inline]
-    #[cfg(feature = "rasp")]
-    pub fn is_set_low(&self) -> bool {
-        self.sys_pin.is_set_low()
-    }
-
-    /// Set the pin to `HIGH`
-    #[inline]
-    #[cfg(not(any(feature = "rasp")))]
-    pub fn set_high(&mut self) {
-        self.state = true;
-    }
-
-    /// Set the pin to `HIGH`
-    #[inline]
-    #[cfg(feature = "rasp")]
-    pub fn set_high(&mut self) {
-        self.sys_pin.set_high();
-    }
-
-    /// Set the pin to `lOW`
-    #[inline]
-    #[cfg(not(any(feature = "rasp")))]
-    pub fn set_low(&mut self) {
-        self.state = false;
-    }
-
-    /// Set the pin to `lOW`
-    #[inline]
-    #[cfg(feature = "rasp")]
-    pub fn set_low(&mut self) {
-        self.sys_pin.set_low();
-    }
-
-    /// Sets the pin to a boolean value 
-    /// - `true` for high
-    /// - `false` for low
-    pub fn set(&mut self, val : bool) {
-        if val {
-            self.set_high()
-        } else {
-            self.set_low()
-        }
-    }
-}
+    // 
+// 

@@ -96,9 +96,9 @@ impl GenericPWM {
 
 impl Controller for GenericPWM {
     fn step_with(&mut self, t_len : Time, t_pause : Time) {
-        self.pin_step.set_high();
+        self.pin_step.set_high().unwrap();
         spin_sleep::sleep(t_len.into());
-        self.pin_step.set_low();
+        self.pin_step.set_low().unwrap();
         spin_sleep::sleep(t_pause.into());
     }
 
@@ -121,9 +121,9 @@ impl Controller for GenericPWM {
                 spin_sleep::sleep(STEP_PULSE_DUR - self.t_pause);
             }
 
-        self.pin_step.set_high();
+        self.pin_step.set_high().unwrap();
         spin_sleep::sleep(STEP_PULSE_DUR);
-        self.pin_step.set_low();
+        self.pin_step.set_low().unwrap();
 
         self.pause_stamp = Instant::now();
         self.t_pause = (t_total - STEP_PULSE_TIME).into();
@@ -137,7 +137,7 @@ impl Controller for GenericPWM {
 
     fn set_dir(&mut self, dir : Direction) {
         self.dir = dir;
-        self.pin_dir.set(self.dir.as_bool());
+        self.pin_dir.set_state(self.dir.as_bool().into()).unwrap();
     }
 }
 

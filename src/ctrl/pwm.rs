@@ -1,6 +1,7 @@
 use std::sync::mpsc::{Sender, Receiver, channel}; 
 use std::thread;
 
+use embedded_hal::digital::v2::OutputPin;
 use serde::{Serialize, Deserialize};
 
 use crate::{Setup, Dismantle};
@@ -102,9 +103,9 @@ impl SoftwarePWM {
 
     /// Does a single pulse with the active time `t_ac` and inactive time `t_in`
     pub fn pulse(sys_pwm : &mut pin::UniOutPin, t_ac : Time, t_in : Time) {
-        sys_pwm.set_high();
+        sys_pwm.set_high().unwrap();
         thread::sleep(t_ac.into());
-        sys_pwm.set_low(); 
+        sys_pwm.set_low().unwrap(); 
         thread::sleep(t_in.into());
     }
 

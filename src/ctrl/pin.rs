@@ -78,7 +78,6 @@ impl UniPin {
     #[cfg(feature = "rasp")]
     pub fn into_output(self) -> UniOutPin {
         UniOutPin::new(
-            self.sys_pin.into_output(),
             self.pin
         )
     }
@@ -87,7 +86,6 @@ impl UniPin {
     #[cfg(not(any(feature = "rasp")))]
     pub fn into_output(self) -> UniOutPin {
         UniOutPin::new(
-            false,
             self.pin
         )
     }

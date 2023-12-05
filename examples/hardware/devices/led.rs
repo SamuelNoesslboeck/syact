@@ -23,7 +23,7 @@ fn main() -> Result<(), syact::Error> {
     let mut led = UniPin::new(pin)?.into_output();
     let mut state = false;
 
-    led.set_low();
+    led.set_low().unwrap();
     
     println!("Created LED at pin: {}", pin);
 
@@ -33,10 +33,10 @@ fn main() -> Result<(), syact::Error> {
 
         if state {
             state = false;
-            led.set_low();
+            led.set_low().unwrap();
         } else {
             state = true;
-            led.set_high();
+            led.set_high().unwrap();
         }
     }
 }  
