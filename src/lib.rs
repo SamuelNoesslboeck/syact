@@ -94,13 +94,6 @@ extern crate alloc;
         }
     }
 
-    impl<T : sylo::Enable> Setup for T {
-        fn setup(&mut self) -> Result<(), Error> {
-            self.enable();
-            Ok(())
-        }
-    }
-
     /// A trait that provides a universal dismantle function
     /// 
     /// # Pin management
