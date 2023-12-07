@@ -1,4 +1,4 @@
-use crate::ctrl::GenericPWM;
+use crate::dev::GenericPWM;
 use crate::prelude::*;
 use crate as syact;
 

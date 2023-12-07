@@ -1,5 +1,5 @@
 use crate::SimpleTool;
-use crate::ctrl::pin::{UniOutPin, UniPin};
+use crate::device::pin::{UniOutPin, UniPin};
 
 /// A simple relay
 pub struct Relay {

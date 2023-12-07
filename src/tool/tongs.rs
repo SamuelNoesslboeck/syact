@@ -2,7 +2,7 @@ use glam::Vec3;
 use serde::{Serialize, Deserialize};
 
 use crate::{Tool, SimpleTool, Setup, Dismantle};
-use crate::ctrl::servo::Servo;
+use crate::device::servo::Servo;
 use crate::units::*;
 
 /// A pair of controllable tongs with simple closed/open state switching

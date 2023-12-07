@@ -4,7 +4,7 @@ use std::thread;
 use serde::{Serialize, Deserialize};
 
 use crate::{Setup, Dismantle};
-use crate::ctrl::pin;
+use crate::device::pin;
 use crate::units::*;
 
 /// A simple software-made PWM-signal 

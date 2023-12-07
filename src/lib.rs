@@ -16,16 +16,15 @@ extern crate alloc;
 // ####################
         // Includes documentation from readme file
         #[doc = include_str!("../docs/components.md")]
-        pub mod comp;
-        pub use comp::{SyncComp, SyncCompGroup};
-        pub use comp::asyn::AsyncComp;
+        pub mod act;
+        pub use act::{SyncActuator, SyncCompGroup, Stepper};
+        pub use act::asyn::AsyncActuator;
 
-        pub mod ctrl;
-        pub use ctrl::Stepper;
+        pub mod device;
     
         /// Structs for storing characteristics of stepper motors and devices
         pub mod data;
-        pub use data::{StepperConst, CompData, CompVars};
+        pub use data::{StepperConst, StepperConfig, ActuatorVars};
 
         /// Functions and Structs for calculating Stepper Motor procedures and operations
         pub mod math;

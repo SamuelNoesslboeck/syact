@@ -1,6 +1,6 @@
-use crate::ctrl::Stepper;
-use crate::ctrl::stepper::GenericPWM;
-use crate::comp::StepperComp;
+use crate::act::Stepper;
+use crate::act::stepper::GenericPWM;
+use crate::act::StepperActuator;
 use crate::data::StepperConst;
 
 use serde::{Serialize, Deserialize};

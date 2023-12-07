@@ -1,6 +1,6 @@
 use crate::StepperConst;
-use crate::comp::StepperMotor;
-use crate::data::{CompData, CompVars};
+use crate::act::StepperMotor;
+use crate::data::{StepperConfig, ActuatorVars};
 
 use super::*;
 
@@ -14,8 +14,8 @@ pub struct HRStepBuilder {
     pub alpha : Alpha,
 
     pub consts : StepperConst,
-    pub vars : CompVars,
-    pub data : CompData,
+    pub vars : ActuatorVars,
+    pub data : StepperConfig,
 
     pub deccel : bool,
     pub omega_max : Omega,
@@ -25,9 +25,9 @@ pub struct HRStepBuilder {
 }
 
 impl HRStepBuilder {
-    pub fn new(omega_0 : Omega, consts : StepperConst, vars : CompVars, data : CompData, omega_max : Omega, micro : u8) -> Self {
+    pub fn new(omega_0 : Omega, consts : StepperConst, vars : ActuatorVars, data : StepperConfig, omega_max : Omega, micro : u8) -> Self {
         Self {
-            delta: consts.step_ang(micro),
+            delta: consts.step_angle(micro),
             omega_0: omega_0.abs(),
             alpha: Alpha::ZERO,
 
@@ -43,7 +43,7 @@ impl HRStepBuilder {
     }
 
     pub fn from_motor<M : StepperMotor + ?Sized>(motor : &M, omega_0 : Omega) -> Self {
-        Self::new(omega_0, motor.consts().clone(), motor.vars().clone(), motor.data().clone(), motor.omega_max(), motor.micro())
+        Self::new(omega_0, motor.consts().clone(), motor.vars().clone(), motor.config().clone(), motor.omega_max(), motor.microsteps())
     }
 
     pub fn start_accel(&mut self) {
@@ -77,7 +77,7 @@ impl Iterator for HRStepBuilder {
 
         // Apply new alpha for speed
         if let Ok(alpha) = self.consts.alpha_max_dyn(
-            crate::math::force::torque_dyn(&self.consts, self.omega_0, self.data.u, self.consts.i) / self.data.s_f, &self.vars
+            crate::math::force::torque_dyn(&self.consts, self.omega_0, self.data.voltage, self.consts.current_max) / self.data.safety_factor, &self.vars
         ) {
             self.alpha = alpha;     // Update the alpha
 
@@ -119,7 +119,7 @@ pub struct HRCtrlStepBuilder {
 }
 
 impl HRCtrlStepBuilder {
-    pub fn new(omega_0 : Omega, consts : StepperConst, vars : CompVars, data : CompData, 
+    pub fn new(omega_0 : Omega, consts : StepperConst, vars : ActuatorVars, data : StepperConfig, 
     omega_max : Omega, micro : u8) -> Self {
         Self::from_builder(
             HRStepBuilder::new(omega_0, consts, vars, data, omega_max, micro)
@@ -210,7 +210,7 @@ pub struct HRLimitedStepBuilder {
 }
 
 impl HRLimitedStepBuilder {
-    pub fn new(omega_0 : Omega, consts : StepperConst, vars : CompVars, data : CompData, 
+    pub fn new(omega_0 : Omega, consts : StepperConst, vars : ActuatorVars, data : StepperConfig, 
     omega_max : Omega, micro : u8) -> Self {
         Self {
             builder: HRCtrlStepBuilder::new(omega_0, consts, vars, data, omega_max, micro),

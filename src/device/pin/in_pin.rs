@@ -2,7 +2,7 @@
 use rppal::gpio::{Gpio, InputPin};
 
 use crate::Setup;
-use crate::ctrl::pin::ERR_PIN;
+use crate::device::pin::ERR_PIN;
 
 /// Universal output pin structure for platform independency with `Setup`-Overhead
 #[derive(Debug)]

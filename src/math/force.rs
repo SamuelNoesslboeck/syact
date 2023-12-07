@@ -20,14 +20,14 @@ pub fn torque_dyn(consts : &StepperConst, mut omega : Omega, u : f32, i_ol : f32
     }
     
     if omega == Omega::ZERO {
-        return consts.t_ol(i_ol);
+        return consts.torque_overload(i_ol);
     }
 
     let time = consts.full_step_time(omega);
     let pow = E.powf( -time / consts.tau() );
 
-    let t_ol = consts.t_ol(i_ol);
-    let t = (1.0 - pow) / (1.0 + pow) * consts.t_ol_max(u);
+    let t_ol = consts.torque_overload(i_ol);
+    let t = (1.0 - pow) / (1.0 + pow) * consts.torque_overload_max(u);
     
     if t > t_ol { t_ol } else { t }
 }
@@ -44,7 +44,7 @@ pub fn torque_dyn_approx(consts : &StepperConst, mut omega : Omega, max_omega : 
         return Force::ZERO;
     }
     
-    consts.t_s * (1.0 - omega / max_omega)
+    consts.torque_stall * (1.0 - omega / max_omega)
 }
 
 /// Calculates all forces and torques acting upon a segment connected with another support segment

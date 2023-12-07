@@ -7,15 +7,13 @@ use std::sync::mpsc::{Receiver, Sender, channel};
 use atomic_float::AtomicF32;
 use sylo::Direction;
 
-use crate::{SyncComp, Setup, lib_error};
-use crate::comp::stepper::{StepperComp, StepperMotor};
-use crate::comp::asyn::AsyncComp;
-use crate::ctrl::{Controller, Interruptor, InterruptReason};
-use crate::ctrl::stepper::StepError;
-use crate::data::{CompData, StepperConst, CompVars}; 
+use crate::{SyncActuator, Setup, lib_error};
+use crate::act::{Interruptor, InterruptReason, Interruptible};
+use crate::act::asyn::AsyncActuator;
+use crate::act::stepper::{StepperActuator, StepperMotor, Controller, StepError};
+use crate::data::{StepperConfig, StepperConst, ActuatorVars}; 
 use crate::math::{HRCtrlStepBuilder, HRLimitedStepBuilder, HRStepBuilder};
 use crate::math::force::torque_dyn;
-use crate::math::kin;
 use crate::units::*;
 
 
@@ -52,7 +50,7 @@ pub struct HRStepper<C : Controller + Send + 'static> {
     /// All constants of the stepper motor
     _consts : StepperConst,
     /// Variables of the component
-    _vars : CompVars,
+    _vars : ActuatorVars,
 
     /// The current direction of the stepper motor
     _dir : Arc<AtomicBool>,
@@ -68,7 +66,7 @@ pub struct HRStepper<C : Controller + Send + 'static> {
     _t_step_cur : Arc<AtomicF32>,
 
     /// Linked data shared between different components
-    _data : CompData,
+    _config : StepperConfig,
 
     // Threading and msg senders
     thr : Option<JoinHandle<()>>,
@@ -90,17 +88,17 @@ impl<C : Controller + Send + 'static> HRStepper<C> {
     pub fn new(ctrl : C, consts : StepperConst) -> Self {
         Self { 
             _ctrl: Arc::new(Mutex::new(ctrl)),
-            _vars: CompVars::ZERO, 
+            _vars: ActuatorVars::ZERO, 
             
             _dir: Arc::new(AtomicBool::new(true)),
             _gamma : Arc::new(AtomicF32::new(0.0)),
-            _step_ang: Arc::new(AtomicF32::new(consts.step_ang(1).0)),
+            _step_ang: Arc::new(AtomicF32::new(consts.step_angle(1).0)),
             _micro: 1,
 
             _omega_max: Omega::ZERO,
             _t_step_cur: Arc::new(AtomicF32::new(Time::INFINITY.0)),
 
-            _data: CompData::ERROR,
+            _config: StepperConfig::ERROR,
 
             thr: None,
             sender: None,
@@ -134,12 +132,12 @@ impl<C : Controller + Send + 'static> HRStepper<C> {
 
     // Current omega
         pub fn omega_cur(&self) -> Omega {
-            self._consts.omega(Time(self._t_step_cur.load(Ordering::Relaxed)), self.micro())
+            self._consts.omega(Time(self._t_step_cur.load(Ordering::Relaxed)), self.microsteps())
         }
 
         #[inline]
         pub fn set_omega_cur(&mut self, omega_cur : Omega) {
-            self._t_step_cur.store(self.consts().step_time(omega_cur, self.micro()).0, Ordering::Relaxed)
+            self._t_step_cur.store(self.consts().step_time(omega_cur, self.microsteps()).0, Ordering::Relaxed)
         }
     // 
 
@@ -227,7 +225,7 @@ impl<C : Controller + Send + 'static> HRStepper<C> {
     /// - Limit checks
     /// - sylo::Direction change
     fn setup_drive(&mut self, delta : Delta) -> Result<(), crate::Error> {
-        let limit = self.lim_for_gamma(self.gamma() + delta);
+        let limit = self.limits_for_gamma(self.gamma() + delta);
 
         // Checks if the given limit is reached 
         if limit.is_normal() {
@@ -257,9 +255,9 @@ impl<C : Controller + Send + 'static> HRStepper<C> {
     /// Returns an error if `setup_drive()` fails
     pub fn step(&mut self, time : Time) -> Result<(), crate::Error> {
         let delta = if self.dir().as_bool() { 
-            self._consts.step_ang(self._micro) 
+            self._consts.step_angle(self._micro) 
         } else { 
-            -self._consts.step_ang(self._micro) 
+            -self._consts.step_angle(self._micro) 
         };
         self.setup_drive(delta)?;
 
@@ -534,11 +532,11 @@ impl<C : Controller + Send + 'static> HRStepper<C> {
 
 impl<C : Controller + Send + 'static> Setup for HRStepper<C> {
     fn setup(&mut self) -> Result<(), crate::Error> {
-        if self._data.u == 0.0 {
-            return Err("Provide the component with vaild data! (`CompData` is invalid)".into());
+        if self._config.voltage == 0.0 {
+            return Err("Provide the component with vaild data! (`StepperConfig` is invalid)".into());
         }
 
-        self._omega_max = self._consts.omega_max(self._data.u);
+        self._omega_max = self._consts.omega_max(self._config.voltage);
 
         self.setup_async();
 
@@ -546,31 +544,10 @@ impl<C : Controller + Send + 'static> Setup for HRStepper<C> {
     }
 }
 
-impl<C : Controller + Send + 'static> SyncComp for HRStepper<C> {
+impl<C : Controller + Send + 'static> SyncActuator for HRStepper<C> {
     // Data
-        fn vars<'a>(&'a self) -> &'a CompVars {
+        fn vars<'a>(&'a self) -> &'a ActuatorVars {
             &self._vars
-        }
-
-        fn data<'a>(&'a self) -> &'a CompData {
-            &self._data
-        }
-
-        #[inline]
-        fn write_data(&mut self, data : CompData) {
-            self._data = data;
-        }  
-    // 
-
-    // Interruptors
-        fn add_interruptor(&mut self, interruptor : Box<dyn Interruptor + Send>) {
-            let mut intr = self.intrs.lock().unwrap();
-            intr.push(interruptor);
-        }
-
-        fn intr_reason(&self) -> Option<InterruptReason> {
-            // Return the value and replace it with `None`
-            std::mem::replace(&mut self._intr_reason.lock().unwrap(), None)
         }
     // 
 
@@ -593,8 +570,6 @@ impl<C : Controller + Send + 'static> SyncComp for HRStepper<C> {
 
             // Logging information
                 log::debug!("[drive_rel (sync)] Delta: {:?}, Speed-Factor {:?}", delta, speed_f);
-                log::trace!(" || - t_dyn: {:?}", self.consts().t(self.vars().t_load_gen));
-                log::trace!(" || - j: {:?}", self.consts().j(self.vars().j_load));
             // 
             
             self.setup_drive(delta)?;
@@ -614,7 +589,7 @@ impl<C : Controller + Send + 'static> SyncComp for HRStepper<C> {
             // Step     Waittime            Last manual step
             // \/         \/                     \/
             // | ----- | --- | -- | --- | --\-- |
-            cur.set_steps_max(self._consts.steps_from_ang_abs(delta, self._micro) - 1);
+            cur.set_steps_max(self._consts.steps_from_angle_abs(delta, self._micro) - 1);
 
             // Set the active status to `true` 
             self.active.store(true, Ordering::Relaxed);
@@ -648,7 +623,7 @@ impl<C : Controller + Send + 'static> SyncComp for HRStepper<C> {
                 })?;
 
                 // Update the pos after the final step
-                self.write_gamma(self.gamma() + Delta(self._step_ang.load(Ordering::Relaxed)));
+                self.set_gamma(self.gamma() + Delta(self._step_ang.load(Ordering::Relaxed)));
             }
 
             // Update the curret step time
@@ -706,7 +681,7 @@ impl<C : Controller + Send + 'static> SyncComp for HRStepper<C> {
             // Step     Waittime            Last manual step
             // \/         \/                     \/
             // | ----- | --- | -- | --- | --\-- |
-            cur.set_steps_max(self._consts.steps_from_ang_abs(delta, self._micro) - 1);
+            cur.set_steps_max(self._consts.steps_from_angle_abs(delta, self._micro) - 1);
 
             // Only execute if the async thread has been started yet
             self.drive_fixed_async(cur)?;
@@ -757,7 +732,7 @@ impl<C : Controller + Send + 'static> SyncComp for HRStepper<C> {
         }   
 
         #[inline]
-        fn write_gamma(&mut self, gamma : Gamma) {
+        fn set_gamma(&mut self, gamma : Gamma) {
             self._gamma.store(gamma.0, Ordering::Relaxed);
         }
 
@@ -767,15 +742,15 @@ impl<C : Controller + Send + 'static> SyncComp for HRStepper<C> {
         }
 
         fn set_omega_max(&mut self, omega_max : Omega) {
-            if omega_max > self._consts.omega_max(self._data.u) {
-                panic!("Maximum omega must not be greater than recommended! (Given: {}, Rec: {})", omega_max, self._consts.omega_max(self._data.u));
+            if omega_max > self._consts.omega_max(self._config.voltage) {
+                panic!("Maximum omega must not be greater than recommended! (Given: {}, Rec: {})", omega_max, self._consts.omega_max(self._config.voltage));
             }
 
             self._omega_max = omega_max;
         }
 
         #[inline]
-        fn set_limit(&mut self, min : Option<Gamma>, max : Option<Gamma>) {
+        fn set_limits(&mut self, min : Option<Gamma>, max : Option<Gamma>) {
             if min.is_some() {
                 self._vars.lim.min = min;
             }
@@ -786,12 +761,12 @@ impl<C : Controller + Send + 'static> SyncComp for HRStepper<C> {
         }
 
         #[inline]
-        fn reset_limit(&mut self, min : Option<Gamma>, max : Option<Gamma>) {
+        fn overwrite_limits(&mut self, min : Option<Gamma>, max : Option<Gamma>) {
             self._vars.lim.min = min;
             self._vars.lim.max = max;
         }
 
-        fn lim_for_gamma(&self, gamma : Gamma) -> Delta {
+        fn limits_for_gamma(&self, gamma : Gamma) -> Delta {
             match self._vars.lim.min {
                 Some(ang) => {
                     if gamma < ang {
@@ -819,9 +794,9 @@ impl<C : Controller + Send + 'static> SyncComp for HRStepper<C> {
         }
 
         fn set_end(&mut self, set_gamma : Gamma) {
-            self.write_gamma(set_gamma);
+            self.set_gamma(set_gamma);
     
-            self.set_limit(
+            self.set_limits(
                 if self.dir().as_bool() { self._vars.lim.min } else { Some(set_gamma) },
                 if self.dir().as_bool() { Some(set_gamma) } else { self._vars.lim.max }
             )
@@ -830,50 +805,49 @@ impl<C : Controller + Send + 'static> SyncComp for HRStepper<C> {
 
     // Loads
         fn gen_force(&self) -> Force {
-            self._vars.t_load_gen    
+            self._vars.force_load_gen    
         }
 
         fn dir_force(&self) -> Force {
-            self._vars.t_load_dir
+            self._vars.force_load_dir
         }
 
         #[inline(always)]
         fn apply_gen_force(&mut self, mut t : Force) -> Result<(), crate::Error> {
             t = t.abs();
 
-            if t >= self._consts.t_s {
+            if t >= self._consts.torque_stall {
                 return Err("Overload!".into());     // TODO: Improve msgs
             }
 
-            self._vars.t_load_gen = t;
+            self._vars.force_load_gen = t;
 
             Ok(())
         }
 
         #[inline(always)]
         fn apply_dir_force(&mut self, t : Force) -> Result<(), crate::Error> {
-            if t.abs() >= self._consts.t_s { 
+            if t.abs() >= self._consts.torque_stall { 
                 return Err("Overload!".into());
             }
 
-            self._vars.t_load_dir = t;
+            self._vars.force_load_dir = t;
 
             Ok(())
         }
 
-        #[inline(always)]
-        fn apply_inertia(&mut self, j : Inertia) {
-            self._vars.j_load = j;
+        fn inertia(&self) -> Inertia {
+            self._vars.inertia_load
         }
 
         #[inline(always)]
-        fn apply_bend_f(&mut self, f_bend : f32) {
-            self._vars.bend_f = f_bend;
+        fn apply_inertia(&mut self, j : Inertia) {
+            self._vars.inertia_load = j;
         }
     //
 }
 
-impl<C : Controller + Send + 'static> AsyncComp for HRStepper<C> {
+impl<C : Controller + Send + 'static> AsyncActuator for HRStepper<C> {
     type Duty = f32;
     
     fn drive(&mut self, dir : Direction, speed_f : f32) -> Result<(), crate::Error> {
@@ -891,7 +865,7 @@ impl<C : Controller + Send + 'static> AsyncComp for HRStepper<C> {
         builder.set_speed_f(speed_f);
 
         // Constant time to hold
-        let t_const = self._consts.step_time(omega_tar, self.micro()) / speed_f;
+        let t_const = self._consts.step_time(omega_tar, self.microsteps()) / speed_f;
 
         if dir == self.dir() {
             builder.set_omega_tar(omega_tar)?;
@@ -927,7 +901,7 @@ impl<C : Controller + Send + 'static> AsyncComp for HRStepper<C> {
     }
 }
 
-impl<C : Controller + Send + 'static> StepperComp for HRStepper<C> {
+impl<C : Controller + Send + 'static> StepperActuator for HRStepper<C> {
     // Motor
         fn motor(&self) -> &dyn StepperMotor {
             self
@@ -943,11 +917,15 @@ impl<C : Controller + Send + 'static> StepperComp for HRStepper<C> {
             &self._consts
         }
 
-        fn micro(&self) -> u8 {
+        fn config(&self) -> &StepperConfig {
+            &self._config
+        }
+
+        fn microsteps(&self) -> u8 {
             self._micro
         }
 
-        fn set_micro(&mut self, micro : u8) {
+        fn set_microsteps(&mut self, micro : u8) {
             if micro == 0 {
                 panic!("0 is not allowed as a microstep amount")
             }
@@ -965,58 +943,25 @@ impl<C : Controller + Send + 'static> StepperComp for HRStepper<C> {
 impl<C : Controller + Send + 'static> StepperMotor for HRStepper<C> {
     // Calculations
         fn torque_at_speed(&self, omega : Omega) -> Force {
-            torque_dyn(self.consts(), omega, self._data.u, self.consts().i)
+            torque_dyn(self.consts(), omega, self._config.voltage, self.consts().current_max)
         }
 
         fn alpha_at_speed(&self, omega : Omega) -> Result<Alpha, crate::Error> {
-            self.consts().alpha_max_dyn(self.torque_at_speed(omega), self.vars())
-        }
-
-        fn approx_time_ptp(&self, delta : Delta, speed_f : f32, acc : usize) -> Result<Time, crate::Error> {
-            let omega_max = self.omega_max() * speed_f;
-    
-            let alpha_av = self.alpha_av(Omega::ZERO, omega_max, acc)?;
-    
-            let time_min = delta / omega_max;       // * 2.0 for average, / 2.0 for one side => * 1.0
-            let time_accel = omega_max / alpha_av;
-            
-            if time_accel > time_min {
-                // Maximum omega is not reached
-                Ok(kin::accel_from_zero(delta / 2.0, alpha_av) * 2.0)
-            } else {
-                // Maximum omega is reached
-                let accel_dist = time_accel * omega_max / 2.0;
-                Ok(time_accel * 2.0 + (delta - accel_dist * 2.0) / omega_max)
-            }
-        }
-
-        fn alpha_av(&self, omega_0 : Omega, omega_tar : Omega, acc : usize) -> Result<Alpha, crate::Error> {
-            let mut alpha_sum = self.alpha_at_speed(omega_0)? + self.alpha_at_speed(omega_tar)?;
-            let omega_diff = (omega_tar - omega_0) / (acc as f32);
-    
-            for i in 1 .. acc {
-                alpha_sum += self.alpha_at_speed(omega_0 + omega_diff * (i as f32))?;
-            }
-    
-            Ok(alpha_sum / (2.0 + acc as f32))
+            todo!()
         }
     // 
+}
 
-    fn drive_nodes(&mut self, delta : Delta, omega_0 : Omega, _omega_tar : Omega, _corr : &mut (Delta, Time)) -> Result<(), crate::Error> {
-        self.setup_drive(delta)?;
+impl<C : Controller + Send> Interruptible for HRStepper<C> {
+    // Interruptors
+        fn add_interruptor(&mut self, interruptor : Box<dyn Interruptor + Send>) {
+            let mut intr = self.intrs.lock().unwrap();
+            intr.push(interruptor);
+        }
 
-        let mut _builder = HRStepBuilder::from_motor(self, omega_0);
-        // let curve = builder.to_speed_lim(delta, omega_0, omega_tar, corr)?;
-
-        // dbg!(self.consts.steps_from_ang(delta));
-        // dbg!(2.0 * delta / (omega_0 + omega_tar));
-        // dbg!(curve.len());a
-        // dbg!(curve.iter().map(|x| x.0).sum::<f32>());
-
-        drop(_builder);
-
-        // self.drive_curve_async(curve, false, None)?;
-
-        Ok(())
-    }
+        fn intr_reason(&self) -> Option<InterruptReason> {
+            // Return the value and replace it with `None`
+            std::mem::replace(&mut self._intr_reason.lock().unwrap(), None)
+        }
+    // 
 }

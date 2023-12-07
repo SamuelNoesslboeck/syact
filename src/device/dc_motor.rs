@@ -1,11 +1,11 @@
 use embedded_hal::PwmPin;
 use sylo::Direction;
 
-use crate::comp::asyn::AsyncComp;
+use crate::act::asyn::AsyncActuator;
 
 use super::pwm::SoftwarePWM;
 
-impl<CW : PwmPin, CCW : PwmPin> AsyncComp for sylo::DcMotor<CW, CCW> 
+impl<CW : PwmPin, CCW : PwmPin> AsyncActuator for sylo::DcMotor<CW, CCW> 
 where
     CW::Duty : Copy + Default,
     CCW::Duty : Copy + Default + From<CW::Duty>

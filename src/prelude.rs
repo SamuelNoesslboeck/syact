@@ -1,16 +1,16 @@
 // Simple all in one import
-pub use crate::{AsyncComp, Direction, Setup, Dismantle, Stepper, SimpleTool, SyncComp, SyncCompGroup, Tool};
+pub use crate::{AsyncActuator, Direction, Setup, Dismantle, Stepper, SimpleTool, SyncActuator, SyncCompGroup, Tool};
 
-pub use crate::comp::{Conveyor, Cylinder, CylinderTriangle, Gear};
-pub use crate::comp::stepper::*;
+pub use crate::act::{Conveyor, LinearAxis, Gear};
+pub use crate::act::stepper::*;
 
-pub use crate::ctrl::{DcMotor, GenericPWM, Interruptor, InterruptReason};
-pub use crate::ctrl::pwm::SoftwarePWM;
-pub use crate::ctrl::pin::*;
-pub use crate::ctrl::servo::Servo;
-
-pub use crate::data::{CompVars, CompData, StepperConst};
+pub use crate::data::{ActuatorVars, StepperConfig, StepperConst};
 pub use crate::data::servo::ServoConst;
+
+pub use crate::device::DcMotor;
+pub use crate::device::pwm::SoftwarePWM;
+pub use crate::device::pin::*;
+pub use crate::device::servo::Servo;
 
 pub use crate::math;
 

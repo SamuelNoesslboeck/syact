@@ -16,36 +16,28 @@ impl Limits {
 
 /// Stores variables that can change in the process of the program
 #[derive(Clone, Debug, Default)]
-pub struct CompVars {
+pub struct ActuatorVars {
     /// Load torque general in both directions (e.g. friction), unit Nm
-    pub t_load_gen : Force,
+    pub force_load_gen : Force,
 
     /// Load torque directionally dependent, unit Nm
-    pub t_load_dir : Force,
-    /// Direction for load torque
-    pub dir_load : sylo::Direction,
+    pub force_load_dir : Force,
 
     /// Load inertia, unit kgm^2
-    pub j_load : Inertia,
-
-    /// Bend factor for stepper 
-    pub bend_f : f32,
+    pub inertia_load : Inertia,
 
     /// Limits of the component
     pub lim : Limits
 }
 
-impl CompVars  {
+impl ActuatorVars  {
     /// Zero value component data, used for initialization
     pub const ZERO : Self = Self { 
-        t_load_gen: Force::ZERO, 
+        force_load_gen: Force::ZERO, 
 
-        t_load_dir: Force::ZERO,
-        dir_load: sylo::Direction::CW,
+        force_load_dir: Force::ZERO,
 
-        j_load: Inertia::ZERO, 
-
-        bend_f: 1.0,
+        inertia_load: Inertia::ZERO, 
 
         lim: Limits::NONE 
     };
