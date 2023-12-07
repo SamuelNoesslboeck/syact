@@ -45,7 +45,7 @@ impl<C : SyncActuator> ActuatorParent for Gear<C> {
         &self.ctrl
     }
 
-    fn child_mut(&mut self) -> &Self::Child {
+    fn child_mut(&mut self) -> &mut Self::Child {
         &mut self.ctrl
     }
 }

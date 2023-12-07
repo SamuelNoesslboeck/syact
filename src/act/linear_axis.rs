@@ -46,7 +46,7 @@ impl<A : SyncActuator> Setup for LinearAxis<A> {
             &self.actuator
         }
 
-        fn child_mut(&mut self) -> &Self::Child {
+        fn child_mut(&mut self) -> &mut Self::Child {
             &mut self.actuator
         }
     }

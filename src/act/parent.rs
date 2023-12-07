@@ -8,7 +8,7 @@ pub trait ActuatorParent {
 
     fn child(&self) -> &Self::Child;
 
-    fn child_mut(&mut self) -> &Self::Child; 
+    fn child_mut(&mut self) -> &mut Self::Child; 
 }
 
 // Relationships
