@@ -3,35 +3,13 @@ use std::time::Instant;
 
 use sylo::Direction;
 
-use crate::StepperConst;
+use crate::act::stepper::StepError;
+use crate::device::pin::*;
 use crate::units::*;
 
-// Submodules
-    mod hr;
-    pub use hr::*;
-
-    mod lr;
-    pub use lr::*;
-
-    use super::pin::*;
-// 
-
+// Constants
 pub const STEP_PULSE_TIME : Time = Time(1.0 / 40000.0);
 const STEP_PULSE_DUR : Duration = Duration::from_micros(25);
-
-// #####################
-// #   Stepper-Types   #
-// #####################
-/// Default `Stepper` type for high-performance systems (high resolution stepper)
-pub type Stepper = HRStepper<GenericPWM>;
-
-impl Stepper {
-    /// Creates a new generic stepper with both pins set to [ERR_PIN](super::pin::ERR_PIN) just for simulation and testing purposes
-    #[inline]
-    pub fn new_gen() -> Self {
-        Self::new(GenericPWM::new_gen(), StepperConst::GEN)
-    }
-}
 
 /// A controller for the logics of a stepper motor
 pub trait Controller {
@@ -140,37 +118,3 @@ impl Controller for GenericPWM {
         self.pin_dir.set_state(self.dir.as_bool().into()).unwrap();
     }
 }
-
-// #####################
-// #    ERROR-TYPES    #
-// #####################
-    #[derive(Debug)]
-    pub enum StepError {
-        TimeTooShort(Time),
-        TimeIsIncorrect(Time),
-        Other(crate::Error)
-    }
-
-    impl StepError {
-        pub fn is_other(&self) -> bool {
-            match self {
-                Self::Other(_) => true,
-                _ => false
-            }
-        }
-    }
-
-    impl core::fmt::Display for StepError {
-        fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-            match self {
-                Self::TimeTooShort(t) => 
-                    f.write_fmt(format_args!("Bad step time! Time given ({}) is smaller than STEP_PULSE_TIME ({})", t, STEP_PULSE_TIME)),
-                Self::TimeIsIncorrect(t) => 
-                    f.write_fmt(format_args!("Bad step time! Time given ({}) is invalid!", t)),
-                Self::Other(err) => err.fmt(f)
-            }
-        }
-    }
-
-    impl std::error::Error for StepError { }
-// 

@@ -1,23 +1,11 @@
 use embedded_hal::PwmPin;
 use sylo::Direction;
 
-use crate::{comp::asyn::AsyncComp, Setup};
+use crate::act::asyn::AsyncActuator;
 
 use super::pwm::SoftwarePWM;
 
-impl<CW : PwmPin, CCW : PwmPin> Setup for sylo::DcMotor<CW, CCW> 
-where
-    CW::Duty : Copy + Default,
-    CCW::Duty : Copy + Default + From<CW::Duty>
-{
-    fn setup(&mut self) -> Result<(), crate::Error> {
-        self.cw_pin_mut().enable();
-        self.ccw_pin_mut().enable();
-        Ok(())
-    }
-}
-
-impl<CW : PwmPin, CCW : PwmPin> AsyncComp for sylo::DcMotor<CW, CCW> 
+impl<CW : PwmPin, CCW : PwmPin> AsyncActuator for sylo::DcMotor<CW, CCW> 
 where
     CW::Duty : Copy + Default,
     CCW::Duty : Copy + Default + From<CW::Duty>

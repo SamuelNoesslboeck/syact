@@ -1,5 +1,5 @@
 use crate::StepperConst;
-use crate::data::{CompData, CompVars};
+use crate::data::{StepperConfig, ActuatorVars};
 use crate::math::force::torque_dyn;
 use crate::prelude::StepperMotor;
 
@@ -15,19 +15,19 @@ pub struct LRStepBuilder {
 }
 
 impl LRStepBuilder {
-    pub fn new(omega_0 : Omega, consts : &StepperConst, vars : &CompVars, data : &CompData, omega_max : Omega, micro : u8) -> Self {
+    pub fn new(omega_0 : Omega, consts : &StepperConst, vars : &ActuatorVars, data : &StepperConfig, omega_max : Omega, micro : u8) -> Self {
         Self {
-            delta: consts.step_ang(micro),
+            delta: consts.step_angle(micro),
             omega_0,
             alpha: consts.alpha_max_dyn(
-                torque_dyn(consts, consts.omega_max(data.u), data.u, 0.0), vars
+                torque_dyn(consts, consts.omega_max(data.voltage), data.voltage, 0.0), vars
             ).unwrap(),     // TODO: Handle overload
             omega_max
         }
     }
 
     pub fn from_motor<M : StepperMotor>(motor : &M, omega_0 : Omega, omega_max : Omega) -> Self {
-        Self::new(omega_0, motor.consts(), motor.vars(), motor.data(), omega_max, motor.micro())
+        Self::new(omega_0, motor.consts(), motor.vars(), motor.config(), omega_max, motor.microsteps())
     }
 
     pub fn t_accel(&self) -> Time {

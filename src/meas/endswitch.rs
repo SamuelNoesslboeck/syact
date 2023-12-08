@@ -1,13 +1,13 @@
 use core::sync::atomic::AtomicBool;
 
-use crate::Setup;
-use crate::ctrl::{Interruptor, InterruptReason};
-use crate::ctrl::pin::UniInPin;
-
 use alloc::sync::Arc;
 use atomic_float::AtomicF32;
 use embedded_hal::digital::v2::InputPin;
 use serde::{Serialize, Deserialize};
+
+use crate::Setup;
+use crate::act::{Interruptor, InterruptReason};
+use crate::device::pin::UniInPin;
 
 use super::*;
 

@@ -1,5 +1,5 @@
-use crate::comp::tool::{Tongs, SimpleTool, AxialJoint, AxisTool};
-use crate::ctrl::servo::ServoDriver;
+use crate::act::tool::{Tongs, SimpleTool, AxialJoint, AxisTool};
+use crate::dev::servo::ServoDriver;
 use crate::data::servo::ServoConst;
 use crate::units::*;
 

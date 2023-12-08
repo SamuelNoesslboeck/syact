@@ -1,5 +1,5 @@
 use crate::{Dismantle, Setup};
-use crate::ctrl::pwm::SoftwarePWM;
+use crate::device::pwm::SoftwarePWM;
 use crate::units::*;
 
 pub const LED_PWM_FREQ : Omega = Omega(200.0);

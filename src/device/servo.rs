@@ -1,7 +1,7 @@
 use serde::{Serialize, Deserialize};
 
 use crate::{Setup, Dismantle};
-use crate::ctrl::pwm::SoftwarePWM;
+use crate::device::pwm::SoftwarePWM;
 use crate::data::servo::ServoConst;
 use crate::units::Gamma;
 

@@ -1,9 +1,9 @@
 use serde::{Serialize, Deserialize};
 
-use crate::{SyncComp, Setup, Stepper};
-use crate::comp::Cylinder;
-use crate::comp::stepper::StepperComp;
-use crate::data::CompData;
+use crate::{SyncActuator, Setup, Stepper};
+use crate::act::LinearAxis;
+use crate::act::stepper::StepperActuator;
+use crate::data::StepperConfig;
 use crate::units::*;
 
 /// A cylinder triangle using a cylinder with a stepper motor to power itself
@@ -23,9 +23,9 @@ pub type StepperCylTriangle = CylinderTriangle<Stepper>;
 /// on the variable length c, making them also variable. The most relevant angle being gamma, as it is the opposing angle to 
 /// the length c, representing the 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct CylinderTriangle<C : SyncComp> {
+pub struct CylinderTriangle<C : SyncActuator> {
     /// The cylinder of the triangle, being the *parent component* for this one
-    pub cylinder : Cylinder<C>,
+    pub cylinder : LinearAxis<C>,
 
     // Triangle
     /// The constant length of the first triangle component in millimeters
@@ -34,10 +34,10 @@ pub struct CylinderTriangle<C : SyncComp> {
     pub l_b : f32,
 }
 
-impl<C : SyncComp> CylinderTriangle<C> {
+impl<C : SyncActuator> CylinderTriangle<C> {
     /// Creates a new instance of a [CylinderTriangle], 
     /// writing an initial length of the longer segments the cylinder, preventing initial calculation errors
-    pub fn new(cylinder : Cylinder<C>, l_a : f32, l_b : f32) -> Self {
+    pub fn new(cylinder : LinearAxis<C>, l_a : f32, l_b : f32) -> Self {
         let mut tri = CylinderTriangle {
             l_a, 
             l_b,
@@ -45,7 +45,7 @@ impl<C : SyncComp> CylinderTriangle<C> {
             cylinder
         };
 
-        tri.cylinder.write_gamma(Gamma(l_a.max(l_b)));
+        tri.cylinder.set_gamma(Gamma(l_a.max(l_b)));
 
         return tri;
     }
@@ -80,32 +80,32 @@ impl<C : SyncComp> CylinderTriangle<C> {
 //     }
 // }
 
-impl<C : SyncComp> Setup for CylinderTriangle<C> {
+impl<C : SyncActuator> Setup for CylinderTriangle<C> {
     fn setup(&mut self) -> Result<(), crate::Error> { 
         self.cylinder.setup()?;
-        self.cylinder.write_gamma(Gamma(self.l_a.max(self.l_b)));
+        self.cylinder.set_gamma(Gamma(self.l_a.max(self.l_b)));
 
         Ok(())
     }
 }
 
-impl<C : SyncComp> SyncComp for CylinderTriangle<C> {
+impl<C : SyncActuator> SyncActuator for CylinderTriangle<C> {
     // Data
-        fn data<'a>(&'a self) -> &'a crate::data::CompData {
+        fn data<'a>(&'a self) -> &'a crate::data::StepperConfig {
             self.cylinder.data()
         }
 
-        fn vars<'a>(&'a self) -> &'a crate::data::CompVars {
+        fn vars<'a>(&'a self) -> &'a crate::data::ActuatorVars {
             self.cylinder.vars()
         }
     // 
 
     // Super 
-        fn parent_comp(&self) -> Option<&dyn SyncComp> {
+        fn parent_comp(&self) -> Option<&dyn SyncActuator> {
             Some(&self.cylinder)
         }
 
-        fn parent_comp_mut(&mut self) -> Option<&mut dyn SyncComp> {
+        fn parent_comp_mut(&mut self) -> Option<&mut dyn SyncActuator> {
             Some(&mut self.cylinder)
         }
 
@@ -125,7 +125,7 @@ impl<C : SyncComp> SyncComp for CylinderTriangle<C> {
     // 
 
     // Link
-        fn write_data(&mut self, data : CompData) {
+        fn write_data(&mut self, data : StepperConfig) {
             self.cylinder.write_data(data);
         }
     //
@@ -163,14 +163,14 @@ impl<C : SyncComp> SyncComp for CylinderTriangle<C> {
     // 
 }
 
-impl<C : StepperComp> StepperComp for CylinderTriangle<C> {
+impl<C : StepperActuator> StepperActuator for CylinderTriangle<C> {
     #[inline]
-    fn parent_stepper_comp(&self) -> Option<&dyn StepperComp> {
+    fn parent_stepper_comp(&self) -> Option<&dyn StepperActuator> {
         Some(&self.cylinder)
     }
 
     #[inline]
-    fn parent_stepper_comp_mut(&mut self) -> Option<&mut dyn StepperComp> {
+    fn parent_stepper_comp_mut(&mut self) -> Option<&mut dyn StepperActuator> {
         Some(&mut self.cylinder)
     }
 

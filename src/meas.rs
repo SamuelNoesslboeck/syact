@@ -1,5 +1,6 @@
-use crate::ctrl::InterruptReason;
-use crate::SyncComp;
+use crate::act::InterruptReason;
+use crate::SyncActuator;
+use crate::act::Interruptible;
 use crate::units::*;
 
 use serde::{Serialize, Deserialize};
@@ -65,7 +66,7 @@ impl SimpleMeasResult {
 /// # Measurement data and its usage
 /// 
 /// Specifing a `sample_dist` is optional, as the script will replace it with 10% of the maximum distance if not specified
-pub fn take_simple_meas<C : SyncComp + ?Sized>(comp : &mut C, data : &SimpleMeasData, speed_f : f32) -> Result<SimpleMeasResult, crate::Error> {
+pub fn take_simple_meas<C : SyncActuator + Interruptible + ?Sized>(comp : &mut C, data : &SimpleMeasData, speed_f : f32) -> Result<SimpleMeasResult, crate::Error> {
     let mut gammas : Vec<Gamma> = Vec::new();
 
     // Init measurement
@@ -113,7 +114,7 @@ pub fn take_simple_meas<C : SyncComp + ?Sized>(comp : &mut C, data : &SimpleMeas
 
     // Set limits and write new distance value
     comp.set_end(gamma_av);
-    comp.write_gamma(gamma_new);
+    comp.set_gamma(gamma_new);
 
     Ok(SimpleMeasResult {
         samples: data.add_samples,

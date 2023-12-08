@@ -14,7 +14,7 @@ fn torque_curve() -> Result<(), Box<dyn std::error::Error>> {
     vars.f_bend = 0.1;
 
     let curve : Vec<Force> = (0 .. 1000).map(
-        |index| force::torque_dyn(&consts, Omega(index as f32 / scalar), data.u)).collect();
+        |index| force::torque_dyn(&consts, Omega(index as f32 / scalar), data.voltage)).collect();
     
     let root = 
         SVGBackend::new("test/example-data/torque_curve.svg", (640, 480)).into_drawing_area();
@@ -44,7 +44,7 @@ fn torque_curve() -> Result<(), Box<dyn std::error::Error>> {
     root.present()?;
 
     // Console output
-    println!(" -> Tau: {}", consts.tau(data.u));
+    println!(" -> Tau: {}", consts.tau(data.voltage));
     
     Ok(())
 }

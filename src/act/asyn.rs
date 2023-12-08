@@ -1,7 +1,7 @@
 use crate::Setup;
 
 /// A component which is asynchronous because of its hardware properties, e.g. a simple DC-Motors
-pub trait AsyncComp : Setup {
+pub trait AsyncActuator : Setup {
     /// Marks the duty of the component
     type Duty : Default;
 

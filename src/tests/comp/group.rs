@@ -2,7 +2,7 @@ use crate as syact;
 
 use syact::prelude::*;
 
-fn test<G : SyncCompGroup<T, 2>, T : SyncComp + ?Sized + 'static>(_g : &G) {
+fn test<G : SyncCompGroup<T, 2>, T : SyncActuator + ?Sized + 'static>(_g : &G) {
     
 }
 
@@ -20,7 +20,7 @@ fn groups() -> Result<(), syact::Error> {
             0.2
         ),
         arm1: CylinderTriangle::new(
-            Cylinder::new(
+            LinearAxis::new(
                 Stepper::new_gen(),
                 0.5
             ),
@@ -30,6 +30,6 @@ fn groups() -> Result<(), syact::Error> {
     }; 
     test(&group);
 
-    group.write_data(CompData::GEN);
+    group.write_data(StepperConfig::GEN);
     group.setup()
 }

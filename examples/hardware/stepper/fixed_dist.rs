@@ -38,14 +38,14 @@ fn main() -> Result<(), syact::Error> {
     );
 
     // Link the component to a system
-    ctrl.write_data(CompData { 
-        u: 12.0,    // System voltage in volts
-        s_f: 1.5    // System safety factor, should be at least 1.0
+    ctrl.write_data(StepperConfig { 
+        voltage: 12.0,    // System voltage in volts
+        safety_factor: 1.5    // System safety factor, should be at least 1.0
     }); 
     ctrl.setup()?;
 
-    if let Some(micro) = micro_opt {
-        ctrl.set_micro(micro);
+    if let Some(&micro) = micro_opt {
+        ctrl.set_microsteps(micro);
     }
 
     // Apply some loads

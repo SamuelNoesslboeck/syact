@@ -1,6 +1,6 @@
 use std::io;
 
-use crate::ctrl::pwm::PWMOutput;
+use crate::dev::pwm::PWMOutput;
 use crate::units::*;
 
 const PIN_1 : u8 = 13;
