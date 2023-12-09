@@ -1,4 +1,5 @@
-use crate::{ActuatorVars, SyncActuator};
+use crate::prelude::StepperActuator;
+use crate::{ActuatorVars, SyncActuator, Setup, StepperConfig};
 use crate::units::*;
 
 use super::Interruptible;
@@ -80,7 +81,7 @@ pub trait ActuatorParent {
 // ##################################
 // 
 // Automatically implements `SyncActor` for every component
-    impl<T : RatioActuatorParent + sylo::Enable> SyncActuator for T 
+    impl<T : RatioActuatorParent + Setup> SyncActuator for T 
     where
         T::Child : SyncActuator
     {
@@ -92,35 +93,39 @@ pub trait ActuatorParent {
         // 
 
         // Drive
-            fn drive_rel(&mut self, delta : crate::prelude::Delta, speed_f : f32) -> Result<crate::prelude::Delta, crate::Error> {
+            fn drive_rel(&mut self, mut delta : Delta, speed_f : f32) -> Result<Delta, crate::Error> {
                 if (1.0 < speed_f) | (0.0 >= speed_f) {
                     panic!("Invalid speed factor! {}", speed_f)
                 }
 
-                Ok(self.delta_for_parent(
-                    self.child_mut().drive_rel(self.delta_for_chlid(delta), speed_f)?
-                ))
+                delta = self.delta_for_chlid(delta);
+                delta = self.child_mut().drive_rel(delta, speed_f)?;
+
+                Ok(self.delta_for_parent(delta))
             }
         //  
 
         // Async
             /// Moves the component by the relative distance as fast as possible
-            fn drive_rel_async(&mut self, delta : Delta, speed_f : f32) -> Result<(), crate::Error> {
+            fn drive_rel_async(&mut self, mut delta : Delta, speed_f : f32) -> Result<(), crate::Error> {
                 if (1.0 < speed_f) | (0.0 >= speed_f) {
                     panic!("Invalid speed factor! {}", speed_f)
                 }
 
-                self.child_mut().drive_rel_async(self.delta_for_chlid(delta), speed_f)
+                delta = self.delta_for_chlid(delta);
+
+                self.child_mut().drive_rel_async(delta, speed_f)
             }
 
-            fn drive_omega(&mut self, omega_tar : Omega) -> Result<(), crate::Error> {
-                self.child_mut().drive_omega(
-                    self.omega_for_child(omega_tar)
-                )
+            fn drive_omega(&mut self, mut omega_tar : Omega) -> Result<(), crate::Error> {
+                omega_tar = self.omega_for_child(omega_tar);
+
+                self.child_mut().drive_omega(omega_tar)
             }   
 
             fn await_inactive(&mut self) -> Result<Delta, crate::Error> {
-                Ok(self.delta_for_parent(self.child_mut().await_inactive()?))
+                let delta = self.child_mut().await_inactive()?;
+                Ok(self.delta_for_parent(delta))
             }
         // 
 
@@ -129,42 +134,41 @@ pub trait ActuatorParent {
                 self.gamma_for_parent(self.child().gamma())
             }
 
-            fn set_gamma(&mut self, gamma : Gamma) {
-                self.child_mut().set_gamma(self.gamma_for_child(gamma))
+            fn set_gamma(&mut self, mut gamma : Gamma) {
+                gamma = self.gamma_for_child(gamma);
+                self.child_mut().set_gamma(gamma)
             }
 
             fn omega_max(&self) -> Omega {
                 self.omega_for_parent(self.child().omega_max())
             }
 
-            fn set_omega_max(&mut self, omega_max : Omega) {
-                self.child_mut().set_omega_max(self.omega_for_child(omega_max))
+            fn set_omega_max(&mut self, mut omega_max : Omega) {
+                omega_max = self.omega_for_child(omega_max);
+                self.child_mut().set_omega_max(omega_max)
             }
 
             fn limits_for_gamma(&self, gamma : Gamma) -> Delta {
-                self.child().limits_for_gamma(
+                self.delta_for_parent(self.child().limits_for_gamma(
                     self.gamma_for_child(gamma)
-                )
+                ))
             }
 
-            fn set_limits(&mut self, min : Option<Gamma>, max : Option<Gamma>) {
-                self.child_mut().set_limits(
-                    min.map(|g| self.gamma_for_child(g)), 
-                    max.map(|g| self.gamma_for_child(g))
-                )
+            fn set_limits(&mut self, mut min : Option<Gamma>, mut max : Option<Gamma>) {
+                min = min.map(|g| self.gamma_for_child(g));
+                max = max.map(|g| self.gamma_for_child(g));
+                self.child_mut().set_limits(min, max)
             }
 
-            fn set_end(&mut self, set_gamma : Gamma) {
-                self.child_mut().set_end(
-                    self.gamma_for_child(set_gamma)
-                )
+            fn set_end(&mut self, mut set_gamma : Gamma) {
+                set_gamma = self.gamma_for_child(set_gamma);
+                self.child_mut().set_end(set_gamma)
             }
 
-            fn overwrite_limits(&mut self, min : Option<Gamma>, max : Option<Gamma>) {
-                self.child_mut().overwrite_limits(
-                    min.map(|g| self.gamma_for_child(g)),
-                    max.map(|g| self.gamma_for_child(g))
-                )
+            fn overwrite_limits(&mut self, mut min : Option<Gamma>, mut max : Option<Gamma>) {
+                min = min.map(|g| self.gamma_for_child(g));
+                max = max.map(|g| self.gamma_for_child(g));
+                self.child_mut().overwrite_limits(min, max)
             }
         // 
 
@@ -177,28 +181,68 @@ pub trait ActuatorParent {
                 self.force_for_parent(self.child().dir_force())
             }
 
-            fn apply_gen_force(&mut self, force : Force) -> Result<(), crate::Error> {
-                self.child_mut().apply_gen_force(
-                    self.force_for_child(force)
-                )
+            fn apply_gen_force(&mut self, mut force : Force) -> Result<(), crate::Error> {
+                force = self.force_for_child(force);
+                self.child_mut().apply_gen_force(force)
             }
 
-            fn apply_dir_force(&mut self, force : Force) -> Result<(), crate::Error> {
-                self.child_mut().apply_dir_force(
-                    self.force_for_child(force)
-                )
+            fn apply_dir_force(&mut self, mut force : Force) -> Result<(), crate::Error> {
+                force = self.force_for_child(force);
+                self.child_mut().apply_dir_force(force)
             }
 
             fn inertia(&self) -> Inertia {
                 self.inertia_for_parent(self.child().inertia())
             }
 
-            fn apply_inertia(&mut self, inertia : Inertia) {
-                self.child_mut().apply_inertia(
-                    self.inertia_for_child(inertia)
-                )
+            fn apply_inertia(&mut self, mut inertia : Inertia) {
+                inertia = self.inertia_for_child(inertia);
+                self.child_mut().apply_inertia(inertia)
             }
         // 
+    }
+
+    impl<T : RatioActuatorParent + Setup> StepperActuator for T 
+    where
+        T::Child : StepperActuator
+    {
+        // Motor
+            fn motor(&self) -> &dyn crate::prelude::StepperMotor {
+                self.child().motor()
+            }
+
+            fn motor_mut(&mut self) -> &mut dyn crate::prelude::StepperMotor {
+                self.child_mut().motor_mut()
+            }
+        // 
+
+        fn consts(&self) -> &crate::StepperConst {
+            self.child().consts()
+        }
+
+        // Config
+            fn config(&self) -> &crate::StepperConfig {
+                self.child().config()
+            }
+
+            fn set_config(&mut self, config : StepperConfig) {
+                self.child_mut().set_config(config)
+            }
+        //
+
+        // Microsteps
+            fn microsteps(&self) -> u8 {
+                self.child().microsteps()
+            }
+
+            fn set_microsteps(&mut self, micro : u8) {
+                self.child_mut().set_microsteps(micro)
+            }
+        // 
+
+        fn step_ang(&self) -> Delta {
+            self.delta_for_parent(self.child().step_ang())
+        }
     }
 
     impl<T : ActuatorParent> Interruptible for T 

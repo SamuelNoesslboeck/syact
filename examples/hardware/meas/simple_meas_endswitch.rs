@@ -38,7 +38,7 @@ fn main() -> Result<(), syact::Error> {
     let samples = std::env::var("SAMPLES").ok().map(|v| v.parse::<usize>().unwrap()).unwrap_or(2);
 
     // Create the controls for a stepper motor
-    let mut ctrl = Stepper::new(
+    let mut device = Stepper::new(
         GenericPWM::new(pin_step, pin_dir)?, 
         StepperConst::MOT_17HE15_1504S
     );
@@ -55,30 +55,30 @@ fn main() -> Result<(), syact::Error> {
     let mut switch = RawEndSwitch::new(trigger, dir_opt, UniInPin::new(pin_meas));
 
     // Link the component to a system
-    ctrl.write_data(StepperConfig { 
+    device.set_config(StepperConfig { 
         voltage: 12.0,    // System voltage in volts
         safety_factor: 1.5    // System safety factor, should be at least 1.0
     }); 
-    ctrl.setup()?;
+    device.setup()?;
 
     if let Some(&micro) = micro_opt {
-        ctrl.set_microsteps(micro);
+        device.set_microsteps(micro);
     }
 
     // Apply some loads
-    ctrl.apply_inertia(inertia);
-    ctrl.apply_gen_force(force)?;
+    device.apply_inertia(inertia);
+    device.apply_gen_force(force)?;
 
     // Setup the switch
     switch.setup()?;
 
     // Append switch as interruptor
-    ctrl.add_interruptor(Box::new(switch));
+    device.add_interruptor(Box::new(switch));
 
     // Starting the measurement
     println!("Starting measurement ... ");
 
-    let res = syact::meas::take_simple_meas(&mut ctrl, &data, 1.0)?;
+    let res = syact::meas::take_simple_meas(&mut device, &data, 1.0)?;
 
     println!("Measurement done!\n");
 

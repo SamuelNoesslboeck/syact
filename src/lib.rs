@@ -17,7 +17,7 @@ extern crate alloc;
         // Includes documentation from readme file
         #[doc = include_str!("../docs/components.md")]
         pub mod act;
-        pub use act::{SyncActuator, SyncCompGroup, Stepper};
+        pub use act::{SyncActuator, SyncActuatorGroup, Stepper};
         pub use act::asyn::AsyncActuator;
 
         pub mod device;
@@ -42,7 +42,7 @@ extern crate alloc;
     // 
 
     // Include proc_macro
-    pub use syact_macros::{SyncCompGroup, StepperCompGroup};
+    pub use syact_macros::{SyncActuatorGroup, StepperActuatorGroup};
 
     /// Easy import of the functionalities
     pub mod prelude;

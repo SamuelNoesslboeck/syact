@@ -30,12 +30,12 @@ impl TryFrom<StepperDes> for Stepper {
 
 impl Into<StepperDes> for &Stepper {
     fn into(self) -> StepperDes {
-        let ctrl = self._ctrl.lock().unwrap();
+        let device = self._ctrl.lock().unwrap();
 
         StepperDes { 
             consts: self.consts().clone(), 
-            pin_dir: ctrl.pin_dir(),
-            pin_step: ctrl.pin_step()
+            pin_dir: device.pin_dir(),
+            pin_step: device.pin_step()
         }
     }
 }

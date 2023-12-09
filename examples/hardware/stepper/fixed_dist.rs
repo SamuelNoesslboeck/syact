@@ -32,32 +32,32 @@ fn main() -> Result<(), syact::Error> {
     let micro_opt = std::env::var("MICRO").ok().map(|v| v.parse::<u8>().unwrap());
 
     // Create the controls for a stepper motor
-    let mut ctrl = Stepper::new(
+    let mut device = Stepper::new(
         GenericPWM::new(pin_step, pin_dir)?, 
         StepperConst::MOT_17HE15_1504S
     );
 
     // Link the component to a system
-    ctrl.write_data(StepperConfig { 
+    device.set_config(StepperConfig { 
         voltage: 12.0,    // System voltage in volts
         safety_factor: 1.5    // System safety factor, should be at least 1.0
     }); 
-    ctrl.setup()?;
+    device.setup()?;
 
-    if let Some(&micro) = micro_opt {
-        ctrl.set_microsteps(micro);
+    if let Some(micro) = micro_opt {
+        device.set_microsteps(micro);
     }
 
     // Apply some loads
-    ctrl.apply_inertia(inertia);
-    ctrl.apply_gen_force(force)?;
+    device.apply_inertia(inertia);
+    device.apply_gen_force(force)?;
 
-    ctrl.set_omega_max(omega);
+    device.set_omega_max(omega);
 
-    ctrl.debug_data();
+    device.debug_data();
 
     print!("Staring to move ... ");
-    ctrl.drive_rel(delta, 1.0)?;      // Move the motor
+    device.drive_rel(delta, 1.0)?;      // Move the motor
     println!("done!");
     println!("");
 

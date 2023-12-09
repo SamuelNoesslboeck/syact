@@ -1,8 +1,10 @@
 use core::f32::consts::PI;
 
 use serde::{Serialize, Deserialize};
+use sylo::Direction;
 
-use crate::units::*;
+use crate::math::force::torque_dyn;
+use crate::{units::*, ActuatorVars};
 
 /// Stores data for generic components 
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
@@ -14,7 +16,7 @@ pub struct StepperConfig {
 }
 
 impl StepperConfig {
-    /// Generic `CompData` for testing purposes
+    /// Generic `StepperConfig` for testing purposes
     pub const GEN : Self = Self {
         voltage: 12.0,
         safety_factor: 1.5
@@ -28,7 +30,7 @@ impl StepperConfig {
         safety_factor: 0.0
     };
 
-    /// Creates a new CompData instance
+    /// Creates a new StepperConfig instance
     /// 
     /// # Panics
     /// 
@@ -115,6 +117,16 @@ impl StepperConst {
         /// Torque created with the given overload (or underload) current `i`
         pub fn torque_overload(&self, current : f32) -> Force {
             self.torque_stall * current / self.current_max
+        }
+    // 
+
+    // Acceleration
+        pub fn alpha_max_stall(&self, vars : &ActuatorVars, dir : Direction) -> Option<Alpha> {
+            vars.force_after_load(self.torque_stall, dir).map(|f| f / vars.inertia_after_load(self.inertia_motor))
+        }
+
+        pub fn alpha_max_for_omega(&self, vars : &ActuatorVars, config : &StepperConfig, omega : Omega, dir : Direction) -> Option<Alpha> {
+            vars.force_after_load(torque_dyn(self, omega, config.voltage, self.current_max), dir).map(|f| f / vars.inertia_after_load(self.inertia_motor))
         }
     // 
 

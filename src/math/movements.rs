@@ -1,11 +1,11 @@
-use crate::act::stepper::{StepperActuator, StepperCompGroup};
+use crate::act::stepper::{StepperActuator, StepperActuatorGroup};
 use crate::math::HRLimitedStepBuilder;
 use crate::units::*;
 
 use super::HRStepBuilder;
 
 /// More calculation intense, no additional memory
-pub fn ptp_exact_unbuffered<S : StepperCompGroup<T, C>, T : StepperActuator + ?Sized + 'static, const C : usize>
+pub fn ptp_exact_unbuffered<S : StepperActuatorGroup<T, C>, T : StepperActuator + ?Sized + 'static, const C : usize>
     (group : &mut S, deltas : [Delta; C], speed_f : f32) -> [f32; C] 
 {
     // The times store the movement time

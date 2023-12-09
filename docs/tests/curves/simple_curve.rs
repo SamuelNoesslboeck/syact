@@ -8,12 +8,12 @@ use crate::prelude::*;
 fn simple_curve() -> Result<(), Box<dyn std::error::Error>> {
     let consts = StepperConst::GEN;
     let mut vars = CompVars::ZERO;
-    let data = CompData::GEN;
+    let data = StepperConfig::GEN;
 
     let delta = Delta(0.5 * (2.0 * PI));
     let omega_max = Omega(4.0 * PI);
 
-    vars.j_load = Inertia(0.1);
+    vars.inertia_load = Inertia(0.1);
     vars.f_bend = 0.1;
 
     let curve_time = curve::create_simple_curve(&consts, &vars, &data, delta, omega_max);

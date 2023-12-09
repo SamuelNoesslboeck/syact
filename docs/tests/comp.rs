@@ -41,7 +41,7 @@ fn gear_bearing() -> Result<(), crate::Error> {
     const PIN_STEP : u8 = 19;
 
     let mut gear = Gear::new(Stepper::new(GenericPWM::new(PIN_STEP, PIN_DIR)?, StepperConst::MOT_17HE15_1504S), 0.1);
-    gear.write_data(CompData::GEN);
+    gear.set_config(StepperConfig::GEN);
     gear.setup()?;
 
     // gear.set_omega_max(Omega(0.5)); 
@@ -56,8 +56,8 @@ fn cylinder() -> Result<(), crate::Error> {
     const PIN_DIR : u8 = 22;
     const PIN_STEP : u8 = 11;
 
-    let mut cylinder = Cylinder::new(Stepper::new(GenericPWM::new(PIN_STEP, PIN_DIR)?, StepperConst::MOT_17HE15_1504S), 1.27);
-    cylinder.write_data(CompData::GEN);
+    let mut cylinder = LinearAxis::new(Stepper::new(GenericPWM::new(PIN_STEP, PIN_DIR)?, StepperConst::MOT_17HE15_1504S), 1.27);
+    cylinder.set_config(StepperConfig::GEN);
     cylinder.setup()?;
     
 
@@ -74,8 +74,8 @@ fn cylinder_tri() -> Result<(), crate::Error> {
     const PIN_STEP : u8 = 11;
 
     let mut cyl_tri = CylinderTriangle::new(
-        Cylinder::new(Stepper::new(GenericPWM::new(PIN_STEP, PIN_DIR)?, StepperConst::MOT_17HE15_1504S), 1.27), 200.0, 200.0);
-    cyl_tri.write_data(CompData::GEN);
+        LinearAxis::new(Stepper::new(GenericPWM::new(PIN_STEP, PIN_DIR)?, StepperConst::MOT_17HE15_1504S), 1.27), 200.0, 200.0);
+    cyl_tri.set_config(StepperConfig::GEN);
     cyl_tri.setup()?;
 
     cyl_tri.set_omega_max(Omega(25.0));

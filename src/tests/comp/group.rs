@@ -2,14 +2,14 @@ use crate as syact;
 
 use syact::prelude::*;
 
-fn test<G : SyncCompGroup<T, 2>, T : SyncActuator + ?Sized + 'static>(_g : &G) {
+fn test<G : SyncActuatorGroup<T, 2>, T : SyncActuator + ?Sized + 'static>(_g : &G) {
     
 }
 
-#[derive(StepperCompGroup)]
+#[derive(StepperActuatorGroup)]
 struct SomeComps {
     base : Gear<Stepper>,
-    arm1 : CylinderTriangle<Stepper>
+    arm1 : LinearAxis<Stepper>
 }
 
 #[test]
@@ -19,17 +19,13 @@ fn groups() -> Result<(), syact::Error> {
             Stepper::new_gen(),
             0.2
         ),
-        arm1: CylinderTriangle::new(
-            LinearAxis::new(
-                Stepper::new_gen(),
-                0.5
-            ),
-            100.0,
-            150.0
+        arm1: LinearAxis::new(
+            Stepper::new_gen(),
+            0.5
         )
     }; 
     test(&group);
 
-    group.write_data(StepperConfig::GEN);
+    group.set_config(StepperConfig::GEN);
     group.setup()
 }

@@ -1,4 +1,4 @@
-// # `ctrl`-module
+// # `device`-module
 //
 // Stable: 0.12.1
 

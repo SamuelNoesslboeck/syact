@@ -15,7 +15,7 @@ pub type StepperGearJoint = Gear<Stepper>;
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Gear<C : SyncActuator> {
     /// Steppercontrol for the motor of the bearing
-    pub ctrl : C,
+    pub device : C,
     
     /// Angle ration from motor to bearing (omega_b / omega_m)
     pub ratio : f32
@@ -23,35 +23,37 @@ pub struct Gear<C : SyncActuator> {
 
 impl<C : SyncActuator> Gear<C> {
     /// Creates a new `Gearbearing`
-    /// - `ctrl`: The parent component driving the cylinder
-    pub fn new(ctrl : C, ratio : f32) -> Self {
+    /// - `device`: The parent component driving the cylinder
+    pub fn new(device : C, ratio : f32) -> Self {
         Self {
-            ctrl,
+            device,
             ratio
         }
     }
 }
 
-impl<C : SyncActuator> Setup for Gear<C> {
-    fn setup(&mut self) -> Result<(), crate::Error> {
-        self.ctrl.setup() 
-    }
-}
-
-impl<C : SyncActuator> ActuatorParent for Gear<C> {
-    type Child = C;
-
-    fn child(&self) -> &Self::Child {
-        &self.ctrl
+// Parent
+    impl<C : SyncActuator> Setup for Gear<C> {
+        fn setup(&mut self) -> Result<(), crate::Error> {
+            self.device.setup() 
+        }
     }
 
-    fn child_mut(&mut self) -> &mut Self::Child {
-        &mut self.ctrl
-    }
-}
+    impl<C : SyncActuator> ActuatorParent for Gear<C> {
+        type Child = C;
 
-impl<C : SyncActuator> RatioActuatorParent for Gear<C> {
-    fn ratio(&self) -> f32 {
-        self.ratio
+        fn child(&self) -> &Self::Child {
+            &self.device
+        }
+
+        fn child_mut(&mut self) -> &mut Self::Child {
+            &mut self.device
+        }
     }
-}
+
+    impl<C : SyncActuator> RatioActuatorParent for Gear<C> {
+        fn ratio(&self) -> f32 {
+            self.ratio
+        }
+    }
+// 

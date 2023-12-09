@@ -21,12 +21,12 @@ pub struct LinearAxis<A : SyncActuator> {
 
 impl<A : SyncActuator> LinearAxis<A> {
     /// Create a new linear axis instance
-    /// - `ctrl`: The parent component driving the linear axis
+    /// - `device`: The parent component driving the linear axis
     /// - `rte_ratio`: (radius to extension ratio), millimeters travelled per radian the spindle rotated
     ///   - `f_rte = pitch / (2pi)`
-    pub fn new(ctrl : A, rte_ratio : f32) -> Self {
+    pub fn new(device : A, rte_ratio : f32) -> Self {
         return LinearAxis {
-            actuator: ctrl,
+            actuator: device,
             rte_ratio
         };
     }

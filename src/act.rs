@@ -26,9 +26,9 @@ use crate::units::*;
     // 
 
     /// A module for component groups, as they are used in various robots. The components are all sharing the same 
-    /// [CompData](crate::data::CompData) and their movements are coordinated. 
+    /// [StepperConfig](crate::data::StepperConfig) and their movements are coordinated. 
     pub mod group;
-    pub use group::SyncCompGroup;
+    pub use group::SyncActuatorGroup;
 
     pub mod parent;
 
@@ -71,6 +71,14 @@ use crate::units::*;
         /// Add an interruptor to the component, often used for measurements or other processes checking the movement
         fn add_interruptor(&mut self, interruptor : Box<dyn Interruptor + Send>);
 
+        fn add_interruptor_inline(mut self, interruptor : Box<dyn Interruptor + Send>) -> Self 
+        where 
+            Self : Sized 
+        {
+            self.add_interruptor(interruptor);
+            self
+        }
+
         /// Returns the interrupt reason if there is any (returns `None` otherwise)
         /// 
         /// # Note
@@ -91,9 +99,7 @@ pub trait SyncActuator : Setup {
         /// Returns the variables of the component, such as load force, inertia, limits ...
         /// 
         /// ```rust
-        /// use syact::{SyncComp, Stepper, StepperConst};
-        /// use syact::comp::Gear;
-        /// use syact::units::*;
+        /// use syact::prelude::*;
         /// 
         /// // Limits
         /// const LIM_MAX : Gamma = Gamma(1.0);
@@ -158,7 +164,7 @@ pub trait SyncActuator : Setup {
         /// const POS : Gamma = Gamma(10.0);
         /// 
         /// // Create a new cylinder (implements SyncComp)
-        /// let mut cylinder = Cylinder::new(
+        /// let mut cylinder = LinearAxis::new(
         ///     // Stepper Motor as subcomponent (also implements SyncComp)
         ///     Stepper::new_gen(), 
         /// 0.5);    // Ratio is set to 0.5, which means for each radian the motor moves, the cylinder moves for 0.5 mm
@@ -181,7 +187,7 @@ pub trait SyncActuator : Setup {
         /// const POS : Gamma = Gamma(10.0);
         /// 
         /// // Create a new cylinder (implements SyncComp)
-        /// let mut cylinder = Cylinder::new(
+        /// let mut cylinder = LinearAxis::new(
         ///     // Stepper Motor as subcomponent (also implements SyncComp)
         ///     Stepper::new_gen(), 
         /// 0.5);    // Ratio is set to 0.5, which means for each radian the motor moves, the cylinder moves for 0.5 mm
@@ -236,23 +242,23 @@ pub trait SyncActuator : Setup {
         ///     Stepper::new_gen(), 
         /// 0.5);    // Ratio is set to 0.5, which means for each radian the motor moves, the bearing moves for half a radian
         /// 
-        /// gear.set_limit(Some(LIM_MIN), Some(LIM_MAX));
+        /// gear.set_limits(Some(LIM_MIN), Some(LIM_MAX));
         /// 
-        /// assert_eq!(gear.lim_for_gamma(Gamma(1.5)), Delta(0.5));     // Over the maximum
-        /// assert_eq!(gear.lim_for_gamma(Gamma(0.5)), Delta::ZERO);    // In range
-        /// assert_eq!(gear.lim_for_gamma(Gamma(-4.0)), Delta(-2.0));   // Under the minimum
+        /// assert_eq!(gear.limits_for_gamma(Gamma(1.5)), Delta(0.5));     // Over the maximum
+        /// assert_eq!(gear.limits_for_gamma(Gamma(0.5)), Delta::ZERO);    // In range
+        /// assert_eq!(gear.limits_for_gamma(Gamma(-4.0)), Delta(-2.0));   // Under the minimum
         /// 
-        /// gear.set_limit(Some(LIM_MIN_LOWER), None);                // Overwriting only `min` limit
+        /// gear.set_limits(Some(LIM_MIN_LOWER), None);                // Overwriting only `min` limit
         /// 
-        /// assert_eq!(gear.lim_for_gamma(Gamma(1.5)), Delta(0.5));     // Over the maximum
-        /// assert_eq!(gear.lim_for_gamma(Gamma(0.5)), Delta::ZERO);    // In range
-        /// assert_eq!(gear.lim_for_gamma(Gamma(-4.0)), Delta(-1.0));   // Under the minimum, but less
+        /// assert_eq!(gear.limits_for_gamma(Gamma(1.5)), Delta(0.5));     // Over the maximum
+        /// assert_eq!(gear.limits_for_gamma(Gamma(0.5)), Delta::ZERO);    // In range
+        /// assert_eq!(gear.limits_for_gamma(Gamma(-4.0)), Delta(-1.0));   // Under the minimum, but less
         /// 
-        /// gear.reset_limit(Some(LIM_MIN_LOWER), None);              // Overwriting only both limits with [reset_limit()]
+        /// gear.overwrite_limits(Some(LIM_MIN_LOWER), None);              // Overwriting only both limits with [overwrite_limits()]
         /// 
-        /// assert_eq!(gear.lim_for_gamma(Gamma(1.5)), Delta::ZERO);    // In range, as the `max` limit has been deleted
-        /// assert_eq!(gear.lim_for_gamma(Gamma(0.5)), Delta::ZERO);    // In range
-        /// assert_eq!(gear.lim_for_gamma(Gamma(-4.0)), Delta(-1.0));   // Under the minimum, but less
+        /// assert_eq!(gear.limits_for_gamma(Gamma(1.5)), Delta::ZERO);    // In range, as the `max` limit has been deleted
+        /// assert_eq!(gear.limits_for_gamma(Gamma(0.5)), Delta::ZERO);    // In range
+        /// assert_eq!(gear.limits_for_gamma(Gamma(-4.0)), Delta(-1.0));   // Under the minimum, but less
         /// ```
         fn limits_for_gamma(&self, gamma : Gamma) -> Delta;
 
@@ -270,22 +276,22 @@ pub trait SyncActuator : Setup {
         ///     // Stepper Motor as subcomponent (also implements SyncComp)
         ///     Stepper::new_gen(), 
         /// 0.5);    // Ratio is set to 0.5, which means for each radian the motor moves, the bearing moves for half a radian
-        /// gear.write_data(CompData::GEN);           // Link component for driving
+        /// gear.set_config(StepperConfig::GEN);           // Link component for driving
         /// 
         /// gear.set_omega_max(Omega(5.0));
         /// gear.drive_rel(Delta(-0.1), 1.0).unwrap();    // Drive component in negative direction
         /// 
         /// gear.set_end(GAMMA);
         /// 
-        /// assert_eq!(gear.lim_for_gamma(Gamma(2.0)), Delta::ZERO);     
-        /// assert_eq!(gear.lim_for_gamma(Gamma(-2.0)), Delta(-3.0));      
+        /// assert_eq!(gear.limits_for_gamma(Gamma(2.0)), Delta::ZERO);     
+        /// assert_eq!(gear.limits_for_gamma(Gamma(-2.0)), Delta(-3.0));      
         /// ```
         fn set_end(&mut self, set_gamma : Gamma);
 
         /// Set the limits for the minimum and maximum angles that the component can reach, note that the limit will 
         /// be converted and transfered to the parent component if defined. 
         /// 
-        /// Unlike [SyncComp::reset_limit()], this function does not overwrite the current `min` or `max` limits if they
+        /// Unlike [SyncComp::overwrite_limits()], this function does not overwrite the current `min` or `max` limits if they
         /// are set to `None`. 
         /// 
         /// ```rust
@@ -303,35 +309,33 @@ pub trait SyncActuator : Setup {
         ///     Stepper::new_gen(), 
         /// 0.5);    // Ratio is set to 0.5, which means for each radian the motor moves, the bearing moves for half a radian
         /// 
-        /// gear.set_limit(Some(LIM_MIN), Some(LIM_MAX));
+        /// gear.set_limits(Some(LIM_MIN), Some(LIM_MAX));
         /// 
-        /// assert_eq!(gear.lim_for_gamma(Gamma(1.5)), Delta(0.5));     // Over the maximum
-        /// assert_eq!(gear.lim_for_gamma(Gamma(0.5)), Delta::ZERO);    // In range
-        /// assert_eq!(gear.lim_for_gamma(Gamma(-4.0)), Delta(-2.0));   // Under the minimum
+        /// assert_eq!(gear.limits_for_gamma(Gamma(1.5)), Delta(0.5));     // Over the maximum
+        /// assert_eq!(gear.limits_for_gamma(Gamma(0.5)), Delta::ZERO);    // In range
+        /// assert_eq!(gear.limits_for_gamma(Gamma(-4.0)), Delta(-2.0));   // Under the minimum
         /// 
-        /// gear.set_limit(Some(LIM_MIN_LOWER), None);                // Overwriting only `min` limit
+        /// gear.set_limits(Some(LIM_MIN_LOWER), None);                // Overwriting only `min` limit
         /// 
-        /// assert_eq!(gear.lim_for_gamma(Gamma(1.5)), Delta(0.5));     // Over the maximum
-        /// assert_eq!(gear.lim_for_gamma(Gamma(0.5)), Delta::ZERO);    // In range
-        /// assert_eq!(gear.lim_for_gamma(Gamma(-4.0)), Delta(-1.0));   // Under the minimum, but less
+        /// assert_eq!(gear.limits_for_gamma(Gamma(1.5)), Delta(0.5));     // Over the maximum
+        /// assert_eq!(gear.limits_for_gamma(Gamma(0.5)), Delta::ZERO);    // In range
+        /// assert_eq!(gear.limits_for_gamma(Gamma(-4.0)), Delta(-1.0));   // Under the minimum, but less
         /// 
-        /// gear.reset_limit(Some(LIM_MIN_LOWER), None);              // Overwriting only both limits with [reset_limit()]
+        /// gear.overwrite_limits(Some(LIM_MIN_LOWER), None);              // Overwriting only both limits with [overwrite_limits()]
         /// 
-        /// assert_eq!(gear.lim_for_gamma(Gamma(1.5)), Delta::ZERO);    // In range, as the `max` limit has been deleted
-        /// assert_eq!(gear.lim_for_gamma(Gamma(0.5)), Delta::ZERO);    // In range
-        /// assert_eq!(gear.lim_for_gamma(Gamma(-4.0)), Delta(-1.0));   // Under the minimum, but less
+        /// assert_eq!(gear.limits_for_gamma(Gamma(1.5)), Delta::ZERO);    // In range, as the `max` limit has been deleted
+        /// assert_eq!(gear.limits_for_gamma(Gamma(0.5)), Delta::ZERO);    // In range
+        /// assert_eq!(gear.limits_for_gamma(Gamma(-4.0)), Delta(-1.0));   // Under the minimum, but less
         /// ```
         fn set_limits(&mut self, min : Option<Gamma>, max : Option<Gamma>);
 
         /// Set the limits for the minimum and maximum angles that the component can reach, note that the limit will 
         /// be converted and transfered to the parent component if this component has one. 
         /// 
-        /// The difference to [SyncComp::set_limit()] is that this function **overwrites** the current limits set.
+        /// The difference to [SyncComp::set_limits()] is that this function **overwrites** the current limits set.
         /// 
         /// ```rust
-        /// use syact::{SyncComp, Stepper, StepperConst};
-        /// use syact::comp::Gear;
-        /// use syact::units::*;
+        /// use syact::prelude::*;
         /// 
         /// // Limits
         /// const LIM_MAX : Gamma = Gamma(1.0);
@@ -345,23 +349,23 @@ pub trait SyncActuator : Setup {
         ///     Stepper::new_gen(), 
         /// 0.5);    // Ratio is set to 0.5, which means for each radian the motor moves, the bearing moves for half a radian
         /// 
-        /// gear.set_limit(Some(LIM_MIN), Some(LIM_MAX));
+        /// gear.set_limits(Some(LIM_MIN), Some(LIM_MAX));
         /// 
-        /// assert_eq!(gear.lim_for_gamma(Gamma(1.5)), Delta(0.5));     // Over the maximum
-        /// assert_eq!(gear.lim_for_gamma(Gamma(0.5)), Delta::ZERO);    // In range
-        /// assert_eq!(gear.lim_for_gamma(Gamma(-4.0)), Delta(-2.0));   // Under the minimum
+        /// assert_eq!(gear.limits_for_gamma(Gamma(1.5)), Delta(0.5));     // Over the maximum
+        /// assert_eq!(gear.limits_for_gamma(Gamma(0.5)), Delta::ZERO);    // In range
+        /// assert_eq!(gear.limits_for_gamma(Gamma(-4.0)), Delta(-2.0));   // Under the minimum
         /// 
-        /// gear.set_limit(Some(LIM_MIN_LOWER), None);                // Overwriting only `min` limit
+        /// gear.set_limits(Some(LIM_MIN_LOWER), None);                // Overwriting only `min` limit
         /// 
-        /// assert_eq!(gear.lim_for_gamma(Gamma(1.5)), Delta(0.5));     // Over the maximum
-        /// assert_eq!(gear.lim_for_gamma(Gamma(0.5)), Delta::ZERO);    // In range
-        /// assert_eq!(gear.lim_for_gamma(Gamma(-4.0)), Delta(-1.0));   // Under the minimum, but less
+        /// assert_eq!(gear.limits_for_gamma(Gamma(1.5)), Delta(0.5));     // Over the maximum
+        /// assert_eq!(gear.limits_for_gamma(Gamma(0.5)), Delta::ZERO);    // In range
+        /// assert_eq!(gear.limits_for_gamma(Gamma(-4.0)), Delta(-1.0));   // Under the minimum, but less
         /// 
-        /// gear.reset_limit(Some(LIM_MIN_LOWER), None);              // Overwriting only both limits with [reset_limit()]
+        /// gear.overwrite_limits(Some(LIM_MIN_LOWER), None);              // Overwriting only both limits with [overwrite_limits()]
         /// 
-        /// assert_eq!(gear.lim_for_gamma(Gamma(1.5)), Delta::ZERO);    // In range, as the `max` limit has been deleted
-        /// assert_eq!(gear.lim_for_gamma(Gamma(0.5)), Delta::ZERO);    // In range
-        /// assert_eq!(gear.lim_for_gamma(Gamma(-4.0)), Delta(-1.0));   // Under the minimum, but less
+        /// assert_eq!(gear.limits_for_gamma(Gamma(1.5)), Delta::ZERO);    // In range, as the `max` limit has been deleted
+        /// assert_eq!(gear.limits_for_gamma(Gamma(0.5)), Delta::ZERO);    // In range
+        /// assert_eq!(gear.limits_for_gamma(Gamma(-4.0)), Delta(-1.0));   // Under the minimum, but less
         /// ```
         fn overwrite_limits(&mut self, min : Option<Gamma>, max : Option<Gamma>);
     // 
@@ -380,9 +384,7 @@ pub trait SyncActuator : Setup {
         /// Force value will always be made positive, as it will be subtracted in the calculation no matter how 
         /// 
         /// ```rust
-        /// use syact::{SyncComp, Stepper, StepperConst};
-        /// use syact::comp::Gear;
-        /// use syact::units::*;
+        /// use syact::prelude::*;
         /// 
         /// // Force to act upon the component
         /// const FORCE : Force = Force(0.2);
@@ -393,10 +395,10 @@ pub trait SyncActuator : Setup {
         ///     Stepper::new_gen(), 
         /// 0.5);    // Ratio is set to 0.5, which means for each radian the motor moves, the bearing moves for half a radian
         /// 
-        /// gear.apply_force(FORCE);
+        /// gear.apply_gen_force(FORCE);
         /// 
-        /// assert_eq!(Gamma(2.0), gear.gamma_for_parent(Gamma(1.0)));
-        /// assert_eq!(Force(0.1), gear.parent_comp().unwrap().vars().t_load);
+        /// assert_eq!(Gamma(2.0), gear.gamma_for_child(Gamma(1.0)));
+        /// assert_eq!(Force(0.1), gear.child().vars().force_load_gen);     // Forces get smaller for smaller gears
         /// ```
         fn apply_gen_force(&mut self, force : Force) -> Result<(), crate::Error>;
 
@@ -404,7 +406,6 @@ pub trait SyncActuator : Setup {
         fn apply_dir_force(&mut self, force : Force) -> Result<(), crate::Error>;
 
         // Inertia
-        
         fn inertia(&self) -> Inertia;
         
         /// Apply a load inertia to the component, slowing down movements
@@ -414,9 +415,7 @@ pub trait SyncActuator : Setup {
         /// Panics if no parent component or override of the function has been provided.
         /// 
         /// ```rust
-        /// use syact::{SyncComp, Stepper, StepperConst};
-        /// use syact::comp::Gear;
-        /// use syact::units::*;
+        /// use syact::prelude::*;
         /// 
         /// // Inertia to act upon the component
         /// const INERTIA : Inertia = Inertia(4.0);
@@ -430,8 +429,8 @@ pub trait SyncActuator : Setup {
         /// // Applies the inertia to the gearbearing component
         /// gear.apply_inertia(INERTIA);
         /// 
-        /// assert_eq!(Gamma(2.0), gear.gamma_for_parent(Gamma(1.0)));
-        /// assert_eq!(Inertia(1.0), gear.parent_comp().unwrap().vars().j_load);
+        /// assert_eq!(Gamma(2.0), gear.gamma_for_child(Gamma(1.0)));
+        /// assert_eq!(Inertia(1.0), gear.child().vars().inertia_load);
         /// ```
         fn apply_inertia(&mut self, inertia : Inertia);
     // 

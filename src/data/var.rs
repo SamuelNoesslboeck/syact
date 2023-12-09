@@ -1,3 +1,5 @@
+use sylo::Direction;
+
 use crate::units::*;
 
 /// Stores distance limits for the component
@@ -41,4 +43,26 @@ impl ActuatorVars  {
 
         lim: Limits::NONE 
     };
+
+    /// Returns `None` if there is an overlaod
+    pub fn force_after_load(&self, force : Force, direction : Direction) -> Option<Force> {
+        let mut force = force - self.force_load_gen;
+        
+        if direction.as_bool() {
+            force -= self.force_load_dir;
+        } else {
+            force += self.force_load_dir;
+        }
+
+        if force > Force::ZERO {
+            Some(force)
+        } else {
+            None
+        }
+    }
+
+    #[inline]
+    pub fn inertia_after_load(&self, inertia : Inertia) -> Inertia {
+        inertia + self.inertia_load
+    }
 }

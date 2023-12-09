@@ -6,12 +6,12 @@ use crate::math::PathNode;
 fn complex_path() {
     let consts = StepperConst::GEN;
     let mut vars = CompVars::ZERO;
-    let data = CompData::GEN;
+    let data = StepperConfig::GEN;
 
     // let delta = Delta(0.5 * (2.0 * PI));
     // let omega_max = Omega(4.0 * PI);
 
-    vars.j_load = Inertia(0.1);
+    vars.inertia_load = Inertia(0.1);
     vars.f_bend = 0.1;
     
     let mut builder = CurveBuilder::new(&consts, &vars, &data, Omega::ZERO);

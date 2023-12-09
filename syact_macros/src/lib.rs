@@ -3,7 +3,7 @@ use core::str::FromStr;
 use proc_macro2::TokenStream;
 use syn::DeriveInput;
 
-// SyncCompGroup
+// SyncActuatorGroup
     fn sync_comp_group_impl(ast : DeriveInput, comp_type : TokenStream) -> proc_macro::TokenStream {
         match ast.data {
             // Macro works only on structs
@@ -62,7 +62,7 @@ use syn::DeriveInput;
                         }
                     }
 
-                    impl syact::comp::group::SyncCompGroup<#comp_type, #fields_count> for #name { 
+                    impl syact::act::group::SyncActuatorGroup<#comp_type, #fields_count> for #name { 
                         fn for_each<'a, F, R>(&'a self, mut func : F) -> [R; #fields_count]
                         where 
                             F : FnMut(&'a #comp_type, usize) -> R
@@ -105,19 +105,19 @@ use syn::DeriveInput;
         }
     }
 
-    /// # `SyncCompGroup` - proc_macro
+    /// # `SyncActuatorGroup` - proc_macro
     /// 
-    /// Automatically generates an implementation for the `SyncCompGroup` macro for a given struct if all the underlying compoments in the struct (all the fields)
-    /// implment `SyncComp` themselfs.
-    #[proc_macro_derive(SyncCompGroup)]
+    /// Automatically generates an implementation for the `SyncActuatorGroup` macro for a given struct if all the underlying compoments in the struct (all the fields)
+    /// implment `SyncActuator` themselfs.
+    #[proc_macro_derive(SyncActuatorGroup)]
     pub fn sync_comp_group_derive(input : proc_macro::TokenStream) -> proc_macro::TokenStream {
         let ast : DeriveInput = syn::parse(input).unwrap();
-        sync_comp_group_impl(ast, TokenStream::from_str("(dyn syact::comp::SyncComp + 'static)").unwrap())
+        sync_comp_group_impl(ast, TokenStream::from_str("(dyn syact::act::SyncActuator + 'static)").unwrap())
     }
 // 
 
-// StepperCompGroup
-    /// Implementation for the `StepperCompGroup` trait
+// StepperActuatorGroup
+    /// Implementation for the `StepperActuatorGroup` trait
     fn stepper_comp_group_impl(ast : DeriveInput) -> proc_macro::TokenStream {
         match ast.data {
             syn::Data::Struct(data) => {
@@ -128,17 +128,17 @@ use syn::DeriveInput;
 
                 // Create an empty implementation
                 quote::quote! {
-                    impl syact::comp::stepper::StepperCompGroup<dyn syact::comp::stepper::StepperComp, #fields_count> for #name { }
+                    impl syact::act::stepper::StepperActuatorGroup<dyn syact::act::stepper::StepperActuator, #fields_count> for #name { }
                 }.into()
             },
             _ => panic!("This macro can only be used on structs")
         }
     }
 
-    #[proc_macro_derive(StepperCompGroup)]
+    #[proc_macro_derive(StepperActuatorGroup)]
     pub fn stepper_comp_group_derive(input : proc_macro::TokenStream) -> proc_macro::TokenStream {
         let ast : DeriveInput = syn::parse(input).unwrap();
-        let mut derive = sync_comp_group_impl(ast.clone(), TokenStream::from_str("(dyn syact::comp::stepper::StepperComp + 'static)").unwrap()); 
+        let mut derive = sync_comp_group_impl(ast.clone(), TokenStream::from_str("(dyn syact::act::stepper::StepperActuator + 'static)").unwrap()); 
         derive.extend(stepper_comp_group_impl(ast));
         derive
     }

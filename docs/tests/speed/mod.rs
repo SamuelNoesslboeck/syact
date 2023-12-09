@@ -35,7 +35,7 @@ fn torque_dyn_approx_speed() {
 #[ignore = "benchmark, run manually"]
 fn create_curve_speed() {
     let consts = StepperConst::GEN;
-    let data = CompData::GEN;
+    let data = StepperConfig::GEN;
     let vars = CompVars::ZERO;
 
     let inst = Instant::now();

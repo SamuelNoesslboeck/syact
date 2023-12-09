@@ -13,7 +13,7 @@ pub type StepperCylTriangle = CylinderTriangle<Stepper>;
 /// 
 /// # Super Component
 /// 
-/// Uses a [Cylinder] as parent component and as the triangular shape makes a constant angular velocity
+/// Uses a [LinearAxis] as parent component and as the triangular shape makes a constant angular velocity
 /// very calculation expensive, all maximum velocites are referencing the cylinder
 /// 
 /// # Angles and lengths
@@ -101,11 +101,11 @@ impl<C : SyncActuator> SyncActuator for CylinderTriangle<C> {
     // 
 
     // Super 
-        fn parent_comp(&self) -> Option<&dyn SyncActuator> {
+        fn child(&self) -> Option<&dyn SyncActuator> {
             Some(&self.cylinder)
         }
 
-        fn parent_comp_mut(&mut self) -> Option<&mut dyn SyncActuator> {
+        fn child_mut(&mut self) -> Option<&mut dyn SyncActuator> {
             Some(&mut self.cylinder)
         }
 
@@ -125,8 +125,8 @@ impl<C : SyncActuator> SyncActuator for CylinderTriangle<C> {
     // 
 
     // Link
-        fn write_data(&mut self, data : StepperConfig) {
-            self.cylinder.write_data(data);
+        fn set_config(&mut self, data : StepperConfig) {
+            self.cylinder.set_config(data);
         }
     //
 

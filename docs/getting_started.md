@@ -84,9 +84,9 @@ pub fn predefined() -> Result<(), syact::Error> {
         R_ROLL
     );
 
-    // Now we write the `CompData` to our component. The `CompData` is often data that is the same for 
+    // Now we write the `StepperConfig` to our component. The `StepperConfig` is often data that is the same for 
     // all components, e.g. supply voltage
-    conv.write_data(CompData {
+    conv.set_config(StepperConfig {
         u: 12.0,        // Voltage
         s_f: 1.5        // Safety factor, the higher the factor, the safer is the stepper to not jump over steps,
                         // however the performance suffers from very high safety factors
@@ -151,39 +151,39 @@ fn inertia_for_motor(inertia_conv : Inertia) -> Inertia {
 }
 
 pub fn direct_approach() -> Result<(), syact::Error> {
-    let mut ctrl = Stepper::new(StepperConst::MOT_17HE15_1504S, PIN_DIR, PIN_STEP);
-    ctrl.write_data(CompData::GEN);
-    ctrl.setup()?;
+    let mut device = Stepper::new(StepperConst::MOT_17HE15_1504S, PIN_DIR, PIN_STEP);
+    device.set_config(StepperConfig::GEN);
+    device.setup()?;
     
     // Apply a inertia to the conveyor (possible masses on the belt)
-    ctrl.apply_inertia(
+    device.apply_inertia(
         inertia_for_motor(Inertia(0.5))
     );
 
     // Set the maximum speed of the conveyor tp 40 millimeters per second
-    ctrl.set_omega_max(
+    device.set_omega_max(
         omega_for_motor(Omega(40.0))
     );
 
     println!("Driving forward with 0.5 speed");
-    ctrl.drive(sylo::Direction::CW, 0.5)?;
-    ctrl.await_inactive()?;
+    device.drive(sylo::Direction::CW, 0.5)?;
+    device.await_inactive()?;
 
     println!(" -> Reached speed!");
 
     sleep(1.0);
 
     println!("Driving forward with 0.8 speed");
-    ctrl.drive(sylo::Direction::CW, 0.8)?;
-    ctrl.await_inactive()?;
+    device.drive(sylo::Direction::CW, 0.8)?;
+    device.await_inactive()?;
 
     println!(" -> Reached speed!");
 
     sleep(2.0);
 
     println!("Driving backwards with 0.2 speed");
-    ctrl.drive(sylo::Direction::CCW, 0.2)?;
-    ctrl.await_inactive()?;
+    device.drive(sylo::Direction::CCW, 0.2)?;
+    device.await_inactive()?;
 
     println!("Reached speed!");
 

@@ -3,7 +3,7 @@ use syact::prelude::*;
 fn main() -> Result<(), syact::Error> {
     // Initialize stepper
     let mut stepper = Stepper::new_gen();
-    stepper.write_data(StepperConfig::GEN);
+    stepper.set_config(StepperConfig::GEN);
     stepper.setup()?;
 
     // Apply loads

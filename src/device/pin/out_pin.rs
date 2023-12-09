@@ -4,7 +4,7 @@ use rppal::gpio::{Gpio, OutputPin};
 use embedded_hal::digital::v2::PinState;
 
 use crate::Setup;
-use crate::ctrl::pin::ERR_PIN;
+use crate::device::pin::ERR_PIN;
 
 /// Universal ouput pin structure for platform independency
 #[derive(Debug)]

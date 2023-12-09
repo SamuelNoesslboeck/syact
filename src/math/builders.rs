@@ -3,9 +3,6 @@ use crate::units::*;
 // Submodules
     mod hr;
     pub use hr::*;
-
-    mod lr;
-    pub use lr::*;
 // 
 
 // Basic builders

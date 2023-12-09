@@ -15,7 +15,7 @@ pub struct HRStepBuilder {
 
     pub consts : StepperConst,
     pub vars : ActuatorVars,
-    pub data : StepperConfig,
+    pub config : StepperConfig,
 
     pub deccel : bool,
     pub omega_max : Omega,
@@ -25,7 +25,7 @@ pub struct HRStepBuilder {
 }
 
 impl HRStepBuilder {
-    pub fn new(omega_0 : Omega, consts : StepperConst, vars : ActuatorVars, data : StepperConfig, omega_max : Omega, micro : u8) -> Self {
+    pub fn new(omega_0 : Omega, consts : StepperConst, vars : ActuatorVars, config : StepperConfig, omega_max : Omega, micro : u8) -> Self {
         Self {
             delta: consts.step_angle(micro),
             omega_0: omega_0.abs(),
@@ -33,7 +33,7 @@ impl HRStepBuilder {
 
             consts, 
             vars,
-            data,
+            config,
 
             deccel: false,
             omega_max,
@@ -76,8 +76,8 @@ impl Iterator for HRStepBuilder {
         }
 
         // Apply new alpha for speed
-        if let Ok(alpha) = self.consts.alpha_max_dyn(
-            crate::math::force::torque_dyn(&self.consts, self.omega_0, self.data.voltage, self.consts.current_max) / self.data.safety_factor, &self.vars
+        if let Some(alpha) = self.consts.alpha_max_for_omega(     // TODO: Rework builders
+            &self.vars, &self.config, self.omega_0, sylo::Direction::CW
         ) {
             self.alpha = alpha;     // Update the alpha
 

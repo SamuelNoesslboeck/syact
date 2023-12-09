@@ -6,11 +6,11 @@ use crate::prelude::*;
 fn torque_curve() -> Result<(), Box<dyn std::error::Error>> {
     let consts = StepperConst::GEN;
     let mut vars = CompVars::ZERO;
-    let data = CompData::GEN;
+    let data = StepperConfig::GEN;
 
     let scalar : f32 = 10.0;
 
-    vars.j_load = Inertia(5.0);
+    vars.inertia_load = Inertia(5.0);
     vars.f_bend = 0.1;
 
     let curve : Vec<Force> = (0 .. 1000).map(

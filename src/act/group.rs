@@ -9,7 +9,7 @@ use crate::units::*;
 /// The generic type `T` repesents the components in the struct
 /// 
 /// # Constant generic `C`
-pub trait SyncCompGroup<T, const C : usize> : Setup 
+pub trait SyncActuatorGroup<T, const C : usize> : Setup 
 where 
     T : SyncActuator + ?Sized + 'static
 {
@@ -115,7 +115,7 @@ where
             });
         }
 
-        /// Runs [SyncComp::lim_for_gamma()] for all components 
+        /// Runs [SyncComp::limits_for_gamma()] for all components 
         #[inline(always)]
         fn limits_for_gammas(&self, gammas : &[Gamma; C]) -> [Delta; C] {
             self.for_each(|act, index| {
@@ -147,7 +147,7 @@ where
             });
         }
         
-        /// Runs [SyncComp::set_limit()] for all components
+        /// Runs [SyncComp::set_limits()] for all components
         #[inline(always)]
         fn set_limits(&mut self, min : &[Option<Gamma>; C], max : &[Option<Gamma>; C]) {
             self.for_each_mut(|act, index| {
@@ -165,7 +165,7 @@ where
             }); 
         }
 
-        /// Runs [SyncComp::apply_force()] for all components
+        /// Runs [SyncComp::apply_force_gen()] for all components
         #[inline]
         fn apply_forces(&mut self, forces : &[Force; C]) -> Result<(), crate::Error> {
             self.try_for_each_mut(|act, index| {

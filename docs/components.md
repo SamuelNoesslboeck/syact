@@ -4,9 +4,9 @@ A component (`trait SyncComp` in the library) represents a synchronous motor, op
 
 The library does include some standard components commonly used
 
-- *Cylinder*, a simple cylinder translating the rotatory movements of a motor to a linear extension
+- *LinearAxis*, a simple cylinder translating the rotatory movements of a motor to a linear extension
 - *Gear*, a motor connected to a gear that translates the movement with a certain ratio
-- *Cylinder-triangle*, a cylinder being the hypotenuse in a triangular shape, creating a high torque/slow movement joint
+- *LinearAxis-triangle*, a cylinder being the hypotenuse in a triangular shape, creating a high torque/slow movement joint
 
 ## Example
 
@@ -26,13 +26,13 @@ const OMEGA : Omega = Omega(20.0);      // 20 millimeters per second
 
 fn main() -> Result<(), syact::Error> {
     // Create the controls for a stepper motor
-    let mut cylinder = Cylinder::new(
+    let mut cylinder = LinearAxis::new(
         Stepper::new(GenericPWM::new(PIN_STEP, PIN_DIR)?, StepperConst::MOT_17HE15_1504S),
         1.273       // Spindle pitch of the cylinder, per radian the cylinder extends for 1.273 millimeters,
                     // this factor calculates out of the pitch per revolve (8mm) divided by 2*PI (for radians) 
     );
     // Link the component to a system
-    cylinder.write_data(CompData { 
+    cylinder.set_config(StepperConfig { 
         u: 12.0,    // System voltage in volts
         s_f: 1.5    // System safety factor, should be at least 1.0
     }); 
@@ -40,7 +40,7 @@ fn main() -> Result<(), syact::Error> {
 
     // Apply some loads
     cylinder.apply_inertia(Inertia(0.2));
-    cylinder.apply_force(Force(0.10));
+    cylinder.apply_force_gen(Force(0.10));
 
     println!("Staring to move ... ");
     let delta_real = cylinder.drive_rel(DELTA, 1.0)?;         // Move the cylinder
@@ -79,19 +79,19 @@ const OMEGA : Omega = Omega(10.0);
 // Defining component structure
 #[derive(Debug)]
 struct MyComp {
-    ctrl : Stepper,     // The stepper motor built into the component
+    device : Stepper,     // The stepper motor built into the component
     ratio : f32             // The gear ratio, e.g. a spingle or
 }
 
 impl MyComp {
-    pub fn new(ctrl : Stepper, ratio : f32) -> Self {
-        Self { ctrl, ratio }
+    pub fn new(device : Stepper, ratio : f32) -> Self {
+        Self { device, ratio }
     }
 }
 
 impl Setup for MyComp {
     fn setup(&mut self) -> Result<(), syact::Error> {
-        self.ctrl.setup()?;  // Setting up the parent component
+        self.device.setup()?;  // Setting up the parent component
         Ok(())      
     }
 }
@@ -102,19 +102,19 @@ impl SyncComp for MyComp {
             todo!()     // Not required in this example
         }
 
-        fn data<'a>(&'a self) -> &'a CompData {
+        fn data<'a>(&'a self) -> &'a StepperConfig {
             todo!()     // Not required in this example
         }
     //
     
     // Super component (motor)
         // The following two overrides give the library access to the stepper motor controller stored in our component
-        fn parent_comp(&self) -> Option<&dyn SyncComp> {
-            Some(&self.ctrl)
+        fn child(&self) -> Option<&dyn SyncComp> {
+            Some(&self.device)
         }
 
-        fn parent_comp_mut(&mut self) -> Option<&mut dyn SyncComp> {
-            Some(&mut self.ctrl)
+        fn child_mut(&mut self) -> Option<&mut dyn SyncComp> {
+            Some(&mut self.device)
         }
     // 
 
@@ -132,7 +132,7 @@ impl SyncComp for MyComp {
     fn drive_rel(&mut self, delta : Delta, speed_f : f32) -> Result<Delta, syact::Error> {
         println!("Now driving!"); // Our custom message
 
-        let delta_real = self.ctrl.drive_rel(
+        let delta_real = self.device.drive_rel(
             self.delta_for_parent(delta, self.gamma()), 
             speed_f
         )?;
@@ -148,7 +148,7 @@ fn main() -> Result<(), syact::Error> {
         2.0 // Example ratio
     );
     // Link the component to a system
-    comp.write_data(CompData { 
+    comp.set_config(StepperConfig { 
         u: 12.0,    // System voltage in volts
         s_f: 1.5    // System safety factor, should be at least 1.0
     }); 
@@ -157,7 +157,7 @@ fn main() -> Result<(), syact::Error> {
 
     // Apply some loads
     comp.apply_inertia(Inertia(0.2));
-    comp.apply_force(Force(0.10));
+    comp.apply_force_gen(Force(0.10));
     
     // Limit the component velocity
     comp.set_omega_max(OMEGA);

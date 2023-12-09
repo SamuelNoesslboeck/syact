@@ -1,7 +1,8 @@
 // Simple all in one import
-pub use crate::{AsyncActuator, Direction, Setup, Dismantle, Stepper, SimpleTool, SyncActuator, SyncCompGroup, Tool};
+pub use crate::{AsyncActuator, Direction, Setup, Dismantle, Stepper, SimpleTool, SyncActuator, SyncActuatorGroup,StepperActuatorGroup, Tool};
 
-pub use crate::act::{Conveyor, LinearAxis, Gear};
+pub use crate::act::{Conveyor, LinearAxis, Gear, Interruptible, Interruptor};
+pub use crate::act::parent::{ActuatorParent, RatioActuatorParent};
 pub use crate::act::stepper::*;
 
 pub use crate::data::{ActuatorVars, StepperConfig, StepperConst};

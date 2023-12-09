@@ -10,8 +10,8 @@ use core::time::Duration;
 use std::thread::sleep;
 
 use syact::{SimpleTool, Tool};
-use syact::comp::tool::Tongs;
-use syact::ctrl::servo::ServoDriver;
+use syact::act::tool::Tongs;
+use syact::device::servo::ServoDriver;
 use syact::data::servo::ServoConst;
 
 // Include the unit system

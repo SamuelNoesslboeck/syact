@@ -85,9 +85,9 @@ pub struct HRStepper<C : Controller + Send + 'static> {
 // Inits
 impl<C : Controller + Send + 'static> HRStepper<C> {   
     /// Creates a new stepper controller with the given stepper motor constants `consts`
-    pub fn new(ctrl : C, consts : StepperConst) -> Self {
+    pub fn new(device : C, consts : StepperConst) -> Self {
         Self { 
-            _ctrl: Arc::new(Mutex::new(ctrl)),
+            _ctrl: Arc::new(Mutex::new(device)),
             _vars: ActuatorVars::ZERO, 
             
             _dir: Arc::new(AtomicBool::new(true)),
@@ -115,13 +115,13 @@ impl<C : Controller + Send + 'static> HRStepper<C> {
         }
     }
 
-    /// Function for accessing the ctrl substruct of a stepper motor with the embed-thread feature being enabled
+    /// Function for accessing the device substruct of a stepper motor with the embed-thread feature being enabled
     pub(crate) fn use_ctrl<F, R>(raw_ctrl : &mut Arc<Mutex<C>>, func : F) -> R 
     where F: FnOnce(&mut C) -> R {
         let mut ctrl_ref = raw_ctrl.lock().unwrap();
-        let ctrl = ctrl_ref.deref_mut();
+        let device = ctrl_ref.deref_mut();
 
-        func(ctrl)
+        func(device)
     }
 
     /// Returns wheiter or not the stepper is actively moving
@@ -177,7 +177,7 @@ impl<C : Controller + Send + 'static> HRStepper<C> {
         // Interruptors used for the movement process
         let mut intrs = intrs_mtx.lock().unwrap();
 
-        Self::use_ctrl(ctrl_mtx, |ctrl| -> Result<Delta, StepError> {
+        Self::use_ctrl(ctrl_mtx, |device| -> Result<Delta, StepError> {
             // Drive each point in the curve
             for point in cur {
                 // Run all interruptors
@@ -205,7 +205,7 @@ impl<C : Controller + Send + 'static> HRStepper<C> {
                 }
 
                 // Run step
-                ctrl.step_no_wait(point)?;
+                device.step_no_wait(point)?;
 
                 // Update the current speed
                 t_step_cur.store(point.0, Ordering::Relaxed);
@@ -261,8 +261,8 @@ impl<C : Controller + Send + 'static> HRStepper<C> {
         };
         self.setup_drive(delta)?;
 
-        Self::use_ctrl(&mut self._ctrl, |ctrl| {
-            ctrl.step(time);
+        Self::use_ctrl(&mut self._ctrl, |device| {
+            device.step(time);
         });
 
         Ok(())
@@ -286,8 +286,8 @@ impl<C : Controller + Send + 'static> HRStepper<C> {
             self._step_ang.store(-self.step_ang().0.abs(), Ordering::Relaxed);
         }
 
-        Self::use_ctrl(&mut self._ctrl, |ctrl| {
-            ctrl.set_dir(dir);
+        Self::use_ctrl(&mut self._ctrl, |device| {
+            device.set_dir(dir);
         }); 
     }
 }
@@ -386,8 +386,8 @@ impl<C : Controller + Send + 'static> HRStepper<C> {
                         }).unwrap();    // TODO: Handle
 
                         // Final step
-                        Self::use_ctrl(&mut ctrl_mtx, |ctrl| {
-                            ctrl.step_final().unwrap();     // TODO: Handle
+                        Self::use_ctrl(&mut ctrl_mtx, |device| {
+                            device.step_final().unwrap();     // TODO: Handle
                         });
 
                         // Update the position after the final step
@@ -450,8 +450,8 @@ impl<C : Controller + Send + 'static> HRStepper<C> {
                                     break;
                                 }
     
-                                Self::use_ctrl(&mut ctrl_mtx, |ctrl| {
-                                    ctrl.step_no_wait(t_const).unwrap();    // TODO: Handle
+                                Self::use_ctrl(&mut ctrl_mtx, |device| {
+                                    device.step_no_wait(t_const).unwrap();    // TODO: Handle
                                 }); 
 
                                 // Update position
@@ -618,8 +618,8 @@ impl<C : Controller + Send + 'static> SyncActuator for HRStepper<C> {
 
             if self._intr_reason.lock().unwrap().is_none() {
                 // Final (unpaused) step
-                Self::use_ctrl(&mut self._ctrl, |ctrl| -> Result<(), StepError> {
-                    ctrl.step_final()
+                Self::use_ctrl(&mut self._ctrl, |device| -> Result<(), StepError> {
+                    device.step_final()
                 })?;
 
                 // Update the pos after the final step
@@ -921,6 +921,10 @@ impl<C : Controller + Send + 'static> StepperActuator for HRStepper<C> {
             &self._config
         }
 
+        fn set_config(&mut self, config : StepperConfig) {
+            self._config = config;
+        }
+
         fn microsteps(&self) -> u8 {
             self._micro
         }
@@ -946,8 +950,8 @@ impl<C : Controller + Send + 'static> StepperMotor for HRStepper<C> {
             torque_dyn(self.consts(), omega, self._config.voltage, self.consts().current_max)
         }
 
-        fn alpha_at_speed(&self, omega : Omega) -> Result<Alpha, crate::Error> {
-            todo!()
+        fn alpha_at_speed(&self, omega : Omega) -> Option<Alpha> {
+            self._consts.alpha_max_for_omega(&self._vars, &self._config, omega, self.dir())
         }
     // 
 }

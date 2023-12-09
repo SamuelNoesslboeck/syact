@@ -13,7 +13,7 @@ pub type StepperConveyor = Conveyor<Stepper>;
 #[derive(Serialize, Deserialize)]
 pub struct Conveyor<C : SyncActuator> {
     /// The parent component (driving the conveyor)
-    ctrl : C,
+    device : C,
 
     /// Radius of the powered conveyor roll in millimeters
     pub r_roll : f32
@@ -21,11 +21,11 @@ pub struct Conveyor<C : SyncActuator> {
 
 impl<C : SyncActuator> Conveyor<C> {
     /// Creates a new instance of a conveyor
-    /// - `ctrl`: The parent component (driving the conveyor)
+    /// - `device`: The parent component (driving the conveyor)
     /// - `r_roll` radius of the driving roll in millimeters
-    pub fn new(ctrl : C, r_roll : f32) -> Self {
+    pub fn new(device : C, r_roll : f32) -> Self {
         Self {
-            ctrl, 
+            device, 
             r_roll
         }
     }
@@ -33,7 +33,7 @@ impl<C : SyncActuator> Conveyor<C> {
 
 impl<C : SyncActuator> Setup for Conveyor<C> {
     fn setup(&mut self) -> Result<(), crate::Error> {
-        self.ctrl.setup()
+        self.device.setup()
     }
 }
 
@@ -42,11 +42,11 @@ impl<C : SyncActuator> Setup for Conveyor<C> {
         type Child = C;
 
         fn child(&self) -> &Self::Child {
-            &self.ctrl
+            &self.device
         }
 
         fn child_mut(&mut self) -> &mut Self::Child {
-            &mut self.ctrl
+            &mut self.device
         }
     }
 
@@ -79,14 +79,14 @@ impl<C : AsyncActuator<Duty = f32> + SyncActuator> AsyncActuator for Conveyor<C>
     type Duty = f32;
 
     fn drive(&mut self, dir : Direction, speed_f : f32) -> Result<(), crate::Error> {
-        self.ctrl.drive(dir, speed_f)
+        self.device.drive(dir, speed_f)
     }
 
     fn dir(&self) -> Direction {
-        self.ctrl.dir()
+        self.device.dir()
     }
 
     fn speed(&self) -> f32 {
-        self.ctrl.speed()
+        self.device.speed()
     }
 }

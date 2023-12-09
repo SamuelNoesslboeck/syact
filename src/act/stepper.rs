@@ -1,9 +1,8 @@
-use crate::{StepperConst, SyncActuator, SyncCompGroup, StepperConfig};
-use crate::act::parent::RatioActuatorParent;
+use crate::{StepperConst, SyncActuator, SyncActuatorGroup, StepperConfig};
 use crate::units::*;
 
 // Public imports
-    pub use syact_macros::StepperCompGroup;
+    pub use syact_macros::StepperActuatorGroup;
 // 
 
 // Submodules
@@ -78,7 +77,11 @@ use crate::units::*;
         /// Returns the constants of the stepper motor
         fn consts(&self) -> &StepperConst;
 
-        fn config(&self) -> &StepperConfig;
+        // Config
+            fn config(&self) -> &StepperConfig;
+
+            fn set_config(&mut self, config : StepperConfig);
+        // 
 
         // Microstepping
             /// The amount of microsteps in a full step
@@ -101,14 +104,21 @@ use crate::units::*;
             fn torque_at_speed(&self, omega : Omega) -> Force;
 
             /// Returns the max acceleration of the motor at a given speed `omega`
-            fn alpha_at_speed(&self, omega : Omega) -> Result<Alpha, crate::Error>;
+            fn alpha_at_speed(&self, omega : Omega) -> Option<Alpha>;
         // 
     }
 
     /// A group of stepper motor based components
-    pub trait StepperCompGroup<T, const C : usize> : SyncCompGroup<T, C> 
-    where T: StepperActuator + ?Sized + 'static
+    pub trait StepperActuatorGroup<T, const C : usize> : SyncActuatorGroup<T, C> 
+    where 
+        T: StepperActuator + ?Sized + 'static
     {
+        fn set_config(&mut self, config : StepperConfig) {
+            self.for_each_mut(|comp, _| {
+                comp.set_config(config.clone())
+            });
+        }
+
         /// Returns the amount of microsteps every component uses
         fn microsteps(&self) -> [u8; C] {
             self.for_each(|comp, _| {
@@ -122,46 +132,5 @@ use crate::units::*;
                 comp.set_microsteps(micro[index]);
             });
         }
-    }
-// 
-
-// General implementations
-    impl<T : RatioActuatorParent + sylo::Enable> StepperActuator for T
-    where
-        T::Child : StepperActuator
-    {
-        // Motor
-            fn motor(&self) -> &dyn StepperMotor {
-                self.child().motor()
-            }
-            
-            fn motor_mut(&mut self) -> &mut dyn StepperMotor {
-                self.child_mut().motor_mut()
-            }
-        // 
-
-        fn consts(&self) -> &StepperConst {
-            self.child().consts()
-        }
-
-        fn config(&self) -> &StepperConfig {
-            self.child().config()
-        }
-
-        // Microstepping
-            fn microsteps(&self) -> u8 {
-                self.child().microsteps()
-            }
-
-            fn set_microsteps(&mut self, microsteps : u8) {
-                self.child_mut().set_microsteps(microsteps)
-            }
-        // 
-
-        // Steps
-            fn step_ang(&self) -> Delta {
-                self.delta_for_parent(self.child().step_ang())
-            }
-        // 
     }
 // 

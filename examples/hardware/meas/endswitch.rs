@@ -3,7 +3,7 @@ use std::io::{Write, stdout};
 
 use clap::{command, arg, value_parser};
 use crossterm::{QueueableCommand, cursor, terminal, ExecutableCommand};
-use syact::ctrl::led::LED;
+use syact::device::led::LED;
 use syact::prelude::*;
 
 /// Plots the gamma and omega values to the console during an async movment process

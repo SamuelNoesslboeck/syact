@@ -37,6 +37,13 @@ macro_rules! additive_unit {
                 $unit(self.0 - rhs.0) 
             }
         }
+
+        impl core::ops::SubAssign<$unit> for $unit {
+            #[inline]
+            fn sub_assign(&mut self, rhs : $unit) {
+                self.0 -= rhs.0
+            }
+        }
     };
 }
 

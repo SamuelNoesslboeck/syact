@@ -52,19 +52,6 @@ rasp = [ "dep:rppal" ]
 # ##############
 # #  Examples  #
 # ##############
-[[example]]
-name = "custom_component"
-path = "examples/custom_component.rs"
-
-[[example]]
-name = "dc_motors"
-path = "examples/dc_motors.rs"
-
-# Async
-  [[example]]
-  name = "async-plot_pos"
-  path = "examples/async/plot_pos.rs"
-# 
 
 # Hardware 
   # Devices
@@ -104,24 +91,6 @@ path = "examples/dc_motors.rs"
     name = "hardware-tools-tongs"
     path = "examples/hardware/tools/tongs.rs"
   # 
-#
-
-# Math
-  [[example]]
-  name = "math-builders"
-  path = "examples/math/builders.rs"
-
-  [[example]]
-  name = "math-movements"
-  path = "examples/math/movements.rs"
-
-  [[example]]
-  name = "math-path"
-  path = "examples/math/path.rs"
-
-  [[example]]
-  name = "math-time"
-  path = "examples/math/time.rs"
 #
 
 # Net

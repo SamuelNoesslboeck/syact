@@ -49,9 +49,9 @@ TODO: NEW EXAMPLE
   - [x] Servo motors
   - [x] DC motors
 - [x] Components
-  - [x] Cylinder
+  - [x] LinearAxis
   - [x] Gear joint
-  - [x] Cylinder-triangle
+  - [x] LinearAxis-triangle
   - [x] Conveyor
   - [x] DC-Motor
 - [x] [Tools](/docs/tools.md)

@@ -8,12 +8,12 @@ use crate::prelude::*;
 fn curve_to_speed() -> Result<(), Box<dyn std::error::Error>> {
     let consts = StepperConst::GEN;
     let mut vars = CompVars::ZERO;
-    let data = CompData::GEN;
+    let data = StepperConfig::GEN;
 
     // let delta = Delta(0.5 * (2.0 * PI));
     let omega_max = Omega(4.0 * PI);
 
-    vars.j_load = Inertia(0.000_25);
+    vars.inertia_load = Inertia(0.000_25);
     vars.f_bend = 0.1;
 
     let mut builder = CurveBuilder::new(&consts, &vars, &data, Omega::ZERO);

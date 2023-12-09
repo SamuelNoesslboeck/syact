@@ -3,7 +3,7 @@ mod single_motor
     use core::f32::consts::PI;
 
     use crate::{Stepper, StepperConst, SyncComp};
-    use crate::data::CompData;
+    use crate::data::StepperConfig;
     use crate::units::*;
 
     const PIN_DIR : u8 = 27;
@@ -14,13 +14,13 @@ mod single_motor
 
     #[test]
     fn step() -> Result<(), crate::Error> {
-        let mut ctrl = Stepper::new(StepperConst::MOT_17HE15_1504S, PIN_DIR, PIN_STEP);
-        ctrl.write_data(CompData { u: 12.0, s_f: 1.5 }); 
+        let mut device = Stepper::new(StepperConst::MOT_17HE15_1504S, PIN_DIR, PIN_STEP);
+        device.set_config(StepperConfig { u: 12.0, s_f: 1.5 }); 
     
-        ctrl.apply_inertia(Inertia(0.000_1));
+        device.apply_inertia(Inertia(0.000_1));
     
         println!("Doing single step ... ");
-        ctrl.step(Time(0.01))?;
+        device.step(Time(0.01))?;
         println!("Step done ... ");
 
         Ok(())
@@ -28,14 +28,14 @@ mod single_motor
     
     #[test]
     fn drive() -> Result<(), crate::Error> {
-        let mut ctrl = Stepper::new(StepperConst::MOT_17HE15_1504S, PIN_DIR, PIN_STEP);
-        ctrl.write_data(CompData::GEN); 
+        let mut device = Stepper::new(StepperConst::MOT_17HE15_1504S, PIN_DIR, PIN_STEP);
+        device.set_config(StepperConfig::GEN); 
     
-        ctrl.apply_inertia(Inertia(0.4));
-        ctrl.apply_force(Force(0.10));
+        device.apply_inertia(Inertia(0.4));
+        device.apply_force_gen(Force(0.10));
     
         println!("Staring to move");
-        ctrl.drive_rel(DELTA, OMEGA)?;
+        device.drive_rel(DELTA, OMEGA)?;
         println!("{} with max speed {:?}rad/s done", DELTA, OMEGA);
 
         Ok(())
@@ -44,15 +44,15 @@ mod single_motor
 
 mod curves {
     use crate::StepperConst;
-    use crate::data::{CompVars, CompData};
+    use crate::data::{CompVars, StepperConfig};
     use crate::math;
     use crate::units::*;
    
     #[test]
     fn simple() {
         let data = StepperConst::GEN;
-        let vars = CompVars { t_load: Force(0.1), j_load: Inertia(1.0), ..Default::default() };
-        let data = CompData::GEN;
+        let vars = CompVars { force_load_gen: Force(0.1), inertia_load: Inertia(1.0), ..Default::default() };
+        let data = StepperConfig::GEN;
 
         let delta = Delta(0.62);
         let omega = Omega(10.0);
