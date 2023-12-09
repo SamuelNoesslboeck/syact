@@ -84,7 +84,7 @@ extern crate alloc;
         }
 
         /// Points to `setup``, helper function
-        fn setup_owned(mut self) -> Result<Self, Error> 
+        fn setup_inline(mut self) -> Result<Self, Error> 
         where 
             Self : Sized 
         {
