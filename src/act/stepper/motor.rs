@@ -43,7 +43,7 @@ fn no_async() -> crate::Error {
 /// A stepper motor
 /// 
 /// Controlled by two pins, one giving information about the direction, the other about the step signal (PWM)
-pub struct HRStepper<C : Controller + Send + 'static> {
+pub struct HRStepper<C : Controller + Setup + Send + 'static> {
     /// Underlying controller of the stepper motor
     pub(crate) _ctrl : Arc<Mutex<C>>,
 
@@ -83,7 +83,7 @@ pub struct HRStepper<C : Controller + Send + 'static> {
 }
 
 // Inits
-impl<C : Controller + Send + 'static> HRStepper<C> {   
+impl<C : Controller + Setup + Send + 'static> HRStepper<C> {   
     /// Creates a new stepper controller with the given stepper motor constants `consts`
     pub fn new(device : C, consts : StepperConst) -> Self {
         Self { 
@@ -153,7 +153,7 @@ impl<C : Controller + Send + 'static> HRStepper<C> {
 }
 
 // Basic functions
-impl<C : Controller + Send + 'static> HRStepper<C> {
+impl<C : Controller + Setup + Send + 'static> HRStepper<C> {
     /// Write a curve of signals to the step output pins
     /// The curve can be any iterator that yields `Time`
     pub fn drive_curve<I, F>(
@@ -247,7 +247,7 @@ impl<C : Controller + Send + 'static> HRStepper<C> {
     }
 }
 
-impl<C : Controller + Send + 'static> HRStepper<C> {
+impl<C : Controller + Setup + Send + 'static> HRStepper<C> {
     /// Makes the component move a single step with the given `time`
     /// 
     /// # Error
@@ -293,7 +293,7 @@ impl<C : Controller + Send + 'static> HRStepper<C> {
 }
 
 // Async helper functions
-impl<C : Controller + Send + 'static> HRStepper<C> {
+impl<C : Controller + Setup + Send + 'static> HRStepper<C> {
     /// Sets the active status of the component
     fn set_active_status(&mut self) {
         self.active.store(true, Ordering::Relaxed)
@@ -530,7 +530,7 @@ impl<C : Controller + Send + 'static> HRStepper<C> {
     // 
 }
 
-impl<C : Controller + Send + 'static> Setup for HRStepper<C> {
+impl<C : Controller + Setup + Send + 'static> Setup for HRStepper<C> {
     fn setup(&mut self) -> Result<(), crate::Error> {
         if self._config.voltage == 0.0 {
             return Err("Provide the component with vaild data! (`StepperConfig` is invalid)".into());
@@ -538,13 +538,14 @@ impl<C : Controller + Send + 'static> Setup for HRStepper<C> {
 
         self._omega_max = self._consts.omega_max(self._config.voltage);
 
+        self._ctrl.lock().unwrap().setup()?;
         self.setup_async();
 
         Ok(())
     }
 }
 
-impl<C : Controller + Send + 'static> SyncActuator for HRStepper<C> {
+impl<C : Controller + Setup + Send + 'static> SyncActuator for HRStepper<C> {
     // Data
         fn vars<'a>(&'a self) -> &'a ActuatorVars {
             &self._vars
@@ -847,7 +848,7 @@ impl<C : Controller + Send + 'static> SyncActuator for HRStepper<C> {
     //
 }
 
-impl<C : Controller + Send + 'static> AsyncActuator for HRStepper<C> {
+impl<C : Controller + Setup + Send + 'static> AsyncActuator for HRStepper<C> {
     type Duty = f32;
     
     fn drive(&mut self, dir : Direction, speed_f : f32) -> Result<(), crate::Error> {
@@ -901,7 +902,7 @@ impl<C : Controller + Send + 'static> AsyncActuator for HRStepper<C> {
     }
 }
 
-impl<C : Controller + Send + 'static> StepperActuator for HRStepper<C> {
+impl<C : Controller + Setup + Send + 'static> StepperActuator for HRStepper<C> {
     // Motor
         fn motor(&self) -> &dyn StepperMotor {
             self
@@ -944,7 +945,7 @@ impl<C : Controller + Send + 'static> StepperActuator for HRStepper<C> {
     }
 }
 
-impl<C : Controller + Send + 'static> StepperMotor for HRStepper<C> {
+impl<C : Controller + Setup + Send + 'static> StepperMotor for HRStepper<C> {
     // Calculations
         fn torque_at_speed(&self, omega : Omega) -> Force {
             torque_dyn(self.consts(), omega, self._config.voltage, self.consts().current_max)
@@ -956,7 +957,7 @@ impl<C : Controller + Send + 'static> StepperMotor for HRStepper<C> {
     // 
 }
 
-impl<C : Controller + Send> Interruptible for HRStepper<C> {
+impl<C : Controller + Setup + Send + 'static> Interruptible for HRStepper<C> {
     // Interruptors
         fn add_interruptor(&mut self, interruptor : Box<dyn Interruptor + Send>) {
             let mut intr = self.intrs.lock().unwrap();

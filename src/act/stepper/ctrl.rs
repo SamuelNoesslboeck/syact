@@ -5,7 +5,7 @@ use sylo::Direction;
 
 use crate::act::stepper::StepError;
 use crate::device::pin::*;
-use crate::units::*;
+use crate::{units::*, Setup};
 
 // Constants
 pub const STEP_PULSE_TIME : Time = Time(1.0 / 40000.0);
@@ -69,6 +69,15 @@ impl GenericPWM {
 
     pub fn pin_dir(&self) -> u8 {
         self.pin_dir.pin
+    }
+}
+
+impl Setup for GenericPWM {
+    fn setup(&mut self) -> Result<(), crate::Error> {
+        self.pin_step.setup()?; 
+        self.pin_dir.setup()?;
+
+        Ok(())
     }
 }
 
