@@ -653,7 +653,7 @@ impl<C : Controller + Setup + Send + 'static> SyncActuator for HRStepper<C> {
     // Async
         fn drive_rel_async(&mut self, delta : Delta, speed_f : f32) -> Result<(), crate::Error> {
             // Check for invalid speed factor (out of bounds)
-            if (1.0 < speed_f) | (0.0 >= speed_f) {
+            if (1.0 < speed_f) | (0.0 > speed_f) {
                 panic!("Invalid speed factor! {}", speed_f)
             }
             
@@ -664,9 +664,13 @@ impl<C : Controller + Setup + Send + 'static> SyncActuator for HRStepper<C> {
 
             self.reset_active_status()?;
 
-            // If delta is zero, do nothing
+            // If delta or speed_f is zero, do nothing
             if delta == Delta::ZERO {
-                return Ok(())    
+                return Ok(())   
+            }
+
+            if speed_f == 0.0 {
+                return Ok(())   
             }
             
             self.setup_drive(delta)?;
