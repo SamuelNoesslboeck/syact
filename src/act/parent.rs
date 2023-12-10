@@ -94,10 +94,6 @@ pub trait ActuatorParent {
 
         // Drive
             fn drive_rel(&mut self, mut delta : Delta, speed_f : f32) -> Result<Delta, crate::Error> {
-                if (1.0 < speed_f) | (0.0 >= speed_f) {
-                    panic!("Invalid speed factor! {}", speed_f)
-                }
-
                 delta = self.delta_for_chlid(delta);
                 delta = self.child_mut().drive_rel(delta, speed_f)?;
 
@@ -108,10 +104,6 @@ pub trait ActuatorParent {
         // Async
             /// Moves the component by the relative distance as fast as possible
             fn drive_rel_async(&mut self, mut delta : Delta, speed_f : f32) -> Result<(), crate::Error> {
-                if (1.0 < speed_f) | (0.0 >= speed_f) {
-                    panic!("Invalid speed factor! {}", speed_f)
-                }
-
                 delta = self.delta_for_chlid(delta);
 
                 self.child_mut().drive_rel_async(delta, speed_f)

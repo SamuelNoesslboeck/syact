@@ -555,7 +555,7 @@ impl<C : Controller + Setup + Send + 'static> SyncActuator for HRStepper<C> {
     // Movement
         fn drive_rel(&mut self, delta : Delta, speed_f : f32) -> Result<Delta, crate::Error> {
             // Check for invalid speed factor (out of bounds)
-            if (1.0 < speed_f) | (0.0 >= speed_f) {
+            if (1.0 < speed_f) | (0.0 > speed_f) {
                 panic!("Invalid speed factor! {}", speed_f)
             }
             
@@ -564,8 +564,12 @@ impl<C : Controller + Setup + Send + 'static> SyncActuator for HRStepper<C> {
                 return Err(format!("Invalid delta distance! {}", delta).into());
             }
 
-            // If delta is zero, do nothing
+            // If delta or speed_f is zero, do nothing
             if delta == Delta::ZERO {
+                return Ok(Delta::ZERO)   
+            }
+
+            if speed_f == 0.0 {
                 return Ok(Delta::ZERO)   
             }
 
