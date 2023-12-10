@@ -665,13 +665,17 @@ impl<C : Controller + Setup + Send + 'static> SyncActuator for HRStepper<C> {
             self.reset_active_status()?;
 
             // If delta or speed_f is zero, do nothing
-            if delta == Delta::ZERO {
+            if self.consts().steps_from_angle(delta, self.microsteps()) == 0 {
                 return Ok(())   
             }
 
             if speed_f == 0.0 {
                 return Ok(())   
             }
+
+            // Logging information
+                log::debug!("[drive_rel (async)] Delta: {:?}, Speed-Factor {:?}", delta, speed_f);
+            // 
             
             self.setup_drive(delta)?;
     
@@ -700,6 +704,10 @@ impl<C : Controller + Setup + Send + 'static> SyncActuator for HRStepper<C> {
         }
 
         fn drive_abs_async(&mut self, gamma : Gamma, speed_f : f32) -> Result<(), crate::Error> {
+            // Logging
+                log::debug!("[drive_abs (async)] Gamma: {} (current: {}), Speed-Factor: {}", gamma, self.gamma(), speed_f);
+            // 
+
             let delta = gamma - self.gamma();
             self.drive_rel_async(delta, speed_f)
         }
@@ -717,10 +725,10 @@ impl<C : Controller + Setup + Send + 'static> SyncActuator for HRStepper<C> {
                 return Err(no_async());
             }
 
-            // TODO: Make sure nothing is blocking
-            // if !self.is_active() {
-            //     return Err(not_active());
-            // }
+            // TODO: Better message
+            if !self.is_active() {
+                return Ok(Delta::ZERO);      
+            }
 
             let delta = if let Some(recv) = &self.receiver {
                 recv.recv().unwrap()    // TODO: Remove unwrap
