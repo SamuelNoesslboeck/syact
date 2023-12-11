@@ -24,7 +24,7 @@ extern crate alloc;
     
         /// Structs for storing characteristics of stepper motors and devices
         pub mod data;
-        pub use data::{StepperConst, StepperConfig, ActuatorVars};
+        pub use data::{StepperConst, StepperConfig, ActuatorVars, MicroSteps, SpeedFactor};
 
         /// Functions and Structs for calculating Stepper Motor procedures and operations
         pub mod math;
@@ -60,13 +60,6 @@ extern crate alloc;
     // Wrapped types
     /// The general error type used in the crate
     pub type Error = Box<dyn std::error::Error>;
-
-    #[inline(always)]
-    fn lib_error<E>(error : E) -> crate::Error 
-    where
-        E: Into<Box<dyn std::error::Error + Sync + Send>> {
-        error.into()
-    }
 //
 
 // ###########################

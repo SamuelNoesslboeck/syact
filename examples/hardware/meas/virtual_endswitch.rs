@@ -17,17 +17,18 @@ fn main() -> Result<(), syact::Error> {
     stepper.add_interruptor(Box::new(switch));
 
     // Drive
-    stepper.drive(sylo::Direction::CW, 1.0)?;
+    let gamma_0 = stepper.gamma();
+    stepper.drive(sylo::Direction::CW, SpeedFactor::MAX)?;
 
     std::thread::sleep(core::time::Duration::from_millis(2000));
     
     vpin.store(true, core::sync::atomic::Ordering::Relaxed);
 
-    let delta = stepper.await_inactive()?;
+    stepper.await_inactive()?;
 
     println!("Movement done!");
     println!("Stats:");
-    println!("- Delta: {}", delta);
+    println!("- Delta: {}", stepper.gamma() - gamma_0);
     println!("- Gamma: {}", stepper.gamma());
     println!("- Reason: {:?}", stepper.intr_reason());
 

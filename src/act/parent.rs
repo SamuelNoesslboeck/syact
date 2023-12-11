@@ -1,3 +1,4 @@
+use crate::data::{SpeedFactor, MicroSteps};
 use crate::prelude::StepperActuator;
 use crate::{ActuatorVars, SyncActuator, Setup, StepperConfig};
 use crate::units::*;
@@ -93,31 +94,26 @@ pub trait ActuatorParent {
         // 
 
         // Drive
-            fn drive_rel(&mut self, mut delta : Delta, speed_f : f32) -> Result<Delta, crate::Error> {
+            fn drive_rel(&mut self, mut delta : Delta, speed : SpeedFactor) -> Result<(), crate::Error> {
                 delta = self.delta_for_chlid(delta);
-                delta = self.child_mut().drive_rel(delta, speed_f)?;
-
-                Ok(self.delta_for_parent(delta))
+                self.child_mut().drive_rel(delta, speed)
             }
         //  
 
         // Async
             /// Moves the component by the relative distance as fast as possible
-            fn drive_rel_async(&mut self, mut delta : Delta, speed_f : f32) -> Result<(), crate::Error> {
+            fn drive_rel_async(&mut self, mut delta : Delta, speed : SpeedFactor) -> Result<(), crate::Error> {
                 delta = self.delta_for_chlid(delta);
-
-                self.child_mut().drive_rel_async(delta, speed_f)
+                self.child_mut().drive_rel_async(delta, speed)
             }
 
             fn drive_omega(&mut self, mut omega_tar : Omega) -> Result<(), crate::Error> {
                 omega_tar = self.omega_for_child(omega_tar);
-
                 self.child_mut().drive_omega(omega_tar)
             }   
 
-            fn await_inactive(&mut self) -> Result<Delta, crate::Error> {
-                let delta = self.child_mut().await_inactive()?;
-                Ok(self.delta_for_parent(delta))
+            fn await_inactive(&mut self) -> Result<(), crate::Error> {
+                self.child_mut().await_inactive()
             }
         // 
 
@@ -223,11 +219,11 @@ pub trait ActuatorParent {
         //
 
         // Microsteps
-            fn microsteps(&self) -> u8 {
+            fn microsteps(&self) -> MicroSteps {
                 self.child().microsteps()
             }
 
-            fn set_microsteps(&mut self, micro : u8) {
+            fn set_microsteps(&mut self, micro : MicroSteps) {
                 self.child_mut().set_microsteps(micro)
             }
         // 

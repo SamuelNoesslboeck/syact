@@ -6,7 +6,6 @@ use syact::prelude::*;
 
 // Define distance and max speed defaults
 const DELTA_DEF : Delta = Delta(30.0 * 2.0 * PI);       // Default value is 30 revolutions
-const SPEED_F_DEF : f32 = 0.5;
 
 fn main() -> Result<(), syact::Error> {
     // Parse cmd args
@@ -19,7 +18,7 @@ fn main() -> Result<(), syact::Error> {
         .arg(arg!([dir] "sylo::Direction of the endswitch (`1` => `CW`, `0` => `CCW`)").value_parser(value_parser!(u8)))
         .arg(arg!([micro] "Enables microstepping with the given step value (1 per default)").value_parser(value_parser!(u8)))
         .arg(arg!([delta] "Delta (distance) of the movement in rad (2pi [1 rev] per default)").value_parser(value_parser!(f32)))
-        .arg(arg!([speed_f] "Omega (velocity) of the movement in rad/s (10 rad/s per default)").value_parser(value_parser!(f32)))
+        .arg(arg!([speed] "Speed factor of movement").value_parser(value_parser!(SpeedFactor)))
         .get_matches();
 
     let pin_step : u8 = *matches.get_one("pin_step").expect("A valid step pin has to be provided");
@@ -27,9 +26,9 @@ fn main() -> Result<(), syact::Error> {
     let pin_meas : u8 = *matches.get_one("pin_meas").expect("A valid measurement pin has to be provided");
     let dir_opt : Option<Direction> = matches.get_one("dir").map(|val| sylo::Direction::from_u8(*val));
 
-    let micro_opt : Option<&u8> = matches.get_one("micro");
+    let micro_opt : Option<&MicroSteps> = matches.get_one("micro");
     let delta : Delta  = Delta(*matches.get_one("delta").unwrap_or(&DELTA_DEF.0));
-    let speed_f : f32 = *matches.get_one("speed_f").unwrap_or(&SPEED_F_DEF);
+    let speed : SpeedFactor = *matches.get_one("speed").unwrap_or(&SpeedFactor::from(0.5));
 
     // Load data
     let inertia = std::env::var("INERTIA").ok().map(|v| v.parse::<Inertia>().unwrap()).unwrap_or(Inertia::ZERO);
@@ -46,7 +45,7 @@ fn main() -> Result<(), syact::Error> {
     let data = SimpleMeasData { 
         set_gamma: Gamma::ZERO, 
         max_dist: delta, 
-        meas_speed_f: speed_f, 
+        meas_speed: speed, 
 
         add_samples: samples, 
         sample_dist: None
@@ -57,7 +56,6 @@ fn main() -> Result<(), syact::Error> {
     // Link the component to a system
     device.set_config(StepperConfig { 
         voltage: 12.0,    // System voltage in volts
-        safety_factor: 1.5    // System safety factor, should be at least 1.0
     }); 
     device.setup()?;
 
@@ -78,7 +76,7 @@ fn main() -> Result<(), syact::Error> {
     // Starting the measurement
     println!("Starting measurement ... ");
 
-    let res = syact::meas::take_simple_meas(&mut device, &data, 1.0)?;
+    let res = syact::meas::take_simple_meas(&mut device, &data, SpeedFactor::MAX)?;
 
     println!("Measurement done!\n");
 

@@ -1,5 +1,5 @@
 use crate::act::InterruptReason;
-use crate::SyncActuator;
+use crate::{SyncActuator, SpeedFactor};
 use crate::act::Interruptible;
 use crate::units::*;
 
@@ -21,7 +21,7 @@ pub struct SimpleMeasData {
     pub set_gamma : Gamma,
     pub max_dist : Delta,
 
-    pub meas_speed_f : f32,
+    pub meas_speed : SpeedFactor,
 
     #[serde(default = "default_add_samples")]
     pub add_samples : usize,
@@ -66,12 +66,12 @@ impl SimpleMeasResult {
 /// # Measurement data and its usage
 /// 
 /// Specifing a `sample_dist` is optional, as the script will replace it with 10% of the maximum distance if not specified
-pub fn take_simple_meas<C : SyncActuator + Interruptible + ?Sized>(comp : &mut C, data : &SimpleMeasData, speed_f : f32) -> Result<SimpleMeasResult, crate::Error> {
+pub fn take_simple_meas<C : SyncActuator + Interruptible + ?Sized>(comp : &mut C, data : &SimpleMeasData, speed : SpeedFactor) -> Result<SimpleMeasResult, crate::Error> {
     let mut gammas : Vec<Gamma> = Vec::new();
 
     // Init measurement
         // Drive full distance with optionally reduced speed
-        comp.drive_rel(data.max_dist, data.meas_speed_f * speed_f)?;
+        comp.drive_rel(data.max_dist, data.meas_speed * speed)?;
 
         // Check wheiter the component has been interrupted and if it is the correct interrupt
         if comp.intr_reason().ok_or("The measurement failed! No interrupt was triggered")? != InterruptReason::EndReached {
@@ -86,12 +86,12 @@ pub fn take_simple_meas<C : SyncActuator + Interruptible + ?Sized>(comp : &mut C
             println!("- Gamma: {}", comp.gamma());
 
             // Drive half of the sample distance back (faster)
-            println!("- Delta {}", comp.drive_rel(-data.sample_dist.unwrap_or(data.max_dist * 0.25) / 2.0, speed_f)?);
+            comp.drive_rel(-data.sample_dist.unwrap_or(data.max_dist * 0.25) / 2.0, speed)?;
 
             println!("- Gamma: {}", comp.gamma());
 
             // Drive sample distance
-            println!("- Delta: {}", comp.drive_rel(data.sample_dist.unwrap_or(data.max_dist * 0.25), data.meas_speed_f * speed_f)?);
+            comp.drive_rel(data.sample_dist.unwrap_or(data.max_dist * 0.25), data.meas_speed * speed)?;
 
             println!("- Gamma: {}", comp.gamma());
 

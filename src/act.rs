@@ -2,7 +2,7 @@ use alloc::sync::Arc;
 use atomic_float::AtomicF32;
 
 use crate::Setup;
-use crate::data::ActuatorVars;
+use crate::data::{ActuatorVars, SpeedFactor};
 use crate::units::*;
 
 // ####################
@@ -120,27 +120,27 @@ pub trait SyncActuator : Setup {
     // Movement
         /// Moves the component by the relative distance as fast as possible, halts the script until 
         /// the movement is finshed and returns the actual **relative** distance travelled
-        fn drive_rel(&mut self, delta : Delta, speed_f : f32) -> Result<Delta, crate::Error>;
+        fn drive_rel(&mut self, delta : Delta, speed : SpeedFactor) -> Result<(), crate::Error>;
 
         /// Moves the component to the given position as fast as possible, halts the script until the 
         /// movement is finished and returns the actual **relative** distance travelled.
         #[inline]
-        fn drive_abs(&mut self, gamma : Gamma, speed_f : f32) -> Result<Delta, crate::Error> {
+        fn drive_abs(&mut self, gamma : Gamma, speed : SpeedFactor) -> Result<(), crate::Error> {
             let delta = gamma - self.gamma();
-            self.drive_rel(delta, speed_f)
+            self.drive_rel(delta, speed)
         }
     // 
 
     // Async
         /// Moves the component by the relative distance as fast as possible
-        fn drive_rel_async(&mut self, delta : Delta, speed_f : f32) -> Result<(), crate::Error>;
+        fn drive_rel_async(&mut self, delta : Delta, speed : SpeedFactor) -> Result<(), crate::Error>;
 
         /// Moves the component to the given position as fast as possible, halts the script until the 
         /// movement is finished and returns the actual **abolute** distance traveled to. 
         #[inline(always)]
-        fn drive_abs_async(&mut self, gamma : Gamma, speed_f : f32) -> Result<(), crate::Error> {
+        fn drive_abs_async(&mut self, gamma : Gamma, speed : SpeedFactor) -> Result<(), crate::Error> {
             let delta = gamma - self.gamma();
-            self.drive_rel_async(delta, speed_f)
+            self.drive_rel_async(delta, speed)
         }
 
         fn drive_omega(&mut self, omega_tar : Omega) -> Result<(), crate::Error>;
@@ -151,7 +151,7 @@ pub trait SyncActuator : Setup {
         /// 
         /// - Returns an error if the definition has not been overwritten by the component and no parent component is known
         /// - Returns an error if no async movement has been started yet
-        fn await_inactive(&mut self) -> Result<Delta, crate::Error>;
+        fn await_inactive(&mut self) -> Result<(), crate::Error>;
     // 
 
     // Position

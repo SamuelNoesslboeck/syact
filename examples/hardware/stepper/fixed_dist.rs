@@ -29,7 +29,7 @@ fn main() -> Result<(), syact::Error> {
     // Load data
     let inertia = std::env::var("INERTIA").ok().map(|v| v.parse::<Inertia>().unwrap()).unwrap_or(Inertia::ZERO);
     let force = std::env::var("FORCE").ok().map(|v| Force(v.parse::<f32>().unwrap())).unwrap_or(Force::ZERO);
-    let micro_opt = std::env::var("MICRO").ok().map(|v| v.parse::<u8>().unwrap());
+    let micro_opt = std::env::var("MICRO").ok().map(|v| v.parse::<MicroSteps>().unwrap());
 
     // Create the controls for a stepper motor
     let mut device = Stepper::new(
@@ -39,8 +39,7 @@ fn main() -> Result<(), syact::Error> {
 
     // Link the component to a system
     device.set_config(StepperConfig { 
-        voltage: 12.0,    // System voltage in volts
-        safety_factor: 1.5    // System safety factor, should be at least 1.0
+        voltage: 12.0    // System voltage in volts
     }); 
     device.setup()?;
 
@@ -54,10 +53,8 @@ fn main() -> Result<(), syact::Error> {
 
     device.set_omega_max(omega);
 
-    device.debug_data();
-
     print!("Staring to move ... ");
-    device.drive_rel(delta, 1.0)?;      // Move the motor
+    device.drive_rel(delta, SpeedFactor::MAX)?;      // Move the motor
     println!("done!");
     println!("");
 

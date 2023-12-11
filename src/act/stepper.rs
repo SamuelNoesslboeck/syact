@@ -1,3 +1,4 @@
+use crate::data::MicroSteps;
 use crate::{StepperConst, SyncActuator, SyncActuatorGroup, StepperConfig};
 use crate::units::*;
 
@@ -6,6 +7,9 @@ use crate::units::*;
 // 
 
 // Submodules
+    mod builder;
+    pub use builder::{DriveError, DriveMode, StepperBuilder, StartStopBuilder};
+
     mod ctrl;
     pub use ctrl::{Controller, GenericPWM};
 
@@ -16,7 +20,7 @@ use crate::units::*;
 // #   Stepper-Types   #
 // #####################
     /// Default `Stepper` type for high-performance systems (high resolution stepper)
-    pub type Stepper = motor::HRStepper<GenericPWM>;
+    pub type Stepper = motor::ThreadedStepper<StartStopBuilder, GenericPWM>;
 
     impl Stepper {
         /// Creates a new generic stepper with both pins set to [ERR_PIN](super::pin::ERR_PIN) just for simulation and testing purposes
@@ -32,20 +36,10 @@ use crate::units::*;
 // #####################
 // #    ERROR-TYPES    #
 // #####################
-    #[derive(Debug)]
+    #[derive(Debug, Clone)]
     pub enum StepError {
         TimeTooShort(Time),
-        TimeIsIncorrect(Time),
-        Other(crate::Error)
-    }
-
-    impl StepError {
-        pub fn is_other(&self) -> bool {
-            match self {
-                Self::Other(_) => true,
-                _ => false
-            }
-        }
+        TimeIsIncorrect(Time)
     }
 
     impl core::fmt::Display for StepError {
@@ -54,8 +48,7 @@ use crate::units::*;
                 Self::TimeTooShort(t) => 
                     f.write_fmt(format_args!("Bad step time! Time given ({}) is smaller than STEP_PULSE_TIME ({})", t, ctrl::STEP_PULSE_TIME)),
                 Self::TimeIsIncorrect(t) => 
-                    f.write_fmt(format_args!("Bad step time! Time given ({}) is invalid!", t)),
-                Self::Other(err) => err.fmt(f)
+                    f.write_fmt(format_args!("Bad step time! Time given ({}) is invalid!", t))
             }
         }
     }
@@ -85,10 +78,10 @@ use crate::units::*;
 
         // Microstepping
             /// The amount of microsteps in a full step
-            fn microsteps(&self) -> u8;
+            fn microsteps(&self) -> MicroSteps;
 
             /// Set the amount of microsteps in a full step
-            fn set_microsteps(&mut self, micro : u8);
+            fn set_microsteps(&mut self, micro : MicroSteps);
         //
 
         // Steps
@@ -120,14 +113,14 @@ use crate::units::*;
         }
 
         /// Returns the amount of microsteps every component uses
-        fn microsteps(&self) -> [u8; C] {
+        fn microsteps(&self) -> [MicroSteps; C] {
             self.for_each(|comp, _| {
                 comp.microsteps()
             })
         }
 
         /// Sets the amount of microsteps for each motor 
-        fn set_micro(&mut self, micro : [u8; C]) {
+        fn set_micro(&mut self, micro : [MicroSteps; C]) {
             self.for_each_mut(|comp, index| {
                 comp.set_microsteps(micro[index]);
             });

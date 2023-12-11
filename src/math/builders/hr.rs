@@ -1,6 +1,6 @@
 use crate::StepperConst;
 use crate::act::StepperMotor;
-use crate::data::{StepperConfig, ActuatorVars};
+use crate::data::{StepperConfig, ActuatorVars, MicroSteps};
 
 use super::*;
 
@@ -25,7 +25,7 @@ pub struct HRStepBuilder {
 }
 
 impl HRStepBuilder {
-    pub fn new(omega_0 : Omega, consts : StepperConst, vars : ActuatorVars, config : StepperConfig, omega_max : Omega, micro : u8) -> Self {
+    pub fn new(omega_0 : Omega, consts : StepperConst, vars : ActuatorVars, config : StepperConfig, omega_max : Omega, micro : MicroSteps) -> Self {
         Self {
             delta: consts.step_angle(micro),
             omega_0: omega_0.abs(),
@@ -120,7 +120,7 @@ pub struct HRCtrlStepBuilder {
 
 impl HRCtrlStepBuilder {
     pub fn new(omega_0 : Omega, consts : StepperConst, vars : ActuatorVars, data : StepperConfig, 
-    omega_max : Omega, micro : u8) -> Self {
+    omega_max : Omega, micro : MicroSteps) -> Self {
         Self::from_builder(
             HRStepBuilder::new(omega_0, consts, vars, data, omega_max, micro)
         )
@@ -199,7 +199,7 @@ impl Iterator for HRCtrlStepBuilder {
     }
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct HRLimitedStepBuilder {
     builder : HRCtrlStepBuilder,
     steps_max : i64,
@@ -211,7 +211,7 @@ pub struct HRLimitedStepBuilder {
 
 impl HRLimitedStepBuilder {
     pub fn new(omega_0 : Omega, consts : StepperConst, vars : ActuatorVars, data : StepperConfig, 
-    omega_max : Omega, micro : u8) -> Self {
+    omega_max : Omega, micro : MicroSteps) -> Self {
         Self {
             builder: HRCtrlStepBuilder::new(omega_0, consts, vars, data, omega_max, micro),
             steps_max: 0,
@@ -261,18 +261,20 @@ impl Iterator for HRLimitedStepBuilder {
             return None;
         }
 
-        if self.steps_curr > (self.steps_max / 2) {
-            if !self.builder.builder.deccel {
-                self.set_omega_tar(Omega::ZERO).unwrap(); 
-                
-                if (self.steps_max % 2) == 1 {
-                    return Some(self.last_val)
+        if self.steps_max != 1 {
+            if self.steps_curr > (self.steps_max / 2) {
+                if !self.builder.builder.deccel {
+                    self.set_omega_tar(Omega::ZERO).unwrap(); 
+                    
+                    if (self.steps_max % 2) == 1 {
+                        return Some(self.last_val)
+                    }
                 }
-            }
 
-            if let Some(dist) = self.reach_dist {
-                if (self.steps_max / 2 - dist) >= (self.steps_curr - self.steps_max / 2) {
-                    return Some(self.last_val)
+                if let Some(dist) = self.reach_dist {
+                    if (self.steps_max / 2 - dist) >= (self.steps_curr - self.steps_max / 2) {
+                        return Some(self.last_val)
+                    }
                 }
             }
         }

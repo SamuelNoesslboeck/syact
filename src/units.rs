@@ -10,6 +10,8 @@ use core::time::Duration;
 
 use serde::{Serialize, Deserialize}; 
 
+use crate::data::SpeedFactor;
+
 #[macro_export]
 macro_rules! additive_unit {
     ( $unit:ident ) => {
@@ -57,6 +59,15 @@ macro_rules! basic_unit {
             pub const INFINITY : Self = Self(f32::INFINITY);
             /// NaN value of this unit (f32::NAN)
             pub const NAN : Self = Self(f32::NAN);
+
+            // Special operations
+            pub fn get_direction(self) -> sylo::Direction {
+                if self.0 >= 0.0 {
+                    sylo::Direction::CW
+                } else {
+                    sylo::Direction::CCW
+                }
+            }
 
             /// Returns the absolute value of the unit
             #[inline(always)]
@@ -207,6 +218,24 @@ macro_rules! basic_unit {
                 #[inline(always)]
                 fn mul(self, rhs : $a) -> Self::Output {
                     $a(self * rhs.0)
+                }
+            }
+
+            impl core::ops::Mul<SpeedFactor> for $a {
+                type Output = $a;
+                
+                #[inline(always)]
+                fn mul(self, rhs: SpeedFactor) -> Self::Output {
+                    $a(self.0 * f32::from(rhs))
+                }
+            }
+
+            impl core::ops::Mul<$a> for SpeedFactor {
+                type Output = $a;
+
+                #[inline(always)]
+                fn mul(self, rhs : $a) -> Self::Output {
+                    $a(f32::from(self) * rhs.0)
                 }
             }
         // 

@@ -3,6 +3,7 @@ use core::f32::consts::PI;
 use serde::{Serialize, Deserialize};
 use sylo::Direction;
 
+use crate::data::MicroSteps;
 use crate::math::force::torque_dyn;
 use crate::{units::*, ActuatorVars};
 
@@ -10,24 +11,20 @@ use crate::{units::*, ActuatorVars};
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct StepperConfig {
     /// Supply voltage of the components in Volts
-    pub voltage : f32,
-    /// Safety factor of movements
-    pub safety_factor : f32
+    pub voltage : f32
 }
 
 impl StepperConfig {
     /// Generic `StepperConfig` for testing purposes
     pub const GEN : Self = Self {
-        voltage: 12.0,
-        safety_factor: 1.5
+        voltage: 12.0
     };  
 
     /// Comp data that will case an error in calculations as it has not been yet initialized.  
     /// 
     /// (Has to be overwritten, will cause errors otherwise)
     pub const ERROR : Self = Self {
-        voltage: 0.0,
-        safety_factor: 0.0
+        voltage: 0.0
     };
 
     /// Creates a new StepperConfig instance
@@ -36,24 +33,10 @@ impl StepperConfig {
     /// 
     /// Panics if the given safety factor is smaller than 1.0
     #[inline(always)]
-    pub fn new(voltage : f32, safety_factor : f32) -> Self {
-        if safety_factor < 1.0 {
-            panic!("The given safetly factor is invalid! {}", safety_factor);
-        }
-
-        Self { voltage, safety_factor }
+    pub fn new(voltage : f32) -> Self {
+        Self { voltage }
     }
 }
-
-impl From<(f32, f32)> for StepperConfig {
-    fn from(data: (f32, f32)) -> Self {
-        Self {
-            voltage: data.0, 
-            safety_factor: data.1
-        }
-    }
-}
-
 
 /// A collection of the most relevant variables Unit stepper calculation 
 /// ```
@@ -161,7 +144,7 @@ impl StepperConst {
     /// assert!((data.omega(Time(1.0/200.0), 1) - Omega(2.0 * PI)).abs() < Omega(0.001));     
     /// ```
     #[inline(always)]
-    pub fn omega(&self, step_time : Time, microsteps : u8) -> Omega {
+    pub fn omega(&self, step_time : Time, microsteps : MicroSteps) -> Omega {
         if (step_time == Time(0.0)) | (step_time == Time(-0.0)) {
             panic!("The given step time ({}) is zero!", step_time)
         }
@@ -173,8 +156,8 @@ impl StepperConst {
         /// Get the angular distance of a step in radians, considering microstepping
         /// - `micro` is the amount of microsteps per full step
         #[inline(always)]
-        pub fn step_angle(&self, microsteps : u8) -> Delta {
-            self.full_step_angle() / microsteps as f32
+        pub fn step_angle(&self, microsteps : MicroSteps) -> Delta {
+            self.full_step_angle() / microsteps.as_u8() as f32
         }
 
         /// A full step angle of the motor, ignoring microstepping
@@ -193,7 +176,7 @@ impl StepperConst {
         /// 
         /// Panics if the given `omega` is zero 
         #[inline]
-        pub fn step_time(&self, omega : Omega, microsteps : u8) -> Time {
+        pub fn step_time(&self, omega : Omega, microsteps : MicroSteps) -> Time {
             // if (omega == Omega(0.0)) | (omega == Omega(-0.0)) {
             //     panic!("The given omega ({}) is zero!", omega);
             // }
@@ -219,32 +202,32 @@ impl StepperConst {
     // Steps & Angles - Conversions
         /// Converts the given angle `ang` into a absolute number of steps (always positive).
         #[inline(always)]
-        pub fn steps_from_angle_abs(&self, angle : Delta, microsteps : u8) -> u64 {
+        pub fn steps_from_angle_abs(&self, angle : Delta, microsteps : MicroSteps) -> u64 {
             (angle.abs() / self.step_angle(microsteps)).round() as u64
         }   
 
         /// Converts the given angle `ang` into a number of steps
         #[inline(always)]
-        pub fn steps_from_angle(&self, angle : Delta, microsteps : u8) -> i64 {
+        pub fn steps_from_angle(&self, angle : Delta, microsteps : MicroSteps) -> i64 {
             (angle / self.step_angle(microsteps)).round() as i64
         }   
 
         /// Converts the given number of steps into an angle
         #[inline(always)]
-        pub fn angle_from_steps_abs(&self, steps : u64, microsteps : u8) -> Delta {
+        pub fn angle_from_steps_abs(&self, steps : u64, microsteps : MicroSteps) -> Delta {
             steps as f32 * self.step_angle(microsteps)
         }
 
         /// Converts the given number of steps into an angle
         #[inline(always)]
-        pub fn angle_from_steps(&self, steps : i64, microsteps : u8) -> Delta {
+        pub fn angle_from_steps(&self, steps : i64, microsteps : MicroSteps) -> Delta {
             steps as f32 * self.step_angle(microsteps)
         }
 
         // Comparision
         /// Checks wheither the given angle `ang` is in range (closes to) a given step count `steps`
         #[inline(always)]
-        pub fn is_in_step_range(&self, steps : i64, angle : Delta, microsteps : u8) -> bool {
+        pub fn is_in_step_range(&self, steps : i64, angle : Delta, microsteps : MicroSteps) -> bool {
             self.steps_from_angle(angle, microsteps) == steps
         }
     //
