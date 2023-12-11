@@ -1,7 +1,6 @@
 use serde::{Serialize, Deserialize};
-use sylo::Direction; 
 
-use crate::{Stepper, SyncActuator, Setup, AsyncActuator};
+use crate::{Stepper, SyncActuator, Setup};
 use crate::act::parent::{ActuatorParent, RatioActuatorParent};
 use crate::units::*;
 
@@ -74,19 +73,3 @@ impl<C : SyncActuator> Setup for Conveyor<C> {
         // 
     }
 // 
-
-impl<C : AsyncActuator<Duty = f32> + SyncActuator> AsyncActuator for Conveyor<C> {
-    type Duty = f32;
-
-    fn drive(&mut self, dir : Direction, speed_f : f32) -> Result<(), crate::Error> {
-        self.device.drive(dir, speed_f)
-    }
-
-    fn dir(&self) -> Direction {
-        self.device.dir()
-    }
-
-    fn speed(&self) -> f32 {
-        self.device.speed()
-    }
-}

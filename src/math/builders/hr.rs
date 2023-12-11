@@ -43,7 +43,7 @@ impl HRStepBuilder {
     }
 
     pub fn from_motor<M : StepperMotor + ?Sized>(motor : &M, omega_0 : Omega) -> Self {
-        Self::new(omega_0, motor.consts().clone(), motor.vars().clone(), motor.config().clone(), motor.omega_max(), motor.microsteps())
+        todo!()
     }
 
     pub fn start_accel(&mut self) {

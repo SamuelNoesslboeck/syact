@@ -1,3 +1,3 @@
-mod comp;
+mod device;
 mod data;
 mod math;

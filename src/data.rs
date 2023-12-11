@@ -46,7 +46,7 @@ impl FromStr for SpeedFactor {
     type Err = <f32 as FromStr>::Err;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Ok(Self(f32::from_str(s)?))
+        Ok(Self::from(f32::from_str(s)?))
     }
 }
 
@@ -61,6 +61,22 @@ impl Mul<SpeedFactor> for SpeedFactor {
 
     fn mul(self, rhs: SpeedFactor) -> Self::Output {
         SpeedFactor(self.0 * rhs.0)
+    }
+}
+
+impl Mul<f32> for SpeedFactor {
+    type Output = SpeedFactor;
+
+    fn mul(self, rhs: f32) -> Self::Output {
+        SpeedFactor::from(self.0 * rhs)
+    }
+}
+
+impl Mul<SpeedFactor> for f32 {
+    type Output = SpeedFactor;
+
+    fn mul(self, rhs: SpeedFactor) -> Self::Output {
+        SpeedFactor::from(self * rhs.0)
     }
 }
 

@@ -1,6 +1,4 @@
 use core::marker::PhantomData;
-use core::ops::DerefMut;
-use core::ptr::NonNull;
 use core::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread::{JoinHandle, self};
@@ -12,8 +10,8 @@ use sylo::Direction;
 use crate::{SyncActuator, Setup, Dismantle};
 use crate::act::{Interruptor, InterruptReason, Interruptible};
 use crate::act::asyn::AsyncActuator;
-use crate::act::stepper::{StepperActuator, StepperMotor, Controller, StepError, StepperBuilder, DriveError, DriveMode};
-use crate::data::{StepperConfig, StepperConst, ActuatorVars, SpeedFactor, MicroSteps}; 
+use crate::act::stepper::{StepperActuator, StepperMotor, Controller, StepperBuilder, DriveError, DriveMode};
+use crate::data::{StepperConfig, StepperConst, SpeedFactor, MicroSteps}; 
 use crate::units::*;
 
 pub enum AsyncMsg {
@@ -31,22 +29,21 @@ type AsyncRes = Result<(), DriveError>;
 pub struct ThreadedStepper<B : StepperBuilder, C : Controller + Setup + Dismantle + Send + 'static> {
     builder : Arc<Mutex<B>>,
 
-    /// The current direction of the stepper motor
-    _dir : Arc<AtomicBool>,
-    /// The current absolute position
-    _gamma : Arc<AtomicF32>,
+    // Atomics
+        /// The current absolute position
+        _gamma : Arc<AtomicF32>,
+        active : Arc<AtomicBool>,
+        _limit_min : Arc<AtomicF32>,
+        _limit_max : Arc<AtomicF32>,
+    // 
 
     /// Maxium omega of the component
-    _t_step_cur : Arc<AtomicF32>,
     _microsteps : MicroSteps,
 
     // Threading and msg senders
-    thr : JoinHandle<()>,
+    _thr : JoinHandle<()>,
     sender : Sender<AsyncMsg>,
     receiver : Receiver<AsyncRes>,
-
-    // Async driving
-    active : Arc<AtomicBool>,
 
     // Interrupters
     intrs : Arc<Mutex<Vec<Box<dyn Interruptor + Send>>>>,
@@ -65,28 +62,39 @@ impl<B : StepperBuilder + Send + 'static + 'static, C : Controller + Setup + Dis
         let (sender_thr, receiver_com) : (Sender<AsyncRes>, Receiver<AsyncRes>) = channel();
 
         // Shared
-        let active = Arc::new(AtomicBool::new(false));
-        let active_clone = active.clone();
+            let active = Arc::new(AtomicBool::new(false));
+            let active_clone = active.clone();
 
-        let builder = Arc::new(Mutex::new(B::new(consts)));
-        let builder_clone = builder.clone();
+            let builder = Arc::new(Mutex::new(B::new(consts)));
+            let builder_clone = builder.clone();
 
-        let dir = Arc::new(AtomicBool::new(true));
-        let dir_clone = dir.clone();
+            let gamma = Arc::new(AtomicF32::new(0.0));
+            let gamma_clone = gamma.clone();
 
-        let gamma = Arc::new(AtomicF32::new(0.0));
-        let gamma_clone = gamma.clone();
+            let limit_min = Arc::new(AtomicF32::new(f32::NEG_INFINITY));
+            let limit_min_clone = limit_min.clone();
+
+            let limit_max = Arc::new(AtomicF32::new(f32::INFINITY));
+            let limit_max_clone = limit_max.clone();
+
+            let interruptors = Arc::new(Mutex::new(Vec::<Box<dyn Interruptor + Send + 'static>>::new()));
+            let interruptors_clone = interruptors.clone();
+
+            let interrupt_reason = Arc::new(Mutex::new(None));
+            let interrupt_reason_clone = interrupt_reason.clone();
+        // 
 
         let thr = thread::spawn(move || {
             // Variables
             let mut msg = AsyncMsg::Setup;
             let mut new_msg = false;
 
-
             loop {
                 // If the builder is inactive, block until a new command is received
                 if *builder.lock().unwrap().drive_mode() == DriveMode::Inactive {
-                    msg = receiver_thr.recv().unwrap();     // TODO: Remove unwrap
+                    if let Ok(m) = receiver_thr.recv() {
+                        msg = m;
+                    } 
                     new_msg = true;
                 } else {
                     if let Ok(m) = receiver_thr.try_recv() {
@@ -101,15 +109,20 @@ impl<B : StepperBuilder + Send + 'static + 'static, C : Controller + Setup + Dis
                         AsyncMsg::Setup => if let Err(_err) = ctrl.setup() {
                             // sender_thr.send(Err(err)).unwrap();
                             continue;
+                        } else {
+                            continue;
                         },
                         AsyncMsg::Dismantle => if let Err(_err) = ctrl.dismantle() {
                             // sender_thr.send(Err(err)).unwrap();
+                            continue;
+                        } else {
                             continue;
                         },
                         AsyncMsg::Drive(mode) => {
                             if let Err(err) = builder.lock().unwrap().set_drive_mode(mode.clone(), &mut ctrl) {
                                 sender_thr.send(Err(err)).unwrap();
                             } else {
+                                // Safety-Store
                                 active.store(true, Ordering::Relaxed);
                             }
                         }
@@ -118,21 +131,65 @@ impl<B : StepperBuilder + Send + 'static + 'static, C : Controller + Setup + Dis
                     new_msg = false;
                 }
 
-                if let Some(node) = builder.lock().unwrap().next() {
+                let mut builder_ref = builder.lock().unwrap();
+
+                if let Some(node) = builder_ref.next() {
+                    let dir_val = builder_ref.dir();
+
+                    // Check all interruptors
+                    for intr in interruptors.lock().unwrap().iter_mut() {
+                        // Check if the direction is right
+                        if let Some(i_dir) = intr.dir() {
+                            if i_dir != dir_val {
+                                continue;
+                            }
+                        }
+
+                        if let Some(reason) = intr.check(&gamma) {
+                            intr.set_temp_dir(Some(dir_val));
+                            interrupt_reason.lock().unwrap().replace(reason);
+                            sender_thr.send(Ok(())).unwrap();
+                        } else {
+                            // Clear temp direction
+                            intr.set_temp_dir(None);
+                        }
+                    }
+
+                    drop(builder_ref);
+
+                    // Make step
                     if let Err(err) = ctrl.step_no_wait(node) {
                         sender_thr.send(Err(DriveError::Step(err))).unwrap();
                     }
 
-                    if dir.load(Ordering::Relaxed) {
+                    builder_ref = builder.lock().unwrap();
+
+                    // Update gamma distance
+                    if dir_val.as_bool() {
                         // TODO: Maybe add cache for step angle?
-                        gamma.fetch_add(builder.lock().unwrap().step_angle().0, Ordering::Relaxed);
+                        if gamma.fetch_add(builder_ref.step_angle().0, Ordering::Relaxed) > limit_max.load(Ordering::Relaxed) {
+                            sender_thr.send(Err(DriveError::LimitReached)).unwrap();
+                            if let Err(err) = builder_ref.set_drive_mode(DriveMode::Stop, &mut ctrl) {
+                                sender_thr.send(Err(err)).unwrap();
+                            }
+                        } 
                     } else {
-                        gamma.fetch_sub(builder.lock().unwrap().step_angle().0, Ordering::Relaxed);
+                        if gamma.fetch_sub(builder_ref.step_angle().0, Ordering::Relaxed) < limit_min.load(Ordering::Relaxed) {
+                            sender_thr.send(Err(DriveError::LimitReached)).unwrap();
+                            if let Err(err) = builder_ref.set_drive_mode(DriveMode::Stop, &mut ctrl) {
+                                sender_thr.send(Err(err)).unwrap();
+                            }
+                        }
                     }
+
+                    drop(builder_ref);
                 } else {
-                    if let Err(err) = builder.lock().unwrap().set_drive_mode(DriveMode::Inactive, &mut ctrl) {
+                    if let Err(err) = builder_ref.set_drive_mode(DriveMode::Inactive, &mut ctrl) {
                         sender_thr.send(Err(err)).unwrap();
                     };
+
+                    drop(builder_ref);
+
                     active.store(false, Ordering::Relaxed);
                     sender_thr.send(Ok(())).unwrap();
                 }
@@ -142,32 +199,24 @@ impl<B : StepperBuilder + Send + 'static + 'static, C : Controller + Setup + Dis
         Self {
             builder: builder_clone,
 
-            _dir: dir_clone,
             _gamma : gamma_clone,
 
-            _t_step_cur: Arc::new(AtomicF32::new(Time::INFINITY.0)),
+            _limit_min: limit_min_clone,
+            _limit_max: limit_max_clone,
+
             _microsteps: MicroSteps::default(),
 
-            thr,
+            _thr: thr,
             sender: sender_com,
             receiver: receiver_com,
 
             active: active_clone,
 
-            intrs : Arc::new(Mutex::new(Vec::new())),
-            _intr_reason: Arc::new(Mutex::new(None)),
+            intrs : interruptors_clone,
+            _intr_reason: interrupt_reason_clone,
 
             __pdc: PhantomData::default()
         }
-    }
-
-    /// Function for accessing the device substruct of a stepper motor with the embed-thread feature being enabled
-    pub(crate) fn use_ctrl<F, R>(raw_ctrl : &mut Arc<Mutex<C>>, func : F) -> R 
-    where F: FnOnce(&mut C) -> R {
-        let mut ctrl_ref = raw_ctrl.lock().unwrap();
-        let device = ctrl_ref.deref_mut();
-
-        func(device)
     }
 
     /// Returns wheiter or not the stepper is actively moving
@@ -175,87 +224,32 @@ impl<B : StepperBuilder + Send + 'static + 'static, C : Controller + Setup + Dis
     pub fn is_active(&self) -> bool {
         self.active.load(Ordering::Relaxed)
     }
-}
 
-// Basic functions
-impl<B : StepperBuilder + Send + 'static, C : Controller + Setup + Dismantle + Send + 'static> ThreadedStepper<B, C> {
-    /// Write a curve of signals to the step output pins
-    /// The curve can be any iterator that yields `Time`
-    pub fn drive_curve<I, F>(
-        ctrl_mtx : &mut Arc<Mutex<C>>,                                      // Mutex to the controller
-        intrs_mtx : &mut Arc<Mutex<Vec<Box<dyn Interruptor + Send>>>>,      // Mutex to the vector of interruptors
-        gamma : &Arc<AtomicF32>,                                            // Atomic gamma value
-        t_step_cur : &Arc<AtomicF32>,                                       // Atomic for current time
-        intr_reason : &Arc<Mutex<Option<InterruptReason>>>,                 // Atomic for interrupt reason
-        step_ang : Delta,                                                   // Current step angle used
-        dir : Direction,                                                    // Current movement direction
-        cur : &mut I,                                                            // The curve
-        mut h_func : F                                                      // Helper function for additional functinality
-    ) -> Result<Delta, StepError>    
-    where
-        I : Iterator<Item = Time> + core::fmt::Debug + Clone,
-        F : FnMut() -> bool
-    {
-        // Record start gamma to return a delta distance at the end
-        let gamma_0 = gamma.load(Ordering::Relaxed);      
+    pub fn limit_min(&self) -> Option<Gamma> {
+        let min = self._limit_min.load(Ordering::Relaxed);
 
-        // Interruptors used for the movement process
-        let mut intrs = intrs_mtx.lock().unwrap();
+        if min == f32::NEG_INFINITY {
+            None
+        } else {
+            Some(Gamma(min))
+        }
+    }
 
-        Self::use_ctrl(ctrl_mtx, |device| -> Result<Delta, StepError> {
-            // Drive each point in the curve
-            for (i, point) in cur.enumerate() {
-                // Run all interruptors
-                for intr in intrs.iter_mut() {
-                    // Check if the direction is right
-                    if let Some(i_dir) = intr.dir() {
-                        if i_dir != dir {
-                            continue;
-                        }
-                    }
+    pub fn limit_max(&self) -> Option<Gamma> {
+        let max = self._limit_max.load(Ordering::Relaxed);
 
-                    if let Some(reason) = intr.check(gamma) {
-                        intr.set_temp_dir(Some(dir));
-                        intr_reason.lock().unwrap().replace(reason);
-                        return Ok(Delta(gamma.load(Ordering::Relaxed) - gamma_0)); 
-                    } else {
-                        // Clear temp direction
-                        intr.set_temp_dir(None);
-                    }
-                }
-
-                // Additional helper function
-                if h_func() {
-                    return Ok(Delta(gamma.load(Ordering::Relaxed) - gamma_0)); 
-                }
-
-                // Run step
-                device.step_no_wait(point).map_err(|err| {
-                    // Additional debug information
-                    log::error!("Steperror occured! {}", err);
-                    log::error!("Dir: {:?}, Step-Number: {:?}", dir, i);
-                    err
-                })?;
-
-                // Update the current speed
-                t_step_cur.store(point.0, Ordering::Relaxed);
-                
-                // Update the position after each step
-                gamma.store(
-                    gamma.load(Ordering::Relaxed) + step_ang.0, 
-                    Ordering::Relaxed
-                );
-            }
-
-            Ok(Delta(gamma.load(Ordering::Relaxed) - gamma_0))
-        })
+        if max == f32::INFINITY {
+            None
+        } else {
+            Some(Gamma(max))
+        }
     }
 }
 
 impl<B : StepperBuilder + Send + 'static, C : Controller + Setup + Dismantle + Send + 'static> ThreadedStepper<B, C> {
     /// Returns the current direction of the motor
     pub fn dir(&self) -> Direction {
-        Direction::from_bool(self._dir.load(Ordering::Relaxed))
+        self.builder.lock().unwrap().dir()
     }
 }
 
@@ -274,12 +268,6 @@ impl<B : StepperBuilder + Send + 'static, C : Controller + Setup + Dismantle + S
 }
 
 impl<B : StepperBuilder + Send + 'static, C : Controller + Setup + Dismantle + Send + 'static> SyncActuator for ThreadedStepper<B, C> {
-    // Data
-        fn vars<'a>(&'a self) -> &'a ActuatorVars {
-            todo!()
-        }
-    // 
-
     // Movement
         fn drive_rel(&mut self, delta : Delta, speed : SpeedFactor) -> Result<(), crate::Error> {
             self.drive_rel_async(delta, speed)?;
@@ -299,16 +287,12 @@ impl<B : StepperBuilder + Send + 'static, C : Controller + Setup + Dismantle + S
                 return Err(format!("Invalid delta distance! {}", delta).into());
             }
 
-            // If delta or speed_f is zero, do nothing
-            if self.consts().steps_from_angle(delta, self.microsteps()) == 0 {
-                return Ok(())   
-            }
-
             // Logging information
                 log::debug!("[drive] Delta: {:?}, Speed-Factor {:?}", delta, speed);
             // 
             
             self.sender.send(AsyncMsg::Drive(DriveMode::FixedDistance(delta, Omega::ZERO, speed)))?;
+            self.active.store(true, Ordering::Relaxed);
 
             Ok(())
         }
@@ -357,80 +341,87 @@ impl<B : StepperBuilder + Send + 'static, C : Controller + Setup + Dismantle + S
 
         #[inline]
         fn set_limits(&mut self, min : Option<Gamma>, max : Option<Gamma>) {
-            todo!()
+            if let Some(min) = min {
+                self._limit_min.store(min.into(), Ordering::Relaxed);
+            }
+
+            if let Some(max) = max {
+                self._limit_max.store(max.into(), Ordering::Relaxed);
+            }
         }
 
         #[inline]
         fn overwrite_limits(&mut self, min : Option<Gamma>, max : Option<Gamma>) {
-            todo!()
+            self._limit_min.store(min.unwrap_or(Gamma::NEG_INFINITY).into(), Ordering::Relaxed);
+            self._limit_max.store(max.unwrap_or(Gamma::INFINITY).into(), Ordering::Relaxed);
         }
 
         fn limits_for_gamma(&self, gamma : Gamma) -> Delta {
-            todo!()
-            // match self._vars.lim.min {
-            //     Some(ang) => {
-            //         if gamma < ang {
-            //             gamma - ang
-            //         } else {
-            //             match self._vars.lim.max {
-            //                 Some(ang) => {
-            //                     if gamma > ang {
-            //                         gamma - ang
-            //                     } else { Delta::ZERO }
-            //                 },
-            //                 None => Delta::ZERO
-            //             }
-            //         }
-            //     },
-            //     None => match self._vars.lim.max {
-            //         Some(ang) => {
-            //             if gamma > ang {
-            //                 gamma - ang
-            //             } else { Delta::ZERO }
-            //         },
-            //         None => Delta::NAN
-            //     }
-            // }
+            if let Some(ang) = self.limit_min() {
+                if gamma < ang {
+                    gamma - ang
+                } else {
+                    if let Some(ang) = self.limit_max() {
+                        if gamma > ang {
+                            gamma - ang
+                        } else { 
+                            Delta::ZERO 
+                        }
+                    } else {
+                        Delta::ZERO
+                    }
+                }
+            } else {
+                if let Some(ang) = self.limit_max() {
+                    if gamma > ang {
+                        gamma - ang
+                    } else { 
+                        Delta::ZERO 
+                    }
+                } else {
+                    Delta::NAN
+                }
+            }
         }
 
         fn set_end(&mut self, set_gamma : Gamma) {
-            todo!()
-            // self.set_gamma(set_gamma);
+            self.set_gamma(set_gamma);
+
+            let dir = self.dir().as_bool();
     
-            // self.set_limits(
-            //     if self.dir().as_bool() { self._vars.lim.min } else { Some(set_gamma) },
-            //     if self.dir().as_bool() { Some(set_gamma) } else { self._vars.lim.max }
-            // )
+            self.set_limits(
+                if dir { None } else { Some(set_gamma) },
+                if dir { Some(set_gamma) } else { None }
+            )
         }
     //
 
     // Loads
-        fn gen_force(&self) -> Force {
-            todo!()
-            // self._vars.force_load_gen    
+        fn force_gen(&self) -> Force {
+            self.builder.lock().unwrap().vars().force_load_gen
         }
 
-        fn dir_force(&self) -> Force {
-            todo!()
+        fn force_dir(&self) -> Force {
+            self.builder.lock().unwrap().vars().force_load_dir
         }
 
-        #[inline(always)]
-        fn apply_gen_force(&mut self, mut t : Force) -> Result<(), crate::Error> {
-            todo!()
+        fn apply_gen_force(&mut self, force : Force) -> Result<(), crate::Error> {
+            self.builder.lock().unwrap().apply_gen_force(force)?;
+            Ok(())
         }
 
-        #[inline(always)]
-        fn apply_dir_force(&mut self, t : Force) -> Result<(), crate::Error> {
-            todo!()
+        fn apply_dir_force(&mut self, force : Force) -> Result<(), crate::Error> {
+            self.builder.lock().unwrap().apply_dir_force(force)?;
+            Ok(())
         }
 
         fn inertia(&self) -> Inertia {
-            todo!()
+            self.builder.lock().unwrap().vars().inertia_load
         }
 
         #[inline(always)]
-        fn apply_inertia(&mut self, j : Inertia) {
-            todo!()
+        fn apply_inertia(&mut self, inertia : Inertia) {
+            self.builder.lock().unwrap().apply_inertia(inertia)
         }
     //
 }

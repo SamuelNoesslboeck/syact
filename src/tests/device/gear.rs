@@ -2,11 +2,7 @@ use crate::prelude::*;
 
 #[test]
 #[ignore = "Value display, run manually ... "]
-fn gear_values() {
-    let mut stepper = Stepper::new_gen();
-    stepper.set_config(StepperConfig::GEN);
-    stepper.setup().unwrap();
-
+fn gear_basic() {
     let mut gear = Gear::new(
         Stepper::new_gen(),
         2.0
@@ -14,5 +10,6 @@ fn gear_values() {
     gear.set_config(StepperConfig::GEN);
     gear.setup().unwrap();
 
-    println!("Gear - Values");
+    println!("Gear - Basics");
+    gear.drive_rel(Delta(1.0), SpeedFactor::MAX).unwrap();
 }

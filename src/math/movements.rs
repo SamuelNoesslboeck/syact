@@ -1,3 +1,4 @@
+use crate::SpeedFactor;
 use crate::act::stepper::{StepperActuator, StepperActuatorGroup};
 use crate::math::HRLimitedStepBuilder;
 use crate::units::*;
@@ -6,7 +7,7 @@ use super::HRStepBuilder;
 
 /// More calculation intense, no additional memory
 pub fn ptp_exact_unbuffered<S : StepperActuatorGroup<T, C>, T : StepperActuator + ?Sized + 'static, const C : usize>
-    (group : &mut S, deltas : [Delta; C], speed_f : f32) -> [f32; C] 
+    (group : &mut S, deltas : [Delta; C], speed_f : SpeedFactor) -> [SpeedFactor; C] 
 {
     // The times store the movement time
     let mut times : [f32; C] = group.for_each(|p_comp, index| {

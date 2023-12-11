@@ -2,7 +2,7 @@ use alloc::sync::Arc;
 use atomic_float::AtomicF32;
 
 use crate::Setup;
-use crate::data::{ActuatorVars, SpeedFactor};
+use crate::data::SpeedFactor;
 use crate::units::*;
 
 // ####################
@@ -95,28 +95,6 @@ use crate::units::*;
 /// Components can have multiple layers, for example take a stepper motor with a geaerbox attached to it. The stepper motor and both combined will be a component, the later having 
 /// the stepper motor component defined as it's parent component. (See [Gear])
 pub trait SyncActuator : Setup {
-    // Data
-        /// Returns the variables of the component, such as load force, inertia, limits ...
-        /// 
-        /// ```rust
-        /// use syact::prelude::*;
-        /// 
-        /// // Limits
-        /// const LIM_MAX : Gamma = Gamma(1.0);
-        /// const LIM_MIN : Gamma = Gamma(-2.0);
-        /// 
-        /// const LIM_MIN_LOWER : Gamma = Gamma(-3.0);
-        /// 
-        /// // Create a new gear bearing (implements SyncComp)
-        /// let mut gear = Gear::new(
-        ///     // Stepper Motor as subcomponent (also implements SyncComp)
-        ///     Stepper::new_gen(), 
-        /// 0.5);    // Ratio is set to 0.5, which means for each radian the motor moves, the bearing moves for half a radian
-        /// 
-        /// ```
-        fn vars(&self) -> &ActuatorVars;
-    //
-
     // Movement
         /// Moves the component by the relative distance as fast as possible, halts the script until 
         /// the movement is finshed and returns the actual **relative** distance travelled
@@ -278,8 +256,13 @@ pub trait SyncActuator : Setup {
         /// 0.5);    // Ratio is set to 0.5, which means for each radian the motor moves, the bearing moves for half a radian
         /// gear.set_config(StepperConfig::GEN);           // Link component for driving
         /// 
+        /// gear.set_gamma(Gamma::ZERO);
+        /// 
         /// gear.set_omega_max(Omega(5.0));
-        /// gear.drive_rel(Delta(-0.1), 1.0).unwrap();    // Drive component in negative direction
+        /// gear.drive_rel(Delta(-0.2), SpeedFactor::MAX).unwrap();    // Drive component in negative direction
+        /// 
+        /// assert_eq!(gear.dir(), Direction::CCW);
+        /// assert!((gear.gamma() - Gamma(-0.2)).abs() < 0.05);     // Check if the movement was correct (with step inaccuracy)
         /// 
         /// gear.set_end(GAMMA);
         /// 
@@ -372,10 +355,10 @@ pub trait SyncActuator : Setup {
 
     // Load calculation
         /// Will always be positive
-        fn gen_force(&self) -> Force;
+        fn force_gen(&self) -> Force;
 
         /// Positive means CW direction
-        fn dir_force(&self) -> Force;
+        fn force_dir(&self) -> Force;
 
         /// Apply a load force to the component, slowing down movements 
         /// 
@@ -398,7 +381,7 @@ pub trait SyncActuator : Setup {
         /// gear.apply_gen_force(FORCE);
         /// 
         /// assert_eq!(Gamma(2.0), gear.gamma_for_child(Gamma(1.0)));
-        /// assert_eq!(Force(0.1), gear.child().vars().force_load_gen);     // Forces get smaller for smaller gears
+        /// assert_eq!(Force(0.1), gear.child().force_gen());     // Forces get smaller for smaller gears
         /// ```
         fn apply_gen_force(&mut self, force : Force) -> Result<(), crate::Error>;
 
@@ -430,7 +413,7 @@ pub trait SyncActuator : Setup {
         /// gear.apply_inertia(INERTIA);
         /// 
         /// assert_eq!(Gamma(2.0), gear.gamma_for_child(Gamma(1.0)));
-        /// assert_eq!(Inertia(1.0), gear.child().vars().inertia_load);
+        /// assert_eq!(Inertia(1.0), gear.child().inertia());
         /// ```
         fn apply_inertia(&mut self, inertia : Inertia);
     // 

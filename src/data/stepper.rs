@@ -136,12 +136,11 @@ impl StepperConst {
     /// ```rust 
     /// use core::f32::consts::PI;
     /// 
-    /// use syact::data::StepperConst;
-    /// use syact::units::*;
+    /// use syact::prelude::*;
     /// 
     /// let data = StepperConst::GEN;
     /// 
-    /// assert!((data.omega(Time(1.0/200.0), 1) - Omega(2.0 * PI)).abs() < Omega(0.001));     
+    /// assert!((data.omega(Time(1.0/200.0), MicroSteps::default()) - Omega(2.0 * PI)).abs() < Omega(0.001));     
     /// ```
     #[inline(always)]
     pub fn omega(&self, step_time : Time, microsteps : MicroSteps) -> Omega {

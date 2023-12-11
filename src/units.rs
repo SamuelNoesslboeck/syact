@@ -10,7 +10,7 @@ use core::time::Duration;
 
 use serde::{Serialize, Deserialize}; 
 
-use crate::data::SpeedFactor;
+use crate as syact;
 
 #[macro_export]
 macro_rules! additive_unit {
@@ -55,8 +55,10 @@ macro_rules! basic_unit {
         impl $a {
             /// Zero value of this unit (0.0)
             pub const ZERO : Self = Self(0.0);
-            /// Infinity value of this unit (f32::INFINITY)
+            /// Positive Infinity value of this unit (f32::INFINITY)
             pub const INFINITY : Self = Self(f32::INFINITY);
+            /// Negative Infinity value of this unit (f32::INFINITY)
+            pub const NEG_INFINITY : Self = Self(f32::NEG_INFINITY);
             /// NaN value of this unit (f32::NAN)
             pub const NAN : Self = Self(f32::NAN);
 
@@ -221,16 +223,16 @@ macro_rules! basic_unit {
                 }
             }
 
-            impl core::ops::Mul<SpeedFactor> for $a {
+            impl core::ops::Mul<syact::data::SpeedFactor> for $a {
                 type Output = $a;
                 
                 #[inline(always)]
-                fn mul(self, rhs: SpeedFactor) -> Self::Output {
+                fn mul(self, rhs: syact::data::SpeedFactor) -> Self::Output {
                     $a(self.0 * f32::from(rhs))
                 }
             }
 
-            impl core::ops::Mul<$a> for SpeedFactor {
+            impl core::ops::Mul<$a> for syact::data::SpeedFactor {
                 type Output = $a;
 
                 #[inline(always)]

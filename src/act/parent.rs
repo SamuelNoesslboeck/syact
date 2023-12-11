@@ -1,6 +1,6 @@
 use crate::data::{SpeedFactor, MicroSteps};
 use crate::prelude::StepperActuator;
-use crate::{ActuatorVars, SyncActuator, Setup, StepperConfig};
+use crate::{SyncActuator, Setup, StepperConfig, AsyncActuator};
 use crate::units::*;
 
 use super::Interruptible;
@@ -86,13 +86,6 @@ pub trait ActuatorParent {
     where
         T::Child : SyncActuator
     {
-        // Data
-            #[inline]
-            fn vars(&self) -> &ActuatorVars {
-                self.child().vars()
-            }
-        // 
-
         // Drive
             fn drive_rel(&mut self, mut delta : Delta, speed : SpeedFactor) -> Result<(), crate::Error> {
                 delta = self.delta_for_chlid(delta);
@@ -161,12 +154,12 @@ pub trait ActuatorParent {
         // 
 
         // Loads
-            fn gen_force(&self) -> Force {
-                self.force_for_parent(self.child().gen_force())
+            fn force_gen(&self) -> Force {
+                self.force_for_parent(self.child().force_gen())
             }
 
-            fn dir_force(&self) -> Force {
-                self.force_for_parent(self.child().dir_force())
+            fn force_dir(&self) -> Force {
+                self.force_for_parent(self.child().force_dir())
             }
 
             fn apply_gen_force(&mut self, mut force : Force) -> Result<(), crate::Error> {
@@ -243,6 +236,25 @@ pub trait ActuatorParent {
 
         fn intr_reason(&self) -> Option<super::InterruptReason> {
             self.child().intr_reason()
+        }
+    }
+
+    impl<T : ActuatorParent + Setup> AsyncActuator for T
+    where 
+        T::Child : AsyncActuator 
+    {
+        type Duty = <T::Child as AsyncActuator>::Duty;
+
+        fn drive(&mut self, dir : sylo::Direction, speed : Self::Duty) -> Result<(), crate::Error> {
+            self.child_mut().drive(dir, speed)
+        }
+
+        fn dir(&self) -> sylo::Direction {
+            self.child().dir()
+        }
+
+        fn speed(&self) -> Self::Duty {
+            self.child().speed()
         }
     }
 // 

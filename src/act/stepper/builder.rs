@@ -20,6 +20,8 @@ pub enum DriveError {
     OmegaMaxTooHigh,
     OmegaOutTooHigh,
     Overload,
+    LimitReached,
+    
     Step(StepError)
 }
 
@@ -52,6 +54,8 @@ pub trait StepperBuilder : Iterator<Item = Time> {
         fn set_microsteps(&mut self, microsteps : MicroSteps);
 
         fn step_angle(&self) -> Delta;
+
+        fn dir(&self) -> Direction;
     //
 
     // Loads
@@ -92,6 +96,7 @@ pub trait StepperBuilder : Iterator<Item = Time> {
         microsteps : MicroSteps,
         mode : DriveMode,
         _step_angle : Delta, 
+        _dir : Direction,
 
         distance : u64,
         distance_counter : u64
@@ -159,8 +164,9 @@ pub trait StepperBuilder : Iterator<Item = Time> {
                     distance: 0,
                     distance_counter: 0,
                     _step_angle: consts.step_angle(MicroSteps::default()),
+                    _dir: Direction::default(),
 
-                    mode: DriveMode::Stop,
+                    mode: DriveMode::Inactive,
 
                     consts
                 };
@@ -200,6 +206,10 @@ pub trait StepperBuilder : Iterator<Item = Time> {
 
             fn step_angle(&self) -> Delta {
                 self._step_angle
+            }
+
+            fn dir(&self) -> Direction {
+                self._dir
             }
         // 
 
@@ -244,9 +254,11 @@ pub trait StepperBuilder : Iterator<Item = Time> {
                         return Err(DriveError::OmegaMaxTooHigh)
                     } 
 
+                    self._dir = dir;
                     ctrl.set_dir(dir);
                 },
                 DriveMode::ConstFactor(_, dir) => {
+                    self._dir = dir;
                     ctrl.set_dir(dir);
                 },
                 DriveMode::FixedDistance(delta, omega_out, _) => {
@@ -257,7 +269,8 @@ pub trait StepperBuilder : Iterator<Item = Time> {
                     self.distance = self.consts.steps_from_angle_abs(delta, self.microsteps);
                     self.distance_counter = 0;
 
-                    ctrl.set_dir(delta.get_direction());
+                    self._dir = delta.get_direction();
+                    ctrl.set_dir(self._dir);
                 },
                 _ => { }
             };
