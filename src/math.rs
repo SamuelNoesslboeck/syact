@@ -1,10 +1,4 @@
 // Submodules
-// pub mod actors;
-/// Iterators for different curve building application cases
-#[allow(dead_code)]
-mod builders;
-pub use builders::*;
-
 // /// Methods for calculating stepper motor acceleration curves
 // pub mod curve;
 

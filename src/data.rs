@@ -26,6 +26,16 @@ impl SpeedFactor {
     pub const HALF : Self = Self(0.5);
 }
 
+impl SpeedFactor {
+    pub fn try_from(value : f32) -> Option<Self> {
+        if (value <= 1.0) & (value > 0.0) {
+            Some(Self(value))
+        } else {
+            None
+        }
+    }
+}
+
 impl From<f32> for SpeedFactor {
     fn from(value: f32) -> Self {
         if (value <= 1.0) & (value > 0.0) {

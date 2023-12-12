@@ -262,7 +262,7 @@ pub trait SyncActuator : Setup {
         /// gear.drive_rel(Delta(-0.2), SpeedFactor::MAX).unwrap();    // Drive component in negative direction
         /// 
         /// assert_eq!(gear.dir(), Direction::CCW);
-        /// assert!((gear.gamma() - Gamma(-0.2)).abs() < 0.05);     // Check if the movement was correct (with step inaccuracy)
+        /// assert!((gear.gamma() - Gamma(-0.2)).abs() < Delta(0.05));     // Check if the movement was correct (with step inaccuracy)
         /// 
         /// gear.set_end(GAMMA);
         /// 
