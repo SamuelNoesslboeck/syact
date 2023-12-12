@@ -137,6 +137,8 @@ impl<B : StepperBuilder + Send + 'static + 'static, C : Controller + Setup + Dis
                 if let Some(node) = builder_ref.next() {
                     let dir_val = builder_ref.dir();
 
+                    let mut interrupted = false;
+
                     // Check all interruptors
                     for intr in interruptors.lock().unwrap().iter_mut() {
                         // Check if the direction is right
@@ -150,10 +152,16 @@ impl<B : StepperBuilder + Send + 'static + 'static, C : Controller + Setup + Dis
                             intr.set_temp_dir(Some(dir_val));
                             interrupt_reason.lock().unwrap().replace(reason);
                             sender_thr.send(Ok(())).unwrap();
+
+                            interrupted = true;
                         } else {
                             // Clear temp direction
                             intr.set_temp_dir(None);
                         }
+                    }
+
+                    if interrupted {
+                        continue;   // Jump to top of loop
                     }
 
                     drop(builder_ref);
