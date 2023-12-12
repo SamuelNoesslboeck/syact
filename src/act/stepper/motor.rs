@@ -7,6 +7,7 @@ use std::sync::mpsc::{Receiver, Sender, channel};
 use atomic_float::AtomicF32;
 use sylo::Direction;
 
+use crate::math::movements::DefinedActuator;
 use crate::{SyncActuator, Setup, Dismantle};
 use crate::act::{Interruptor, InterruptReason, Interruptible};
 use crate::act::asyn::AsyncActuator;
@@ -442,7 +443,10 @@ impl<B : StepperBuilder + Send + 'static, C : Controller + Setup + Dismantle + S
     }
 }
 
-impl<B : StepperBuilder + Send + 'static, C : Controller + Setup + Dismantle + Send + 'static> StepperActuator for ThreadedStepper<B, C> {
+impl<B : StepperBuilder + Send + 'static, C : Controller + Setup + Dismantle + Send + 'static> StepperActuator for ThreadedStepper<B, C> 
+where
+    B : DefinedActuator 
+{
     // Motor
         fn motor(&self) -> &dyn StepperMotor {
             self
@@ -481,7 +485,10 @@ impl<B : StepperBuilder + Send + 'static, C : Controller + Setup + Dismantle + S
     }
 }
 
-impl<B : StepperBuilder + Send + 'static, C : Controller + Setup + Dismantle + Send + 'static> StepperMotor for ThreadedStepper<B, C> {
+impl<B : StepperBuilder + Send + 'static, C : Controller + Setup + Dismantle + Send + 'static> StepperMotor for ThreadedStepper<B, C> 
+where
+    B : DefinedActuator 
+{
     // Calculations
         fn torque_at_speed(&self, omega : Omega) -> Force {
             todo!()
@@ -505,4 +512,13 @@ impl<B : StepperBuilder + Send + 'static, C : Controller + Setup + Dismantle + S
             std::mem::replace(&mut self._intr_reason.lock().unwrap(), None)
         }
     // 
+}
+
+impl<B : StepperBuilder + Send + 'static, C : Controller + Setup + Dismantle + Send + 'static> DefinedActuator for ThreadedStepper<B, C> 
+where
+    B : DefinedActuator 
+{
+    fn ptp_time_for_distance(&self, gamma_0 : Gamma, gamma_t : Gamma) -> Time {
+        self.builder.lock().unwrap().ptp_time_for_distance(gamma_0, gamma_t)
+    }
 }

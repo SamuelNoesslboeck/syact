@@ -1,4 +1,5 @@
 use crate::data::{SpeedFactor, MicroSteps};
+use crate::math::movements::DefinedActuator;
 use crate::prelude::StepperActuator;
 use crate::{SyncActuator, Setup, StepperConfig, AsyncActuator};
 use crate::units::*;
@@ -255,6 +256,16 @@ pub trait ActuatorParent {
 
         fn speed(&self) -> Self::Duty {
             self.child().speed()
+        }
+    }
+
+    // Movements
+    impl<T : ActuatorParent> DefinedActuator for T 
+    where
+        T::Child : DefinedActuator
+    {
+        fn ptp_time_for_distance(&self, gamma_0 : Gamma, gamma_t : Gamma) -> Time {
+            self.child().ptp_time_for_distance(gamma_0, gamma_t)
         }
     }
 // 

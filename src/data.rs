@@ -34,6 +34,10 @@ impl SpeedFactor {
             None
         }
     }
+
+    pub const unsafe fn from_unchecked(value : f32) -> Self {
+        Self(value)
+    }
 }
 
 impl From<f32> for SpeedFactor {

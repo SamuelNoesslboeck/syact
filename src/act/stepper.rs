@@ -1,4 +1,5 @@
 use crate::data::MicroSteps;
+use crate::math::movements::DefinedActuator;
 use crate::{StepperConst, SyncActuator, SyncActuatorGroup, StepperConfig};
 use crate::units::*;
 
@@ -58,7 +59,7 @@ use crate::units::*;
 
 // Stepper traits
     /// A component based on a stepper motor
-    pub trait StepperActuator : SyncActuator {
+    pub trait StepperActuator : SyncActuator + DefinedActuator {
         // Super comp
             /// Returns a reference to the motor of the component (either itself or a sub/parent-component)
             fn motor(&self) -> &dyn StepperMotor;
