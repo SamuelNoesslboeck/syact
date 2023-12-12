@@ -29,14 +29,12 @@ impl UniPin {
     /// Create a new raspberry pi GPIO pin
     #[cfg(feature = "rasp")]
     pub fn new(pin : u8) -> Result<Self, crate::Error> {
-        use crate::lib_error;
-
         let sys_pin = match Gpio::new() {
             Ok(gp) => match gp.get(pin) { 
                 Ok(pin) => pin,
-                Err(err) => return Err(lib_error(format!("{:?}", err)))
+                Err(err) => return Err(format!("{:?}", err).into())
             },
-            Err(err) => return Err(lib_error(format!("{:?}", err)))
+            Err(err) => return Err(format!("{:?}", err).into())
         };
         
         Ok(Self {
