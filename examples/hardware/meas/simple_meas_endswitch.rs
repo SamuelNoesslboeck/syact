@@ -56,6 +56,7 @@ fn main() -> Result<(), syact::Error> {
     // Link the component to a system
     device.set_config(StepperConfig { 
         voltage: 12.0,    // System voltage in volts
+        overload_current: None
     }); 
     device.setup()?;
 

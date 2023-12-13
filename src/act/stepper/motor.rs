@@ -152,7 +152,10 @@ impl<B : StepperBuilder + Send + 'static + 'static, C : Controller + Setup + Dis
                             intr.set_temp_dir(Some(dir_val));
                             interrupt_reason.lock().unwrap().replace(reason);
                             sender_thr.send(Ok(())).unwrap();
-
+                            
+                            if let Err(err) = builder_ref.set_drive_mode(DriveMode::Stop, &mut ctrl) {
+                                sender_thr.send(Err(err)).unwrap();
+                            }
                             interrupted = true;
                         } else {
                             // Clear temp direction
@@ -438,7 +441,7 @@ impl<B : StepperBuilder + Send + 'static, C : Controller + Setup + Dismantle + S
 impl<B : StepperBuilder + Send + 'static, C : Controller + Setup + Dismantle + Send + 'static> AsyncActuator for ThreadedStepper<B, C> {
     type Duty = SpeedFactor;
     
-    fn drive(&mut self, dir : Direction, speed_f : SpeedFactor) -> Result<(), crate::Error> {
+    fn drive(&mut self, _dir : Direction, _speed_f : SpeedFactor) -> Result<(), crate::Error> {
         todo!()
     }
 
@@ -498,11 +501,11 @@ where
     B : DefinedActuator 
 {
     // Calculations
-        fn torque_at_speed(&self, omega : Omega) -> Force {
+        fn torque_at_speed(&self, _omega : Omega) -> Force {
             todo!()
         }
 
-        fn alpha_at_speed(&self, omega : Omega) -> Option<Alpha> {
+        fn alpha_at_speed(&self, _omega : Omega) -> Option<Alpha> {
             todo!()
         }
     // 

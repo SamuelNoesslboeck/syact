@@ -12,7 +12,7 @@ use crate::units::*;
 /// # Panics
 /// 
 /// Panics if the given omega is not finite
-pub fn torque_dyn(consts : &StepperConst, mut omega : Omega, voltage : f32, i_ol : f32) -> Force {
+pub fn torque_dyn(consts : &StepperConst, mut omega : Omega, voltage : f32, overload_current : Option<f32>) -> Force {
     omega = omega.abs();
 
     if !omega.is_finite() {
@@ -20,13 +20,13 @@ pub fn torque_dyn(consts : &StepperConst, mut omega : Omega, voltage : f32, i_ol
     }
     
     if omega == Omega::ZERO {
-        return consts.torque_overload(i_ol);
+        return consts.torque_overload(overload_current);
     }
 
     let time = consts.full_step_time(omega);
     let pow = E.powf( -time / consts.tau() );
 
-    let t_ol = consts.torque_overload(i_ol);
+    let t_ol = consts.torque_overload(overload_current);
     let t = (1.0 - pow) / (1.0 + pow) * consts.torque_overload_max(voltage);
     
     if t > t_ol { t_ol } else { t }

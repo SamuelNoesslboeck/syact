@@ -133,3 +133,11 @@ impl Default for MicroSteps {
         Self(1)
     }
 }
+
+impl Mul<MicroSteps> for u64 {
+    type Output = u64;
+
+    fn mul(self, rhs: MicroSteps) -> Self::Output {
+        self * (rhs.as_u8() as u64)
+    }
+}

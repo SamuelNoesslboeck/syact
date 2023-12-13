@@ -11,30 +11,34 @@ use crate::{units::*, ActuatorVars};
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct StepperConfig {
     /// Supply voltage of the components in Volts
-    pub voltage : f32
+    pub voltage : f32,
+
+    /// Overload current of the stepper, can increase torque
+    pub overload_current : Option<f32>
 }
 
 impl StepperConfig {
     /// Generic `StepperConfig` for testing purposes
     pub const GEN : Self = Self {
-        voltage: 12.0
+        voltage: 12.0,
+        overload_current: None
     };  
 
     /// Comp data that will case an error in calculations as it has not been yet initialized.  
     /// 
     /// (Has to be overwritten, will cause errors otherwise)
     pub const ERROR : Self = Self {
-        voltage: 0.0
+        voltage: 0.0,
+        overload_current: None
     };
 
     /// Creates a new StepperConfig instance
-    /// 
-    /// # Panics
-    /// 
-    /// Panics if the given safety factor is smaller than 1.0
     #[inline(always)]
-    pub fn new(voltage : f32) -> Self {
-        Self { voltage }
+    pub fn new(voltage : f32, overload_current : Option<f32>) -> Self {
+        Self { 
+            voltage,
+            overload_current
+        }
     }
 }
 
@@ -50,7 +54,7 @@ impl StepperConfig {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct StepperConst {
     /// Max phase current [Unit A]
-    pub current_max : f32,
+    pub default_current : f32,
     /// Motor inductence [Unit H]
     pub inductance : f32,
     /// Coil resistance [Unit Ohm]
@@ -68,7 +72,7 @@ impl StepperConst {
     // Constants
         /// Error stepperdata with all zeros
         pub const ERROR : Self = Self {
-            current_max: 0.0,
+            default_current: 0.0,
             inductance: 0.0,
             resistance: 0.0,
             number_steps: 0,
@@ -82,7 +86,7 @@ impl StepperConst {
         /// ### Stepper motor 17HE15-1504S
         /// Values for standard stepper motor, see <https://github.com/SamuelNoesslboeck/syact/docs/datasheets/17HE15_1504S.pdf>
         pub const MOT_17HE15_1504S : Self = Self {
-            current_max: 1.5, 
+            default_current: 1.5, 
             inductance: 0.004, 
             resistance: 2.3,
             number_steps: 200, 
@@ -94,12 +98,12 @@ impl StepperConst {
     // Amperage
         /// Maximum overload force with the given overload (or underload) voltage `u`
         pub fn torque_overload_max(&self, voltage : f32) -> Force {
-            self.torque_stall * voltage / self.resistance / self.current_max
+            self.torque_stall * voltage / self.resistance / self.default_current
         }
 
         /// Torque created with the given overload (or underload) current `i`
-        pub fn torque_overload(&self, current : f32) -> Force {
-            self.torque_stall * current / self.current_max
+        pub fn torque_overload(&self, current : Option<f32>) -> Force {
+            self.torque_stall * current.unwrap_or(self.default_current) / self.default_current
         }
     // 
 
@@ -109,7 +113,7 @@ impl StepperConst {
         }
 
         pub fn alpha_max_for_omega(&self, vars : &ActuatorVars, config : &StepperConfig, omega : Omega, dir : Direction) -> Option<Alpha> {
-            vars.force_after_load(torque_dyn(self, omega, config.voltage, self.current_max), dir).map(|f| f / vars.inertia_after_load(self.inertia_motor))
+            vars.force_after_load(torque_dyn(self, omega, config.voltage, None), dir).map(|f| f / vars.inertia_after_load(self.inertia_motor))
         }
     // 
 
@@ -123,7 +127,7 @@ impl StepperConst {
         /// Maximum speed for a stepper motor where it can be guarantied that it works properly
         #[inline(always)]
         pub fn omega_max(&self, voltage : f32) -> Omega {
-            Omega(2.0 * PI * voltage / self.current_max / self.inductance / self.number_steps as f32)
+            Omega(2.0 * PI * voltage / self.default_current / self.inductance / self.number_steps as f32)
         }
     // 
 
@@ -221,6 +225,10 @@ impl StepperConst {
         #[inline(always)]
         pub fn angle_from_steps(&self, steps : i64, microsteps : MicroSteps) -> Delta {
             steps as f32 * self.step_angle(microsteps)
+        }
+
+        pub fn round_angle_to_steps(&self, angle : Delta, microsteps : MicroSteps) -> Delta {
+            self.angle_from_steps(self.steps_from_angle(angle, microsteps), microsteps)
         }
 
         // Comparision
