@@ -295,7 +295,7 @@ pub trait StepperBuilder : Iterator<Item = Time> {
         }
     }
 
-
+    /*
     pub struct ComplexStartStopBuilder {
         _consts : StepperConst,
         _vars : ActuatorVars,
@@ -512,4 +512,5 @@ pub trait StepperBuilder : Iterator<Item = Time> {
             (gamma_t / gamma_0) / self.omega_max()
         }
     }
+    */
 // 

@@ -1,11 +1,7 @@
 use serde::{Serialize, Deserialize};
 
-use crate::{SyncActuator, Stepper, Setup};
-
-use super::parent::{ActuatorParent, RatioActuatorParent};
-
-/// A gear joint using a stepper motor to power itself
-pub type StepperGearJoint = Gear<Stepper>;
+use crate::{SyncActuator, Setup};
+use crate::act::parent::{ActuatorParent, RatioActuatorParent};
 
 /// A gear component
 /// 
@@ -15,7 +11,7 @@ pub type StepperGearJoint = Gear<Stepper>;
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Gear<C : SyncActuator> {
     /// Steppercontrol for the motor of the bearing
-    pub device : C,
+    pub ctrl : C,
     
     /// Angle ration from motor to bearing (omega_b / omega_m)
     pub ratio : f32
@@ -24,9 +20,9 @@ pub struct Gear<C : SyncActuator> {
 impl<C : SyncActuator> Gear<C> {
     /// Creates a new `Gearbearing`
     /// - `device`: The parent component driving the cylinder
-    pub fn new(device : C, ratio : f32) -> Self {
+    pub fn new(ctrl : C, ratio : f32) -> Self {
         Self {
-            device,
+            ctrl,
             ratio
         }
     }
@@ -35,7 +31,7 @@ impl<C : SyncActuator> Gear<C> {
 // Parent
     impl<C : SyncActuator> Setup for Gear<C> {
         fn setup(&mut self) -> Result<(), crate::Error> {
-            self.device.setup() 
+            self.ctrl.setup() 
         }
     }
 
@@ -43,11 +39,11 @@ impl<C : SyncActuator> Gear<C> {
         type Child = C;
 
         fn child(&self) -> &Self::Child {
-            &self.device
+            &self.ctrl
         }
 
         fn child_mut(&mut self) -> &mut Self::Child {
-            &mut self.device
+            &mut self.ctrl
         }
     }
 

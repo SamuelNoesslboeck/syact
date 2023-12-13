@@ -1,57 +1,55 @@
 use serde::{Serialize, Deserialize};
 
-use crate::{Stepper, SyncActuator, Setup};
+use crate::{SyncActuator, Setup};
 use crate::act::parent::{ActuatorParent, RatioActuatorParent};
 use crate::units::*;
 
-/// A conveyor that uses a stepper as its motor
-pub type StepperConveyor = Conveyor<Stepper>;
+/// A linear axis
+#[derive(Debug, Serialize, Deserialize)]
+pub struct LinearAxis<A : SyncActuator> {
+    /// The child component driving the linear axis
+    pub actuator : A,
 
-/// A simple conveyor powered by any kind of synchronous motor
-#[derive(Debug)]
-#[derive(Serialize, Deserialize)]
-pub struct Conveyor<C : SyncActuator> {
-    /// The parent component (driving the conveyor)
-    device : C,
-
-    /// Radius of the powered conveyor roll in millimeters
-    pub r_roll : f32
+    /// Distance traveled per rad (Unit mm)   \
+    /// `f_rte = pitch / (2pi)`
+    pub rte_ratio : f32
 }
 
-impl<C : SyncActuator> Conveyor<C> {
-    /// Creates a new instance of a conveyor
-    /// - `device`: The parent component (driving the conveyor)
-    /// - `r_roll` radius of the driving roll in millimeters
-    pub fn new(device : C, r_roll : f32) -> Self {
-        Self {
-            device, 
-            r_roll
-        }
+impl<A : SyncActuator> LinearAxis<A> {
+    /// Create a new linear axis instance
+    /// - `device`: The parent component driving the linear axis
+    /// - `rte_ratio`: (radius to extension ratio), millimeters travelled per radian the spindle rotated
+    ///   - `f_rte = pitch / (2pi)`
+    pub fn new(device : A, rte_ratio : f32) -> Self {
+        return LinearAxis {
+            actuator: device,
+            rte_ratio
+        };
     }
 }
 
-impl<C : SyncActuator> Setup for Conveyor<C> {
+impl<A : SyncActuator> Setup for LinearAxis<A> {
     fn setup(&mut self) -> Result<(), crate::Error> {
-        self.device.setup()
+        self.actuator.setup()
     }
 }
 
 // Parent
-    impl<C : SyncActuator> ActuatorParent for Conveyor<C> {
-        type Child = C;
+    impl<A : SyncActuator> ActuatorParent for LinearAxis<A> {
+        type Child = A;
 
         fn child(&self) -> &Self::Child {
-            &self.device
+            &self.actuator
         }
 
         fn child_mut(&mut self) -> &mut Self::Child {
-            &mut self.device
+            &mut self.actuator
         }
     }
 
-    impl<C : SyncActuator> RatioActuatorParent for Conveyor<C> {
+    impl<A : SyncActuator> RatioActuatorParent for LinearAxis<A> {
         fn ratio(&self) -> f32 {
-            self.r_roll
+            self.rte_ratio
         }
 
         // Correct unit conversions

@@ -11,19 +11,8 @@ use crate::units::*;
     /// A module for async components like a basic DC-motor. These components cannot move certain distances or to absolute positions
     pub mod asyn;
 
-    // Components
-        mod conveyor;
-        pub use conveyor::{Conveyor, StepperConveyor};
-
-        // mod cylinder_triangle;
-        // pub use cylinder_triangle::{CylinderTriangle, StepperCylTriangle};
-
-        mod gear;
-        pub use gear::{Gear, StepperGearJoint};
-
-        mod linear_axis;
-        pub use linear_axis::{LinearAxis, LinearStepper};
-    // 
+    mod comps;
+    pub use comps::{Conveyor, Gear, LinearAxis, StateActuator};
 
     /// A module for component groups, as they are used in various robots. The components are all sharing the same 
     /// [StepperConfig](crate::data::StepperConfig) and their movements are coordinated. 
@@ -31,7 +20,6 @@ use crate::units::*;
     pub use group::SyncActuatorGroup;
 
     pub mod parent;
-
 
     /// Stepper motors and their unique methods and traits
     pub mod stepper;

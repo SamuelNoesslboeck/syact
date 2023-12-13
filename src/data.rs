@@ -109,7 +109,7 @@ impl From<u8> for MicroSteps {
         if (value & value.wrapping_sub(1)) == 0 {   // Check if power of 2
             Self(value)
         } else {
-            panic!("")
+            panic!("Number of microsteps must be a power of 2! ({} given)", value)
         }
     }
 }
