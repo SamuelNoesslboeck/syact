@@ -106,7 +106,7 @@ pub trait StepperBuilder : Iterator<Item = Time> {
 
     impl StartStopBuilder {
         pub fn update_start_stop(&mut self) -> Result<(), DriveError> {
-            self.omega_start_stop = math::kin::start_stop(
+            self.omega_start_stop = math::kin::omega_start_stop(
                 self._vars.force_after_load_lower(
                     self.consts.torque_overload(self._config.overload_current)
                 ).ok_or(DriveError::Overload)?, 

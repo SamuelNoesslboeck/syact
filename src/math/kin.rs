@@ -78,6 +78,6 @@ pub fn alpha_req_for_dist(delta : Delta, omega : Omega) -> Alpha {
 }
 
 // Stepper
-pub fn start_stop(force_stall : Force, inertia : Inertia, number_of_steps : u64) -> Omega {
+pub fn omega_start_stop(force_stall : Force, inertia : Inertia, number_of_steps : u64) -> Omega {
     Omega((force_stall.0 / inertia.0 * core::f32::consts::PI / number_of_steps as f32).sqrt())
 }
