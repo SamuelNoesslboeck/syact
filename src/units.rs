@@ -582,18 +582,19 @@ additive_unit!(Force);
 
 
 // Additional operations
-pub fn add_unit_arrays<U, Rhs, const C : usize>(base : [U; C], rhs : [Rhs; C]) -> [U::Output; C]
-where
-    U : Add<Rhs>,
-    U : Copy,
-    Rhs : Copy
-{
-    // Safe as zeroed, as it will not be read before being set
-    let mut result : [U::Output; C] = unsafe { core::mem::zeroed() };
+    pub fn add_unit_arrays<U, Rhs, const C : usize>(base : [U; C], rhs : [Rhs; C]) -> [U::Output; C]
+    where
+        U : Add<Rhs>,
+        U : Copy,
+        Rhs : Copy
+    {
+        // Safe as zeroed, as it will not be read before being set
+        let mut result : [U::Output; C] = unsafe { core::mem::zeroed() };
 
-    for i in 0 .. C {
-        result[i] = base[i] + rhs[i];
+        for i in 0 .. C {
+            result[i] = base[i] + rhs[i];
+        }
+
+        result
     }
-
-    result
-}
+// 

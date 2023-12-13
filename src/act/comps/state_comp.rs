@@ -4,34 +4,56 @@ use crate::units::*;
 
 pub struct StateActuator<A : SyncActuator, const C : usize> {
     ctrl : A,
-    states : [Gamma; C]
+    states : [Gamma; C],
+    state : usize
 }
 
 impl<A : SyncActuator, const C : usize> StateActuator<A, C> {
     pub fn new(ctrl : A, states : [Gamma; C]) -> Self {
         Self {
             ctrl,
-            states
+            states,
+            state: 0
         }
     }
 
     #[inline]
-    pub fn get_state(&self, index : usize) -> Gamma {
+    pub fn get_state_gamma(&self, index : usize) -> Gamma {
         self.states[index]
     }
 
     #[inline]
-    pub fn set_state(&mut self, index : usize, gamma : Gamma) {
+    pub fn set_state_gamma(&mut self, index : usize, gamma : Gamma) {
         self.states[index] = gamma;
+    }
+
+    #[inline]
+    pub fn get_state(&self) -> usize {
+        self.state
+    }
+
+    #[inline]
+    pub fn set_state(&mut self, index : usize) {
+        if index > C {
+            panic!("State index out of bounds! (Index given: {}, Max: {})", index, C);
+        }
+
+        self.set_gamma(self.get_state_gamma(index))
     }
 
     // Driving
         pub fn drive_to_state(&mut self, index : usize, speed : SpeedFactor) -> Result<(), crate::Error> {
-            self.drive_abs(self.get_state(index), speed)
+            self.drive_abs(self.get_state_gamma(index), speed).map(|ok| {
+                self.state = index;
+                ok
+            })
         }
 
         pub fn drive_to_state_async(&mut self, index : usize, speed : SpeedFactor) -> Result<(), crate::Error> {
-            self.drive_abs_async(self.get_state(index), speed)
+            self.drive_abs_async(self.get_state_gamma(index), speed).map(|ok| {
+                self.state = index;
+                ok
+            })
         }
     // 
 }
