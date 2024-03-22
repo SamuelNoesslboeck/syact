@@ -2,7 +2,8 @@ use std::{thread, time};
 use std::io::{Write, stdout};
 
 use clap::{command, arg, value_parser};
-use crossterm::{QueueableCommand, cursor, terminal, ExecutableCommand};
+use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind, KeyEventState, KeyModifiers};
+use crossterm::{QueueableCommand, cursor, event, terminal, ExecutableCommand};
 use syact::device::led::LED;
 use syact::prelude::*;
 
@@ -16,7 +17,7 @@ fn plot(switch : &mut EndSwitch, mut led_opt : Option<LED>) -> Result<(), syact:
 
         // Plot
         stdout.queue(cursor::SavePosition).unwrap();    
-        stdout.write_all(format!("Switch state: {}", state).as_bytes())?;
+        stdout.write_all(format!("   |- Switch state: {}", state).as_bytes())?;
         stdout.queue(cursor::RestorePosition).unwrap();
         stdout.flush().unwrap();
 
@@ -28,9 +29,24 @@ fn plot(switch : &mut EndSwitch, mut led_opt : Option<LED>) -> Result<(), syact:
 
         stdout.queue(cursor::RestorePosition).unwrap();
         stdout.queue(terminal::Clear(terminal::ClearType::FromCursorDown)).unwrap();
+
+        match event::read().unwrap() {
+            Event::Key(KeyEvent {
+                code: KeyCode::Char('q'),
+                modifiers: KeyModifiers::NONE,
+                kind: KeyEventKind::Press,
+                state: KeyEventState::NONE
+            }) => {
+                break;
+            },
+            _ => ()
+        };
     }
 
-    // stdout.execute(cursor::Show).unwrap();
+    stdout.execute(cursor::Show).unwrap();
+    println!("   | > Test ended");
+
+    Ok(())
 }
 
 fn main() -> Result<(), syact::Error> {
@@ -52,6 +68,18 @@ fn main() -> Result<(), syact::Error> {
         led.setup().unwrap();
         led
     });
+
+    println!("  Testing endswitch  ");
+    println!("=====================");
+
+    if let Ok(v) = std::env::var("SYACT_DEVICE_NAME") {
+        println!(" |- Device name: {}", v);
+    }
+
+    println!(" |- Pin-Number: {}", pin);
+    println!(" |");
+    println!(" | => Press Q to quit!  ");
+    println!("   |");
 
     plot(&mut switch, led)
 }
