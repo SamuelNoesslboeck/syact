@@ -18,6 +18,7 @@
     pub use var::ActuatorVars;
 //
 
+/// New speed factor structure, for determining the speed
 #[derive(Clone, Copy, Debug, PartialEq, PartialOrd, Serialize, Deserialize)]
 pub struct SpeedFactor(f32);
 

@@ -16,7 +16,7 @@
     pub mod led;
 
     /// Universal pin structure
-    pub mod pin;
+    pub mod pin;   
 
     /// PWM-signal 
     pub mod pwm;
