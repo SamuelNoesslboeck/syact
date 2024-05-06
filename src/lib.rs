@@ -1,99 +1,99 @@
 #![doc = include_str!("../README.md")]
 #![crate_name = "syact"]
-#![cfg_attr(not(feature = "std"), no_std)]
 // #![warn(missing_docs)]
 
 // Modules
-#[cfg(feature = "std")]
 extern crate alloc;
 
-// Submodules
-    // Basic
-        /// Collection of structs and functions for controlling Stepper Motors
-        pub mod ctrl;
-        pub use ctrl::{Direction, Stepper};
+// ####################
+// #    SUBMODULES    #
+// ####################
+        // Includes documentation from readme file
+        pub mod act;
+        pub use act::{SyncActuator, SyncActuatorGroup, Stepper};
+        pub use act::asyn::AsyncActuator;
 
-        /// Easy import of the functionalities
-        pub mod prelude;
-    //
-
-    // Std use
-    cfg_if::cfg_if! { if #[cfg(feature = "std")] {
-        #[doc = include_str!("../docs/components.md")]
-        pub mod comp;
-        pub use comp::{SyncComp, SyncCompGroup};
-        pub use comp::asyn::AsyncComp;
-        
-        // Include proc_macro
-        pub use syact_macros::SyncCompGroup;
-
+        pub mod device;
+    
         /// Structs for storing characteristics of stepper motors and devices
         pub mod data;
-        pub use data::{StepperConst, CompData, CompVars};
+        pub use data::{StepperConst, StepperConfig, ActuatorVars, MicroSteps};
 
         /// Functions and Structs for calculating Stepper Motor procedures and operations
         pub mod math;
 
         /// Functions and Structs for taking measurements with a robot for e.g. position calculation
         pub mod meas;
+    // 
 
-        #[doc = "../docs/tools.md"]
-        pub mod tool;
-        pub use tool::{Tool, SimpleTool};
+    // Include proc_macro
+    pub use syact_macros::{SyncActuatorGroup, StepperActuatorGroup};
 
-        /// Self defined units for mathematical operations
-        #[doc = include_str!("../docs/unit_system.md")]
-        pub mod units;
-    }}
+    /// Easy import of the functionalities
+    pub mod prelude;
 
     /// Module with all the tests required to assure the library funcitons as intended
-    #[cfg(test)]
-    #[cfg(feature = "std")]
+    #[cfg(any(test, feature = "testing"))]
     mod tests;
 // 
 
-cfg_if::cfg_if! { if #[cfg(feature = "std")] {
+// ################
+// #    ERRORS    #
+// ################
+// 
+// Different platforms require different types of errors 
     // Wrapped types
     /// The general error type used in the crate
     pub type Error = Box<dyn std::error::Error>;
+//
 
-    #[inline(always)]
-    fn lib_error<E>(error : E) -> crate::Error 
-    where
-        E: Into<Box<dyn std::error::Error + Sync + Send>> {
-        error.into()
-    }
-} else {
-    /// The general error type of the crate
-    pub type Error = ErrorKind;
+// ###########################
+// #    SETUP & DISMANTLE    #
+// ###########################
+    /// A trait that provides a universal setup function, 
+    /// 
+    /// # Pin management
+    /// 
+    /// For dynamic initialization purposes, all pin creations should run in a `setup()` function
+    pub trait Setup {
+        /// Calls all required functions to assure the components functionality
+        fn setup(&mut self) -> Result<(), Error> { 
+            Ok(()) 
+        }
 
-    /// Enum for different error types
-    #[derive(Debug, Clone, Copy)]
-    pub enum ErrorKind {
-        // TODO
+        /// Points to `setup``, helper function
+        fn setup_inline(mut self) -> Result<Self, Error> 
+        where 
+            Self : Sized 
+        {
+            self.setup()?;
+            Ok(self)
+        }
     }
-}}
 
-/// A trait that provides a universal setup function
-/// 
-/// # Pin management
-/// 
-/// For dynamic initialization purposes, all pin creations should run in a `setup()` function
-pub trait Setup {
-    /// Calls all required functions to assure the components functionality
-    fn setup(&mut self) -> Result<(), Error> { 
-        Ok(()) 
-    }
-}
+    /// A trait that provides a universal dismantle function
+    /// 
+    /// # Pin management
+    /// 
+    /// For dynamic initialization purposes, all pins that have previously been created with `setup()` should be dropped here
+    pub trait Dismantle {
+        /// Calls all required functions to assure the component will not occupy any more resources like pins or network connections, without dropping the value
+        fn dismantle(&mut self) -> Result<(), Error> {
+            Ok(())
+        }
 
-/// A trait that provides a universal dismantle function
-/// 
-/// # Pin management
-/// 
-/// For dynamic initialization purposes, all pins that have previously been created with `setup()` should be dropped here
-pub trait Dismantle {
-    /// Calls all required functions to assure the component will not occupy any more resources like pins or network connections, without dropping the value
-    fn dismantle(&mut self) -> Result<(), Error> {
-        Ok(())
+        fn dismantle_inline(mut self) -> Result<Self, Error> 
+        where
+            Self : Sized
+        {
+            self.dismantle()?;
+            Ok(self)
+        }
     }
-}
+
+    /// A trait that marks a type as a boxing type for another type that includes e.g. GPIO-pins or other physical interfaces that have to be setup
+    pub trait Boxed : Setup + Dismantle {
+        /// The type that is boxed by this type
+        type Boxing;
+    }
+//

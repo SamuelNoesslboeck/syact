@@ -1,37 +1,21 @@
-use crate::comp::stepper::{StepperComp, StepperCompGroup};
-use crate::math::HRLimitedStepBuilder;
-use crate::units::*;
+use crate::act::stepper::{StepperActuator, StepperActuatorGroup};
+use syunit::*;
 
-use super::HRStepBuilder;
+pub trait DefinedActuator {
+    fn ptp_time_for_distance(&self, gamma_0 : Gamma, gamma_t : Gamma) -> Time;
+}
 
 /// More calculation intense, no additional memory
-pub fn ptp_exact_unbuffered<S : StepperCompGroup<T, C>, T : StepperComp + ?Sized + 'static, const C : usize>
-    (group : &mut S, deltas : [Delta; C], speed_f : f32) -> [f32; C] 
+pub fn ptp_speed_factors<S : StepperActuatorGroup<T, C>, T : StepperActuator + DefinedActuator + ?Sized + 'static, const C : usize>
+    (group : &mut S, gamma_0 : [Gamma; C], gamma_t : [Gamma; C], speed : Factor) -> [Factor; C] 
 {
-    // The times store the movement time
-    let mut times : [f32; C] = group.for_each(|p_comp, index| {
-        // Curves are built for motors
-        let comp = p_comp.motor();
-
-        // Create the builder using the Motor
-        let mut builder = HRLimitedStepBuilder::from_builder(
-            HRStepBuilder::from_motor(comp, Omega::ZERO)
-        );
-
-        builder.set_omega_tar(comp.omega_max()).unwrap();   // Save unwraped
-        builder.set_steps_max(comp.consts().steps_from_ang_abs(deltas[index], comp.micro()));
-        
-        builder.map(|t| t.0).sum()
+    let times = group.for_each(|comp, index| {
+        comp.ptp_time_for_distance(gamma_0[index], gamma_t[index])
     });
 
-    // The maximum movement time
-    let max = times.into_iter().reduce(f32::max).unwrap();
+    // Safe to unwrap, cause iterator is not empty
+    let time_max = *times.iter().reduce(Time::max_ref).unwrap();
 
-    // Each time is divided by the maximum 
-    for i in 0 .. C {
-        // (New speed factor) times overall speed factor
-        times[i] = (times[i] / max) * speed_f;
-    }
-
-    times
+    times.iter().map(|time| Factor::try_new(*time / time_max).unwrap_or(Factor::MAX) * speed)
+        .collect::<Vec<Factor>>().try_into().unwrap()
 }

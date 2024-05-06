@@ -1,8 +1,6 @@
 use alloc::vec::Vec;
-
 use glam::{Vec3, Mat3};
-
-use crate::units::*;
+use syunit::*;
 
 /// Calculates the inertia of a given point with a certain distance `dist` to a center point and a certain `mass`
 pub fn inertia_point(dist : Vec3, mass : f32) -> Mat3 {

@@ -1,83 +1,79 @@
 use core::sync::atomic::AtomicBool;
 
-use crate::{Setup, Direction};
-use crate::ctrl::{Interruptor, InterruptReason};
-use crate::ctrl::pin::{UniInPin, UniPin};
-
 use alloc::sync::Arc;
 use atomic_float::AtomicF32;
+use embedded_hal::digital::InputPin;
 use serde::{Serialize, Deserialize};
+use syunit::*;
 
-use super::*;
+use crate::Setup;
+use crate::act::{Interruptor, InterruptReason};
+use crate::meas::Measurable;
 
 /// A simple endswitch that can trigger when reaching a destination
 #[derive(Serialize, Deserialize)]
-pub struct EndSwitch {
-    pin : u8,
+pub struct EndSwitch<P : InputPin> {
     trigger : bool,
-    _dir : Option<Direction>,
+    _dir : Option<Direction>, 
+    temp_dir : Option<Direction>,
 
     #[serde(skip)]
-    sys_pin : Option<UniInPin>
+    sys_pin : P
 }
 
-impl EndSwitch {
+impl<P : InputPin> EndSwitch<P> {
     /// Creates a new end switch
-    pub fn new(pin : u8, trigger : bool, _dir : Option<Direction>) -> Self {
+    pub fn new(trigger : bool, dir : Option<Direction>, sys_pin : P) -> Self {
         Self {
-            pin, 
             trigger,
-            _dir,
+            _dir: dir,
+            temp_dir: None,
 
-            sys_pin: None
+            sys_pin
         }
     }
+}
 
-    pub fn is_triggered(&self) -> bool {
-        self.sys_pin.as_ref()
-            .map(|pin| pin.is_high())
-            .unwrap_or(false) == self.trigger
+impl<P : InputPin> Measurable<bool> for EndSwitch<P> {
+    type Error = P::Error; 
+
+    fn meas(&mut self) -> Result<bool, Self::Error> {
+        self.sys_pin.is_high().map(|v| v == self.trigger)
     }
 }
 
-impl Setup for EndSwitch {
-    fn setup(&mut self) -> Result<(), crate::Error> {
-        self.sys_pin = Some(UniPin::new(self.pin)?.into_input());
-        Ok(())
-    }
-}
-
-impl Interruptor for EndSwitch {
+impl<P : InputPin> Interruptor for EndSwitch<P> {
     fn dir(&self) -> Option<Direction> {
-        self._dir
+        self._dir.or(self.temp_dir)
+    }
+
+    fn set_temp_dir(&mut self, dir_opt : Option<Direction>) {
+        self.temp_dir = dir_opt;
     }
 
     fn check(&mut self, _gamma : &Arc<AtomicF32>) -> Option<InterruptReason> {
-        if let Some(pin) = &mut self.sys_pin {
-            if pin.is_high() == self.trigger {
-                Some(InterruptReason::EndReached)
-            } else {
-                None
-            }
+        // unwraping unsafe is safe, as no error can occur
+        if unsafe { self.sys_pin.is_high().unwrap_unchecked() } == self.trigger {    
+            Some(InterruptReason::EndReached)
         } else {
-            Some(InterruptReason::Error) // TODO: add error
+            None
         }
     }
 }
-
-impl SimpleMeas for EndSwitch { }
 
 // Virtual
 pub struct VirtualEndSwitch {
     pub vpin : Arc<AtomicBool>,
-    _dir : Option<Direction>
+    _dir : Option<Direction>,
+    temp_dir : Option<Direction>
 }
 
 impl VirtualEndSwitch {
     pub fn new(def : bool, _dir : Option<Direction>) -> Self {
         VirtualEndSwitch { 
             vpin: Arc::new(AtomicBool::new(def)),
-            _dir
+            _dir,
+            temp_dir: None
         }
     }
 }
@@ -86,8 +82,12 @@ impl Setup for VirtualEndSwitch { }
 
 impl Interruptor for VirtualEndSwitch {
     fn dir(&self) -> Option<Direction> {
-        self._dir
+        self._dir.or(self.temp_dir)
     }
+
+    fn set_temp_dir(&mut self, dir_opt : Option<Direction>) {
+        self.temp_dir = dir_opt;
+    } 
     
     fn check(&mut self, _gamma : &Arc<AtomicF32>) -> Option<InterruptReason> {
         if self.vpin.load(core::sync::atomic::Ordering::Relaxed) {

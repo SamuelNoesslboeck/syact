@@ -1,4 +1,4 @@
-use crate::units::*;
+use syunit::*;
 
 /// Stores distance limits for the component
 #[derive(Debug, Clone, Default)]
@@ -16,27 +16,61 @@ impl Limits {
 
 /// Stores variables that can change in the process of the program
 #[derive(Clone, Debug, Default)]
-pub struct CompVars {
-    /// Load torque, unit Nm
-    pub t_load : Force,
-    /// Load inertia, unit kgm^2
-    pub j_load : Inertia,
+pub struct ActuatorVars {
+    /// Load torque general in both directions (e.g. friction), unit Nm
+    pub force_load_gen : Force,
 
-    /// Bend factor for stepper 
-    pub bend_f : f32,
+    /// Load torque directionally dependent, unit Nm
+    pub force_load_dir : Force,
+
+    /// Load inertia, unit kgm^2
+    pub inertia_load : Inertia,
 
     /// Limits of the component
     pub lim : Limits
 }
 
-impl CompVars  {
+impl ActuatorVars  {
     /// Zero value component data, used for initialization
     pub const ZERO : Self = Self { 
-        t_load: Force::ZERO, 
-        j_load: Inertia::ZERO, 
+        force_load_gen: Force::ZERO, 
 
-        bend_f: 1.0,
+        force_load_dir: Force::ZERO,
+
+        inertia_load: Inertia::ZERO, 
 
         lim: Limits::NONE 
     };
+
+    /// Returns `None` if there is an overlaod
+    pub fn force_after_load(&self, force : Force, direction : Direction) -> Option<Force> {
+        let mut force = force - self.force_load_gen;
+        
+        if direction.as_bool() {
+            force -= self.force_load_dir;
+        } else {
+            force += self.force_load_dir;
+        }
+
+        if force > Force::ZERO {
+            Some(force)
+        } else {
+            None
+        }
+    }
+
+    pub fn force_after_load_lower(&self, force : Force) -> Option<Force> {
+        let force = force - self.force_load_gen - self.force_load_dir.abs();
+        
+        if force > Force::ZERO {
+            Some(force)
+        } else {
+            None
+        }
+    }
+
+    #[inline]
+    pub fn inertia_after_load(&self, inertia : Inertia) -> Inertia {
+        inertia + self.inertia_load
+    }
 }

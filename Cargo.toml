@@ -1,7 +1,7 @@
 [package]
 name = "syact"
 authors = [ "Samuel Nösslböck <samuel.noesslboeck@gmail.com>" ]
-version = "0.12.0"
+version = "0.12.1-alpha"
 description = "A library to control motors (mainly stepper motors) and components, read data from sensors and more"
 edition = "2021"
 repository = "https://github.com/SamuelNoesslboeck/syact"
@@ -17,148 +17,22 @@ name = "syact"
 path = "src/lib.rs"
 
 [dependencies]
-atomic_float = "0.1.0"
+atomic_float = "1.0.0"
 cfg-if = "1.0.0"
-clap = { version = "4.3.16", features = [ "cargo" ] }
-glam = { version = "0.24.0", optional = true }
-serde = { version = "1.0.104", features = [ "derive" ], optional = true }
-serde_json = { version = "1.0.48", optional = true }
-serde_repr = { version = "0.1", optional = true }
-spin_sleep = { version = "1.1.1", optional = true }
+embedded-hal = "1.0.0"
+log = "0.4.20"
+glam = "0.27.0"
+serde = { version = "1.0.192", features = [ "derive" ] }
+serde_json = "1.0.108"
+serde_repr = "0.1" 
+spin_sleep = "1.1.1" 
+syunit = "0.1.5"
 
 # Subcrates
-syact_macros = { path = "syact_macros", version = "0.1.0", optional = true }
-
-# Raspberry
-rppal = { version = "0.14.1", optional = true }
+syact_macros = { path = "syact_macros", version = "0.1.0" }
 
 [dev-dependencies]
-# Plotting and displaying
 crossterm = "0.27.0"
 
-# Net-examples
-# magicbox_mk1 = { git = "https://github.com/SamuelNoesslboeck/MagicBox_Mk1", rev = "5a113b2f" }
-# syiot = { git = "https://github.com/SamuelNoesslboeck/syiot.git" }
-
-[target.'cfg(windows)'.dev-dependencies]
-plotters = "0.3.4"
-
 [features]
-default = [ "std", "safe-move", "embed-thread" ]
-std = [ "dep:glam", "dep:serde", "dep:serde_json", "dep:serde_repr", "dep:spin_sleep", "dep:syact_macros" ]
-safe-move = [ ]
-embed-thread = [ "std" ]
-
-# Platform features
-rasp = [ "std", "dep:rppal" ]
-
-# ##############
-# #  Examples  #
-# ##############
-[[example]]
-name = "cylinder"
-path = "examples/cylinder.rs"
-
-[[example]]
-name = "custom_component"
-path = "examples/custom_component.rs"
-
-[[example]]
-name = "tongs"
-path = "examples/tongs.rs"
-
-[[example]]
-name = "dc_motors"
-path = "examples/dc_motors.rs"
-
-# Async
-  [[example]]
-  name = "async-plot_pos"
-  path = "examples/async/plot_pos.rs"
-# 
-
-# Hardware 
-  # Comps
-    [[example]]
-    name = "hardware-comps-conv"
-    path = "examples/hardware/comps/conv.rs"
-
-    [[example]]
-    name = "hardware-comps-cyl_tri"
-    path = "examples/hardware/comps/cyl_tri.rs"
-
-    [[example]]
-    name = "hardware-comps-cylinder"
-    path = "examples/hardware/comps/cylinder.rs"
-
-    [[example]]
-    name = "hardware-comps-stepper"
-    path = "examples/hardware/comps/stepper.rs"
-  #
-
-  # Devices
-    [[example]]
-    name = "hardware-devices-led"
-    path = "examples/hardware/devices/led.rs"
-  # 
-
-  # Meas
-    [[example]]
-    name = "hardware-meas-endswitch_cons"
-    path = "examples/hardware/meas/endswitch_cons.rs"
-
-    [[example]]
-    name = "hardware-meas-endswitch"
-    path = "examples/hardware/meas/endswitch.rs"
-
-    [[example]]
-    name = "hardware-meas-simple_meas_endswitch"
-    path = "examples/hardware/meas/simple_meas_endswitch.rs"
-
-    [[example]]
-    name = "hardware-meas-virtual_endswitch"
-    path = "examples/hardware/meas/virtual_endswitch.rs"
-  #
-
-  # Tools
-    [[example]]
-    name = "hardware-tools-tongs"
-    path = "examples/hardware/tools/tongs.rs"
-  # 
-#
-
-# Math
-  [[example]]
-  name = "math-builders"
-  path = "examples/math/builders.rs"
-
-  [[example]]
-  name = "math-movements"
-  path = "examples/math/movements.rs"
-
-  [[example]]
-  name = "math-path"
-  path = "examples/math/path.rs"
-
-  [[example]]
-  name = "math-time"
-  path = "examples/math/time.rs"
-#
-
-# Net
-  # [[example]]
-  # name = "net-ctrl_client"
-  # path = "examples/net/ctrl_client.rs"
-
-  # [[example]]
-  # name = "net-ctrl_server"
-  # path = "examples/net/ctrl_server.rs"
-
-  # [[example]]
-  # name = "net-ctrl_stepper_client"
-  # path = "examples/net/ctrl_stepper_client.rs"
-
-  # [[example]]
-  # name = "net-ctrl_stepper_server"
-  # path = "examples/net/ctrl_stepper_server.rs"
-#
+testing = []
