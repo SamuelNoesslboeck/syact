@@ -1,8 +1,9 @@
-use crate::data::{SpeedFactor, MicroSteps};
+use crate::data::MicroSteps;
 use crate::math::movements::DefinedActuator;
 use crate::prelude::StepperActuator;
 use crate::{SyncActuator, Setup, StepperConfig, AsyncActuator};
-use crate::units::*;
+
+use syunit::*;
 
 use super::Interruptible;
 
@@ -41,19 +42,19 @@ pub trait ActuatorParent {
                 child_delta * self.ratio()
             }
 
-            fn omega_for_child(&self, parent_omega : Omega) -> Omega {
+            fn omega_for_child(&self, parent_omega : Velocity) -> Velocity {
                 parent_omega / self.ratio()
             }
 
-            fn omega_for_parent(&self, child_omega : Omega) -> Omega {
+            fn omega_for_parent(&self, child_omega : Velocity) -> Velocity {
                 child_omega * self.ratio()
             }
 
-            fn alpha_for_child(&self, parent_alpha : Alpha) -> Alpha {
+            fn alpha_for_child(&self, parent_alpha : Acceleration) -> Acceleration {
                 parent_alpha / self.ratio()
             }
 
-            fn alpha_for_parent(&self, child_alpha : Alpha) -> Alpha {
+            fn alpha_for_parent(&self, child_alpha : Acceleration) -> Acceleration {
                 child_alpha * self.ratio()
             }
 
@@ -88,7 +89,7 @@ pub trait ActuatorParent {
         T::Child : SyncActuator
     {
         // Drive
-            fn drive_rel(&mut self, mut delta : Delta, speed : SpeedFactor) -> Result<(), crate::Error> {
+            fn drive_rel(&mut self, mut delta : Delta, speed : Factor) -> Result<(), crate::Error> {
                 delta = self.delta_for_chlid(delta);
                 self.child_mut().drive_rel(delta, speed)
             }
@@ -96,14 +97,14 @@ pub trait ActuatorParent {
 
         // Async
             /// Moves the component by the relative distance as fast as possible
-            fn drive_rel_async(&mut self, mut delta : Delta, speed : SpeedFactor) -> Result<(), crate::Error> {
+            fn drive_rel_async(&mut self, mut delta : Delta, speed : Factor) -> Result<(), crate::Error> {
                 delta = self.delta_for_chlid(delta);
                 self.child_mut().drive_rel_async(delta, speed)
             }
 
-            fn drive_omega(&mut self, mut omega_tar : Omega) -> Result<(), crate::Error> {
+            fn drive_velocity(&mut self, mut omega_tar : Velocity) -> Result<(), crate::Error> {
                 omega_tar = self.omega_for_child(omega_tar);
-                self.child_mut().drive_omega(omega_tar)
+                self.child_mut().drive_velocity(omega_tar)
             }   
 
             fn await_inactive(&mut self) -> Result<(), crate::Error> {
@@ -121,13 +122,13 @@ pub trait ActuatorParent {
                 self.child_mut().set_gamma(gamma)
             }
 
-            fn omega_max(&self) -> Omega {
-                self.omega_for_parent(self.child().omega_max())
+            fn velocity_max(&self) -> Velocity {
+                self.omega_for_parent(self.child().velocity_max())
             }
 
-            fn set_omega_max(&mut self, mut omega_max : Omega) {
+            fn set_velocity_max(&mut self, mut omega_max : Velocity) {
                 omega_max = self.omega_for_child(omega_max);
-                self.child_mut().set_omega_max(omega_max)
+                self.child_mut().set_velocity_max(omega_max)
             }
 
             fn limits_for_gamma(&self, gamma : Gamma) -> Delta {
@@ -188,16 +189,6 @@ pub trait ActuatorParent {
     where
         T::Child : StepperActuator
     {
-        // Motor
-            fn motor(&self) -> &dyn crate::prelude::StepperMotor {
-                self.child().motor()
-            }
-
-            fn motor_mut(&mut self) -> &mut dyn crate::prelude::StepperMotor {
-                self.child_mut().motor_mut()
-            }
-        // 
-
         fn consts(&self) -> &crate::StepperConst {
             self.child().consts()
         }
@@ -246,11 +237,11 @@ pub trait ActuatorParent {
     {
         type Duty = <T::Child as AsyncActuator>::Duty;
 
-        fn drive(&mut self, dir : sylo::Direction, speed : Self::Duty) -> Result<(), crate::Error> {
+        fn drive(&mut self, dir : Direction, speed : Self::Duty) -> Result<(), crate::Error> {
             self.child_mut().drive(dir, speed)
         }
 
-        fn dir(&self) -> sylo::Direction {
+        fn dir(&self) -> Direction {
             self.child().dir()
         }
 

@@ -1,31 +1,30 @@
-use embedded_hal::PwmPin;
+use embedded_hal::pwm::SetDutyCycle;
+use syunit::*;
 
 use crate::{Dismantle, Setup};
-use crate::device::pwm::SoftwarePWM;
-use crate::units::*;
 
-pub const LED_PWM_FREQ : Omega = Omega(200.0);
+pub const LED_PWM_FREQ : Velocity = Velocity(200.0);
 
-pub struct LED {
-    pwm : SoftwarePWM
+pub struct LED<P : SetDutyCycle> {
+    pwm : P
 }
 
-impl Setup for LED {
+impl<P : SetDutyCycle + Setup> Setup for LED<P> {
     fn setup(&mut self) -> Result<(), crate::Error> {
         self.pwm.setup()
     }
 }
 
-impl Dismantle for LED {
+impl<P : SetDutyCycle + Dismantle> Dismantle for LED<P> {
     fn dismantle(&mut self) -> Result<(), crate::Error> {
         self.pwm.dismantle()
     }
 }
 
-impl LED {
-    pub fn new(pin : u8) -> Self {
+impl<P : SetDutyCycle> LED<P> {
+    pub fn new(pwm : P) -> Self {
         Self {
-            pwm: SoftwarePWM::new(pin)
+            pwm
         }
     }
 
@@ -41,11 +40,11 @@ impl LED {
 
     // Write value
         pub fn on(&mut self) {
-            self.pwm.set_freq(LED_PWM_FREQ, 1.0)
+            self.pwm.set_duty_cycle_fully_on()
         }
 
         pub fn off(&mut self) {
-            self.pwm.set_freq(LED_PWM_FREQ, 0.0)
+            self.pwm.set_duty_cycle_fully_off()
         }
 
         pub fn set(&mut self, val : bool) {
@@ -57,7 +56,7 @@ impl LED {
         }
 
         pub fn dim(&mut self, factor : f32) {
-            self.pwm.set_freq(LED_PWM_FREQ, factor)
+            self
         }
     // 
 }

@@ -1,11 +1,11 @@
 use core::f32::consts::PI;
 
 use serde::{Serialize, Deserialize};
-use sylo::Direction;
+use syunit::*;
 
+use crate::ActuatorVars;
 use crate::data::MicroSteps;
 use crate::math::force::torque_dyn;
-use crate::{units::*, ActuatorVars};
 
 /// Stores data for generic components 
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
@@ -108,11 +108,11 @@ impl StepperConst {
     // 
 
     // Acceleration
-        pub fn alpha_max_stall(&self, vars : &ActuatorVars, dir : Direction) -> Option<Alpha> {
+        pub fn alpha_max_stall(&self, vars : &ActuatorVars, dir : Direction) -> Option<Acceleration> {
             vars.force_after_load(self.torque_stall, dir).map(|f| f / vars.inertia_after_load(self.inertia_motor))
         }
 
-        pub fn alpha_max_for_omega(&self, vars : &ActuatorVars, config : &StepperConfig, omega : Omega, dir : Direction) -> Option<Alpha> {
+        pub fn alpha_max_for_omega(&self, vars : &ActuatorVars, config : &StepperConfig, omega : Velocity, dir : Direction) -> Option<Acceleration> {
             vars.force_after_load(torque_dyn(self, omega, config.voltage, None), dir).map(|f| f / vars.inertia_after_load(self.inertia_motor))
         }
     // 
@@ -126,12 +126,12 @@ impl StepperConst {
 
         /// Maximum speed for a stepper motor where it can be guarantied that it works properly
         #[inline(always)]
-        pub fn omega_max(&self, voltage : f32) -> Omega {
-            Omega(2.0 * PI * voltage / self.default_current / self.inductance / self.number_steps as f32)
+        pub fn omega_max(&self, voltage : f32) -> Velocity {
+            Velocity(2.0 * PI * voltage / self.default_current / self.inductance / self.number_steps as f32)
         }
     // 
 
-    /// Omega for time per step [Unit 1/s]
+    /// Velocity for time per step [Unit 1/s]
     /// 
     /// # Panics
     /// 
@@ -144,10 +144,10 @@ impl StepperConst {
     /// 
     /// let data = StepperConst::GEN;
     /// 
-    /// assert!((data.omega(Time(1.0/200.0), MicroSteps::default()) - Omega(2.0 * PI)).abs() < Omega(0.001));     
+    /// assert!((data.omega(Time(1.0/200.0), MicroSteps::default()) - Velocity(2.0 * PI)).abs() < Velocity(0.001));     
     /// ```
     #[inline(always)]
-    pub fn omega(&self, step_time : Time, microsteps : MicroSteps) -> Omega {
+    pub fn omega(&self, step_time : Time, microsteps : MicroSteps) -> Velocity {
         if (step_time == Time(0.0)) | (step_time == Time(-0.0)) {
             panic!("The given step time ({}) is zero!", step_time)
         }
@@ -179,8 +179,8 @@ impl StepperConst {
         /// 
         /// Panics if the given `omega` is zero 
         #[inline]
-        pub fn step_time(&self, omega : Omega, microsteps : MicroSteps) -> Time {
-            // if (omega == Omega(0.0)) | (omega == Omega(-0.0)) {
+        pub fn step_time(&self, omega : Velocity, microsteps : MicroSteps) -> Time {
+            // if (omega == Velocity(0.0)) | (omega == Velocity(-0.0)) {
             //     panic!("The given omega ({}) is zero!", omega);
             // }
 
@@ -193,8 +193,8 @@ impl StepperConst {
         /// 
         /// Returns the time in seconds
         #[inline]
-        pub fn full_step_time(&self, omega : Omega) -> Time {
-            if (omega == Omega(0.0)) | (omega == Omega(-0.0)) {
+        pub fn full_step_time(&self, omega : Velocity) -> Time {
+            if (omega == Velocity(0.0)) | (omega == Velocity(-0.0)) {
                 panic!("The given omega ({}) is zero!", omega);
             }
 

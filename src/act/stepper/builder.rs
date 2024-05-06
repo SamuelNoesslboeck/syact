@@ -1,17 +1,16 @@
-use sylo::Direction;
+use syunit::*;
 
 use crate::math::movements::DefinedActuator;
 use crate::{StepperConst, ActuatorVars, StepperConfig};
 use crate::act::stepper::{StepError, Controller};
-use crate::data::{SpeedFactor, MicroSteps};
+use crate::data::MicroSteps;
 use crate::math;
-use crate::units::*;
 
 #[derive(Clone, Debug, PartialEq, PartialOrd)]
 pub enum DriveMode {
-    ConstOmega(Omega, Direction),
-    ConstFactor(SpeedFactor, Direction),
-    FixedDistance(Delta, Omega, SpeedFactor),
+    ConstOmega(Velocity, Direction),
+    ConstFactor(Factor, Direction),
+    FixedDistance(Delta, Velocity, Factor),
     Stop,
     Inactive
 }
@@ -69,10 +68,10 @@ pub trait StepperBuilder : Iterator<Item = Time> {
         fn apply_inertia(&mut self, inertia : Inertia);
     //
 
-    // Omega max
-        fn omega_max(&self) -> Omega;
+    // Velocity max
+        fn omega_max(&self) -> Velocity;
 
-        fn set_omega_max(&mut self, omega : Omega) -> Result<(), DriveError>;
+        fn set_omega_max(&mut self, omega : Velocity) -> Result<(), DriveError>;
     // 
 
     // Regulation
@@ -91,8 +90,8 @@ pub trait StepperBuilder : Iterator<Item = Time> {
         _config : StepperConfig,
 
         // Speeds
-        omega_start_stop : Omega,
-        _omega_max : Option<Omega>,
+        omega_start_stop : Velocity,
+        _omega_max : Option<Velocity>,
 
         // Cache
         _microsteps : MicroSteps,
@@ -161,7 +160,7 @@ pub trait StepperBuilder : Iterator<Item = Time> {
                     _vars: ActuatorVars::ZERO,
                     _config: StepperConfig::GEN,
 
-                    omega_start_stop: Omega::INFINITY,
+                    omega_start_stop: Velocity::INFINITY,
                     _omega_max: None,
                     _microsteps: MicroSteps::default(),
 
@@ -239,11 +238,11 @@ pub trait StepperBuilder : Iterator<Item = Time> {
             }
         // 
 
-        fn omega_max(&self) -> Omega {
+        fn omega_max(&self) -> Velocity {
             self._omega_max.unwrap_or(self.omega_start_stop)
         }
 
-        fn set_omega_max(&mut self, omega : Omega) -> Result<(), DriveError> {
+        fn set_omega_max(&mut self, omega : Velocity) -> Result<(), DriveError> {
             if omega > self.omega_start_stop {
                 Err(DriveError::OmegaMaxTooHigh)
             } else {
@@ -278,7 +277,11 @@ pub trait StepperBuilder : Iterator<Item = Time> {
                     self.distance = self.consts.steps_from_angle_abs(delta, self._microsteps);
                     self.distance_counter = 0;
 
-                    self._dir = delta.get_direction();
+                    if delta >= Delta::ZERO {
+                        self._dir = Direction::CW;
+                    } else {
+                        self._dir = Direction::CCW;
+                    }
                     ctrl.set_dir(self._dir);
                 },
                 _ => { }
@@ -302,8 +305,8 @@ pub trait StepperBuilder : Iterator<Item = Time> {
         _config : StepperConfig,
 
         // Speeds
-        omega_abs_max : Omega,
-        _omega_max : Option<Omega>,
+        omega_abs_max : Velocity,
+        _omega_max : Option<Velocity>,
 
         // Cache
         microsteps : MicroSteps,
@@ -312,7 +315,7 @@ pub trait StepperBuilder : Iterator<Item = Time> {
         _dir : Direction,
 
         // Speed
-        speed_levels : Vec<Omega>,
+        speed_levels : Vec<Velocity>,
         time_sums : Vec<Time>,
 
         distance : u64,
@@ -376,7 +379,7 @@ pub trait StepperBuilder : Iterator<Item = Time> {
                     _vars: ActuatorVars::ZERO,
                     _config: StepperConfig::GEN,
 
-                    omega_abs_max: Omega::INFINITY,
+                    omega_abs_max: Velocity::INFINITY,
                     _omega_max: None,
                     microsteps: MicroSteps::default(),
 
@@ -457,11 +460,11 @@ pub trait StepperBuilder : Iterator<Item = Time> {
             }
         // 
 
-        fn omega_max(&self) -> Omega {
+        fn omega_max(&self) -> Velocity {
             self._omega_max.unwrap_or(self.omega_abs_max)
         }
 
-        fn set_omega_max(&mut self, omega : Omega) -> Result<(), DriveError> {
+        fn set_omega_max(&mut self, omega : Velocity) -> Result<(), DriveError> {
             if omega > self.omega_abs_max {
                 Err(DriveError::OmegaMaxTooHigh)
             } else {

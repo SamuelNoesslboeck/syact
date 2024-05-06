@@ -6,17 +6,14 @@
 // #    SUBMODULES    #
 // ####################
     /// Basic DC-Motors
-    pub mod dc_motor;
-    pub use dc_motor::DcMotor;
+    // pub mod dc_motor;
+    // pub use dc_motor::DcMotor;
 
     // /// Helper functions and structs for deserializing
     // mod des;
 
     /// LEDs and other light sources
     pub mod led;
-
-    /// Universal pin structure
-    pub mod pin;
 
     /// PWM-signal 
     pub mod pwm;

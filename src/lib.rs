@@ -5,17 +5,10 @@
 // Modules
 extern crate alloc;
 
-// ########################
-// #    PUBLIC IMPORTS    #
-// ########################
-    pub use sylo::Direction;
-// 
-
 // ####################
 // #    SUBMODULES    #
 // ####################
         // Includes documentation from readme file
-        #[doc = include_str!("../docs/components.md")]
         pub mod act;
         pub use act::{SyncActuator, SyncActuatorGroup, Stepper};
         pub use act::asyn::AsyncActuator;
@@ -24,21 +17,13 @@ extern crate alloc;
     
         /// Structs for storing characteristics of stepper motors and devices
         pub mod data;
-        pub use data::{StepperConst, StepperConfig, ActuatorVars, MicroSteps, SpeedFactor};
+        pub use data::{StepperConst, StepperConfig, ActuatorVars, MicroSteps};
 
         /// Functions and Structs for calculating Stepper Motor procedures and operations
         pub mod math;
 
         /// Functions and Structs for taking measurements with a robot for e.g. position calculation
         pub mod meas;
-
-        #[doc = "../docs/tools.md"]
-        pub mod tool;
-        pub use tool::{Tool, SimpleTool};
-
-        /// Self defined units for mathematical operations
-        #[doc = include_str!("../docs/unit_system.md")]
-        pub mod units;
     // 
 
     // Include proc_macro
@@ -95,6 +80,14 @@ extern crate alloc;
         /// Calls all required functions to assure the component will not occupy any more resources like pins or network connections, without dropping the value
         fn dismantle(&mut self) -> Result<(), Error> {
             Ok(())
+        }
+
+        fn dismantle_inline(mut self) -> Result<Self, Error> 
+        where
+            Self : Sized
+        {
+            self.dismantle()?;
+            Ok(self)
         }
     }
 

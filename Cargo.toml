@@ -17,37 +17,23 @@ name = "syact"
 path = "src/lib.rs"
 
 [dependencies]
-# Imports
-atomic_float = "0.1.0"
+atomic_float = "1.0.0"
 cfg-if = "1.0.0"
 clap = { version = "4.3.16", features = [ "cargo" ] }
-embedded-hal = { version = "0.2.7", features = [ "unproven" ] }
-log = { version = "0.4.20" }
-glam = { version = "0.24.0" }
+embedded-hal = "1.0.0"
+log = "0.4.20"
+glam = "0.27.0"
 serde = { version = "1.0.192", features = [ "derive" ] }
-serde_json = { version = "1.0.108" }
-serde_repr = { version = "0.1" }
-spin_sleep = { version = "1.1.1" }
-sylo = { path = "../sylo", features = [ "serde" ]}
-
-# #############
-# # PLATFORMS #
-# #############
-  # Raspberry
-  rppal = { version = "0.14.1", optional = true }
-#
+serde_json = "1.0.108"
+serde_repr = "0.1" 
+spin_sleep = "1.1.1" 
+syunit = "0.1.5"
 
 # Subcrates
 syact_macros = { path = "syact_macros", version = "0.1.0" }
 
 [dev-dependencies]
 crossterm = "0.27.0"
-
-[features]
-default = [ ]
-
-# Platform features
-rasp = [ "dep:rppal" ]
 
 # ##############
 # #  Examples  #

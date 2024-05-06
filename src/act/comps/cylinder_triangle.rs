@@ -4,7 +4,7 @@ use crate::{SyncActuator, Setup, Stepper};
 use crate::act::LinearAxis;
 use crate::act::stepper::StepperActuator;
 use crate::data::StepperConfig;
-use crate::units::*;
+use syunit::*;
 
 /// A cylinder triangle using a cylinder with a stepper motor to power itself
 pub type StepperCylTriangle = CylinderTriangle<Stepper>;
@@ -62,19 +62,19 @@ impl<C : SyncActuator> CylinderTriangle<C> {
         }  
 
         /// Converts the given linear velocity `vel` to the angluar velocity for the given gamma angle `gam`
-        pub fn omega_for_gam(&self, omega : Omega, gam : Gamma) -> Omega {
+        pub fn omega_for_gam(&self, omega : Velocity, gam : Gamma) -> Velocity {
             omega / self.l_a * self.beta_for_gam(gam).sin()
         }
 
         /// Converts the given angular velocity `vel` to the linear velocity for the given gamma angle `gam`
-        pub fn vel_for_gam(&self, omega : Omega, gam : Gamma) -> Omega {
+        pub fn vel_for_gam(&self, omega : Velocity, gam : Gamma) -> Velocity {
             omega * self.l_a / self.beta_for_gam(gam).sin()
         }
     //
 }
 
 // impl crate::math::MathActor for CylinderTriangle {
-//     fn accel_dyn(&self, omega : Omega, gamma : Gamma) -> Alpha {
+//     fn accel_dyn(&self, omega : Velocity, gamma : Gamma) -> Acceleration {
 //         self.alpha_for_this(self.cylinder.accel_dyn(
 //             self.omega_for_parent(omega, gamma), self.gamma_for_parent(gamma)), self.gamma_for_parent(gamma))
 //     }
@@ -119,7 +119,7 @@ impl<C : SyncActuator> SyncActuator for CylinderTriangle<C> {
             Gamma(((self.l_a.powi(2) + self.l_b.powi(2) - len.0.powi(2)) / 2.0 / self.l_a / self.l_b).acos())
         }
 
-        fn omega_for_this(&self, parent_omega : Omega, this_gamma : Gamma) -> Omega {
+        fn omega_for_this(&self, parent_omega : Velocity, this_gamma : Gamma) -> Velocity {
             parent_omega / self.l_a * self.beta_for_gam(this_gamma).sin()
         }
     // 
@@ -130,12 +130,12 @@ impl<C : SyncActuator> SyncActuator for CylinderTriangle<C> {
         }
     //
 
-    // Omega max 
-        fn omega_max(&self) -> Omega {
+    // Velocity max 
+        fn omega_max(&self) -> Velocity {
             self.cylinder.omega_max()
         }
 
-        fn set_omega_max(&mut self, omega_max : Omega) {
+        fn set_omega_max(&mut self, omega_max : Velocity) {
             self.cylinder.set_omega_max(omega_max)
         }
     // 

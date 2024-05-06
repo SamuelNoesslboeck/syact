@@ -39,7 +39,7 @@ fn main() -> Result<(), syact::Error> {
     // 
 
     // Continous drive in one direction
-        stepper.drive(sylo::Direction::CW, 0.2)?;
+        stepper.drive(Direction::CW, 0.2)?;
 
         plot(&mut stepper);
     // 

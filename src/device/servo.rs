@@ -1,9 +1,10 @@
+use embedded_hal::digital::OutputPin;
 use serde::{Serialize, Deserialize};
+use syunit::*;
 
-use crate::{Setup, Dismantle};
 use crate::device::pwm::SoftwarePWM;
+use crate::{Setup, Dismantle};
 use crate::data::servo::ServoConst;
-use crate::units::Gamma;
 
 /// A basic servo motor with absolute position being controlled by a PWM signal
 /// 
@@ -12,7 +13,7 @@ use crate::units::Gamma;
 /// In order to function correctly the servo has to be set up first!
 /// - No pins will be occupied until the setup function is called
 #[derive(Debug, Serialize, Deserialize)]
-pub struct Servo {
+pub struct Servo<P : OutputPin> {
     /// The absolute position of the servo motor
     #[serde(skip)]
     gamma : Gamma,
@@ -20,32 +21,32 @@ pub struct Servo {
     consts : ServoConst,
 
     /// The PWM output signal
-    pwm : SoftwarePWM
+    pwm : SoftwarePWM<P>
 }
 
-impl Servo {
+impl<P : OutputPin> Servo<P> {
     /// Creates a new servo driver with the given servo data `consts` connected to the `pin_pwm`
     /// 
     /// # Setup
     /// 
     /// Before any use of movement functions you must call `start()` or `setup()` in order to set up all the pins
-    pub fn new(consts : ServoConst, pin_pwm : u8) -> Self {
+    pub fn new(consts : ServoConst, pin : P) -> Self {
         Self {
             gamma: consts.default_pos(),
             consts,
 
-            pwm: SoftwarePWM::new(pin_pwm)
+            pwm: SoftwarePWM::new(pin)
         }
     }
  
     /// Returns a reference to the `ServoConst` of the driver
-    pub fn consts<'a>(&'a self) -> &'a ServoConst {
+    pub fn consts(&self) -> &ServoConst {
         &self.consts
     }
 
     /// Start the PWM signal and moves the servo to it's default position
     pub fn start(&mut self) -> Result<(), crate::Error> {
-        self.pwm.start()?;
+        // self.pwm.start()?;
         self.pwm.set_period(self.consts.default_pulse(), self.consts.period_time());
         Ok(())
     }
@@ -98,13 +99,13 @@ impl Servo {
 }
 
 // Setup and Dismantle
-impl Setup for Servo {
+impl<P : OutputPin> Setup for Servo<P> {
     fn setup(&mut self) -> Result<(), crate::Error> {
         self.start()
     }
 }
 
-impl Dismantle for Servo {
+impl<P : OutputPin> Dismantle for Servo<P> {
     fn dismantle(&mut self) -> Result<(), crate::Error> {
         self.stop()
     }

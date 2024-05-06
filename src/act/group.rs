@@ -1,6 +1,6 @@
-use crate::data::SpeedFactor;
+use syunit::Factor;
 use crate::{Setup, SyncActuator};
-use crate::units::*;
+use syunit::*;
 
 /// A group of synchronous components  
 /// This trait allows a lot of functions to be used for all components at once.
@@ -61,7 +61,7 @@ where
     //
 
     /// Runs [SyncComp::drive_rel()] for all components
-    fn drive_rel(&mut self, deltas : [Delta; C], speed : [SpeedFactor; C]) -> Result<(), crate::Error> {
+    fn drive_rel(&mut self, deltas : [Delta; C], speed : [Factor; C]) -> Result<(), crate::Error> {
         self.try_for_each_mut(|act, index| {
             act.drive_rel(deltas[index], speed[index])  
         })?;
@@ -69,7 +69,7 @@ where
     }
 
     /// Runs [SyncComp::drive_abs()] for all components
-    fn drive_abs(&mut self, gamma : [Gamma; C], speed : [SpeedFactor; C]) -> Result<(), crate::Error>  {
+    fn drive_abs(&mut self, gamma : [Gamma; C], speed : [Factor; C]) -> Result<(), crate::Error>  {
         self.try_for_each_mut(|act, index| {
             act.drive_abs(gamma[index], speed[index])
         })?;
@@ -78,7 +78,7 @@ where
 
     // Async
         /// Runs [SyncComp::drive_rel_async()] for all components
-        fn drive_rel_async(&mut self, deltas : [Delta; C], speed : [SpeedFactor; C]) -> Result<(), crate::Error> {
+        fn drive_rel_async(&mut self, deltas : [Delta; C], speed : [Factor; C]) -> Result<(), crate::Error> {
             self.try_for_each_mut(|act, index| {
                 act.drive_rel_async(deltas[index], speed[index])
             })?; 
@@ -86,7 +86,7 @@ where
         }
 
         /// Runs [SyncComp::drive_abs_async()] for all components
-        fn drive_abs_async(&mut self, gamma : [Gamma; C], speed : [SpeedFactor; C]) -> Result<(), crate::Error> {
+        fn drive_abs_async(&mut self, gamma : [Gamma; C], speed : [Factor; C]) -> Result<(), crate::Error> {
             self.try_for_each_mut(|act, index| {
                 act.drive_abs_async(gamma[index], speed[index])
             })?;
@@ -179,16 +179,16 @@ where
         }
 
         /// Returns the maximum omegas for each component of the group
-        fn omega_max(&self) -> [Omega; C] {
+        fn omega_max(&self) -> [Velocity; C] {
             self.for_each(|act, _| {
-                act.omega_max()
+                act.velocity_max()
             })
         }
 
         /// Set the maximum omega of the components
-        fn set_omega_max(&mut self, omega_max : [Omega; C]) {
+        fn set_omega_max(&mut self, omega_max : [Velocity; C]) {
             self.for_each_mut(|act, index| {
-                act.set_omega_max(omega_max[index]);
+                act.set_velocity_max(omega_max[index]);
             });
         }
     // 

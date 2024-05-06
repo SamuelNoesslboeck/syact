@@ -1,6 +1,7 @@
-use crate::{SyncActuator, Setup, SpeedFactor};
+use syunit::*;
+
+use crate::{SyncActuator, Setup};
 use crate::act::parent::{ActuatorParent, RatioActuatorParent};
-use crate::units::*;
 
 pub struct StateActuator<A : SyncActuator, const C : usize> {
     ctrl : A,
@@ -42,14 +43,14 @@ impl<A : SyncActuator, const C : usize> StateActuator<A, C> {
     }
 
     // Driving
-        pub fn drive_to_state(&mut self, index : usize, speed : SpeedFactor) -> Result<(), crate::Error> {
+        pub fn drive_to_state(&mut self, index : usize, speed : Factor) -> Result<(), crate::Error> {
             self.drive_abs(self.get_state_gamma(index), speed).map(|ok| {
                 self.state = index;
                 ok
             })
         }
 
-        pub fn drive_to_state_async(&mut self, index : usize, speed : SpeedFactor) -> Result<(), crate::Error> {
+        pub fn drive_to_state_async(&mut self, index : usize, speed : Factor) -> Result<(), crate::Error> {
             self.drive_abs_async(self.get_state_gamma(index), speed).map(|ok| {
                 self.state = index;
                 ok

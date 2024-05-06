@@ -1,6 +1,4 @@
-use sylo::Direction;
-
-use crate::units::*;
+use syunit::*;
 
 /// Stores distance limits for the component
 #[derive(Debug, Clone, Default)]

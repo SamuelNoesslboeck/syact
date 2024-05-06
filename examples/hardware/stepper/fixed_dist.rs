@@ -7,7 +7,7 @@ mod helper;
 
 // Define distance and max speed defaults
 const DELTA_DEF : Delta = Delta(2.0 * PI);
-const OMEGA_DEF : Omega = Omega(20.0);
+const OMEGA_DEF : Velocity = Velocity(20.0);
 
 fn main() -> Result<(), syact::Error> {
     // Parse cmd args
@@ -17,14 +17,14 @@ fn main() -> Result<(), syact::Error> {
         .arg(arg!([pin_step] "Pin number of the step pin").value_parser(value_parser!(u8)))
         .arg(arg!([pin_dir] "Pin number of the direction pin").value_parser(value_parser!(u8)))
         .arg(arg!([delta] "Delta (distance) of the movement in rad (2pi [1 rev] per default)").value_parser(value_parser!(f32)))
-        .arg(arg!([omega] "Omega (velocity) of the movement in rad/s (10 rad/s per default)").value_parser(value_parser!(f32)))
+        .arg(arg!([omega] "Velocity (velocity) of the movement in rad/s (10 rad/s per default)").value_parser(value_parser!(f32)))
         .get_matches();
 
     let pin_step : u8 = *matches.get_one("pin_step").expect("A valid step pin has to be provided");
     let pin_dir : u8 = *matches.get_one("pin_dir").expect("A valid direction pin has to be provided");
 
     let delta : Delta  = Delta(*matches.get_one("delta").unwrap_or(&DELTA_DEF.0));
-    let omega : Omega = Omega(*matches.get_one("omega").unwrap_or(&OMEGA_DEF.0));
+    let omega : Velocity = Velocity(*matches.get_one("omega").unwrap_or(&OMEGA_DEF.0));
 
     // Load data
     let inertia = std::env::var("INERTIA").ok().map(|v| v.parse::<Inertia>().unwrap()).unwrap_or(Inertia::ZERO);
@@ -52,10 +52,10 @@ fn main() -> Result<(), syact::Error> {
     device.apply_inertia(inertia);
     device.apply_gen_force(force)?;
 
-    device.set_omega_max(omega);
+    device.set_velocity_max(omega);
 
     print!("Staring to move ... ");
-    device.drive_rel(delta, SpeedFactor::MAX)?;      // Move the motor
+    device.drive_rel(delta, Factor::MAX)?;      // Move the motor
     println!("done!");
     println!("");
 

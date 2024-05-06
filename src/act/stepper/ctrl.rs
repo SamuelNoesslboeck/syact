@@ -1,11 +1,11 @@
 use core::time::Duration;
 use std::time::Instant;
 
-use sylo::Direction;
+use embedded_hal::digital::OutputPin;
+use syunit::*;
 
+use crate::{Setup, Dismantle};
 use crate::act::stepper::StepError;
-use crate::device::pin::*;
-use crate::{units::*, Setup, Dismantle};
 
 // Constants
 pub const STEP_PULSE_TIME : Time = Time(1.0 / 40000.0);
@@ -36,43 +36,43 @@ pub trait Controller {
 }
 
 #[derive(Debug)]
-pub struct GenericPWM {
+pub struct GenericPWM<S : OutputPin, D : OutputPin> {
     dir : Direction,
 
-    pin_step : UniOutPin,
-    pin_dir : UniOutPin,
+    pin_step : S,
+    pin_dir : D,
 
     t_pause : Duration,
     pause_stamp : Instant
 }
 
-impl GenericPWM {
-    pub fn new(pin_step : u8, pin_dir : u8) -> Result<Self, crate::Error> {
+impl<S : OutputPin, D : OutputPin> GenericPWM<S, D> {
+    pub fn new(pin_step : S, pin_dir : D) -> Result<Self, crate::Error> {
         Ok(Self {
             dir: Direction::CW,
             
-            pin_step: UniPin::new(pin_step)?.into_output(),
-            pin_dir: UniPin::new(pin_dir)?.into_output(),
+            pin_step,
+            pin_dir,
 
             t_pause: Duration::ZERO,
             pause_stamp: Instant::now()
         }) 
     }
 
-    pub fn new_gen() -> Self {
-        Self::new(ERR_PIN, ERR_PIN).unwrap()
-    }
+    // pub fn new_gen() -> Self {
+    //     Self::new(ERR_PIN, ERR_PIN).unwrap()
+    // }
 
-    pub fn pin_step(&self) -> u8 {
-        self.pin_step.pin
-    }
+    // pub fn pin_step(&self) -> u8 {
+    //     self.pin_step.pin
+    // }
 
-    pub fn pin_dir(&self) -> u8 {
-        self.pin_dir.pin
-    }
+    // pub fn pin_dir(&self) -> u8 {
+    //     self.pin_dir.pin
+    // }
 }
 
-impl Setup for GenericPWM {
+impl<S : OutputPin + Setup, D : OutputPin + Setup> Setup for GenericPWM<S, D> {
     fn setup(&mut self) -> Result<(), crate::Error> {
         self.pin_step.setup()?; 
         self.pin_dir.setup()?;
@@ -81,14 +81,14 @@ impl Setup for GenericPWM {
     }
 }
 
-impl Dismantle for GenericPWM {
+impl<S : OutputPin, D : OutputPin> Dismantle for GenericPWM<S, D> {
     fn dismantle(&mut self) -> Result<(), crate::Error> {
         // TODO: Add pins dismantle
         Ok(())
     }
 }
 
-impl Controller for GenericPWM {
+impl<S : OutputPin, D : OutputPin> Controller for GenericPWM<S, D> {
     fn step_with(&mut self, t_len : Time, t_pause : Time) {
         self.pin_step.set_high().unwrap();
         spin_sleep::sleep(t_len.into());

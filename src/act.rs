@@ -1,9 +1,8 @@
 use alloc::sync::Arc;
 use atomic_float::AtomicF32;
+use syunit::*;
 
 use crate::Setup;
-use crate::data::SpeedFactor;
-use crate::units::*;
 
 // ####################
 // #    SUBMODULES    #
@@ -23,7 +22,7 @@ use crate::units::*;
 
     /// Stepper motors and their unique methods and traits
     pub mod stepper;
-    pub use stepper::{StepperActuator, StepperMotor, Stepper};
+    pub use stepper::{StepperActuator, Stepper};
 //
 
 // #####################
@@ -39,9 +38,9 @@ use crate::units::*;
         /// 
         /// If an interruptor was previously triggered by a movement, the control applies a temporary direction that lasts as long as
         /// the interruptor is triggered. Otherwise a not direction dependent switch would block movements completely
-        fn dir(&self) -> Option<sylo::Direction>;
+        fn dir(&self) -> Option<Direction>;
         
-        fn set_temp_dir(&mut self, dir_opt : Option<sylo::Direction>);
+        fn set_temp_dir(&mut self, dir_opt : Option<Direction>);
 
         /// Runs a check of the movement process
         fn check(&mut self, gamma : &Arc<AtomicF32>) -> Option<InterruptReason>;
@@ -86,12 +85,12 @@ pub trait SyncActuator : Setup {
     // Movement
         /// Moves the component by the relative distance as fast as possible, halts the script until 
         /// the movement is finshed and returns the actual **relative** distance travelled
-        fn drive_rel(&mut self, delta : Delta, speed : SpeedFactor) -> Result<(), crate::Error>;
+        fn drive_rel(&mut self, delta : Delta, speed : Factor) -> Result<(), crate::Error>;
 
         /// Moves the component to the given position as fast as possible, halts the script until the 
         /// movement is finished and returns the actual **relative** distance travelled.
         #[inline]
-        fn drive_abs(&mut self, gamma : Gamma, speed : SpeedFactor) -> Result<(), crate::Error> {
+        fn drive_abs(&mut self, gamma : Gamma, speed : Factor) -> Result<(), crate::Error> {
             let delta = gamma - self.gamma();
             self.drive_rel(delta, speed)
         }
@@ -99,17 +98,17 @@ pub trait SyncActuator : Setup {
 
     // Async
         /// Moves the component by the relative distance as fast as possible
-        fn drive_rel_async(&mut self, delta : Delta, speed : SpeedFactor) -> Result<(), crate::Error>;
+        fn drive_rel_async(&mut self, delta : Delta, speed : Factor) -> Result<(), crate::Error>;
 
         /// Moves the component to the given position as fast as possible, halts the script until the 
         /// movement is finished and returns the actual **abolute** distance traveled to. 
         #[inline(always)]
-        fn drive_abs_async(&mut self, gamma : Gamma, speed : SpeedFactor) -> Result<(), crate::Error> {
+        fn drive_abs_async(&mut self, gamma : Gamma, speed : Factor) -> Result<(), crate::Error> {
             let delta = gamma - self.gamma();
             self.drive_rel_async(delta, speed)
         }
-
-        fn drive_omega(&mut self, omega_tar : Omega) -> Result<(), crate::Error>;
+        
+        fn drive_velocity(&mut self, omega_tar : Velocity) -> Result<(), crate::Error>;
 
         /// Halts the thread until the async movement is finished
         /// 
@@ -170,7 +169,7 @@ pub trait SyncActuator : Setup {
         /// # Panics
         /// 
         /// - Panics if no parent component or an override is provided
-        fn omega_max(&self) -> Omega;
+        fn velocity_max(&self) -> Velocity;
 
         /// Set the maximum velocity of the component, current maximum omega can be access with `SyncComp::omega_max()`
         /// 
@@ -178,7 +177,7 @@ pub trait SyncActuator : Setup {
         /// 
         /// - Panics if no parent component or an override is provided
         /// - Panics if the omega given is higher than the maximum omega recommended (e.g. `StepperConst::omega_max()`)
-        fn set_omega_max(&mut self, omega_max : Omega);
+        fn set_velocity_max(&mut self, omega_max : Velocity);
 
         /// Returns if any limit positions have been reached. The value returned can either be radians or millimeters, 
         /// depending on the type of component.
@@ -246,8 +245,8 @@ pub trait SyncActuator : Setup {
         /// 
         /// gear.set_gamma(Gamma::ZERO);
         /// 
-        /// gear.set_omega_max(Omega(5.0));
-        /// gear.drive_rel(Delta(-0.2), SpeedFactor::MAX).unwrap();    // Drive component in negative direction
+        /// gear.set_omega_max(Velocity(5.0));
+        /// gear.drive_rel(Delta(-0.2), Factor::MAX).unwrap();    // Drive component in negative direction
         /// 
         /// assert_eq!(gear.dir(), Direction::CCW);
         /// assert!((gear.gamma() - Gamma(-0.2)).abs() < Delta(0.05));     // Check if the movement was correct (with step inaccuracy)

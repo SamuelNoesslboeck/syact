@@ -11,5 +11,5 @@ fn gear_basic() {
     gear.setup().unwrap();
 
     println!("Gear - Basics");
-    gear.drive_rel(Delta(1.0), SpeedFactor::MAX).unwrap();
+    gear.drive_rel(Delta(1.0), Factor::MAX).unwrap();
 }

@@ -5,15 +5,14 @@ use std::thread::{JoinHandle, self};
 use std::sync::mpsc::{Receiver, Sender, channel};
 
 use atomic_float::AtomicF32;
-use sylo::Direction;
+use syunit::*;
 
 use crate::math::movements::DefinedActuator;
 use crate::{SyncActuator, Setup, Dismantle};
 use crate::act::{Interruptor, InterruptReason, Interruptible};
 use crate::act::asyn::AsyncActuator;
-use crate::act::stepper::{StepperActuator, StepperMotor, Controller, StepperBuilder, DriveError, DriveMode};
-use crate::data::{StepperConfig, StepperConst, SpeedFactor, MicroSteps}; 
-use crate::units::*;
+use crate::act::stepper::{StepperActuator, Controller, StepperBuilder, DriveError, DriveMode};
+use crate::data::{StepperConfig, StepperConst, MicroSteps}; 
 
 pub enum AsyncMsg {
     Setup,
@@ -281,19 +280,19 @@ impl<B : StepperBuilder + Send + 'static, C : Controller + Setup + Dismantle + S
 
 impl<B : StepperBuilder + Send + 'static, C : Controller + Setup + Dismantle + Send + 'static> SyncActuator for ThreadedStepper<B, C> {
     // Movement
-        fn drive_rel(&mut self, delta : Delta, speed : SpeedFactor) -> Result<(), crate::Error> {
+        fn drive_rel(&mut self, delta : Delta, speed : Factor) -> Result<(), crate::Error> {
             self.drive_rel_async(delta, speed)?;
             Ok(self.await_inactive()?)
         }
 
-        fn drive_abs(&mut self, gamma : Gamma, speed : SpeedFactor) -> Result<(), crate::Error> {
+        fn drive_abs(&mut self, gamma : Gamma, speed : Factor) -> Result<(), crate::Error> {
             let delta = gamma - self.gamma();
             self.drive_rel(delta, speed)
         }
     // 
 
     // Async
-        fn drive_rel_async(&mut self, delta : Delta, speed : SpeedFactor) -> Result<(), crate::Error> {
+        fn drive_rel_async(&mut self, delta : Delta, speed : Factor) -> Result<(), crate::Error> {
             // Check if the delta given is finite
             if !delta.is_finite() {
                 return Err(format!("Invalid delta distance! {}", delta).into());
@@ -303,18 +302,18 @@ impl<B : StepperBuilder + Send + 'static, C : Controller + Setup + Dismantle + S
                 log::debug!("[drive] Delta: {:?}, Speed-Factor {:?}", delta, speed);
             // 
             
-            self.sender.send(AsyncMsg::Drive(DriveMode::FixedDistance(delta, Omega::ZERO, speed)))?;
+            self.sender.send(AsyncMsg::Drive(DriveMode::FixedDistance(delta, Velocity::ZERO, speed)))?;
             self.active.store(true, Ordering::Relaxed);
 
             Ok(())
         }
 
-        fn drive_abs_async(&mut self, gamma : Gamma, speed : SpeedFactor) -> Result<(), crate::Error> {
+        fn drive_abs_async(&mut self, gamma : Gamma, speed : Factor) -> Result<(), crate::Error> {
             let delta = gamma - self.gamma();
             self.drive_rel_async(delta, speed)
         }
 
-        fn drive_omega(&mut self, omega_tar : Omega) -> Result<(), crate::Error> {
+        fn drive_velocity(&mut self, omega_tar : Velocity) -> Result<(), crate::Error> {
             self.sender.send(AsyncMsg::Drive(DriveMode::ConstOmega(omega_tar.abs(), omega_tar.get_direction())))?;
             Ok(())
         }
@@ -343,11 +342,11 @@ impl<B : StepperBuilder + Send + 'static, C : Controller + Setup + Dismantle + S
         }
 
         #[inline]
-        fn omega_max(&self) -> Omega {
+        fn velocity_max(&self) -> Velocity {
             self.builder.lock().unwrap().omega_max()
         }
 
-        fn set_omega_max(&mut self, omega_max : Omega) {
+        fn set_velocity_max(&mut self, omega_max : Velocity) {
             self.builder.lock().unwrap().set_omega_max(omega_max).unwrap();      // TODO
         }
 
@@ -439,9 +438,9 @@ impl<B : StepperBuilder + Send + 'static, C : Controller + Setup + Dismantle + S
 }
 
 impl<B : StepperBuilder + Send + 'static, C : Controller + Setup + Dismantle + Send + 'static> AsyncActuator for ThreadedStepper<B, C> {
-    type Duty = SpeedFactor;
+    type Duty = Factor;
     
-    fn drive(&mut self, _dir : Direction, _speed_f : SpeedFactor) -> Result<(), crate::Error> {
+    fn drive(&mut self, _dir : Direction, _speed_f : Factor) -> Result<(), crate::Error> {
         todo!()
     }
 
@@ -449,7 +448,7 @@ impl<B : StepperBuilder + Send + 'static, C : Controller + Setup + Dismantle + S
         self.dir()
     }
 
-    fn speed(&self) -> SpeedFactor {
+    fn speed(&self) -> Factor {
         todo!()
     }
 }
@@ -458,16 +457,6 @@ impl<B : StepperBuilder + Send + 'static, C : Controller + Setup + Dismantle + S
 where
     B : DefinedActuator 
 {
-    // Motor
-        fn motor(&self) -> &dyn StepperMotor {
-            self
-        }
-
-        fn motor_mut(&mut self) -> &mut dyn StepperMotor {
-            self
-        }
-    // 
-
     // Data
         fn consts(&self) -> &StepperConst {
             todo!()
@@ -494,21 +483,6 @@ where
     fn step_ang(&self) -> Delta {
         self.builder.lock().unwrap().step_angle()
     }
-}
-
-impl<B : StepperBuilder + Send + 'static, C : Controller + Setup + Dismantle + Send + 'static> StepperMotor for ThreadedStepper<B, C> 
-where
-    B : DefinedActuator 
-{
-    // Calculations
-        fn torque_at_speed(&self, _omega : Omega) -> Force {
-            todo!()
-        }
-
-        fn alpha_at_speed(&self, _omega : Omega) -> Option<Alpha> {
-            todo!()
-        }
-    // 
 }
 
 impl<B : StepperBuilder + Send + 'static, C : Controller + Setup + Dismantle + Send + 'static> Interruptible for ThreadedStepper<B, C> {

@@ -1,7 +1,7 @@
 use crate::data::MicroSteps;
 use crate::math::movements::DefinedActuator;
 use crate::{StepperConst, SyncActuator, SyncActuatorGroup, StepperConfig};
-use crate::units::*;
+use syunit::*;
 
 // Public imports
     pub use syact_macros::StepperActuatorGroup;
@@ -21,15 +21,15 @@ use crate::units::*;
 // #   Stepper-Types   #
 // #####################
     /// Default `Stepper` type for high-performance systems (high resolution stepper)
-    pub type Stepper = motor::ThreadedStepper<StartStopBuilder, GenericPWM>;
+    pub type Stepper<S, D> = motor::ThreadedStepper<StartStopBuilder, GenericPWM<S, D>>;
 
-    impl Stepper {
-        /// Creates a new generic stepper with both pins set to [ERR_PIN](super::pin::ERR_PIN) just for simulation and testing purposes
-        #[inline]
-        pub fn new_gen() -> Self {
-            Self::new(GenericPWM::new_gen(), StepperConst::GEN)
-        }
-    }
+    // impl<S, D> Stepper<S, D> {
+    //     /// Creates a new generic stepper with both pins set to [ERR_PIN](super::pin::ERR_PIN) just for simulation and testing purposes
+    //     #[inline]
+    //     pub fn new_gen() -> Self {
+    //         Self::new(GenericPWM::new_gen(), StepperConst::GEN)
+    //     }
+    // }
 
     // pub struct MicroSteps(u8);
 // 
@@ -60,14 +60,6 @@ use crate::units::*;
 // Stepper traits
     /// A component based on a stepper motor
     pub trait StepperActuator : SyncActuator + DefinedActuator {
-        // Super comp
-            /// Returns a reference to the motor of the component (either itself or a sub/parent-component)
-            fn motor(&self) -> &dyn StepperMotor;
-
-            /// Returns a mutable reference to the motor of the component (either itself or a sub/parent component)
-            fn motor_mut(&mut self) -> &mut dyn StepperMotor;
-        // 
-
         /// Returns the constants of the stepper motor
         fn consts(&self) -> &StepperConst;
 
@@ -88,17 +80,6 @@ use crate::units::*;
         // Steps
             /// The angular distance of a step considering microstepping
             fn step_ang(&self) -> Delta;
-        // 
-    }
-
-    /// All path and curve calculations are designed for the 
-    pub trait StepperMotor : StepperActuator {
-        // Calculation
-            /// Returns the max torque of the motor at a given speed `omega`
-            fn torque_at_speed(&self, omega : Omega) -> Force;
-
-            /// Returns the max acceleration of the motor at a given speed `omega`
-            fn alpha_at_speed(&self, omega : Omega) -> Option<Alpha>;
         // 
     }
 

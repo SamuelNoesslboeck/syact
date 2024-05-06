@@ -2,7 +2,7 @@ use serde::{Serialize, Deserialize};
 
 use crate::{SyncActuator, Setup};
 use crate::act::parent::{ActuatorParent, RatioActuatorParent};
-use crate::units::*;
+use syunit::*;
 
 /// A linear axis
 #[derive(Debug, Serialize, Deserialize)]

@@ -8,5 +8,5 @@ fn basic_plot() {
     let u = 12.0;
 
     println!("Stepper-Data");
-    println!("- Omega-Max: {}", consts.omega_max(u));
+    println!("- Velocity-Max: {}", consts.omega_max(u));
 }

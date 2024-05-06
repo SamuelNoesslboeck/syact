@@ -2,7 +2,7 @@ use serde::{Serialize, Deserialize};
 
 use crate::{SyncActuator, Setup};
 use crate::act::parent::{ActuatorParent, RatioActuatorParent};
-use crate::units::*;
+use syunit::*;
 
 /// A simple conveyor powered by any kind of synchronous motor
 #[derive(Debug)]

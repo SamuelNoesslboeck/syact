@@ -18,7 +18,7 @@ fn main() -> Result<(), syact::Error> {
 
     // Drive
     let gamma_0 = stepper.gamma();
-    stepper.drive(sylo::Direction::CW, SpeedFactor::MAX)?;
+    stepper.drive(Direction::CW, Factor::MAX)?;
 
     std::thread::sleep(core::time::Duration::from_millis(2000));
     

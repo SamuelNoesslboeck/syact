@@ -14,9 +14,9 @@ impl<'a> ControlHandler<magicbox::State> for Handler<'a> {
     fn on_msg(&mut self, msg : Result<magicbox::State, syiot::Error>) {
         if let Ok(state) = msg {
             let dir = if state.joystick_x >= 0 {
-                sylo::Direction::CW
+                Direction::CW
             } else {
-                sylo::Direction::CCW
+                Direction::CCW
             };
 
             self.stepper.drive(dir, (state.joystick_x.abs() as f32 / 100.0).min(1.0)).unwrap();

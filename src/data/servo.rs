@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::units::*;
+use syunit::*;
 
 /// A struct for storing all the constants of a servo motor that do not change during the process of the program
 #[derive(Debug, Default, Clone, PartialEq, PartialOrd, Serialize, Deserialize)]
@@ -10,7 +10,7 @@ pub struct ServoConst
     pub t_max : Force,
 
     /// Maximum angular velocity [Unit rad/s]
-    pub omega_max : Omega,
+    pub omega_max : Velocity,
 
     /// Maximum angle [Unit (radians)]
     pub gamma_max : Gamma,
@@ -21,7 +21,7 @@ pub struct ServoConst
     pub pwm_max : Time,
 
     /// Default frequency
-    pub f_pwm : Omega
+    pub f_pwm : Velocity
 }
 
 impl ServoConst 
@@ -31,23 +31,23 @@ impl ServoConst
     /// DO NOT EXECUTE CALCULATION FUNCTIONS WITH THIS DATA
     pub const ERROR : Self = Self {
         t_max: Force::ZERO,
-        omega_max: Omega::ZERO,
+        omega_max: Velocity::ZERO,
         gamma_max: Gamma::ZERO,
         pwm_min: Time::ZERO,
         pwm_max: Time::ZERO,
-        f_pwm: Omega::ZERO
+        f_pwm: Velocity::ZERO
     }; 
 
     /// Constants for a MG996R servo motor. 
     /// See [datasheet](https://github.com/SamuelNoesslboeck/syact/blob/master/docs/datasheets/MG996R.pdf)
     pub const MG996R : Self = Self {
         t_max: Force(1.08),
-        omega_max: Omega(8.5),
+        omega_max: Velocity(8.5),
         gamma_max: Gamma(core::f32::consts::PI),
 
         pwm_min: Time(0.00075),
         pwm_max: Time(0.00225),
-        f_pwm: Omega(50.0)
+        f_pwm: Velocity(50.0)
     };
 
     /// The default pulse time of a servo motor (mid position)

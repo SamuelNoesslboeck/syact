@@ -4,7 +4,6 @@
 
 /// Methods for calculating forces acting upon components and motors
 pub mod force;
-pub use force::{forces_joint, forces_segment};
 
 /// Methods for calculating inertias of assemblies
 pub mod inertia;

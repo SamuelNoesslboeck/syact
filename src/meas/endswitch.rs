@@ -2,29 +2,28 @@ use core::sync::atomic::AtomicBool;
 
 use alloc::sync::Arc;
 use atomic_float::AtomicF32;
-use embedded_hal::digital::v2::InputPin;
+use embedded_hal::digital::InputPin;
 use serde::{Serialize, Deserialize};
+use syunit::*;
 
 use crate::Setup;
 use crate::act::{Interruptor, InterruptReason};
-use crate::device::pin::UniInPin;
-
-use super::*;
+use crate::meas::Measurable;
 
 /// A simple endswitch that can trigger when reaching a destination
 #[derive(Serialize, Deserialize)]
-pub struct RawEndSwitch<P : InputPin> {
+pub struct EndSwitch<P : InputPin> {
     trigger : bool,
-    _dir : Option<sylo::Direction>, 
-    temp_dir : Option<sylo::Direction>,
+    _dir : Option<Direction>, 
+    temp_dir : Option<Direction>,
 
     #[serde(skip)]
     sys_pin : P
 }
 
-impl<P : InputPin> RawEndSwitch<P> {
+impl<P : InputPin> EndSwitch<P> {
     /// Creates a new end switch
-    pub fn new(trigger : bool, dir : Option<sylo::Direction>, sys_pin : P) -> Self {
+    pub fn new(trigger : bool, dir : Option<Direction>, sys_pin : P) -> Self {
         Self {
             trigger,
             _dir: dir,
@@ -35,20 +34,20 @@ impl<P : InputPin> RawEndSwitch<P> {
     }
 }
 
-impl<P : InputPin> BoolMeas for RawEndSwitch<P> {
-    type Error = (); 
+impl<P : InputPin> Measurable<bool> for EndSwitch<P> {
+    type Error = P::Error; 
 
     fn meas(&mut self) -> Result<bool, Self::Error> {
-        return Ok(unsafe { self.sys_pin.is_high().unwrap_unchecked() } == self.trigger)
+        self.sys_pin.is_high().map(|v| v == self.trigger)
     }
 }
 
-impl<P : InputPin> Interruptor for RawEndSwitch<P> {
-    fn dir(&self) -> Option<sylo::Direction> {
+impl<P : InputPin> Interruptor for EndSwitch<P> {
+    fn dir(&self) -> Option<Direction> {
         self._dir.or(self.temp_dir)
     }
 
-    fn set_temp_dir(&mut self, dir_opt : Option<sylo::Direction>) {
+    fn set_temp_dir(&mut self, dir_opt : Option<Direction>) {
         self.temp_dir = dir_opt;
     }
 
@@ -65,12 +64,12 @@ impl<P : InputPin> Interruptor for RawEndSwitch<P> {
 // Virtual
 pub struct VirtualEndSwitch {
     pub vpin : Arc<AtomicBool>,
-    _dir : Option<sylo::Direction>,
-    temp_dir : Option<sylo::Direction>
+    _dir : Option<Direction>,
+    temp_dir : Option<Direction>
 }
 
 impl VirtualEndSwitch {
-    pub fn new(def : bool, _dir : Option<sylo::Direction>) -> Self {
+    pub fn new(def : bool, _dir : Option<Direction>) -> Self {
         VirtualEndSwitch { 
             vpin: Arc::new(AtomicBool::new(def)),
             _dir,
@@ -82,11 +81,11 @@ impl VirtualEndSwitch {
 impl Setup for VirtualEndSwitch { }
 
 impl Interruptor for VirtualEndSwitch {
-    fn dir(&self) -> Option<sylo::Direction> {
+    fn dir(&self) -> Option<Direction> {
         self._dir.or(self.temp_dir)
     }
 
-    fn set_temp_dir(&mut self, dir_opt : Option<sylo::Direction>) {
+    fn set_temp_dir(&mut self, dir_opt : Option<Direction>) {
         self.temp_dir = dir_opt;
     } 
     
@@ -98,16 +97,3 @@ impl Interruptor for VirtualEndSwitch {
         }
     }
 }
-
-// #########################
-// #    IMPLEMENTATIONS    #
-// #########################
-    // `UniPin` - Implementation
-    pub type EndSwitch = RawEndSwitch<UniInPin>;
-
-    impl<P : InputPin + Setup> Setup for RawEndSwitch<P> {
-        fn setup(&mut self) -> Result<(), crate::Error> {
-            self.sys_pin.setup()
-        }
-    } 
-//

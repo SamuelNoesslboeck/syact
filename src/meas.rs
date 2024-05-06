@@ -1,12 +1,8 @@
-use crate::act::InterruptReason;
-use crate::{SyncActuator, SpeedFactor};
-use crate::act::Interruptible;
-use crate::units::*;
+use crate::SyncActuator;
+use crate::act::{Interruptible, InterruptReason};
+use syunit::*;
 
 use serde::{Serialize, Deserialize};
-
-// Public imports
-pub use sylo::{BoolMeas, ByteMeas, ShortMeas, IntMeas};
 
 // Submodules
     mod endswitch;
@@ -16,12 +12,20 @@ pub use sylo::{BoolMeas, ByteMeas, ShortMeas, IntMeas};
     pub use sonar::*;
 // 
 
+// Traits
+    pub trait Measurable<V> {
+        type Error;
+
+        fn meas(&mut self) -> Result<V, Self::Error>;
+    }
+// 
+
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct SimpleMeasData {
     pub set_gamma : Gamma,
     pub max_dist : Delta,
 
-    pub meas_speed : SpeedFactor,
+    pub meas_speed : Factor,
 
     #[serde(default = "default_add_samples")]
     pub add_samples : usize,
@@ -66,7 +70,7 @@ impl SimpleMeasResult {
 /// # Measurement data and its usage
 /// 
 /// Specifing a `sample_dist` is optional, as the script will replace it with 10% of the maximum distance if not specified
-pub fn take_simple_meas<C : SyncActuator + Interruptible + ?Sized>(comp : &mut C, data : &SimpleMeasData, speed : SpeedFactor) -> Result<SimpleMeasResult, crate::Error> {
+pub fn take_simple_meas<C : SyncActuator + Interruptible + ?Sized>(comp : &mut C, data : &SimpleMeasData, speed : Factor) -> Result<SimpleMeasResult, crate::Error> {
     let mut gammas : Vec<Gamma> = Vec::new();
 
     // Init measurement

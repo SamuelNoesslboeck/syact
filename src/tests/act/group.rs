@@ -1,3 +1,4 @@
+use crate::tests::SimPin;
 use crate as syact;
 
 use syact::prelude::*;
@@ -8,8 +9,8 @@ fn test<G : SyncActuatorGroup<T, 2>, T : SyncActuator + ?Sized + 'static>(_g : &
 
 #[derive(StepperActuatorGroup)]
 struct SomeComps {
-    base : Gear<Stepper>,
-    arm1 : LinearAxis<Stepper>
+    base : Gear<Stepper<SimPin, SimPin>>,
+    arm1 : LinearAxis<Stepper<SimPin, SimPin>>
 }
 
 #[test]

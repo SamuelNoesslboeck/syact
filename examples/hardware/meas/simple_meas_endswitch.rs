@@ -15,20 +15,20 @@ fn main() -> Result<(), syact::Error> {
         .arg(arg!([pin_step] "Pin number of the step pin").value_parser(value_parser!(u8)))
         .arg(arg!([pin_dir] "Pin number of the direction pin").value_parser(value_parser!(u8)))
         .arg(arg!([pin_meas] "Pin number of the measurement pin").value_parser(value_parser!(u8)))
-        .arg(arg!([dir] "sylo::Direction of the endswitch (`1` => `CW`, `0` => `CCW`)").value_parser(value_parser!(u8)))
+        .arg(arg!([dir] "Direction of the endswitch (`1` => `CW`, `0` => `CCW`)").value_parser(value_parser!(u8)))
         .arg(arg!([micro] "Enables microstepping with the given step value (1 per default)").value_parser(value_parser!(u8)))
         .arg(arg!([delta] "Delta (distance) of the movement in rad (2pi [1 rev] per default)").value_parser(value_parser!(f32)))
-        .arg(arg!([speed] "Speed factor of movement").value_parser(value_parser!(SpeedFactor)))
+        .arg(arg!([speed] "Speed factor of movement").value_parser(value_parser!(Factor)))
         .get_matches();
 
     let pin_step : u8 = *matches.get_one("pin_step").expect("A valid step pin has to be provided");
     let pin_dir : u8 = *matches.get_one("pin_dir").expect("A valid direction pin has to be provided");
     let pin_meas : u8 = *matches.get_one("pin_meas").expect("A valid measurement pin has to be provided");
-    let dir_opt : Option<Direction> = matches.get_one("dir").map(|val| sylo::Direction::from_u8(*val));
+    let dir_opt : Option<Direction> = matches.get_one("dir").map(|val| Direction::from_u8(*val));
 
     let micro_opt : Option<&MicroSteps> = matches.get_one("micro");
     let delta : Delta  = Delta(*matches.get_one("delta").unwrap_or(&DELTA_DEF.0));
-    let speed : SpeedFactor = *matches.get_one("speed").unwrap_or(&SpeedFactor::from(0.5));
+    let speed : Factor = *matches.get_one("speed").unwrap_or(&Factor::from(0.5));
 
     // Load data
     let inertia = std::env::var("INERTIA").ok().map(|v| v.parse::<Inertia>().unwrap()).unwrap_or(Inertia::ZERO);
@@ -51,7 +51,7 @@ fn main() -> Result<(), syact::Error> {
         sample_dist: None
     };
 
-    let mut switch = RawEndSwitch::new(trigger, dir_opt, UniInPin::new(pin_meas));
+    let mut switch = EndSwitch::new(trigger, dir_opt, UniInPin::new(pin_meas));
 
     // Link the component to a system
     device.set_config(StepperConfig { 
@@ -77,7 +77,7 @@ fn main() -> Result<(), syact::Error> {
     // Starting the measurement
     println!("Starting measurement ... ");
 
-    let res = syact::meas::take_simple_meas(&mut device, &data, SpeedFactor::MAX)?;
+    let res = syact::meas::take_simple_meas(&mut device, &data, Factor::MAX)?;
 
     println!("Measurement done!\n");
 
