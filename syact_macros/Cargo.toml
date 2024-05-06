@@ -2,7 +2,7 @@
 name = "syact_macros"
 authors = [ "Samuel Nösslböck <samuel.noesslboeck@gmail.com>" ]
 repository = "https://github.com/SamuelNoesslboeck/syact"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 description = "Macros for the syact"
 license = "MIT"
