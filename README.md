@@ -54,9 +54,6 @@ TODO: NEW EXAMPLE
   - [x] LinearAxis-triangle
   - [x] Conveyor
   - [x] DC-Motor
-- [x] [Tools](/docs/tools.md)
-  - [x] Tongs
-  - [x] Axial joint
 - [x] Calculation
   - [ ] Stepper motor curves
     - [ ] Low resolution
@@ -71,13 +68,6 @@ TODO: NEW EXAMPLE
   - [x] Simple switch
   - [ ] Rotary resolver
   - [x] Trait for custom measurements
-- [x] Extendable
-  - [x] [Custom components](/docs/components.md#custom-components)
-  - [x] Custom tools
-  - [x] Custom meaurement systems
-- [x] [Unit system](/docs/unit_system.md)
-- [x] [Platforms](/docs/platforms.md)
-  - [x] Raspberry Pi and similar
   
 ## Issues and requests
 

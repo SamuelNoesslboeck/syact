@@ -13,11 +13,14 @@
     // mod des;
 
     /// LEDs and other light sources
-    pub mod led;
+    mod led;
+    pub use led::{LED, LED_PWM_FREQ};
 
     /// PWM-signal 
-    pub mod pwm;
+    mod pwm;
+    pub use pwm::SoftwarePWM;
 
     /// Structs and methods for basic servo motors
-    pub mod servo;
+    mod servo;
+    pub use servo::Servo;
 //

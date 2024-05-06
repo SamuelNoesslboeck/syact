@@ -1,3 +1,4 @@
+use core::fmt::Debug;
 use core::marker::PhantomData;
 use std::sync::mpsc::{Sender, Receiver, channel}; 
 use std::thread::{self, JoinHandle};
@@ -10,14 +11,14 @@ use crate::{Setup, Dismantle};
 
 /// A simple software-made PWM-signal 
 #[derive(Debug)]
-pub struct SoftwarePWM<P : OutputPin> {
+pub struct SoftwarePWM<P : OutputPin + Send> {
     /// Active time in a cycle (high)
     t_ac : Time,
     /// Inactive time in a cycle (low)
     t_in : Time,
 
     // Thread
-    thr : JoinHandle<()>,
+    _thr : JoinHandle<()>,
     sender : Sender<[Time; 2]>,
     murderer: Receiver<()>,
 
@@ -25,13 +26,13 @@ pub struct SoftwarePWM<P : OutputPin> {
     __pd : PhantomData<P>
 }
 
-impl<P : OutputPin> SoftwarePWM<P> {
+impl<P : OutputPin + Send + 'static> SoftwarePWM<P> {
     /// Create a new software PWM-signal at the given `pin`. Make sure the `pin` is not already in use!
     /// 
     /// # Setup
     /// 
     /// Once the setup function is called, the thread and the pin will be crated
-    pub fn new(pin : P) -> Self {
+    pub fn new(mut pin : P) -> Self {
         // The thread communication structures
         let (sender, recv) : (Sender<[Time; 2]>, Receiver<[Time; 2]>) = channel();
         let (victim, murderer) : (Sender<()>, Receiver<()>) = channel();
@@ -66,7 +67,7 @@ impl<P : OutputPin> SoftwarePWM<P> {
                 }
 
                 // Crates pulse
-                SoftwarePWM::pulse(&mut pin, t_ac, t_in);
+                SoftwarePWM::pulse(&mut pin, t_ac, t_in).unwrap();  // TODO: Unwrap
             }
 
             victim.send(()).unwrap();
@@ -76,7 +77,7 @@ impl<P : OutputPin> SoftwarePWM<P> {
             t_ac: Time::NAN,
             t_in: Time::NAN,
 
-            thr,
+            _thr: thr,
             sender,
             murderer,
             
@@ -125,9 +126,7 @@ impl<P : OutputPin> SoftwarePWM<P> {
             self.t_ac = t_ac.max(Time::ZERO);
             self.t_in = t_in.max(Time::ZERO);
             
-            if let Some(sender) = &mut self.sender {
-                sender.send([ self.t_ac, self.t_in ]).unwrap();
-            }
+            self.sender.send([ self.t_ac, self.t_in ]).unwrap();
         }
     //
     
@@ -190,49 +189,43 @@ impl<P : OutputPin> SoftwarePWM<P> {
 
     /// Stops the PWM-Signal and deletes the thread, can be started again if desired with `start()`
     pub fn stop(&mut self) -> Result<(), crate::Error> {
-        if let Some(sender) = &mut self.sender {
-            sender.send([ Time::NAN, Time::NAN ])?;
-        }
-
-        self.thr = None;
-        self.sender = None;
-
-        // Waits for the thread to be "murdered"
-        if let Some(murder) = &mut self.murderer {
-            murder.recv()?;
-        }
-
-        self.murderer = None;
+        self.sender.send([ Time::NAN, Time::NAN ])?;
+        self.murderer.recv()?;
 
         Ok(())
     }
 }
 
 // Setup and dismantle
-impl<P : OutputPin> Setup for SoftwarePWM<P> {
+impl<P : OutputPin + Send> Setup for SoftwarePWM<P> {
     fn setup(&mut self) -> Result<(), crate::Error> {
         Ok(())
     }
 }
 
-impl<P : OutputPin> Dismantle for SoftwarePWM<P> {
+impl<P : OutputPin + Send + 'static> Dismantle for SoftwarePWM<P> {
     fn dismantle(&mut self) -> Result<(), crate::Error> {
         self.stop()
     }
 }
 
 // Embedded-HAL implementations
-    impl<P : OutputPin> embedded_hal::pwm::ErrorType for SoftwarePWM<P> {
-        type Error = P::Error;
+    // #[derive(Clone, Debug)]
+    // pub enum SoftwarePWMError<P : OutputPin> {
+    //     Pin(P::Error)
+    // }
+
+    impl<P : OutputPin + Send> embedded_hal::pwm::ErrorType for SoftwarePWM<P> {
+        type Error = embedded_hal::pwm::ErrorKind;
     }
 
-    impl<P : OutputPin> embedded_hal::pwm::SetDutyCycle for SoftwarePWM<P> {
+    impl<P : OutputPin + Send + 'static> embedded_hal::pwm::SetDutyCycle for SoftwarePWM<P> {
         fn max_duty_cycle(&self) -> u16 {
             u16::MAX
         }
 
         fn set_duty_cycle(&mut self, duty: u16) -> Result<(), Self::Error> {
-            let [t_ac, period] = self.get_period();
+            let [_, period] = self.get_period();
             self.set_period(((duty as f32) / (self.max_duty_cycle() as f32)) * period, period);
             Ok(())
         }

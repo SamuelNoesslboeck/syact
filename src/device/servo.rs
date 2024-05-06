@@ -1,5 +1,4 @@
 use embedded_hal::digital::OutputPin;
-use serde::{Serialize, Deserialize};
 use syunit::*;
 
 use crate::device::pwm::SoftwarePWM;
@@ -12,10 +11,9 @@ use crate::data::servo::ServoConst;
 /// 
 /// In order to function correctly the servo has to be set up first!
 /// - No pins will be occupied until the setup function is called
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Servo<P : OutputPin> {
+#[derive(Debug)]
+pub struct Servo<P : OutputPin + Send> {
     /// The absolute position of the servo motor
-    #[serde(skip)]
     gamma : Gamma,
     /// The constants of the servo motor (depending on type)
     consts : ServoConst,
@@ -24,7 +22,7 @@ pub struct Servo<P : OutputPin> {
     pwm : SoftwarePWM<P>
 }
 
-impl<P : OutputPin> Servo<P> {
+impl<P : OutputPin + Send + 'static> Servo<P> {
     /// Creates a new servo driver with the given servo data `consts` connected to the `pin_pwm`
     /// 
     /// # Setup
@@ -99,13 +97,13 @@ impl<P : OutputPin> Servo<P> {
 }
 
 // Setup and Dismantle
-impl<P : OutputPin> Setup for Servo<P> {
+impl<P : OutputPin + Send + 'static> Setup for Servo<P> {
     fn setup(&mut self) -> Result<(), crate::Error> {
         self.start()
     }
 }
 
-impl<P : OutputPin> Dismantle for Servo<P> {
+impl<P : OutputPin + Send + 'static> Dismantle for Servo<P> {
     fn dismantle(&mut self) -> Result<(), crate::Error> {
         self.stop()
     }

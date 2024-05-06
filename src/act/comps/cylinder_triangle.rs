@@ -135,8 +135,8 @@ impl<C : SyncActuator> SyncActuator for CylinderTriangle<C> {
             self.cylinder.omega_max()
         }
 
-        fn set_omega_max(&mut self, omega_max : Velocity) {
-            self.cylinder.set_omega_max(omega_max)
+        fn set_velocity_max(&mut self, omega_max : Velocity) {
+            self.cylinder.set_velocity_max(omega_max)
         }
     // 
 

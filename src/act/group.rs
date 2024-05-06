@@ -186,7 +186,7 @@ where
         }
 
         /// Set the maximum omega of the components
-        fn set_omega_max(&mut self, omega_max : [Velocity; C]) {
+        fn set_velocity_max(&mut self, omega_max : [Velocity; C]) {
             self.for_each_mut(|act, index| {
                 act.set_velocity_max(omega_max[index]);
             });

@@ -19,7 +19,6 @@ path = "src/lib.rs"
 [dependencies]
 atomic_float = "1.0.0"
 cfg-if = "1.0.0"
-clap = { version = "4.3.16", features = [ "cargo" ] }
 embedded-hal = "1.0.0"
 log = "0.4.20"
 glam = "0.27.0"
@@ -35,64 +34,5 @@ syact_macros = { path = "syact_macros", version = "0.1.0" }
 [dev-dependencies]
 crossterm = "0.27.0"
 
-# ##############
-# #  Examples  #
-# ##############
-
-# Hardware 
-  # Devices
-    # Control an LED at a certain pin
-    [[example]]
-    name = "hardware-devices-led"
-    path = "examples/hardware/devices/led.rs"
-  # 
-
-  # Meas
-    [[example]]
-    name = "hardware-meas-endswitch_cons"
-    path = "examples/hardware/meas/endswitch_cons.rs"
-
-    [[example]]
-    name = "hardware-meas-endswitch"
-    path = "examples/hardware/meas/endswitch.rs"
-
-    [[example]]
-    name = "hardware-meas-simple_meas_endswitch"
-    path = "examples/hardware/meas/simple_meas_endswitch.rs"
-
-    [[example]]
-    name = "hardware-meas-virtual_endswitch"
-    path = "examples/hardware/meas/virtual_endswitch.rs"
-  #
-
-  # Stepper
-    # Drive the stepper motor by a fixed distance
-    [[example]]
-    name = "hardware-stepper-fixed_dist"
-    path = "examples/hardware/stepper/fixed_dist.rs"
-  #
-
-  # Tools
-    [[example]]
-    name = "hardware-tools-tongs"
-    path = "examples/hardware/tools/tongs.rs"
-  # 
-#
-
-# Net
-  # [[example]]
-  # name = "net-ctrl_client"
-  # path = "examples/net/ctrl_client.rs"
-
-  # [[example]]
-  # name = "net-ctrl_server"
-  # path = "examples/net/ctrl_server.rs"
-
-  # [[example]]
-  # name = "net-ctrl_stepper_client"
-  # path = "examples/net/ctrl_stepper_client.rs"
-
-  # [[example]]
-  # name = "net-ctrl_stepper_server"
-  # path = "examples/net/ctrl_stepper_server.rs"
-#
+[features]
+testing = []

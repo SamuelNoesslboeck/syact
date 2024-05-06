@@ -347,7 +347,7 @@ impl<B : StepperBuilder + Send + 'static, C : Controller + Setup + Dismantle + S
         }
 
         fn set_velocity_max(&mut self, omega_max : Velocity) {
-            self.builder.lock().unwrap().set_omega_max(omega_max).unwrap();      // TODO
+            self.builder.lock().unwrap().set_velocity_max(omega_max).unwrap();      // TODO
         }
 
         #[inline]

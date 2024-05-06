@@ -33,7 +33,7 @@ extern crate alloc;
     pub mod prelude;
 
     /// Module with all the tests required to assure the library funcitons as intended
-    #[cfg(test)]
+    #[cfg(any(test, feature = "testing"))]
     mod tests;
 // 
 

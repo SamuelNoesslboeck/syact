@@ -8,8 +8,7 @@ pub use crate::act::stepper::*;
 pub use crate::data::{ActuatorVars, StepperConfig, StepperConst};
 pub use crate::data::servo::ServoConst;
 
-pub use crate::device::pwm::SoftwarePWM;
-pub use crate::device::servo::Servo;
+pub use crate::device::{Servo, SoftwarePWM};
 
 pub use crate::math;
 

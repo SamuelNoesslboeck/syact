@@ -71,7 +71,7 @@ pub trait StepperBuilder : Iterator<Item = Time> {
     // Velocity max
         fn omega_max(&self) -> Velocity;
 
-        fn set_omega_max(&mut self, omega : Velocity) -> Result<(), DriveError>;
+        fn set_velocity_max(&mut self, omega : Velocity) -> Result<(), DriveError>;
     // 
 
     // Regulation
@@ -242,7 +242,7 @@ pub trait StepperBuilder : Iterator<Item = Time> {
             self._omega_max.unwrap_or(self.omega_start_stop)
         }
 
-        fn set_omega_max(&mut self, omega : Velocity) -> Result<(), DriveError> {
+        fn set_velocity_max(&mut self, omega : Velocity) -> Result<(), DriveError> {
             if omega > self.omega_start_stop {
                 Err(DriveError::OmegaMaxTooHigh)
             } else {
@@ -464,7 +464,7 @@ pub trait StepperBuilder : Iterator<Item = Time> {
             self._omega_max.unwrap_or(self.omega_abs_max)
         }
 
-        fn set_omega_max(&mut self, omega : Velocity) -> Result<(), DriveError> {
+        fn set_velocity_max(&mut self, omega : Velocity) -> Result<(), DriveError> {
             if omega > self.omega_abs_max {
                 Err(DriveError::OmegaMaxTooHigh)
             } else {

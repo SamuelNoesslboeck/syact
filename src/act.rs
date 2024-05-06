@@ -163,7 +163,7 @@ pub trait SyncActuator : Setup {
         /// ```
         fn set_gamma(&mut self, gamma : Gamma);
 
-        /// Returns the maximum velocity of the component. It can be set using `SyncComp::set_omega_max()`. 
+        /// Returns the maximum velocity of the component. It can be set using `SyncComp::set_velocity_max()`. 
         /// The component cannot move faster than the omega given (valid for all movement operations)
         /// 
         /// # Panics
@@ -245,7 +245,7 @@ pub trait SyncActuator : Setup {
         /// 
         /// gear.set_gamma(Gamma::ZERO);
         /// 
-        /// gear.set_omega_max(Velocity(5.0));
+        /// gear.set_velocity_max(Velocity(5.0));
         /// gear.drive_rel(Delta(-0.2), Factor::MAX).unwrap();    // Drive component in negative direction
         /// 
         /// assert_eq!(gear.dir(), Direction::CCW);

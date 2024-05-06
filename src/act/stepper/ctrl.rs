@@ -72,10 +72,11 @@ impl<S : OutputPin, D : OutputPin> GenericPWM<S, D> {
     // }
 }
 
-impl<S : OutputPin + Setup, D : OutputPin + Setup> Setup for GenericPWM<S, D> {
+impl<S : OutputPin, D : OutputPin> Setup for GenericPWM<S, D> {
     fn setup(&mut self) -> Result<(), crate::Error> {
-        self.pin_step.setup()?; 
-        self.pin_dir.setup()?;
+        // self.pin_step.setup()?; 
+        // self.pin_dir.setup()?;
+        // TODO: Add pins setup
 
         Ok(())
     }

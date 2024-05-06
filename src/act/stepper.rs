@@ -1,7 +1,8 @@
+use syunit::*;
+
 use crate::data::MicroSteps;
 use crate::math::movements::DefinedActuator;
 use crate::{StepperConst, SyncActuator, SyncActuatorGroup, StepperConfig};
-use syunit::*;
 
 // Public imports
     pub use syact_macros::StepperActuatorGroup;
@@ -22,14 +23,6 @@ use syunit::*;
 // #####################
     /// Default `Stepper` type for high-performance systems (high resolution stepper)
     pub type Stepper<S, D> = motor::ThreadedStepper<StartStopBuilder, GenericPWM<S, D>>;
-
-    // impl<S, D> Stepper<S, D> {
-    //     /// Creates a new generic stepper with both pins set to [ERR_PIN](super::pin::ERR_PIN) just for simulation and testing purposes
-    //     #[inline]
-    //     pub fn new_gen() -> Self {
-    //         Self::new(GenericPWM::new_gen(), StepperConst::GEN)
-    //     }
-    // }
 
     // pub struct MicroSteps(u8);
 // 
