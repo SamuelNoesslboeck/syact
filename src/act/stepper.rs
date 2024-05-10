@@ -13,7 +13,7 @@ use crate::{StepperConst, SyncActuator, SyncActuatorGroup, StepperConfig};
     pub use builder::{DriveError, DriveMode, StepperBuilder, StartStopBuilder};
 
     mod ctrl;
-    pub use ctrl::{Controller, GenericPWM};
+    pub use ctrl::{Controller, GenericPWM, ControllerError};
 
     mod motor;
 // 
@@ -25,29 +25,6 @@ use crate::{StepperConst, SyncActuator, SyncActuatorGroup, StepperConfig};
     pub type Stepper<S, D> = motor::ThreadedStepper<StartStopBuilder, GenericPWM<S, D>>;
 
     // pub struct MicroSteps(u8);
-// 
-
-// #####################
-// #    ERROR-TYPES    #
-// #####################
-    #[derive(Debug, Clone)]
-    pub enum StepError {
-        TimeTooShort(Time),
-        TimeIsIncorrect(Time)
-    }
-
-    impl core::fmt::Display for StepError {
-        fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-            match self {
-                Self::TimeTooShort(t) => 
-                    f.write_fmt(format_args!("Bad step time! Time given ({}) is smaller than STEP_PULSE_TIME ({})", t, ctrl::STEP_PULSE_TIME)),
-                Self::TimeIsIncorrect(t) => 
-                    f.write_fmt(format_args!("Bad step time! Time given ({}) is invalid!", t))
-            }
-        }
-    }
-
-    impl std::error::Error for StepError { }
 // 
 
 // Stepper traits

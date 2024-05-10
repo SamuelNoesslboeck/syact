@@ -14,5 +14,5 @@ pub mod kin;
 /// Functions and structs for movements of single or multiple components
 pub mod movements;
 
-// /// Methods for calculating paths and movements
+/// Methods for calculating paths and movements
 pub mod path;

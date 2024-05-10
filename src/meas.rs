@@ -13,50 +13,71 @@ use serde::{Serialize, Deserialize};
 // 
 
 // Traits
+    /// Traits for objects that can conduct a measurement and return a value 
+    /// 
+    /// # Generic `V`
+    /// 
+    /// Data type that will be returned by the measurement
     pub trait Measurable<V> {
+        /// Error that can occur when measuring
         type Error;
 
-        fn meas(&mut self) -> Result<V, Self::Error>;
+        /// Conduct the measurement 
+        fn measure(&mut self) -> Result<V, Self::Error>;
     }
 // 
 
+/// Collection of parameters required for a simple measurement
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
-pub struct SimpleMeasData {
+pub struct SimpleMeasParams {
+    /// The gamma value to set the component to if the measurement was successful
     pub set_gamma : Gamma,
+    /// Maximum drive distance, also determines which direction will be used. 
+    /// If the maximum distance is reached before the measurement is conducted, the measurement will count as failed
     pub max_dist : Delta,
 
+    /// Measurement speed factor (Optionally conduct a measurement slower)
     pub meas_speed : Factor,
 
-    #[serde(default = "default_add_samples")]
-    pub add_samples : usize,
+    /// Number of additional samples to take
+    _add_samples : Option<usize>,
     /// Will take 5% of max_dist as default
     pub sample_dist : Option<Delta>
 }
 
-// Defaults
-    /// The default number of measurement samples to take
-    const fn default_add_samples() -> usize { 1 }
-// 
+impl SimpleMeasParams {
+    /// Number of additional samples to take
+    pub fn add_samples(&self) -> usize {
+        self._add_samples.unwrap_or(1)
+    }
+}
 
+/// Result of a simple measurement
 #[derive(Debug, Clone, Default)]
 pub struct SimpleMeasResult {
+    /// Number of samples taken
     pub samples : usize,
 
-    // Gamma values
+    /// Collection of all gamma values
     pub gammas : Vec<Gamma>,
+    /// Average gamma used for the set gamma
     pub gamma_av : Gamma,
+    /// Correction value (offset of current postion and set-gamma reference)
     pub corr : Delta
 }
 
 impl SimpleMeasResult {
+    /// Maximum gamma value measured
     pub fn gamma_max(&self) -> Gamma {
         *self.gammas.iter().reduce(Gamma::max_ref).expect("Gamma array must contain a value")
     }
 
+    /// Minimum gamma value measured
     pub fn gamma_min(&self) -> Gamma {
         *self.gammas.iter().reduce(Gamma::min_ref).expect("Gamma array must contain a value")
     }
 
+    /// Inaccuracy accross all gamma values measured
     pub fn max_inacc(&self) -> Delta {
         self.gamma_max() - self.gamma_min()
     }
@@ -70,7 +91,7 @@ impl SimpleMeasResult {
 /// # Measurement data and its usage
 /// 
 /// Specifing a `sample_dist` is optional, as the script will replace it with 10% of the maximum distance if not specified
-pub fn take_simple_meas<C : SyncActuator + Interruptible + ?Sized>(comp : &mut C, data : &SimpleMeasData, speed : Factor) -> Result<SimpleMeasResult, crate::Error> {
+pub fn take_simple_meas<C : SyncActuator + Interruptible + ?Sized>(comp : &mut C, data : &SimpleMeasParams, speed : Factor) -> Result<SimpleMeasResult, crate::Error> {
     let mut gammas : Vec<Gamma> = Vec::new();
 
     // Init measurement
@@ -86,7 +107,7 @@ pub fn take_simple_meas<C : SyncActuator + Interruptible + ?Sized>(comp : &mut C
     //
 
     // Samples
-        for _ in 0 .. data.add_samples {
+        for _ in 0 .. data.add_samples() {
             println!("- Gamma: {}", comp.gamma());
 
             // Drive half of the sample distance back (faster)
@@ -121,7 +142,7 @@ pub fn take_simple_meas<C : SyncActuator + Interruptible + ?Sized>(comp : &mut C
     comp.set_gamma(gamma_new);
 
     Ok(SimpleMeasResult {
-        samples: data.add_samples,
+        samples: data.add_samples(),
 
         gammas: gammas,
         gamma_av: gamma_av,

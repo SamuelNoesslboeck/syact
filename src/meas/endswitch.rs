@@ -37,7 +37,7 @@ impl<P : InputPin> EndSwitch<P> {
 impl<P : InputPin> Measurable<bool> for EndSwitch<P> {
     type Error = P::Error; 
 
-    fn meas(&mut self) -> Result<bool, Self::Error> {
+    fn measure(&mut self) -> Result<bool, Self::Error> {
         self.sys_pin.is_high().map(|v| v == self.trigger)
     }
 }

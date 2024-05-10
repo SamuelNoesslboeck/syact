@@ -2,35 +2,54 @@ use syunit::*;
 
 use crate::math::movements::DefinedActuator;
 use crate::{StepperConst, ActuatorVars, StepperConfig};
-use crate::act::stepper::{StepError, Controller};
+use crate::act::stepper::{ControllerError, Controller};
 use crate::data::MicroSteps;
 use crate::math;
 
+/// The drive-mode of the stepper motor
 #[derive(Clone, Debug, PartialEq, PartialOrd)]
 pub enum DriveMode {
-    ConstOmega(Velocity, Direction),
+    /// Driving with a constant velocity
+    /// - `Velocity`: The constant velocity to drive
+    /// - `Direction`: The direction to drive 
+    ConstVelocity(Velocity, Direction),
+    /// Driving with a constant fraction of the maximum speed
+    /// - `Factor`: The speed factor to use, references maximum 
     ConstFactor(Factor, Direction),
+    /// Driving a fixed distance
     FixedDistance(Delta, Velocity, Factor),
+    /// Motor is stopping
     Stop,
+    /// Signals that the motor is inactive
     Inactive
 }
 
-#[derive(Clone, Debug)]
-pub enum DriveError {
-    OmegaMaxTooHigh,
-    OmegaOutTooHigh,
-    Overload,
-    LimitReached,
-    Step(StepError)
-}
-
-impl std::fmt::Display for DriveError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_fmt(format_args!("{:?}", self))
+// #####################
+// #    ERROR-TYPES    #
+// #####################
+    /// Errors that can occur while driving a stepper motor
+    #[derive(Clone, Debug)]
+    pub enum DriveError {
+        /// The maximum velocity given is too high
+        VelocityMaxTooHigh(Velocity, Velocity),
+        /// The desired exit velocity is too high
+        VelocityExitTooHigh(Velocity, Velocity),
+        /// The load data given is too high, causing an overload
+        Overload,
+        /// A limit has been reached
+        LimitReached,
+        /// An error occured in the controller
+        Controller(ControllerError)
     }
-}
 
-impl std::error::Error for DriveError { }
+    impl std::fmt::Display for DriveError {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            f.write_fmt(format_args!("{:?}", self))
+        }
+    }
+
+    impl std::error::Error for DriveError { }
+//
 
 pub trait StepperBuilder : Iterator<Item = Time> {
     // General constructor
@@ -69,9 +88,9 @@ pub trait StepperBuilder : Iterator<Item = Time> {
     //
 
     // Velocity max
-        fn omega_max(&self) -> Velocity;
+        fn velocity_max(&self) -> Velocity;
 
-        fn set_velocity_max(&mut self, omega : Velocity) -> Result<(), DriveError>;
+        fn set_velocity_max(&mut self, velocity  : Velocity) -> Result<(), DriveError>;
     // 
 
     // Regulation
@@ -85,13 +104,13 @@ pub trait StepperBuilder : Iterator<Item = Time> {
 // #    COMMON    #
 // ################
     pub struct StartStopBuilder {
-        consts : StepperConst,
+        _consts : StepperConst,
         _vars : ActuatorVars,
         _config : StepperConfig,
 
         // Speeds
-        omega_start_stop : Velocity,
-        _omega_max : Option<Velocity>,
+        velocity_start_stop : Velocity,
+        _velocity_max : Option<Velocity>,
 
         // Cache
         _microsteps : MicroSteps,
@@ -105,18 +124,18 @@ pub trait StepperBuilder : Iterator<Item = Time> {
 
     impl StartStopBuilder {
         pub fn update_start_stop(&mut self) -> Result<(), DriveError> {
-            self.omega_start_stop = math::kin::omega_start_stop(
+            self.velocity_start_stop = math::kin::velocity_start_stop(
                 self._vars.force_after_load_lower(
-                    self.consts.torque_overload(self._config.overload_current)
+                    self._consts.torque_overload(self._config.overload_current)
                 ).ok_or(DriveError::Overload)?, 
-                self._vars.inertia_after_load(self.consts.inertia_motor), 
-                self.consts.number_steps * self._microsteps
+                self._vars.inertia_after_load(self._consts.inertia_motor), 
+                self._consts.number_steps * self._microsteps
             );
 
-            // Reset omega max if it is too high
-            if let Some(omega_max) = self._omega_max {
-                if omega_max >= self.omega_start_stop {
-                    self._omega_max = None;
+            // Reset velocity  max if it is too high
+            if let Some(velocity_max) = self._velocity_max {
+                if velocity_max >= self.velocity_start_stop {
+                    self._velocity_max = None;
                 }
             }
 
@@ -129,8 +148,8 @@ pub trait StepperBuilder : Iterator<Item = Time> {
 
         fn next(&mut self) -> Option<Self::Item> {
             match self.mode {
-                DriveMode::ConstOmega(omega, _) => Some(omega),
-                DriveMode::ConstFactor(factor, _) => Some(self.omega_max() * factor),
+                DriveMode::ConstVelocity(velocity , _) => Some(velocity),
+                DriveMode::ConstFactor(factor, _) => Some(self.velocity_max() * factor),
                 DriveMode::FixedDistance(_, _, factor) => {
                     self.distance_counter += 1;
 
@@ -138,7 +157,7 @@ pub trait StepperBuilder : Iterator<Item = Time> {
                         self.mode = DriveMode::Inactive;
                         None
                     } else {
-                        Some(self.omega_max() * factor)
+                        Some(self.velocity_max() * factor)
                     }
                 },
                 DriveMode::Stop => {
@@ -146,7 +165,7 @@ pub trait StepperBuilder : Iterator<Item = Time> {
                     None
                 },
                 DriveMode::Inactive => None
-            }.map(|omega| self.consts.step_time(omega, self._microsteps))
+            }.map(|velocity | self._consts.step_time(velocity , self._microsteps))
         }
     }
 
@@ -160,8 +179,8 @@ pub trait StepperBuilder : Iterator<Item = Time> {
                     _vars: ActuatorVars::ZERO,
                     _config: StepperConfig::GEN,
 
-                    omega_start_stop: Velocity::INFINITY,
-                    _omega_max: None,
+                    velocity_start_stop: Velocity::INFINITY,
+                    _velocity_max: None,
                     _microsteps: MicroSteps::default(),
 
                     distance: 0,
@@ -171,7 +190,7 @@ pub trait StepperBuilder : Iterator<Item = Time> {
 
                     mode: DriveMode::Inactive,
 
-                    consts
+                    _consts: consts
                 };
 
                 // TODO: Enable error
@@ -183,7 +202,7 @@ pub trait StepperBuilder : Iterator<Item = Time> {
 
         // Data
             fn consts(&self) -> &StepperConst {
-                &self.consts
+                &self._consts
             }
 
             fn vars(&self) -> &ActuatorVars {
@@ -203,7 +222,7 @@ pub trait StepperBuilder : Iterator<Item = Time> {
             }
 
             fn set_microsteps(&mut self, microsteps : MicroSteps) {
-                self._step_angle = self.consts.step_angle(microsteps);
+                self._step_angle = self._consts.step_angle(microsteps);
                 self._microsteps = microsteps;
             }
 
@@ -238,15 +257,15 @@ pub trait StepperBuilder : Iterator<Item = Time> {
             }
         // 
 
-        fn omega_max(&self) -> Velocity {
-            self._omega_max.unwrap_or(self.omega_start_stop)
+        fn velocity_max(&self) -> Velocity {
+            self._velocity_max.unwrap_or(self.velocity_start_stop)
         }
 
-        fn set_velocity_max(&mut self, omega : Velocity) -> Result<(), DriveError> {
-            if omega > self.omega_start_stop {
-                Err(DriveError::OmegaMaxTooHigh)
+        fn set_velocity_max(&mut self, velocity  : Velocity) -> Result<(), DriveError> {
+            if velocity > self.velocity_start_stop {
+                Err(DriveError::VelocityMaxTooHigh(velocity, self.velocity_start_stop))
             } else {
-                self._omega_max = Some(omega); 
+                self._velocity_max = Some(velocity ); 
                 Ok(())
             }
         }
@@ -257,9 +276,9 @@ pub trait StepperBuilder : Iterator<Item = Time> {
 
         fn set_drive_mode<C : Controller>(&mut self, mode : DriveMode, ctrl : &mut C) -> Result<(), DriveError> {
             match mode {
-                DriveMode::ConstOmega(omega, dir) => {
-                    if omega > self.omega_max() {
-                        return Err(DriveError::OmegaMaxTooHigh)
+                DriveMode::ConstVelocity(velocity, dir) => {
+                    if velocity > self.velocity_max() {
+                        return Err(DriveError::VelocityMaxTooHigh(velocity, self.velocity_max()))
                     } 
 
                     self._dir = dir;
@@ -269,12 +288,12 @@ pub trait StepperBuilder : Iterator<Item = Time> {
                     self._dir = dir;
                     ctrl.set_dir(dir);
                 },
-                DriveMode::FixedDistance(delta, omega_out, _) => {
-                    if omega_out > self.omega_max() {
-                        return Err(DriveError::OmegaOutTooHigh)
+                DriveMode::FixedDistance(delta, velocity_exit, _) => {
+                    if velocity_exit > self.velocity_max() {
+                        return Err(DriveError::VelocityExitTooHigh(velocity_exit, self.velocity_max()))
                     }
 
-                    self.distance = self.consts.steps_from_angle_abs(delta, self._microsteps);
+                    self.distance = self._consts.steps_from_angle_abs(delta, self._microsteps);
                     self.distance_counter = 0;
 
                     if delta >= Delta::ZERO {
@@ -294,29 +313,31 @@ pub trait StepperBuilder : Iterator<Item = Time> {
 
     impl DefinedActuator for StartStopBuilder {
         fn ptp_time_for_distance(&self, gamma_0 : Gamma, gamma_t : Gamma) -> Time {
-            (gamma_t / gamma_0) / self.omega_max()
+            (gamma_t / gamma_0) / self.velocity_max()
         }
     }
 
-    /*
+
     pub struct ComplexStartStopBuilder {
         _consts : StepperConst,
         _vars : ActuatorVars,
         _config : StepperConfig,
 
         // Speeds
-        omega_abs_max : Velocity,
-        _omega_max : Option<Velocity>,
+        velocity_range : Velocity,
+        _velocity_max : Option<Velocity>,
 
         // Cache
-        microsteps : MicroSteps,
+        _microsteps : MicroSteps,
         mode : DriveMode,
         _step_angle : Delta, 
         _dir : Direction,
 
-        // Speed
+        // Speed levels
         speed_levels : Vec<Velocity>,
         time_sums : Vec<Time>,
+        max_speed_level : Option<usize>,
+        current_speed_level : usize,
 
         distance : u64,
         distance_counter : u64
@@ -324,18 +345,18 @@ pub trait StepperBuilder : Iterator<Item = Time> {
 
     impl ComplexStartStopBuilder {
         pub fn update(&mut self) -> Result<(), DriveError> {
-            self.omega_abs_max = math::kin::start_stop(
+            self.velocity_range = math::kin::velocity_start_stop(
                 self._vars.force_after_load_lower(
                     self._consts.torque_overload(self._config.overload_current)
-                ).ok_or(DriveError::Overload)?,  
+                ).ok_or(DriveError::Overload)?, 
                 self._vars.inertia_after_load(self._consts.inertia_motor), 
-                self._consts.number_steps
+                self._consts.number_steps * self._microsteps
             );
 
-            // Reset omega max if it is too high
-            if let Some(omega_max) = self._omega_max {
-                if omega_max >= self.omega_abs_max {
-                    self._omega_max = None;
+            // Reset velocity  max if it is too high
+            if let Some(velocity_max) = self._velocity_max {
+                if velocity_max >= self.velocity_range {
+                    self._velocity_max = None;
                 }
             }
 
@@ -348,16 +369,20 @@ pub trait StepperBuilder : Iterator<Item = Time> {
 
         fn next(&mut self) -> Option<Self::Item> {
             match self.mode {
-                DriveMode::ConstOmega(omega, _) => Some(omega),
-                DriveMode::ConstFactor(factor, _) => Some(self.omega_max() * factor),
+                DriveMode::ConstVelocity(velocity , _) => Some(velocity),
+                DriveMode::ConstFactor(factor, _) => Some(self.velocity_max() * factor),
                 DriveMode::FixedDistance(_, _, factor) => {
                     self.distance_counter += 1;
 
                     if self.distance_counter > self.distance {
                         self.mode = DriveMode::Inactive;
                         None
+                    } else if (self.distance_counter + self.current_speed_level as u64) > self.distance {
+                        self.mode = DriveMode::Stop;
+                        self.current_speed_level -= 1;
+                        Some(self.speed_levels[self.current_speed_level])
                     } else {
-                        Some(self.omega_max() * factor)
+                        Some(self.velocity_max() * factor)
                     }
                 },
                 DriveMode::Stop => {
@@ -365,7 +390,7 @@ pub trait StepperBuilder : Iterator<Item = Time> {
                     None
                 },
                 DriveMode::Inactive => None
-            }.map(|omega| self._consts.step_time(omega, self.microsteps))
+            }.map(|velocity | self._consts.step_time(velocity , self._microsteps))
         }
     }
 
@@ -379,19 +404,21 @@ pub trait StepperBuilder : Iterator<Item = Time> {
                     _vars: ActuatorVars::ZERO,
                     _config: StepperConfig::GEN,
 
-                    omega_abs_max: Velocity::INFINITY,
-                    _omega_max: None,
-                    microsteps: MicroSteps::default(),
+                    velocity_range: Velocity::INFINITY,
+                    _velocity_max: None,
+                    _microsteps: MicroSteps::default(),
 
                     distance: 0,
                     distance_counter: 0,
                     _step_angle: consts.step_angle(MicroSteps::default()),
                     _dir: Direction::default(),
 
-                    speed_levels: Vec::new(),
-                    time_sums: Vec::new(),
-
                     mode: DriveMode::Inactive,
+
+                    time_sums: vec![],
+                    speed_levels: vec![],
+                    max_speed_level: None,
+                    current_speed_level: 0,
 
                     _consts: consts
                 };
@@ -421,12 +448,12 @@ pub trait StepperBuilder : Iterator<Item = Time> {
             }
 
             fn microsteps(&self) -> MicroSteps {
-                self.microsteps
+                self._microsteps
             }
 
             fn set_microsteps(&mut self, microsteps : MicroSteps) {
                 self._step_angle = self._consts.step_angle(microsteps);
-                self.microsteps = microsteps;
+                self._microsteps = microsteps;
             }
 
             fn step_angle(&self) -> Delta {
@@ -460,15 +487,15 @@ pub trait StepperBuilder : Iterator<Item = Time> {
             }
         // 
 
-        fn omega_max(&self) -> Velocity {
-            self._omega_max.unwrap_or(self.omega_abs_max)
+        fn velocity_max(&self) -> Velocity {
+            self._velocity_max.unwrap_or(self.velocity_range)
         }
 
-        fn set_velocity_max(&mut self, omega : Velocity) -> Result<(), DriveError> {
-            if omega > self.omega_abs_max {
-                Err(DriveError::OmegaMaxTooHigh)
+        fn set_velocity_max(&mut self, velocity  : Velocity) -> Result<(), DriveError> {
+            if velocity > self.velocity_range {
+                Err(DriveError::VelocityMaxTooHigh(velocity, self.velocity_range))
             } else {
-                self._omega_max = Some(omega); 
+                self._velocity_max = Some(velocity ); 
                 Ok(())
             }
         }
@@ -479,9 +506,9 @@ pub trait StepperBuilder : Iterator<Item = Time> {
 
         fn set_drive_mode<C : Controller>(&mut self, mode : DriveMode, ctrl : &mut C) -> Result<(), DriveError> {
             match mode {
-                DriveMode::ConstOmega(omega, dir) => {
-                    if omega > self.omega_max() {
-                        return Err(DriveError::OmegaMaxTooHigh)
+                DriveMode::ConstVelocity(velocity, dir) => {
+                    if velocity > self.velocity_max() {
+                        return Err(DriveError::VelocityMaxTooHigh(velocity, self.velocity_max()))
                     } 
 
                     self._dir = dir;
@@ -491,15 +518,19 @@ pub trait StepperBuilder : Iterator<Item = Time> {
                     self._dir = dir;
                     ctrl.set_dir(dir);
                 },
-                DriveMode::FixedDistance(delta, omega_out, _) => {
-                    if omega_out > self.omega_max() {
-                        return Err(DriveError::OmegaOutTooHigh)
+                DriveMode::FixedDistance(delta, velocity_exit, _) => {
+                    if velocity_exit > self.velocity_max() {
+                        return Err(DriveError::VelocityExitTooHigh(velocity_exit, self.velocity_max()))
                     }
 
-                    self.distance = self._consts.steps_from_angle_abs(delta, self.microsteps);
+                    self.distance = self._consts.steps_from_angle_abs(delta, self._microsteps);
                     self.distance_counter = 0;
 
-                    self._dir = delta.get_direction();
+                    if delta >= Delta::ZERO {
+                        self._dir = Direction::CW;
+                    } else {
+                        self._dir = Direction::CCW;
+                    }
                     ctrl.set_dir(self._dir);
                 },
                 _ => { }
@@ -512,8 +543,7 @@ pub trait StepperBuilder : Iterator<Item = Time> {
 
     impl DefinedActuator for ComplexStartStopBuilder {
         fn ptp_time_for_distance(&self, gamma_0 : Gamma, gamma_t : Gamma) -> Time {
-            (gamma_t / gamma_0) / self.omega_max()
+            (gamma_t / gamma_0) / self.velocity_max()
         }
     }
-    */
 // 

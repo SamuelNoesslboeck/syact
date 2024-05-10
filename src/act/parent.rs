@@ -42,12 +42,12 @@ pub trait ActuatorParent {
                 child_delta * self.ratio()
             }
 
-            fn omega_for_child(&self, parent_omega : Velocity) -> Velocity {
-                parent_omega / self.ratio()
+            fn velocity_for_child(&self, parent_velocity : Velocity) -> Velocity {
+                parent_velocity / self.ratio()
             }
 
-            fn omega_for_parent(&self, child_omega : Velocity) -> Velocity {
-                child_omega * self.ratio()
+            fn velocity_for_parent(&self, child_velocity : Velocity) -> Velocity {
+                child_velocity * self.ratio()
             }
 
             fn alpha_for_child(&self, parent_alpha : Acceleration) -> Acceleration {
@@ -102,9 +102,9 @@ pub trait ActuatorParent {
                 self.child_mut().drive_rel_async(delta, speed)
             }
 
-            fn drive_velocity(&mut self, mut omega_tar : Velocity) -> Result<(), crate::Error> {
-                omega_tar = self.omega_for_child(omega_tar);
-                self.child_mut().drive_velocity(omega_tar)
+            fn drive_velocity(&mut self, mut velocity_tar : Velocity) -> Result<(), crate::Error> {
+                velocity_tar = self.velocity_for_child(velocity_tar);
+                self.child_mut().drive_velocity(velocity_tar)
             }   
 
             fn await_inactive(&mut self) -> Result<(), crate::Error> {
@@ -123,12 +123,12 @@ pub trait ActuatorParent {
             }
 
             fn velocity_max(&self) -> Velocity {
-                self.omega_for_parent(self.child().velocity_max())
+                self.velocity_for_parent(self.child().velocity_max())
             }
 
-            fn set_velocity_max(&mut self, mut omega_max : Velocity) {
-                omega_max = self.omega_for_child(omega_max);
-                self.child_mut().set_velocity_max(omega_max)
+            fn set_velocity_max(&mut self, mut velocity_max : Velocity) {
+                velocity_max = self.velocity_for_child(velocity_max);
+                self.child_mut().set_velocity_max(velocity_max)
             }
 
             fn limits_for_gamma(&self, gamma : Gamma) -> Delta {
@@ -235,9 +235,7 @@ pub trait ActuatorParent {
     where 
         T::Child : AsyncActuator 
     {
-        type Duty = <T::Child as AsyncActuator>::Duty;
-
-        fn drive(&mut self, dir : Direction, speed : Self::Duty) -> Result<(), crate::Error> {
+        fn drive(&mut self, dir : Direction, speed : Factor) -> Result<(), crate::Error> {
             self.child_mut().drive(dir, speed)
         }
 
@@ -245,7 +243,7 @@ pub trait ActuatorParent {
             self.child().dir()
         }
 
-        fn speed(&self) -> Self::Duty {
+        fn speed(&self) -> Factor {
             self.child().speed()
         }
     }

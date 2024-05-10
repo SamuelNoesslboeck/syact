@@ -3,9 +3,10 @@
 // ####################
     mod comp;
 
-    /// Crate for servo motor data
+    /// Servo motor data
     pub mod servo;
-
+    
+    /// All data and parameters related to stepper motors
     pub mod stepper;
     use core::ops::Mul;
     use core::str::FromStr;
@@ -18,10 +19,12 @@
     pub use var::ActuatorVars;
 //
 
+/// Microsteps used for stepper motors
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct MicroSteps(u8);
 
 impl MicroSteps {
+    /// Get the representing `u8` value
     pub fn as_u8(self) -> u8 {
         self.0
     }

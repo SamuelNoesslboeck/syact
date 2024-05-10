@@ -178,17 +178,17 @@ where
             Ok(())
         }
 
-        /// Returns the maximum omegas for each component of the group
-        fn omega_max(&self) -> [Velocity; C] {
+        /// Returns the maximum velocitys for each component of the group
+        fn velocity_max(&self) -> [Velocity; C] {
             self.for_each(|act, _| {
                 act.velocity_max()
             })
         }
 
-        /// Set the maximum omega of the components
-        fn set_velocity_max(&mut self, omega_max : [Velocity; C]) {
+        /// Set the maximum velocity  of the components
+        fn set_velocity_max(&mut self, velocity_max : [Velocity; C]) {
             self.for_each_mut(|act, index| {
-                act.set_velocity_max(omega_max[index]);
+                act.set_velocity_max(velocity_max[index]);
             });
         }
     // 

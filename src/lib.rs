@@ -1,6 +1,6 @@
 #![doc = include_str!("../README.md")]
 #![crate_name = "syact"]
-// #![warn(missing_docs)]
+// #![deny(missing_docs)]
 
 // Modules
 extern crate alloc;
@@ -8,11 +8,12 @@ extern crate alloc;
 // ####################
 // #    SUBMODULES    #
 // ####################
-        // Includes documentation from readme file
+        /// Actuator structures and traits
         pub mod act;
         pub use act::{SyncActuator, SyncActuatorGroup, Stepper};
         pub use act::asyn::AsyncActuator;
 
+        /// Various devices
         pub mod device;
     
         /// Structs for storing characteristics of stepper motors and devices
@@ -82,6 +83,7 @@ extern crate alloc;
             Ok(())
         }
 
+        /// Calls `dismantle()` with an owned object
         fn dismantle_inline(mut self) -> Result<Self, Error> 
         where
             Self : Sized

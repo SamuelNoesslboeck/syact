@@ -86,7 +86,7 @@ impl<P : OutputPin + Send + 'static> SoftwarePWM<P> {
     }
 
     // Owned functions
-        pub fn with_freq(mut self, freq : Velocity) -> Self {
+        pub fn with_freq(mut self, freq : Frequency) -> Self {
             self.set_freq(freq, 0.0);
             self
         }
@@ -175,7 +175,7 @@ impl<P : OutputPin + Send + 'static> SoftwarePWM<P> {
         /// 
         /// The function panics if the given factor is out of range 
         #[inline]
-        pub fn set_freq(&mut self, freq : Velocity, factor : f32) {
+        pub fn set_freq(&mut self, freq : Frequency, factor : f32) {
             if (1.0 < factor) & (0.0 > factor) {
                 panic!("Bad factor value! {}", factor);
             }

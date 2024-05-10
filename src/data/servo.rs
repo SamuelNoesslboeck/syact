@@ -10,7 +10,7 @@ pub struct ServoConst
     pub t_max : Force,
 
     /// Maximum angular velocity [Unit rad/s]
-    pub omega_max : Velocity,
+    pub velocity_max : Velocity,
 
     /// Maximum angle [Unit (radians)]
     pub gamma_max : Gamma,
@@ -31,7 +31,7 @@ impl ServoConst
     /// DO NOT EXECUTE CALCULATION FUNCTIONS WITH THIS DATA
     pub const ERROR : Self = Self {
         t_max: Force::ZERO,
-        omega_max: Velocity::ZERO,
+        velocity_max: Velocity::ZERO,
         gamma_max: Gamma::ZERO,
         pwm_min: Time::ZERO,
         pwm_max: Time::ZERO,
@@ -42,7 +42,7 @@ impl ServoConst
     /// See [datasheet](https://github.com/SamuelNoesslboeck/syact/blob/master/docs/datasheets/MG996R.pdf)
     pub const MG996R : Self = Self {
         t_max: Force(1.08),
-        omega_max: Velocity(8.5),
+        velocity_max: Velocity(8.5),
         gamma_max: Gamma(core::f32::consts::PI),
 
         pwm_min: Time(0.00075),

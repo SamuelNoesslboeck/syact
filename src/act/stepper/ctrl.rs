@@ -5,11 +5,36 @@ use embedded_hal::digital::OutputPin;
 use syunit::*;
 
 use crate::{Setup, Dismantle};
-use crate::act::stepper::StepError;
 
 // Constants
 pub const STEP_PULSE_TIME : Time = Time(1.0 / 40000.0);
 const STEP_PULSE_DUR : Duration = Duration::from_micros(25);
+
+// #####################
+// #    ERROR-TYPES    #
+// #####################
+    /// Error type for errors that can occur with `StepperDrivers`
+    #[derive(Debug, Clone)]
+    pub enum ControllerError {
+        /// The time given is too short for the driver to recognize
+        TimeTooShort(Time),
+        /// The time given is invalid (`<=0` / `NaN` / ... )
+        TimeIsInvalid(Time)
+    }
+
+    impl core::fmt::Display for ControllerError {
+        fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+            match self {
+                Self::TimeTooShort(t) => 
+                    f.write_fmt(format_args!("Bad step time! Time given ({}) is smaller than STEP_PULSE_TIME ({})", t, STEP_PULSE_TIME)),
+                Self::TimeIsInvalid(t) => 
+                    f.write_fmt(format_args!("Bad step time! Time given ({}) is invalid!", t))
+            }
+        }
+    }
+
+    impl std::error::Error for ControllerError { }
+// 
 
 /// A controller for the logics of a stepper motor
 pub trait Controller {
@@ -24,9 +49,9 @@ pub trait Controller {
         }
     }
 
-    fn step_no_wait(&mut self, t_total : Time) -> Result<(), StepError>;
+    fn step_no_wait(&mut self, t_total : Time) -> Result<(), ControllerError>;
 
-    fn step_final(&mut self) -> Result<(), StepError>{
+    fn step_final(&mut self) -> Result<(), ControllerError>{
         self.step_no_wait(2.0 * STEP_PULSE_TIME)
     }
 
@@ -97,14 +122,14 @@ impl<S : OutputPin, D : OutputPin> Controller for GenericPWM<S, D> {
         spin_sleep::sleep(t_pause.into());
     }
 
-    fn step_no_wait(&mut self, t_total : Time) -> Result<(), StepError> {
+    fn step_no_wait(&mut self, t_total : Time) -> Result<(), ControllerError> {
         // TODO: Maybe create fallbacks or move to Result?
         if t_total <= STEP_PULSE_TIME {
-            return Err(StepError::TimeTooShort(t_total));
+            return Err(ControllerError::TimeTooShort(t_total));
         }
 
         if !t_total.is_normal() {
-            return Err(StepError::TimeIsIncorrect(t_total));
+            return Err(ControllerError::TimeIsInvalid(t_total));
         }
 
         let elapsed = self.pause_stamp.elapsed();

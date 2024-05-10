@@ -13,7 +13,7 @@ pub struct Gear<C : SyncActuator> {
     /// Steppercontrol for the motor of the bearing
     pub ctrl : C,
     
-    /// Angle ration from motor to bearing (omega_b / omega_m)
+    /// Angle ration from motor to bearing (velocity_b / velocity_m)
     pub ratio : f32
 }
 

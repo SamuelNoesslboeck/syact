@@ -37,7 +37,7 @@ pub struct ThreadedStepper<B : StepperBuilder, C : Controller + Setup + Dismantl
         _limit_max : Arc<AtomicF32>,
     // 
 
-    /// Maxium omega of the component
+    /// Maxium velocity  of the component
     _microsteps : MicroSteps,
 
     // Threading and msg senders
@@ -170,7 +170,7 @@ impl<B : StepperBuilder + Send + 'static + 'static, C : Controller + Setup + Dis
 
                     // Make step
                     if let Err(err) = ctrl.step_no_wait(node) {
-                        sender_thr.send(Err(DriveError::Step(err))).unwrap();
+                        sender_thr.send(Err(DriveError::Controller(err))).unwrap();
                     }
 
                     builder_ref = builder.lock().unwrap();
@@ -313,8 +313,8 @@ impl<B : StepperBuilder + Send + 'static, C : Controller + Setup + Dismantle + S
             self.drive_rel_async(delta, speed)
         }
 
-        fn drive_velocity(&mut self, omega_tar : Velocity) -> Result<(), crate::Error> {
-            self.sender.send(AsyncMsg::Drive(DriveMode::ConstOmega(omega_tar.abs(), omega_tar.get_direction())))?;
+        fn drive_velocity(&mut self, velocity_tar : Velocity) -> Result<(), crate::Error> {
+            self.sender.send(AsyncMsg::Drive(DriveMode::ConstVelocity(velocity_tar.abs(), velocity_tar.get_direction())))?;
             Ok(())
         }
         
@@ -343,11 +343,11 @@ impl<B : StepperBuilder + Send + 'static, C : Controller + Setup + Dismantle + S
 
         #[inline]
         fn velocity_max(&self) -> Velocity {
-            self.builder.lock().unwrap().omega_max()
+            self.builder.lock().unwrap().velocity_max()
         }
 
-        fn set_velocity_max(&mut self, omega_max : Velocity) {
-            self.builder.lock().unwrap().set_velocity_max(omega_max).unwrap();      // TODO
+        fn set_velocity_max(&mut self, velocity_max : Velocity) {
+            self.builder.lock().unwrap().set_velocity_max(velocity_max).unwrap();      // TODO
         }
 
         #[inline]
@@ -438,8 +438,6 @@ impl<B : StepperBuilder + Send + 'static, C : Controller + Setup + Dismantle + S
 }
 
 impl<B : StepperBuilder + Send + 'static, C : Controller + Setup + Dismantle + Send + 'static> AsyncActuator for ThreadedStepper<B, C> {
-    type Duty = Factor;
-    
     fn drive(&mut self, _dir : Direction, _speed_f : Factor) -> Result<(), crate::Error> {
         todo!()
     }

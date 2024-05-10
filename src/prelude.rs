@@ -12,6 +12,6 @@ pub use crate::device::{Servo, SoftwarePWM};
 
 pub use crate::math;
 
-pub use crate::meas::{SimpleMeasData, VirtualEndSwitch, EndSwitch};
+pub use crate::meas::{SimpleMeasParams, VirtualEndSwitch, EndSwitch};
 
 pub use syunit::*;

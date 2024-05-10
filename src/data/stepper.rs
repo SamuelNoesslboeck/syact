@@ -112,8 +112,8 @@ impl StepperConst {
             vars.force_after_load(self.torque_stall, dir).map(|f| f / vars.inertia_after_load(self.inertia_motor))
         }
 
-        pub fn alpha_max_for_omega(&self, vars : &ActuatorVars, config : &StepperConfig, omega : Velocity, dir : Direction) -> Option<Acceleration> {
-            vars.force_after_load(torque_dyn(self, omega, config.voltage, None), dir).map(|f| f / vars.inertia_after_load(self.inertia_motor))
+        pub fn alpha_max_for_velocity(&self, vars : &ActuatorVars, config : &StepperConfig, velocity  : Velocity, dir : Direction) -> Option<Acceleration> {
+            vars.force_after_load(torque_dyn(self, velocity , config.voltage, None), dir).map(|f| f / vars.inertia_after_load(self.inertia_motor))
         }
     // 
 
@@ -126,7 +126,7 @@ impl StepperConst {
 
         /// Maximum speed for a stepper motor where it can be guarantied that it works properly
         #[inline(always)]
-        pub fn omega_max(&self, voltage : f32) -> Velocity {
+        pub fn velocity_max(&self, voltage : f32) -> Velocity {
             Velocity(2.0 * PI * voltage / self.default_current / self.inductance / self.number_steps as f32)
         }
     // 
@@ -144,10 +144,10 @@ impl StepperConst {
     /// 
     /// let data = StepperConst::GEN;
     /// 
-    /// assert!((data.omega(Time(1.0/200.0), MicroSteps::default()) - Velocity(2.0 * PI)).abs() < Velocity(0.001));     
+    /// assert!((data.velocity (Time(1.0/200.0), MicroSteps::default()) - Velocity(2.0 * PI)).abs() < Velocity(0.001));     
     /// ```
     #[inline(always)]
-    pub fn omega(&self, step_time : Time, microsteps : MicroSteps) -> Velocity {
+    pub fn velocity (&self, step_time : Time, microsteps : MicroSteps) -> Velocity {
         if (step_time == Time(0.0)) | (step_time == Time(-0.0)) {
             panic!("The given step time ({}) is zero!", step_time)
         }
@@ -169,7 +169,7 @@ impl StepperConst {
             Delta(2.0 * PI / self.number_steps as f32)
         }
 
-        /// Time per step for the given omega
+        /// Time per step for the given velocity 
         /// 
         /// # Unit
         /// 
@@ -177,28 +177,28 @@ impl StepperConst {
         /// 
         /// # Panics 
         /// 
-        /// Panics if the given `omega` is zero 
+        /// Panics if the given `velocity ` is zero 
         #[inline]
-        pub fn step_time(&self, omega : Velocity, microsteps : MicroSteps) -> Time {
-            // if (omega == Velocity(0.0)) | (omega == Velocity(-0.0)) {
-            //     panic!("The given omega ({}) is zero!", omega);
+        pub fn step_time(&self, velocity  : Velocity, microsteps : MicroSteps) -> Time {
+            // if (velocity  == Velocity(0.0)) | (velocity  == Velocity(-0.0)) {
+            //     panic!("The given velocity  ({}) is zero!", velocity );
             // }
 
-            self.step_angle(microsteps) / omega
+            self.step_angle(microsteps) / velocity 
         }
 
-        /// Time per full step at the given velocity omega
+        /// Time per full step at the given velocity velocity 
         /// 
         /// # Unit
         /// 
         /// Returns the time in seconds
         #[inline]
-        pub fn full_step_time(&self, omega : Velocity) -> Time {
-            if (omega == Velocity(0.0)) | (omega == Velocity(-0.0)) {
-                panic!("The given omega ({}) is zero!", omega);
+        pub fn full_step_time(&self, velocity  : Velocity) -> Time {
+            if (velocity  == Velocity(0.0)) | (velocity  == Velocity(-0.0)) {
+                panic!("The given velocity  ({}) is zero!", velocity );
             }
 
-            self.full_step_angle() / omega
+            self.full_step_angle() / velocity 
         }
     // 
 

@@ -62,21 +62,21 @@ impl<C : SyncActuator> CylinderTriangle<C> {
         }  
 
         /// Converts the given linear velocity `vel` to the angluar velocity for the given gamma angle `gam`
-        pub fn omega_for_gam(&self, omega : Velocity, gam : Gamma) -> Velocity {
-            omega / self.l_a * self.beta_for_gam(gam).sin()
+        pub fn velocity_for_gam(&self, velocity  : Velocity, gam : Gamma) -> Velocity {
+            velocity  / self.l_a * self.beta_for_gam(gam).sin()
         }
 
         /// Converts the given angular velocity `vel` to the linear velocity for the given gamma angle `gam`
-        pub fn vel_for_gam(&self, omega : Velocity, gam : Gamma) -> Velocity {
-            omega * self.l_a / self.beta_for_gam(gam).sin()
+        pub fn vel_for_gam(&self, velocity  : Velocity, gam : Gamma) -> Velocity {
+            velocity  * self.l_a / self.beta_for_gam(gam).sin()
         }
     //
 }
 
 // impl crate::math::MathActor for CylinderTriangle {
-//     fn accel_dyn(&self, omega : Velocity, gamma : Gamma) -> Acceleration {
+//     fn accel_dyn(&self, velocity  : Velocity, gamma : Gamma) -> Acceleration {
 //         self.alpha_for_this(self.cylinder.accel_dyn(
-//             self.omega_for_parent(omega, gamma), self.gamma_for_parent(gamma)), self.gamma_for_parent(gamma))
+//             self.velocity_for_parent(velocity , gamma), self.gamma_for_parent(gamma)), self.gamma_for_parent(gamma))
 //     }
 // }
 
@@ -119,8 +119,8 @@ impl<C : SyncActuator> SyncActuator for CylinderTriangle<C> {
             Gamma(((self.l_a.powi(2) + self.l_b.powi(2) - len.0.powi(2)) / 2.0 / self.l_a / self.l_b).acos())
         }
 
-        fn omega_for_this(&self, parent_omega : Velocity, this_gamma : Gamma) -> Velocity {
-            parent_omega / self.l_a * self.beta_for_gam(this_gamma).sin()
+        fn velocity_for_this(&self, parent_velocity : Velocity, this_gamma : Gamma) -> Velocity {
+            parent_velocity / self.l_a * self.beta_for_gam(this_gamma).sin()
         }
     // 
 
@@ -131,12 +131,12 @@ impl<C : SyncActuator> SyncActuator for CylinderTriangle<C> {
     //
 
     // Velocity max 
-        fn omega_max(&self) -> Velocity {
-            self.cylinder.omega_max()
+        fn velocity_max(&self) -> Velocity {
+            self.cylinder.velocity_max()
         }
 
-        fn set_velocity_max(&mut self, omega_max : Velocity) {
-            self.cylinder.set_velocity_max(omega_max)
+        fn set_velocity_max(&mut self, velocity_max : Velocity) {
+            self.cylinder.set_velocity_max(velocity_max)
         }
     // 
 
