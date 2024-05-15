@@ -19,7 +19,7 @@ pub type StepperCylTriangle = CylinderTriangle<Stepper>;
 /// # Angles and lengths
 /// 
 /// The struct uses the default labeling of a mathematical triangles with the sides a, b and c. Here, a and b are the 
-/// constant lengths and c being the variable cylinder length. All angles used are alpha, beta and gamma, all depending 
+/// constant lengths and c being the variable cylinder length. All angles used are acceleration, beta and gamma, all depending 
 /// on the variable length c, making them also variable. The most relevant angle being gamma, as it is the opposing angle to 
 /// the length c, representing the 
 #[derive(Debug, Serialize, Deserialize)]
@@ -51,7 +51,7 @@ impl<C : SyncActuator> CylinderTriangle<C> {
     }
 
     // Conversions
-        /// Returns the alpha angle (opposing to the a-segment) for a given gamma angle `gam`
+        /// Returns the acceleration angle (opposing to the a-segment) for a given gamma angle `gam`
         pub fn alpha_for_gam(&self, gam : Gamma) -> f32 {
             (self.l_a / self.gamma_for_parent(gam).0 * gam.sin()).asin()
         }

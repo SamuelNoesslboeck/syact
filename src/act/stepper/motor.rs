@@ -65,7 +65,7 @@ impl<B : StepperBuilder + Send + 'static + 'static, C : Controller + Setup + Dis
             let active = Arc::new(AtomicBool::new(false));
             let active_clone = active.clone();
 
-            let builder = Arc::new(Mutex::new(B::new(consts)));
+            let builder = Arc::new(Mutex::new(B::new(consts).unwrap()));    // TODO: Fix builder with bad values
             let builder_clone = builder.clone();
 
             let gamma = Arc::new(AtomicF32::new(0.0));
@@ -347,7 +347,7 @@ impl<B : StepperBuilder + Send + 'static, C : Controller + Setup + Dismantle + S
         }
 
         fn set_velocity_max(&mut self, velocity_max : Velocity) {
-            self.builder.lock().unwrap().set_velocity_max(velocity_max).unwrap();      // TODO
+            self.builder.lock().unwrap().set_velocity_cap(velocity_max).unwrap();      // TODO
         }
 
         #[inline]

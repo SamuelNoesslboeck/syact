@@ -98,7 +98,7 @@ impl<const N : usize> PathBuilder<N> {
     }
 
     pub fn check_alpha(&mut self, i : usize, max : Acceleration) {
-        // Recalc alpha
+        // Recalc acceleration
         self.alphas[i] = (self.velocitys_node[i] - self.velocity_0(i)) / self.times[i];   
 
         if self.alphas[i].abs() > max.abs() {
@@ -145,8 +145,8 @@ impl<const N : usize> PathBuilder<N> {
 
     pub fn check_all_with_alpha<F : FnMut(&mut Self, usize) -> Acceleration>(&mut self, mut afunc : F) {
         for i in 0 .. N {
-            let alpha = afunc(self, i);
-            self.check_alpha(i, alpha)
+            let acceleration = afunc(self, i);
+            self.check_alpha(i, acceleration)
         }
     }
 }

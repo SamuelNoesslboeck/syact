@@ -10,8 +10,8 @@ pub mod time {
     }
 
     #[inline]
-    pub fn positive_travel_time(delta : Delta, velocity  : Velocity, alpha : Acceleration) -> Option<Time> {
-        let (mut t_1, mut t_2) = travel_times(delta, velocity , alpha);
+    pub fn positive_travel_time(delta : Delta, velocity  : Velocity, acceleration : Acceleration) -> Option<Time> {
+        let (mut t_1, mut t_2) = travel_times(delta, velocity , acceleration);
 
         if t_1.is_sign_negative() {
             t_1 = Time::INFINITY;       // Invaild time
@@ -36,8 +36,8 @@ pub mod delta {
     }
 
     #[inline]
-    pub fn from_velocity_alpha(velocity_0 : Velocity, alpha : Acceleration, time : Time) -> Delta {
-        velocity_0 * time + alpha * time * time / 2.0
+    pub fn from_velocity_alpha(velocity_0 : Velocity, acceleration : Acceleration, time : Time) -> Delta {
+        velocity_0 * time + acceleration * time * time / 2.0
     }
 }
 
@@ -53,15 +53,15 @@ pub mod velocity {
 /// 
 /// # Panics 
 /// 
-/// The function panics if the given alpha is not normal (`Acceleration::is_normal()`)
+/// The function panics if the given acceleration is not normal (`Acceleration::is_normal()`)
 #[inline]
-pub fn travel_times(delta : Delta, velocity : Velocity, alpha : Acceleration) -> (Time, Time) {
-    if !alpha.is_normal() {
-        panic!("The given alpha is invalid (delta: {}, velocity : {}, alpha: {})", delta, velocity , alpha);
+pub fn travel_times(delta : Delta, velocity : Velocity, acceleration : Acceleration) -> (Time, Time) {
+    if !acceleration.is_normal() {
+        panic!("The given acceleration is invalid (delta: {}, velocity : {}, acceleration: {})", delta, velocity , acceleration);
     }
 
-    let p = velocity  / alpha;
-    let q = 2.0 * delta.0 / alpha.0; 
+    let p = velocity  / acceleration;
+    let q = 2.0 * delta.0 / acceleration.0; 
 
     let inner = p.0.powi(2) + q;
     let mut root = Time(inner.sqrt());
@@ -73,8 +73,8 @@ pub fn travel_times(delta : Delta, velocity : Velocity, alpha : Acceleration) ->
     ( -p + root, -p - root )
 }
 
-pub fn accel_from_zero(delta : Delta, alpha : Acceleration) -> Time {
-    Time((2.0 * delta.0 / alpha.0).sqrt())
+pub fn accel_from_zero(delta : Delta, acceleration : Acceleration) -> Time {
+    Time((2.0 * delta.0 / acceleration.0).sqrt())
 }
 
 pub fn alpha_req_for_dist(delta : Delta, velocity  : Velocity) -> Acceleration {
