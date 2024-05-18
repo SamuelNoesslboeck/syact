@@ -7,7 +7,7 @@ use crate::data::MicroSteps;
 use crate::math;
 
 // Constants
-    pub const DEFAULT_MAX_SPEED_LEVEL : usize = 10;
+    // pub const DEFAULT_MAX_SPEED_LEVEL : usize = 10;
 // 
 
 /// The drive-mode of the stepper motor

@@ -56,6 +56,7 @@ pub struct ThreadedStepper<B : StepperBuilder, C : Controller + Setup + Dismantl
 // Inits
 impl<B : StepperBuilder + Send + 'static + 'static, C : Controller + Setup + Dismantle + Send + 'static> ThreadedStepper<B, C> {   
     /// Creates a new stepper controller with the given stepper motor constants `consts`
+    #[allow(unused_must_use)]
     pub fn new(mut ctrl : C, consts : StepperConst) -> Self {
         // Create communication channels
         let (sender_com, receiver_thr) : (Sender<AsyncMsg>, Receiver<AsyncMsg>) = channel();
@@ -202,7 +203,7 @@ impl<B : StepperBuilder + Send + 'static + 'static, C : Controller + Setup + Dis
                     drop(builder_ref);
 
                     active.store(false, Ordering::Relaxed);
-                    sender_thr.send(Ok(())).unwrap();
+                    sender_thr.send(Ok(()));
                 }
             }
         });
