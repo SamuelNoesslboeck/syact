@@ -9,14 +9,16 @@ mod math;
 // Helper structs
 pub struct SimPin {
     pub pin : u8,
-    pub state : bool
+    pub state : bool,
+    pub state_changes : u64
 }
 
 impl SimPin {
     fn new(pin : u8) -> Self {
         SimPin {
             pin,
-            state: false
+            state: false,
+            state_changes: 0
         }
     }
 
@@ -32,11 +34,13 @@ impl embedded_hal::digital::ErrorType for SimPin {
 impl embedded_hal::digital::OutputPin for SimPin {
     fn set_low(&mut self) -> Result<(), Self::Error> {
         self.state = false;
+        self.state_changes += 1;
         Ok(())
     }
 
     fn set_high(&mut self) -> Result<(), Self::Error> {
         self.state = true;
+        self.state_changes += 1;
         Ok(())
     }
 }
@@ -54,3 +58,9 @@ impl Stepper<SimPin, SimPin> {
         Self::new(GenericPWM::new_gen().unwrap(), StepperConst::GEN)
     }
 }
+
+// impl Drop for SimPin {
+//     fn drop(&mut self) {
+//         println!("State changes: {}", self.state_changes);
+//     }
+// }

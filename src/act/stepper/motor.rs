@@ -321,7 +321,7 @@ impl<B : StepperBuilder + Send + 'static, C : Controller + Setup + Dismantle + S
         fn await_inactive(&mut self) -> Result<(), crate::Error> {
             // TODO: Better message
             if !self.is_active() {
-                return Ok(());      
+                return Err("The stepper motor is not active!".into());      
             }
 
             self.receiver.recv()??;
@@ -431,8 +431,8 @@ impl<B : StepperBuilder + Send + 'static, C : Controller + Setup + Dismantle + S
         }
 
         #[inline(always)]
-        fn apply_inertia(&mut self, inertia : Inertia) {
-            self.builder.lock().unwrap().apply_inertia(inertia)
+        fn apply_inertia(&mut self, inertia : Inertia) -> () {
+            self.builder.lock().unwrap().apply_inertia(inertia).unwrap()
         }
     //
 }
@@ -464,8 +464,8 @@ where
             todo!()
         }
 
-        fn set_config(&mut self, config : StepperConfig) {
-            self.builder.lock().unwrap().set_config(config)
+        fn set_config(&mut self, config : StepperConfig) -> () {
+            self.builder.lock().unwrap().set_config(config).unwrap()
         }
 
         fn microsteps(&self) -> MicroSteps {

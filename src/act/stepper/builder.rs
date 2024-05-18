@@ -348,11 +348,11 @@ pub trait StepperBuilder : Iterator<Item = Time> {
 
     impl DefinedActuator for StartStopBuilder {
         fn ptp_time_for_distance(&self, gamma_0 : Gamma, gamma_t : Gamma) -> Time {
-            (gamma_t / gamma_0) / self.velocity_max()
+            (gamma_t - gamma_0) / self.velocity_max()
         }
     }
 
-
+    /* 
     pub struct ComplexStartStopBuilder {
         _consts : StepperConst,
         _vars : ActuatorVars,
@@ -639,7 +639,7 @@ pub trait StepperBuilder : Iterator<Item = Time> {
             Ok(())
         }
     }
-
+    */
     // impl DefinedActuator for ComplexStartStopBuilder {
     //     fn ptp_time_for_distance(&self, gamma_0 : Gamma, gamma_t : Gamma) -> Time {
     //         (gamma_t / gamma_0) / self.velocity_max()
