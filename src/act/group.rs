@@ -1,5 +1,5 @@
-use syunit::Factor;
 use crate::{Setup, SyncActuator};
+
 use syunit::*;
 
 /// A group of synchronous components  
@@ -61,46 +61,20 @@ where
     //
 
     /// Runs [SyncComp::drive_rel()] for all components
-    fn drive_rel(&mut self, deltas : [Delta; C], speed : [Factor; C]) -> Result<(), crate::Error> {
-        self.try_for_each_mut(|act, index| {
-            act.drive_rel(deltas[index], speed[index])  
-        })?;
-        Ok(())
-    }
+    // fn drive_rel(&mut self, deltas : [Delta; C], speed : [Factor; C]) -> impl Future<Output = Result<(), crate::Error>> {
+    //     self.try_for_each_mut(|act, index| {
+    //         act.drive_rel(deltas[index], speed[index])  
+    //     })?;
+    //     Ok(())
+    // }
 
-    /// Runs [SyncComp::drive_abs()] for all components
-    fn drive_abs(&mut self, gamma : [Gamma; C], speed : [Factor; C]) -> Result<(), crate::Error>  {
-        self.try_for_each_mut(|act, index| {
-            act.drive_abs(gamma[index], speed[index])
-        })?;
-        Ok(())
-    }
-
-    // Async
-        /// Runs [SyncComp::drive_rel_async()] for all components
-        fn drive_rel_async(&mut self, deltas : [Delta; C], speed : [Factor; C]) -> Result<(), crate::Error> {
-            self.try_for_each_mut(|act, index| {
-                act.drive_rel_async(deltas[index], speed[index])
-            })?; 
-            Ok(())
-        }
-
-        /// Runs [SyncComp::drive_abs_async()] for all components
-        fn drive_abs_async(&mut self, gamma : [Gamma; C], speed : [Factor; C]) -> Result<(), crate::Error> {
-            self.try_for_each_mut(|act, index| {
-                act.drive_abs_async(gamma[index], speed[index])
-            })?;
-            Ok(())
-        }   
-
-        /// Runs [SyncComp::await_inactive()] for all components
-        fn await_inactive(&mut self) -> Result<(), crate::Error> {
-            self.try_for_each_mut(|act, _| {
-                act.await_inactive()
-            })?;
-            Ok(())
-        }
-    // 
+    // /// Runs [SyncComp::drive_abs()] for all components
+    // fn drive_abs(&mut self, gamma : [Gamma; C], speed : [Factor; C]) -> impl Future<Output = Result<(), crate::Error>>  {
+    //     self.try_for_each_mut(|act, index| {
+    //         act.drive_abs(gamma[index], speed[index])
+    //     })?;
+    //     Ok(())
+    // }
 
     // Position
         /// Runs [SyncComp::gamma()] for all components

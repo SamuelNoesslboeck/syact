@@ -10,10 +10,10 @@ use crate::{StepperConst, SyncActuator, SyncActuatorGroup, StepperConfig};
 
 // Submodules
     mod builder;
-    pub use builder::{DriveError, DriveMode, StepperBuilder, StartStopBuilder};
+    pub use builder::{BuilderError, DriveMode, StepperBuilder, StartStopBuilder, ComplexStartStopBuilder};
 
     mod ctrl;
-    pub use ctrl::{Controller, GenericPWM, ControllerError};
+    pub use ctrl::{StepperController, GenericPWM, ControllerError};
 
     mod motor;
 // 
@@ -22,9 +22,10 @@ use crate::{StepperConst, SyncActuator, SyncActuatorGroup, StepperConfig};
 // #   Stepper-Types   #
 // #####################
     /// Default `Stepper` type for high-performance systems (high resolution stepper)
-    pub type Stepper<S, D> = motor::ThreadedStepper<StartStopBuilder, GenericPWM<S, D>>;
+    pub type Stepper<S, D> = motor::StepperMotor<StartStopBuilder, GenericPWM<S, D>>;
 
-    // pub struct MicroSteps(u8);
+    /// Complex `Stepper` type for high-performance systems with greater speed but greater risk and higher calculation complexity
+    pub type ComplexStepper<S, D> = motor::StepperMotor<ComplexStartStopBuilder, GenericPWM<S, D>>;
 // 
 
 // Stepper traits
@@ -34,8 +35,10 @@ use crate::{StepperConst, SyncActuator, SyncActuatorGroup, StepperConfig};
         fn consts(&self) -> &StepperConst;
 
         // Config
+            /// Returns a reference to the `StepperConfig` used by the stepper motor
             fn config(&self) -> &StepperConfig;
 
+            /// Set the config used by the Stepper motor
             fn set_config(&mut self, config : StepperConfig);
         // 
 
@@ -58,6 +61,7 @@ use crate::{StepperConst, SyncActuator, SyncActuatorGroup, StepperConfig};
     where 
         T: StepperActuator + ?Sized + 'static
     {
+        /// Set the configuration for multiple stepper motors
         fn set_config(&mut self, config : StepperConfig) {
             self.for_each_mut(|comp, _| {
                 comp.set_config(config.clone())

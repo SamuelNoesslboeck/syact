@@ -1,3 +1,4 @@
+use crate::prelude::BuilderError;
 use crate::{Stepper, StepperConst};
 use crate::act::stepper::GenericPWM;
 
@@ -54,7 +55,7 @@ impl GenericPWM<SimPin, SimPin> {
 impl Stepper<SimPin, SimPin> {
     /// Creates a new generic stepper with both pins set to [ERR_PIN](super::pin::ERR_PIN) just for simulation and testing purposes
     #[inline]
-    pub fn new_gen() -> Self {
+    pub fn new_gen() -> Result<Self, BuilderError> {
         Self::new(GenericPWM::new_gen().unwrap(), StepperConst::GEN)
     }
 }

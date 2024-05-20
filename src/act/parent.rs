@@ -1,3 +1,4 @@
+use crate::act::SyncDriveFuture;
 use crate::data::MicroSteps;
 use crate::math::movements::DefinedActuator;
 use crate::prelude::StepperActuator;
@@ -89,28 +90,11 @@ pub trait ActuatorParent {
         T::Child : SyncActuator
     {
         // Drive
-            fn drive_rel(&mut self, mut delta : Delta, speed : Factor) -> Result<(), crate::Error> {
+            fn drive_rel(&mut self, mut delta : Delta, speed : Factor) -> SyncDriveFuture {
                 delta = self.delta_for_chlid(delta);
                 self.child_mut().drive_rel(delta, speed)
             }
         //  
-
-        // Async
-            /// Moves the component by the relative distance as fast as possible
-            fn drive_rel_async(&mut self, mut delta : Delta, speed : Factor) -> Result<(), crate::Error> {
-                delta = self.delta_for_chlid(delta);
-                self.child_mut().drive_rel_async(delta, speed)
-            }
-
-            fn drive_velocity(&mut self, mut velocity_tar : Velocity) -> Result<(), crate::Error> {
-                velocity_tar = self.velocity_for_child(velocity_tar);
-                self.child_mut().drive_velocity(velocity_tar)
-            }   
-
-            fn await_inactive(&mut self) -> Result<(), crate::Error> {
-                self.child_mut().await_inactive()
-            }
-        // 
 
         // Position
             fn gamma(&self) -> Gamma {
@@ -226,8 +210,8 @@ pub trait ActuatorParent {
             self.child_mut().add_interruptor(interruptor)
         }
 
-        fn intr_reason(&self) -> Option<super::InterruptReason> {
-            self.child().intr_reason()
+        fn intr_reason(&mut self) -> Option<super::InterruptReason> {
+            self.child_mut().intr_reason()
         }
     }
 

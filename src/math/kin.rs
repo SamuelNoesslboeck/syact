@@ -1,53 +1,7 @@
 use syunit::*;
 
+/// Defined inaccuracy
 pub const ROOT_EPSILON : f32 = -1.0e-4;
-
-pub mod time {
-    use super::*;
-
-    pub fn from_velocity_start_end(velocity_0 : Velocity, velocity  : Velocity, delta : Delta) -> Time {
-        2.0 * delta / (velocity_0 + velocity )
-    }
-
-    #[inline]
-    pub fn positive_travel_time(delta : Delta, velocity  : Velocity, acceleration : Acceleration) -> Option<Time> {
-        let (mut t_1, mut t_2) = travel_times(delta, velocity , acceleration);
-
-        if t_1.is_sign_negative() {
-            t_1 = Time::INFINITY;       // Invaild time
-
-            if t_2.is_sign_negative() {
-                return None;            // Both invalid, no time can be determined
-            }
-        } else if t_2.is_sign_negative() {
-            t_2 = Time::INFINITY;       // Invalid time
-        }
-
-        Some(t_1.min(t_2))
-    }
-}
-
-pub mod delta {
-    use super::*;
-
-    #[inline]
-    pub fn from_velocity_start_end(velocity_0 : Velocity, velocity  : Velocity, time : Time) -> Delta {
-        (velocity_0 + velocity ) / 2.0 * time
-    }
-
-    #[inline]
-    pub fn from_velocity_alpha(velocity_0 : Velocity, acceleration : Acceleration, time : Time) -> Delta {
-        velocity_0 * time + acceleration * time * time / 2.0
-    }
-}
-
-pub mod velocity {
-    use super::*;
-
-    pub fn from_delta_time_0(velocity_0 : Velocity, delta : Delta, time : Time) -> Velocity {
-        2.0 * delta / time - velocity_0
-    }
-}
 
 /// Calculates the two possible travel times for a physical object 
 /// 
@@ -57,10 +11,10 @@ pub mod velocity {
 #[inline]
 pub fn travel_times(delta : Delta, velocity : Velocity, acceleration : Acceleration) -> (Time, Time) {
     if !acceleration.is_normal() {
-        panic!("The given acceleration is invalid (delta: {}, velocity : {}, acceleration: {})", delta, velocity , acceleration);
+        panic!("The given acceleration is invalid (delta: {}, velocity : {}, acceleration: {})", delta, velocity, acceleration);
     }
 
-    let p = velocity  / acceleration;
+    let p = velocity / acceleration;
     let q = 2.0 * delta.0 / acceleration.0; 
 
     let inner = p.0.powi(2) + q;
@@ -73,15 +27,18 @@ pub fn travel_times(delta : Delta, velocity : Velocity, acceleration : Accelerat
     ( -p + root, -p - root )
 }
 
+/// Time required to move a distance `delta` from a zero-velocity state with the acceleration `acceleration`
 pub fn accel_from_zero(delta : Delta, acceleration : Acceleration) -> Time {
     Time((2.0 * delta.0 / acceleration.0).sqrt())
 }
 
-pub fn alpha_req_for_dist(delta : Delta, velocity  : Velocity) -> Acceleration {
-    Acceleration(velocity .0 * velocity .0 / 2.0 / delta.0)
+/// The acceleration required to exit a certain distance `delta` with the given velocity `velocity`, starting with a velocity of zero
+pub fn alpha_req_for_dist(delta : Delta, velocity : Velocity) -> Acceleration {
+    Acceleration(velocity.0 * velocity.0 / 2.0 / delta.0)
 }
 
 // Stepper
-pub fn velocity_start_stop(force_stall : Force, inertia : Inertia, number_of_steps : u64) -> Velocity {
-    Velocity((force_stall.0 / inertia.0 * core::f32::consts::PI / number_of_steps as f32).sqrt())
+/// Returns the start-stop-velocity for a stepper motor
+pub fn velocity_start_stop(torque_stall : Force, inertia : Inertia, number_of_steps : u64) -> Velocity {
+    Velocity((torque_stall.0 / inertia.0 * core::f32::consts::PI / number_of_steps as f32).sqrt())
 }

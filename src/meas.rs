@@ -7,9 +7,6 @@ use serde::{Serialize, Deserialize};
 // Submodules
     mod endswitch;
     pub use endswitch::*;
-
-    mod sonar;
-    pub use sonar::*;
 // 
 
 // Traits
@@ -91,12 +88,12 @@ impl SimpleMeasResult {
 /// # Measurement data and its usage
 /// 
 /// Specifing a `sample_dist` is optional, as the script will replace it with 10% of the maximum distance if not specified
-pub fn take_simple_meas<C : SyncActuator + Interruptible + ?Sized>(comp : &mut C, data : &SimpleMeasParams, speed : Factor) -> Result<SimpleMeasResult, crate::Error> {
+pub async fn take_simple_meas<C : SyncActuator + Interruptible + ?Sized>(comp : &mut C, data : &SimpleMeasParams, speed : Factor) -> Result<SimpleMeasResult, crate::Error> {
     let mut gammas : Vec<Gamma> = Vec::new();
 
     // Init measurement
         // Drive full distance with optionally reduced speed
-        comp.drive_rel(data.max_dist, data.meas_speed * speed)?;
+        comp.drive_rel(data.max_dist, data.meas_speed * speed).await?;
 
         // Check wheiter the component has been interrupted and if it is the correct interrupt
         if comp.intr_reason().ok_or("The measurement failed! No interrupt was triggered")? != InterruptReason::EndReached {
@@ -111,12 +108,12 @@ pub fn take_simple_meas<C : SyncActuator + Interruptible + ?Sized>(comp : &mut C
             println!("- Gamma: {}", comp.gamma());
 
             // Drive half of the sample distance back (faster)
-            comp.drive_rel(-data.sample_dist.unwrap_or(data.max_dist * 0.25) / 2.0, speed)?;
+            comp.drive_rel(-data.sample_dist.unwrap_or(data.max_dist * 0.25) / 2.0, speed).await?;
 
             println!("- Gamma: {}", comp.gamma());
 
             // Drive sample distance
-            comp.drive_rel(data.sample_dist.unwrap_or(data.max_dist * 0.25), data.meas_speed * speed)?;
+            comp.drive_rel(data.sample_dist.unwrap_or(data.max_dist * 0.25), data.meas_speed * speed).await?;
 
             println!("- Gamma: {}", comp.gamma());
 
