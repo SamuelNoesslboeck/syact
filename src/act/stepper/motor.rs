@@ -98,7 +98,7 @@ impl<B : StepperBuilder + Send + 'static, C : StepperController + Setup + Disman
             }
 
             // Set drive mode, return mapped error if one occurs
-            if let Err(e) = self.builder.set_drive_mode(DriveMode::FixedDistance(delta.abs(), Velocity::ZERO, speed_f), &mut self.ctrl) {
+            if let Err(e) = self.builder.set_drive_mode(DriveMode::FixedDistance(delta, Velocity::ZERO, speed_f), &mut self.ctrl) {
                 return SyncDriveFuture::Done(Err(SyncActuatorError::StepperBuilderError(e)));
             }
 
