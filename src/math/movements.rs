@@ -1,4 +1,4 @@
-use crate::act::stepper::{StepperActuator, StepperActuatorGroup};
+use crate::{SyncActuator, SyncActuatorGroup};
 use syunit::*;
 
 /// An actuator that has a defined time to move for a PTP (Point-To-Point) movement
@@ -8,7 +8,7 @@ pub trait DefinedActuator {
 }
 
 /// More calculation intense, no additional memory
-pub fn ptp_speed_factors<S : StepperActuatorGroup<T, C>, T : StepperActuator + DefinedActuator + ?Sized + 'static, const C : usize>
+pub fn ptp_speed_factors<S : SyncActuatorGroup<T, C>, T : SyncActuator + DefinedActuator + ?Sized + 'static, const C : usize>
     (group : &mut S, gamma_0 : [Gamma; C], gamma_t : [Gamma; C], speed : Factor) -> [Factor; C] 
 {
     let times = group.for_each(|comp, index| {

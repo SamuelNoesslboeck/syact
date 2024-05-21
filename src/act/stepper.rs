@@ -10,7 +10,7 @@ use crate::{StepperConst, SyncActuator, SyncActuatorGroup, StepperConfig};
 
 // Submodules
     mod builder;
-    pub use builder::{BuilderError, DriveMode, StepperBuilder, StartStopBuilder, ComplexStartStopBuilder};
+    pub use builder::{BuilderError, DriveMode, StepperBuilder, StartStopBuilder, ComplexBuilder};
 
     mod ctrl;
     pub use ctrl::{StepperController, GenericPWM, ControllerError};
@@ -25,7 +25,7 @@ use crate::{StepperConst, SyncActuator, SyncActuatorGroup, StepperConfig};
     pub type Stepper<S, D> = motor::StepperMotor<StartStopBuilder, GenericPWM<S, D>>;
 
     /// Complex `Stepper` type for high-performance systems with greater speed but greater risk and higher calculation complexity
-    pub type ComplexStepper<S, D> = motor::StepperMotor<ComplexStartStopBuilder, GenericPWM<S, D>>;
+    pub type ComplexStepper<S, D> = motor::StepperMotor<ComplexBuilder, GenericPWM<S, D>>;
 // 
 
 // Stepper traits

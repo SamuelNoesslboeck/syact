@@ -131,6 +131,11 @@ pub trait StepperBuilder : Iterator<Item = Time> {
 // ################
 // #    COMMON    #
 // ################
+    /// A simple builder that moves the stepper motor only in its start-stop-range  
+    /// - High performance
+    /// - Very safe
+    /// - Low movement speed
+    /// - Microstepping basically impossible
     #[derive(Debug)]
     pub struct StartStopBuilder {
         _consts : StepperConst,
@@ -153,6 +158,7 @@ pub trait StepperBuilder : Iterator<Item = Time> {
     }
 
     impl StartStopBuilder {
+        /// Updates the builders velocity values considering the loads etc.
         pub fn update_start_stop(&mut self) -> Result<(), BuilderError> {
             self.velocity_start_stop = math::kin::velocity_start_stop(
                 self._vars.force_after_load_lower(
@@ -219,7 +225,6 @@ pub trait StepperBuilder : Iterator<Item = Time> {
                     _consts: consts
                 };
 
-                // TODO: Enable error
                 _self.update_start_stop()?;
 
                 Ok(_self)
@@ -322,7 +327,6 @@ pub trait StepperBuilder : Iterator<Item = Time> {
                 DriveMode::ConstFactor(_, dir) => {
                     self._dir = dir;
                     ctrl.set_dir(dir);
-                    // TODO
                 },
                 DriveMode::FixedDistance(delta, velocity_exit, _) => {
                     if velocity_exit > self.velocity_max() {
@@ -353,8 +357,11 @@ pub trait StepperBuilder : Iterator<Item = Time> {
         }
     }
 
+    /// A more complex builder that introduces speed levels 
+    /// - High movements speeds
+    /// - Perfect for microstepping
     #[derive(Debug)]
-    pub struct ComplexStartStopBuilder {
+    pub struct ComplexBuilder {
         _consts : StepperConst,
         _vars : ActuatorVars,
         _config : StepperConfig,
@@ -382,7 +389,8 @@ pub trait StepperBuilder : Iterator<Item = Time> {
         distance_counter : u64
     }
 
-    impl ComplexStartStopBuilder {
+    impl ComplexBuilder {
+        /// Updates the builders speed levels and times considering loads etc.
         pub fn update(&mut self) -> Result<(), BuilderError> {
             // Store relevant values
             let max_speed_level = self.max_speed_level.unwrap_or(DEFAULT_MAX_SPEED_LEVEL);
@@ -439,17 +447,20 @@ pub trait StepperBuilder : Iterator<Item = Time> {
                 .min(self.consts().velocity_max(self.config().voltage))
         }
 
+        /// Stops the builder with the given drivemode
         pub fn stop_with_mode(&mut self, mode : DriveMode) {
             self.mode = DriveMode::Stop;
             self.cached_mode = Some(mode);
         }
-
+        
+        /// The current velocity of the builder
         pub fn velocity_current(&self) -> Velocity {
             self.current_speed_level.checked_sub(1)
                 .map(|i| self.speed_levels[i])
                 .unwrap_or(Velocity::ZERO)
         }
 
+        /// Moves the builder towards the next speed-level closer to the desired velocity `vel_tar`
         pub fn goto_velocity(&mut self, vel_tar : Velocity) -> Result<Velocity, BuilderError> {
             let vel_below = self.current_speed_level.checked_sub(2)
                 .map(|i| self.speed_levels[i])
@@ -474,7 +485,7 @@ pub trait StepperBuilder : Iterator<Item = Time> {
         }
     }
 
-    impl Iterator for ComplexStartStopBuilder {
+    impl Iterator for ComplexBuilder {
         type Item = Time;
 
         fn next(&mut self) -> Option<Self::Item> {
@@ -513,7 +524,7 @@ pub trait StepperBuilder : Iterator<Item = Time> {
         }
     }
 
-    impl StepperBuilder for ComplexStartStopBuilder {
+    impl StepperBuilder for ComplexBuilder {
         // General constructors
             fn new(consts : StepperConst) -> Result<Self, BuilderError>
             where 
@@ -681,7 +692,7 @@ pub trait StepperBuilder : Iterator<Item = Time> {
         }
     }
     
-    impl DefinedActuator for ComplexStartStopBuilder {
+    impl DefinedActuator for ComplexBuilder {
         fn ptp_time_for_distance(&self, gamma_0 : Gamma, gamma_t : Gamma) -> Time {
             let delta = gamma_t - gamma_0;
             let distance = self.consts().steps_from_angle_abs(delta, self.microsteps());

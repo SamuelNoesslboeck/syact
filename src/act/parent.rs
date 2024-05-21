@@ -8,16 +8,21 @@ use syunit::*;
 
 use super::Interruptible;
 
+/// A trait that marks an actuator which acts as a parent for another actuator
 pub trait ActuatorParent {
+    /// The type of the child
     type Child;
 
+    /// Returns a reference to the child
     fn child(&self) -> &Self::Child;
 
+    /// Returns a mutable reference to the child
     fn child_mut(&mut self) -> &mut Self::Child; 
 }
 
 // Relationships
     /// A parent that relates to its child through a constant `ratio`
+    #[allow(missing_docs)]
     pub trait RatioActuatorParent : ActuatorParent {
         /// The linear ratio that defines the relation between the child and the parent component
         /// 

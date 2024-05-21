@@ -45,7 +45,7 @@ fn simple_builder() {
 #[ignore = "Value display, run manually ... "]
 fn complex_builder() {
     let mut ctrl = GenericPWM::new_gen().unwrap();
-    let mut builder = ComplexStartStopBuilder::new(StepperConst::GEN).unwrap();
+    let mut builder = ComplexBuilder::new(StepperConst::GEN).unwrap();
     builder.set_config(StepperConfig::GEN).unwrap();
     builder.set_microsteps(MicroSteps::from(16)).unwrap();
 
@@ -65,7 +65,7 @@ fn builder_comparision() {
     const DELTA : Delta = Delta(0.3);
 
     let mut ctrl = GenericPWM::new_gen().unwrap();
-    let mut builder = ComplexStartStopBuilder::new(StepperConst::GEN).unwrap();
+    let mut builder = ComplexBuilder::new(StepperConst::GEN).unwrap();
     builder.set_config(StepperConfig::GEN).unwrap();
     builder.set_microsteps(MicroSteps::from(16)).unwrap();
 

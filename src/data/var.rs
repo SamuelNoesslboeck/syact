@@ -59,6 +59,7 @@ impl ActuatorVars  {
         }
     }
 
+    /// Returns the smaller force of the two directions after applying both loads
     pub fn force_after_load_lower(&self, force : Force) -> Option<Force> {
         let force = force - self.force_load_gen - self.force_load_dir.abs();
         
@@ -69,6 +70,7 @@ impl ActuatorVars  {
         }
     }
 
+    /// Returns the given inertia after applying the load inertia to it
     #[inline]
     pub fn inertia_after_load(&self, inertia : Inertia) -> Inertia {
         inertia + self.inertia_load

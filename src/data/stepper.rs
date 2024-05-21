@@ -97,22 +97,28 @@ impl StepperConst {
 
     // Amperage
         /// Maximum overload force with the given overload (or underload) voltage `u`
+        #[inline]
         pub fn torque_overload_max(&self, voltage : f32) -> Force {
             self.torque_stall * voltage / self.resistance / self.default_current
         }
 
         /// Torque created with the given overload (or underload) current `i`
+        #[inline]
         pub fn torque_overload(&self, current : Option<f32>) -> Force {
             self.torque_stall * current.unwrap_or(self.default_current) / self.default_current
         }
     // 
 
     // Acceleration
+        /// Returns the maximum acceleration that can be reached in stall
+        #[inline]
         pub fn alpha_max_stall(&self, vars : &ActuatorVars, dir : Direction) -> Option<Acceleration> {
             vars.force_after_load(self.torque_stall, dir).map(|f| f / vars.inertia_after_load(self.inertia_motor))
         }
 
-        pub fn alpha_max_for_velocity(&self, vars : &ActuatorVars, config : &StepperConfig, velocity  : Velocity, dir : Direction) -> Option<Acceleration> {
+        /// Returns the maximum acceleration that can be reached 
+        #[inline]
+        pub fn alpha_max_for_velocity(&self, vars : &ActuatorVars, config : &StepperConfig, velocity : Velocity, dir : Direction) -> Option<Acceleration> {
             vars.force_after_load(torque_dyn(self, velocity , config.voltage, None), dir).map(|f| f / vars.inertia_after_load(self.inertia_motor))
         }
     // 
@@ -147,7 +153,7 @@ impl StepperConst {
     /// assert!((data.velocity (Time(1.0/200.0), MicroSteps::default()) - Velocity(2.0 * PI)).abs() < Velocity(0.001));     
     /// ```
     #[inline(always)]
-    pub fn velocity (&self, step_time : Time, microsteps : MicroSteps) -> Velocity {
+    pub fn velocity(&self, step_time : Time, microsteps : MicroSteps) -> Velocity {
         if (step_time == Time(0.0)) | (step_time == Time(-0.0)) {
             panic!("The given step time ({}) is zero!", step_time)
         }
@@ -227,6 +233,8 @@ impl StepperConst {
             steps as f32 * self.step_angle(microsteps)
         }
 
+        /// Rounds the given angle to the nearest step value
+        #[inline(always)]
         pub fn round_angle_to_steps(&self, angle : Delta, microsteps : MicroSteps) -> Delta {
             self.angle_from_steps(self.steps_from_angle(angle, microsteps), microsteps)
         }

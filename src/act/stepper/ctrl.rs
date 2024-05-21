@@ -7,7 +7,7 @@ use syunit::*;
 use crate::{Setup, Dismantle};
 
 // Constants
-pub const STEP_PULSE_TIME : Time = Time(1.0 / 40000.0);
+pub const STEP_PULSE_TIME : Time = Time(1.0 / 100000.0);     // TODO: Remove minium pulse time
 const STEP_PULSE_DUR : Duration = Duration::from_micros(25);
 
 // #####################
@@ -38,8 +38,10 @@ const STEP_PULSE_DUR : Duration = Duration::from_micros(25);
 
 /// A controller for the logics of a stepper motor
 pub trait StepperController {
+    /// Moves a step with the pulse time `t_len` and the pause time `t_pause`
     fn step_with(&mut self, t_len : Time, t_pause : Time);
 
+    /// Moves a step with the total `time`
     fn step(&mut self, time : Time) {
         if time < (STEP_PULSE_TIME * 2.0) {
             // TODO: Notify about fallback
@@ -49,17 +51,22 @@ pub trait StepperController {
         }
     }
 
+    /// Moves a step and compensates waiting time
     fn step_no_wait(&mut self, t_total : Time) -> Result<(), ControllerError>;
 
+    /// Moves a final step without waiting
     fn step_final(&mut self) -> Result<(), ControllerError>{
         self.step_no_wait(2.0 * STEP_PULSE_TIME)
     }
 
+    /// The movement direction of the motor
     fn dir(&self) -> Direction;
 
+    /// Sets the direction of the motor
     fn set_dir(&mut self, dir : Direction);
 }
 
+/// A generic stepper driver that uses a PWM-signal for step-input
 #[derive(Debug)]
 pub struct GenericPWM<S : OutputPin, D : OutputPin> {
     dir : Direction,
@@ -72,6 +79,7 @@ pub struct GenericPWM<S : OutputPin, D : OutputPin> {
 }
 
 impl<S : OutputPin, D : OutputPin> GenericPWM<S, D> {
+    /// Creates a new `GenericPWM` signal from the two pins
     pub fn new(pin_step : S, pin_dir : D) -> Result<Self, crate::Error> {
         Ok(Self {
             dir: Direction::CW,
@@ -83,18 +91,6 @@ impl<S : OutputPin, D : OutputPin> GenericPWM<S, D> {
             pause_stamp: Instant::now()
         }) 
     }
-
-    // pub fn new_gen() -> Self {
-    //     Self::new(ERR_PIN, ERR_PIN).unwrap()
-    // }
-
-    // pub fn pin_step(&self) -> u8 {
-    //     self.pin_step.pin
-    // }
-
-    // pub fn pin_dir(&self) -> u8 {
-    //     self.pin_dir.pin
-    // }
 }
 
 impl<S : OutputPin, D : OutputPin> Setup for GenericPWM<S, D> {

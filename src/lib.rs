@@ -1,6 +1,6 @@
 #![doc = include_str!("../README.md")]
 #![crate_name = "syact"]
-// #![deny(missing_docs)]
+#![deny(missing_docs)]
 
 // Modules
 extern crate alloc;

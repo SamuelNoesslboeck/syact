@@ -61,7 +61,7 @@ where
             F : FnMut(&mut T, usize) -> Result<R, E>;
     //
 
-    // Runs [SyncComp::drive_rel()] for all components
+    /// Runs [SyncComp::drive_rel()] for all components
     fn drive_rel(&mut self, deltas : [Delta; C], speed : [Factor; C]) -> [SyncDriveFuture; C] {
         self.for_each_mut(|act, index| {
             act.drive_rel(deltas[index], speed[index])  
