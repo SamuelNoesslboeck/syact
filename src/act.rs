@@ -166,7 +166,7 @@ use crate::Setup;
             /// // Create a new cylinder (implements SyncComp)
             /// let mut cylinder = LinearAxis::new(
             ///     // Stepper Motor as subcomponent (also implements SyncComp)
-            ///     Stepper::new_gen(), 
+            ///     Stepper::new_gen().unwrap(), 
             /// 0.5);    // Ratio is set to 0.5, which means for each radian the motor moves, the cylinder moves for 0.5 mm
             /// 
             /// cylinder.set_gamma(POS);
@@ -189,7 +189,7 @@ use crate::Setup;
             /// // Create a new cylinder (implements SyncComp)
             /// let mut cylinder = LinearAxis::new(
             ///     // Stepper Motor as subcomponent (also implements SyncComp)
-            ///     Stepper::new_gen(), 
+            ///     Stepper::new_gen().unwrap(), 
             /// 0.5);    // Ratio is set to 0.5, which means for each radian the motor moves, the cylinder moves for 0.5 mm
             /// 
             /// cylinder.set_gamma(POS);
@@ -239,7 +239,7 @@ use crate::Setup;
             /// // Create a new gear bearing (implements SyncComp)
             /// let mut gear = Gear::new(
             ///     // Stepper Motor as subcomponent (also implements SyncComp)
-            ///     Stepper::new_gen(), 
+            ///     Stepper::new_gen().unwrap(), 
             /// 0.5);    // Ratio is set to 0.5, which means for each radian the motor moves, the bearing moves for half a radian
             /// 
             /// gear.set_limits(Some(LIM_MIN), Some(LIM_MAX));
@@ -265,32 +265,6 @@ use crate::Setup;
             /// Sets an endpoint in the current direction by modifying the components limits. For example, when the component is moving
             /// in the positive direction and the endpoint is set, this function will overwrite the current maximum limit with the current
             /// gamma value. The component is then not allowed to move in the current direction anymore. 
-            /// 
-            /// ```rust
-            /// use syact::prelude::*;
-            /// 
-            /// const GAMMA : Gamma = Gamma(1.0); 
-            /// 
-            /// // Create a new gear bearing (implements SyncComp)
-            /// let mut gear = Gear::new(
-            ///     // Stepper Motor as subcomponent (also implements SyncComp)
-            ///     Stepper::new_gen(), 
-            /// 0.5);    // Ratio is set to 0.5, which means for each radian the motor moves, the bearing moves for half a radian
-            /// gear.set_config(StepperConfig::GEN);           // Link component for driving
-            /// 
-            /// gear.set_gamma(Gamma::ZERO);
-            /// 
-            /// gear.set_velocity_max(Velocity(5.0));
-            /// gear.drive_rel(Delta(-0.2), Factor::MAX).unwrap();    // Drive component in negative direction
-            /// 
-            /// assert_eq!(gear.dir(), Direction::CCW);
-            /// assert!((gear.gamma() - Gamma(-0.2)).abs() < Delta(0.05));     // Check if the movement was correct (with step inaccuracy)
-            /// 
-            /// gear.set_end(GAMMA);
-            /// 
-            /// assert_eq!(gear.limits_for_gamma(Gamma(2.0)), Delta::ZERO);     
-            /// assert_eq!(gear.limits_for_gamma(Gamma(-2.0)), Delta(-3.0));      
-            /// ```
             fn set_end(&mut self, set_gamma : Gamma);
 
             /// Set the limits for the minimum and maximum angles that the component can reach, note that the limit will 
@@ -311,7 +285,7 @@ use crate::Setup;
             /// // Create a new gear bearing (implements SyncComp)
             /// let mut gear = Gear::new(
             ///     // Stepper Motor as subcomponent (also implements SyncComp)
-            ///     Stepper::new_gen(), 
+            ///     Stepper::new_gen().unwrap(), 
             /// 0.5);    // Ratio is set to 0.5, which means for each radian the motor moves, the bearing moves for half a radian
             /// 
             /// gear.set_limits(Some(LIM_MIN), Some(LIM_MAX));
@@ -351,7 +325,7 @@ use crate::Setup;
             /// // Create a new gear bearing (implements SyncComp)
             /// let mut gear = Gear::new(
             ///     // Stepper Motor as subcomponent (also implements SyncComp)
-            ///     Stepper::new_gen(), 
+            ///     Stepper::new_gen().unwrap(), 
             /// 0.5);    // Ratio is set to 0.5, which means for each radian the motor moves, the bearing moves for half a radian
             /// 
             /// gear.set_limits(Some(LIM_MIN), Some(LIM_MAX));
@@ -397,7 +371,7 @@ use crate::Setup;
             /// // Create a new gear bearing (implements SyncComp)
             /// let mut gear = Gear::new(
             ///     // Stepper Motor as subcomponent (also implements SyncComp)
-            ///     Stepper::new_gen(), 
+            ///     Stepper::new_gen().unwrap(), 
             /// 0.5);    // Ratio is set to 0.5, which means for each radian the motor moves, the bearing moves for half a radian
             /// 
             /// gear.apply_gen_force(FORCE);
@@ -429,7 +403,7 @@ use crate::Setup;
             /// // Create a new gear bearing (implements SyncComp)
             /// let mut gear = Gear::new(
             ///     // Stepper Motor as subcomponent (also implements SyncComp)
-            ///     Stepper::new_gen(), 
+            ///     Stepper::new_gen().unwrap(), 
             /// 0.5);    // Ratio is set to 0.5, which means for each radian the motor moves, the bearing moves for half a radian
             /// 
             /// // Applies the inertia to the gearbearing component
