@@ -1,3 +1,4 @@
+use crate::act::SyncDriveFuture;
 use crate::{Setup, SyncActuator};
 
 use syunit::*;
@@ -60,21 +61,19 @@ where
             F : FnMut(&mut T, usize) -> Result<R, E>;
     //
 
-    /// Runs [SyncComp::drive_rel()] for all components
-    // fn drive_rel(&mut self, deltas : [Delta; C], speed : [Factor; C]) -> impl Future<Output = Result<(), crate::Error>> {
-    //     self.try_for_each_mut(|act, index| {
-    //         act.drive_rel(deltas[index], speed[index])  
-    //     })?;
-    //     Ok(())
-    // }
+    // Runs [SyncComp::drive_rel()] for all components
+    fn drive_rel(&mut self, deltas : [Delta; C], speed : [Factor; C]) -> [SyncDriveFuture; C] {
+        self.for_each_mut(|act, index| {
+            act.drive_rel(deltas[index], speed[index])  
+        })
+    }
 
-    // /// Runs [SyncComp::drive_abs()] for all components
-    // fn drive_abs(&mut self, gamma : [Gamma; C], speed : [Factor; C]) -> impl Future<Output = Result<(), crate::Error>>  {
-    //     self.try_for_each_mut(|act, index| {
-    //         act.drive_abs(gamma[index], speed[index])
-    //     })?;
-    //     Ok(())
-    // }
+    /// Runs [SyncComp::drive_abs()] for all components
+    fn drive_abs(&mut self, gamma : [Gamma; C], speed : [Factor; C]) -> [SyncDriveFuture; C] {
+        self.for_each_mut(|act, index| {
+            act.drive_abs(gamma[index], speed[index])
+        })
+    }
 
     // Position
         /// Runs [SyncComp::gamma()] for all components
