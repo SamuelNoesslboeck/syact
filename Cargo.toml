@@ -1,7 +1,7 @@
 [package]
 name = "syact"
 authors = [ "Samuel Nösslböck <samuel.noesslboeck@gmail.com>" ]
-version = "0.13.3"
+version = "0.13.4"
 description = "A library to control motors (mainly stepper motors) and components, read data from sensors and more"
 edition = "2021"
 repository = "https://github.com/SamuelNoesslboeck/syact"

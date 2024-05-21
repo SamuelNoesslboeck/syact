@@ -1,7 +1,3 @@
-use core::sync::atomic::Ordering;
-use std::sync::Arc;
-
-use atomic_float::AtomicF32;
 use syunit::*;
 
 use crate::{SyncActuator, Setup, Dismantle};
@@ -19,7 +15,7 @@ pub struct StepperMotor<B : StepperBuilder, C : StepperController + Setup + Dism
 
     // Atomics
         /// The current absolute position
-        _gamma : Arc<AtomicF32>,
+        _gamma : Gamma,
     // 
 
     _limit_min : Option<Gamma>,
@@ -39,7 +35,7 @@ impl<B : StepperBuilder + Send + 'static + 'static, C : StepperController + Setu
             builder: B::new(consts)?,
             ctrl,
 
-            _gamma : Arc::new(AtomicF32::new(0.0)),
+            _gamma : Gamma::ZERO,
 
             _limit_min: None,
             _limit_max: None,
@@ -48,12 +44,6 @@ impl<B : StepperBuilder + Send + 'static + 'static, C : StepperController + Setu
             _intr_reason: None
         })
     }
-
-    // /// Returns wheiter or not the stepper is actively moving
-    // #[inline]
-    // pub fn is_active(&self) -> bool {
-    //     self.active.load(Ordering::Relaxed)
-    // }
 
     pub fn limit_min(&self) -> Option<Gamma> {
         self._limit_min
@@ -109,7 +99,7 @@ impl<B : StepperBuilder + Send + 'static, C : StepperController + Setup + Disman
                         }
                     }
 
-                    if let Some(reason) = intr.check(&self._gamma) {
+                    if let Some(reason) = intr.check(self._gamma) {
                         intr.set_temp_dir(Some(dir_val));
                         self._intr_reason.replace(reason);
                         
@@ -126,18 +116,19 @@ impl<B : StepperBuilder + Send + 'static, C : StepperController + Setup + Disman
                 if let Err(e) = self.ctrl.step_no_wait(node) {
                     return SyncDriveFuture::Done(Err(SyncActuatorError::StepperCtrlError(e)));
                 }
-                
-                // Update gamma value
-                self._gamma.fetch_add(self.builder.step_angle().0, Ordering::Relaxed);
 
                 // Check if the gamma value exeeds any limits
                 if dir_val.as_bool() {
+                    self._gamma += self.builder.step_angle();
+
                     if self.gamma() > self.limit_max().unwrap_or(Gamma::INFINITY) {
                         if let Err(e) = self.builder.set_drive_mode(DriveMode::Stop, &mut self.ctrl) {
                             return SyncDriveFuture::Done(Err(SyncActuatorError::StepperBuilderError(e)))
                         }
                     } 
                 } else {
+                    self._gamma = self._gamma - self.builder.step_angle();
+
                     if self.gamma() < self.limit_min().unwrap_or(Gamma::NEG_INFINITY) {
                         if let Err(e) = self.builder.set_drive_mode(DriveMode::Stop, &mut self.ctrl) {
                             return SyncDriveFuture::Done(Err(SyncActuatorError::StepperBuilderError(e)))
@@ -158,12 +149,12 @@ impl<B : StepperBuilder + Send + 'static, C : StepperController + Setup + Disman
     // Position
         #[inline]
         fn gamma(&self) -> Gamma {
-            Gamma(self._gamma.load(Ordering::Relaxed))
+            self._gamma
         }   
 
         #[inline]
         fn set_gamma(&mut self, gamma : Gamma) {
-            self._gamma.store(gamma.0, Ordering::Relaxed);
+            self._gamma = gamma;
         }
 
         #[inline]

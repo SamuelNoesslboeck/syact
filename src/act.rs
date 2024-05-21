@@ -1,7 +1,5 @@
 use core::future::Future;
 
-use alloc::sync::Arc;
-use atomic_float::AtomicF32;
 use syunit::*;
 
 use crate::Setup;
@@ -52,7 +50,7 @@ use crate::Setup;
         fn set_temp_dir(&mut self, dir_opt : Option<Direction>);
 
         /// Runs a check of the movement process and Interrupts if it has a reason to
-        fn check(&mut self, gamma : &Arc<AtomicF32>) -> Option<InterruptReason>;
+        fn check(&mut self, gamma : Gamma) -> Option<InterruptReason>;
     }
 
     /// Reasons why an interrupt was triggered

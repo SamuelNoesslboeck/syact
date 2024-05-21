@@ -1,5 +1,3 @@
-use alloc::sync::Arc;
-use atomic_float::AtomicF32;
 use embedded_hal::digital::InputPin;
 use serde::{Serialize, Deserialize};
 use syunit::*;
@@ -48,7 +46,7 @@ impl<P : InputPin> Interruptor for EndSwitch<P> {
         self.temp_dir = dir_opt;
     }
 
-    fn check(&mut self, _gamma : &Arc<AtomicF32>) -> Option<InterruptReason> {
+    fn check(&mut self, _gamma : Gamma) -> Option<InterruptReason> {
         // unwraping unsafe is safe, as no error can occur
         if unsafe { self.sys_pin.is_high().unwrap_unchecked() } == self.trigger {    
             Some(InterruptReason::EndReached)

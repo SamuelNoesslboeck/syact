@@ -97,3 +97,17 @@ fn builder_comparision() {
 
     println!("Simple: Pred: {}, true: {}", pred, time_sum);
 }
+
+#[tokio::test]
+#[ignore = "Value diplay, run manually ... "]
+async fn gamma_distance() {
+    let mut stepper = Stepper::new_gen().unwrap();  
+    stepper.set_config(StepperConfig::GEN).unwrap();
+    stepper.setup().unwrap();
+
+    dbg!(stepper.gamma());
+    stepper.drive_abs(Gamma(30.0), Factor::MAX).await.unwrap();
+    dbg!(stepper.gamma());
+    stepper.drive_abs(Gamma(10.0), Factor::MAX).await.unwrap();
+    dbg!(stepper.gamma());
+}
