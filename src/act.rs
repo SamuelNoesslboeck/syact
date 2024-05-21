@@ -1,3 +1,5 @@
+use core::future::Future;
+
 use alloc::sync::Arc;
 use atomic_float::AtomicF32;
 use syunit::*;
@@ -11,7 +13,7 @@ use crate::Setup;
     pub mod asyn;
 
     mod comps;
-    pub use comps::{Conveyor, Gear, LinearAxis, StateActuator};
+    pub use comps::{Conveyor, Gear, LinearAxis};
 
     /// A module for component groups, as they are used in various robots. The components are all sharing the same 
     /// [StepperConfig](crate::data::StepperConfig) and their movements are coordinated. 
@@ -83,16 +85,52 @@ use crate::Setup;
         /// # Note
         /// 
         /// Executing this function will replace the reason with `None`, so if you need to access the value multiple times, you have to store it yourself
-        fn intr_reason(&self) -> Option<InterruptReason>;
+        fn intr_reason(&mut self) -> Option<InterruptReason>;
     }
 //
 
 // ######################
 // #    SyncActuator    #
 // ######################
-    // pub enum SyncActuatorError {
+    /// General Error type for `SyncActuators`
+    #[derive(Clone, Debug)]
+    pub enum SyncActuatorError {
+        /// The delta distance given is invalid
+        InvaldDeltaDistance(Delta),
 
-    // }
+        // Motor specific errors
+        /// An error that occured with the `StepperBuilder` for a stepper motor
+        StepperBuilderError(crate::act::stepper::BuilderError),
+        /// An error that occured with the `StepperController` of a stepper motor
+        StepperCtrlError(crate::act::stepper::ControllerError),
+    }
+
+    impl core::fmt::Display for SyncActuatorError {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            f.write_fmt(format_args!("{:?}", self))
+        }
+    }
+
+    impl std::error::Error for SyncActuatorError { }
+    
+    /// A `Future` for drive operations
+    pub enum SyncDriveFuture {
+        /// The movement is still in process
+        Driving,
+        /// The movement is done, eiter successfully or not
+        Done(Result<(), SyncActuatorError>)
+    }
+
+    impl Future for SyncDriveFuture {
+        type Output = Result<(), SyncActuatorError>;
+
+        fn poll(self: core::pin::Pin<&mut Self>, _cx: &mut core::task::Context<'_>) -> std::task::Poll<Self::Output> {
+            match self.get_mut() {
+                Self::Driving => core::task::Poll::Pending,
+                Self::Done(v) => core::task::Poll::Ready(v.clone())
+            }
+        }
+    }
 
 
     /// Trait for defining controls and components of synchronous actuators
@@ -105,39 +143,15 @@ use crate::Setup;
         // Movement
             /// Moves the component by the relative distance as fast as possible, halts the script until 
             /// the movement is finshed and returns the actual **relative** distance travelled
-            fn drive_rel(&mut self, delta : Delta, speed : Factor) -> Result<(), crate::Error>;
+            fn drive_rel(&mut self, delta : Delta, speed : Factor) -> SyncDriveFuture;
 
             /// Moves the component to the given position as fast as possible, halts the script until the 
             /// movement is finished and returns the actual **relative** distance travelled.
             #[inline]
-            fn drive_abs(&mut self, gamma : Gamma, speed : Factor) -> Result<(), crate::Error> {
+            fn drive_abs(&mut self, gamma : Gamma, speed : Factor) -> SyncDriveFuture {
                 let delta = gamma - self.gamma();
                 self.drive_rel(delta, speed)
             }
-        // 
-
-        // Async
-            /// Moves the component by the relative distance as fast as possible
-            fn drive_rel_async(&mut self, delta : Delta, speed : Factor) -> Result<(), crate::Error>;
-
-            /// Moves the component to the given position as fast as possible, halts the script until the 
-            /// movement is finished and returns the actual **abolute** distance traveled to. 
-            #[inline(always)]
-            fn drive_abs_async(&mut self, gamma : Gamma, speed : Factor) -> Result<(), crate::Error> {
-                let delta = gamma - self.gamma();
-                self.drive_rel_async(delta, speed)
-            }
-            
-            /// Drive with a fixed `Velocity`
-            fn drive_velocity(&mut self, velocity_tar : Velocity) -> Result<(), crate::Error>;
-
-            /// Halts the thread until the async movement is finished
-            /// 
-            /// # Errors
-            /// 
-            /// - Returns an error if the definition has not been overwritten by the component and no parent component is known
-            /// - Returns an error if no async movement has been started yet
-            fn await_inactive(&mut self) -> Result<(), crate::Error>;
         // 
 
         // Position
@@ -152,7 +166,7 @@ use crate::Setup;
             /// // Create a new cylinder (implements SyncComp)
             /// let mut cylinder = LinearAxis::new(
             ///     // Stepper Motor as subcomponent (also implements SyncComp)
-            ///     Stepper::new_gen(), 
+            ///     Stepper::new_gen().unwrap(), 
             /// 0.5);    // Ratio is set to 0.5, which means for each radian the motor moves, the cylinder moves for 0.5 mm
             /// 
             /// cylinder.set_gamma(POS);
@@ -175,7 +189,7 @@ use crate::Setup;
             /// // Create a new cylinder (implements SyncComp)
             /// let mut cylinder = LinearAxis::new(
             ///     // Stepper Motor as subcomponent (also implements SyncComp)
-            ///     Stepper::new_gen(), 
+            ///     Stepper::new_gen().unwrap(), 
             /// 0.5);    // Ratio is set to 0.5, which means for each radian the motor moves, the cylinder moves for 0.5 mm
             /// 
             /// cylinder.set_gamma(POS);
@@ -225,7 +239,7 @@ use crate::Setup;
             /// // Create a new gear bearing (implements SyncComp)
             /// let mut gear = Gear::new(
             ///     // Stepper Motor as subcomponent (also implements SyncComp)
-            ///     Stepper::new_gen(), 
+            ///     Stepper::new_gen().unwrap(), 
             /// 0.5);    // Ratio is set to 0.5, which means for each radian the motor moves, the bearing moves for half a radian
             /// 
             /// gear.set_limits(Some(LIM_MIN), Some(LIM_MAX));
@@ -251,32 +265,6 @@ use crate::Setup;
             /// Sets an endpoint in the current direction by modifying the components limits. For example, when the component is moving
             /// in the positive direction and the endpoint is set, this function will overwrite the current maximum limit with the current
             /// gamma value. The component is then not allowed to move in the current direction anymore. 
-            /// 
-            /// ```rust
-            /// use syact::prelude::*;
-            /// 
-            /// const GAMMA : Gamma = Gamma(1.0); 
-            /// 
-            /// // Create a new gear bearing (implements SyncComp)
-            /// let mut gear = Gear::new(
-            ///     // Stepper Motor as subcomponent (also implements SyncComp)
-            ///     Stepper::new_gen(), 
-            /// 0.5);    // Ratio is set to 0.5, which means for each radian the motor moves, the bearing moves for half a radian
-            /// gear.set_config(StepperConfig::GEN);           // Link component for driving
-            /// 
-            /// gear.set_gamma(Gamma::ZERO);
-            /// 
-            /// gear.set_velocity_max(Velocity(5.0));
-            /// gear.drive_rel(Delta(-0.2), Factor::MAX).unwrap();    // Drive component in negative direction
-            /// 
-            /// assert_eq!(gear.dir(), Direction::CCW);
-            /// assert!((gear.gamma() - Gamma(-0.2)).abs() < Delta(0.05));     // Check if the movement was correct (with step inaccuracy)
-            /// 
-            /// gear.set_end(GAMMA);
-            /// 
-            /// assert_eq!(gear.limits_for_gamma(Gamma(2.0)), Delta::ZERO);     
-            /// assert_eq!(gear.limits_for_gamma(Gamma(-2.0)), Delta(-3.0));      
-            /// ```
             fn set_end(&mut self, set_gamma : Gamma);
 
             /// Set the limits for the minimum and maximum angles that the component can reach, note that the limit will 
@@ -297,7 +285,7 @@ use crate::Setup;
             /// // Create a new gear bearing (implements SyncComp)
             /// let mut gear = Gear::new(
             ///     // Stepper Motor as subcomponent (also implements SyncComp)
-            ///     Stepper::new_gen(), 
+            ///     Stepper::new_gen().unwrap(), 
             /// 0.5);    // Ratio is set to 0.5, which means for each radian the motor moves, the bearing moves for half a radian
             /// 
             /// gear.set_limits(Some(LIM_MIN), Some(LIM_MAX));
@@ -337,7 +325,7 @@ use crate::Setup;
             /// // Create a new gear bearing (implements SyncComp)
             /// let mut gear = Gear::new(
             ///     // Stepper Motor as subcomponent (also implements SyncComp)
-            ///     Stepper::new_gen(), 
+            ///     Stepper::new_gen().unwrap(), 
             /// 0.5);    // Ratio is set to 0.5, which means for each radian the motor moves, the bearing moves for half a radian
             /// 
             /// gear.set_limits(Some(LIM_MIN), Some(LIM_MAX));
@@ -383,7 +371,7 @@ use crate::Setup;
             /// // Create a new gear bearing (implements SyncComp)
             /// let mut gear = Gear::new(
             ///     // Stepper Motor as subcomponent (also implements SyncComp)
-            ///     Stepper::new_gen(), 
+            ///     Stepper::new_gen().unwrap(), 
             /// 0.5);    // Ratio is set to 0.5, which means for each radian the motor moves, the bearing moves for half a radian
             /// 
             /// gear.apply_gen_force(FORCE);
@@ -415,7 +403,7 @@ use crate::Setup;
             /// // Create a new gear bearing (implements SyncComp)
             /// let mut gear = Gear::new(
             ///     // Stepper Motor as subcomponent (also implements SyncComp)
-            ///     Stepper::new_gen(), 
+            ///     Stepper::new_gen().unwrap(), 
             /// 0.5);    // Ratio is set to 0.5, which means for each radian the motor moves, the bearing moves for half a radian
             /// 
             /// // Applies the inertia to the gearbearing component

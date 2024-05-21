@@ -17,11 +17,11 @@ struct SomeComps {
 fn group_basics() -> Result<(), syact::Error> {
     let mut group = SomeComps {
         base: Gear::new(
-            Stepper::new_gen(),
+            Stepper::new_gen()?,
             0.2
         ),
         arm1: LinearAxis::new(
-            Stepper::new_gen(),
+            Stepper::new_gen()?,
             0.5
         )
     }; 

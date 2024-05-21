@@ -37,7 +37,7 @@ const STEP_PULSE_DUR : Duration = Duration::from_micros(25);
 // 
 
 /// A controller for the logics of a stepper motor
-pub trait Controller {
+pub trait StepperController {
     fn step_with(&mut self, t_len : Time, t_pause : Time);
 
     fn step(&mut self, time : Time) {
@@ -114,7 +114,7 @@ impl<S : OutputPin, D : OutputPin> Dismantle for GenericPWM<S, D> {
     }
 }
 
-impl<S : OutputPin, D : OutputPin> Controller for GenericPWM<S, D> {
+impl<S : OutputPin, D : OutputPin> StepperController for GenericPWM<S, D> {
     fn step_with(&mut self, t_len : Time, t_pause : Time) {
         self.pin_step.set_high().unwrap();
         spin_sleep::sleep(t_len.into());

@@ -127,7 +127,7 @@ impl StepperConst {
         /// Maximum speed for a stepper motor where it can be guarantied that it works properly
         #[inline(always)]
         pub fn velocity_max(&self, voltage : f32) -> Velocity {
-            Velocity(2.0 * PI * voltage / self.default_current / self.inductance / self.number_steps as f32)
+            Velocity(PI * voltage / self.default_current / self.inductance / self.number_steps as f32)
         }
     // 
 

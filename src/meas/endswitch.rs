@@ -1,12 +1,9 @@
-use core::sync::atomic::AtomicBool;
-
 use alloc::sync::Arc;
 use atomic_float::AtomicF32;
 use embedded_hal::digital::InputPin;
 use serde::{Serialize, Deserialize};
 use syunit::*;
 
-use crate::Setup;
 use crate::act::{Interruptor, InterruptReason};
 use crate::meas::Measurable;
 
@@ -54,43 +51,6 @@ impl<P : InputPin> Interruptor for EndSwitch<P> {
     fn check(&mut self, _gamma : &Arc<AtomicF32>) -> Option<InterruptReason> {
         // unwraping unsafe is safe, as no error can occur
         if unsafe { self.sys_pin.is_high().unwrap_unchecked() } == self.trigger {    
-            Some(InterruptReason::EndReached)
-        } else {
-            None
-        }
-    }
-}
-
-// Virtual
-pub struct VirtualEndSwitch {
-    pub vpin : Arc<AtomicBool>,
-    _dir : Option<Direction>,
-    temp_dir : Option<Direction>
-}
-
-impl VirtualEndSwitch {
-    pub fn new(def : bool, _dir : Option<Direction>) -> Self {
-        VirtualEndSwitch { 
-            vpin: Arc::new(AtomicBool::new(def)),
-            _dir,
-            temp_dir: None
-        }
-    }
-}
-
-impl Setup for VirtualEndSwitch { }
-
-impl Interruptor for VirtualEndSwitch {
-    fn dir(&self) -> Option<Direction> {
-        self._dir.or(self.temp_dir)
-    }
-
-    fn set_temp_dir(&mut self, dir_opt : Option<Direction>) {
-        self.temp_dir = dir_opt;
-    } 
-    
-    fn check(&mut self, _gamma : &Arc<AtomicF32>) -> Option<InterruptReason> {
-        if self.vpin.load(core::sync::atomic::Ordering::Relaxed) {
             Some(InterruptReason::EndReached)
         } else {
             None

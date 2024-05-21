@@ -86,11 +86,13 @@ impl<P : OutputPin + Send + 'static> SoftwarePWM<P> {
     }
 
     // Owned functions
+        /// Sets the frequency of the PWM-Signal inline
         pub fn with_freq(mut self, freq : Frequency) -> Self {
             self.set_freq(freq, 0.0);
             self
         }
 
+        /// Sets the period time of the signal inline
         pub fn with_period_time(mut self, time : Time) -> Self {
             self.set_times(Time::ZERO, time);
             self

@@ -1,7 +1,9 @@
 use crate::act::stepper::{StepperActuator, StepperActuatorGroup};
 use syunit::*;
 
+/// An actuator that has a defined time to move for a PTP (Point-To-Point) movement
 pub trait DefinedActuator {
+    /// The time required to perform a certain PTP (Point-To-Point movement)
     fn ptp_time_for_distance(&self, gamma_0 : Gamma, gamma_t : Gamma) -> Time;
 }
 
