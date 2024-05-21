@@ -7,7 +7,7 @@ async fn gear_basic() {
         Stepper::new_gen().unwrap(),
         2.0
     );
-    gear.set_config(StepperConfig::GEN);
+    gear.set_config(StepperConfig::GEN).unwrap();
     gear.setup().unwrap();
 
     println!("Gear - Basics");

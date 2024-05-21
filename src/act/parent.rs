@@ -1,7 +1,7 @@
 use crate::act::SyncDriveFuture;
+use crate::act::stepper::{StepperActuator, BuilderError};
 use crate::data::MicroSteps;
 use crate::math::movements::DefinedActuator;
-use crate::prelude::StepperActuator;
 use crate::{SyncActuator, Setup, StepperConfig, AsyncActuator};
 
 use syunit::*;
@@ -182,7 +182,7 @@ pub trait ActuatorParent {
                 self.child().config()
             }
 
-            fn set_config(&mut self, config : StepperConfig) {
+            fn set_config(&mut self, config : StepperConfig) -> Result<(), BuilderError> {
                 self.child_mut().set_config(config)
             }
         //
@@ -192,7 +192,7 @@ pub trait ActuatorParent {
                 self.child().microsteps()
             }
 
-            fn set_microsteps(&mut self, micro : MicroSteps) {
+            fn set_microsteps(&mut self, micro : MicroSteps) -> Result<(), BuilderError> {
                 self.child_mut().set_microsteps(micro)
             }
         // 

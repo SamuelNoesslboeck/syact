@@ -25,9 +25,6 @@ pub struct StepperMotor<B : StepperBuilder, C : StepperController + Setup + Dism
     _limit_min : Option<Gamma>,
     _limit_max : Option<Gamma>,
 
-    /// Maxium velocity  of the component
-    _microsteps : MicroSteps,
-
     // Interrupters
     interruptors : Vec<Box<dyn Interruptor + Send>>,
     _intr_reason : Option<InterruptReason>,
@@ -46,8 +43,6 @@ impl<B : StepperBuilder + Send + 'static + 'static, C : StepperController + Setu
 
             _limit_min: None,
             _limit_max: None,
-
-            _microsteps: MicroSteps::default(),
 
             interruptors : vec![],
             _intr_reason: None
@@ -280,16 +275,16 @@ where
             self.builder.config()
         }
 
-        fn set_config(&mut self, config : StepperConfig) -> () {
-            self.builder.set_config(config).unwrap()
+        fn set_config(&mut self, config : StepperConfig) -> Result<(), BuilderError> {
+            self.builder.set_config(config)
         }
 
         fn microsteps(&self) -> MicroSteps {
-            self._microsteps
+            self.builder.microsteps()
         }
 
-        fn set_microsteps(&mut self, microsteps : MicroSteps) {
-            self._microsteps = microsteps;
+        fn set_microsteps(&mut self, microsteps : MicroSteps) -> Result<(), BuilderError> {
+            self.builder.set_microsteps(microsteps)
             
         }
     //

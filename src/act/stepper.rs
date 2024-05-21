@@ -39,7 +39,7 @@ use crate::{StepperConst, SyncActuator, SyncActuatorGroup, StepperConfig};
             fn config(&self) -> &StepperConfig;
 
             /// Set the config used by the Stepper motor
-            fn set_config(&mut self, config : StepperConfig);
+            fn set_config(&mut self, config : StepperConfig) -> Result<(), BuilderError>;
         // 
 
         // Microstepping
@@ -47,7 +47,7 @@ use crate::{StepperConst, SyncActuator, SyncActuatorGroup, StepperConfig};
             fn microsteps(&self) -> MicroSteps;
 
             /// Set the amount of microsteps in a full step
-            fn set_microsteps(&mut self, micro : MicroSteps);
+            fn set_microsteps(&mut self, micro : MicroSteps) -> Result<(), BuilderError>;
         //
 
         // Steps
@@ -76,10 +76,11 @@ use crate::{StepperConst, SyncActuator, SyncActuatorGroup, StepperConfig};
         }
 
         /// Sets the amount of microsteps for each motor 
-        fn set_micro(&mut self, micro : [MicroSteps; C]) {
-            self.for_each_mut(|comp, index| {
-                comp.set_microsteps(micro[index]);
-            });
+        fn set_micro(&mut self, micro : [MicroSteps; C]) -> Result<(), BuilderError> {
+            self.try_for_each_mut(|comp, index| {
+                comp.set_microsteps(micro[index])
+            })?;
+            Ok(())
         }
     }
 // 

@@ -8,7 +8,7 @@ use crate::{Setup, Stepper, StepperConfig, SyncActuator};
 #[ignore = "Value display, run manually ... "]
 async fn stepper_move_fixed_dist() {
     let mut stepper = Stepper::new_gen().unwrap();
-    stepper.set_config(StepperConfig::GEN);
+    stepper.set_config(StepperConfig::GEN).unwrap();
     stepper.setup().unwrap();
     
     for _ in 0 .. 10 {
