@@ -47,6 +47,7 @@ impl embedded_hal::digital::OutputPin for SimPin {
 }
 
 impl GenericPWM<SimPin, SimPin> {
+    /// Creates a new generic PWM signal with default testing values
     pub fn new_gen() -> Result<Self, crate::Error> {
         Self::new(SimPin::new_gen(), SimPin::new_gen())
     }
