@@ -702,7 +702,7 @@ pub trait StepperBuilder : Iterator<Item = Time> {
             // Multiple cases
             if distance == 1 {
                 *self.times.first().unwrap_or(&Time::INFINITY)
-            } else if max_speed_level <= self.speed_levels.len() as u64 {
+            } else if max_speed_level < self.speed_levels.len() as u64 {
                 self.time_sums[max_speed_level as usize] * 2.0
                     + self.consts().step_time(self.speed_levels[max_speed_level as usize], self.microsteps())
             } else {
