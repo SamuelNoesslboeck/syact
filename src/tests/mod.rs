@@ -60,9 +60,3 @@ impl Stepper<SimPin, SimPin> {
         Self::new(GenericPWM::new_gen().unwrap(), StepperConst::GEN)
     }
 }
-
-// impl Drop for SimPin {
-//     fn drop(&mut self) {
-//         println!("State changes: {}", self.state_changes);
-//     }
-// }
