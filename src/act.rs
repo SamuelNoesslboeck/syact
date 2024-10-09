@@ -1,4 +1,5 @@
 use alloc::boxed::Box;
+use alloc::sync::Arc;
 
 use syunit::*;
 
@@ -140,6 +141,8 @@ use stepper::BuilderError;
             }
 
             fn state(&self) -> &dyn SyncActuatorState;
+
+            fn clone_state(&self) -> Arc<dyn SyncActuatorState>;
         // 
 
         // Position

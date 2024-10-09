@@ -189,6 +189,10 @@ impl<B : StepperBuilder + Send + 'static, C : StepperController + Send + 'static
         fn state(&self) -> &dyn SyncActuatorState {
             self._state.as_ref()
         }
+
+        fn clone_state(&self) -> Arc<dyn SyncActuatorState> {
+            self._state.clone()
+        }
     // 
 
     // Position

@@ -4,21 +4,23 @@ use crate::{Stepper, StepperConfig, SyncActuator};
 use crate::math::movements::DefinedActuator;
 use crate::prelude::*;
 
-#[tokio::test]
+#[test]
 #[ignore = "Value display, run manually ... "]
-async fn stepper_move_fixed_dist() {
+fn stepper_move_fixed_dist() {
     let mut stepper = Stepper::new_gen().unwrap();
     stepper.set_config(StepperConfig::GEN).unwrap();
 
     for _ in 0 .. 10 {
         let inst = Instant::now();
 
-        let handle = tokio::spawn(   
-            stepper.drive_rel(Delta(-10.0), Factor::MAX)
-        );
+        std::thread::scope(|s| {
+            let handle = s.spawn(||   
+                stepper.drive_rel(Delta(-10.0), Factor::MAX)
+            );
 
-        handle.await.unwrap().unwrap();
-    
+            handle.join().unwrap().unwrap();
+        });
+
         let calc_time = stepper.ptp_time_for_distance(Gamma(0.0), Gamma(10.0));
     
         println!(" => Time elapsed: {}", inst.elapsed().as_secs_f32());
@@ -104,8 +106,8 @@ async fn gamma_distance() {
     stepper.set_config(StepperConfig::GEN).unwrap();
 
     dbg!(stepper.gamma());
-    stepper.drive_abs(Gamma(30.0), Factor::MAX).await.unwrap();
+    stepper.drive_abs(Gamma(30.0), Factor::MAX).unwrap();
     dbg!(stepper.gamma());
-    stepper.drive_abs(Gamma(10.0), Factor::MAX).await.unwrap();
+    stepper.drive_abs(Gamma(10.0), Factor::MAX).unwrap();
     dbg!(stepper.gamma());
 }

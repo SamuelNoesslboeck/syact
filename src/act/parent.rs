@@ -1,8 +1,9 @@
 use alloc::boxed::Box;
+use alloc::sync::Arc;
 
 use syunit::*;
 
-use crate::act::{Interruptible, SyncActuatorError};
+use crate::act::{Interruptible, SyncActuatorError, SyncActuatorState};
 use crate::act::stepper::{StepperActuator, BuilderError};
 use crate::data::MicroSteps;
 use crate::math::movements::DefinedActuator;
@@ -102,6 +103,10 @@ pub trait ActuatorParent {
 
             fn state(&self) -> &dyn super::SyncActuatorState {
                 self.child().state() 
+            }
+
+            fn clone_state(&self) -> Arc<dyn SyncActuatorState> {
+                self.child().clone_state()
             }
         //  
 

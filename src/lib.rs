@@ -1,8 +1,7 @@
 #![doc = include_str!("../README.md")]
 #![crate_name = "syact"]
 // #![deny(missing_docs)]
-#![no_std]
-
+#![cfg_attr(not(test), no_std)]
 #![cfg_attr(feature = "testing", allow(unused))]
 
 // Modules

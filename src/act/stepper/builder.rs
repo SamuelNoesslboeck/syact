@@ -59,7 +59,7 @@ pub enum DriveMode {
         }
     }
 
-    impl core::error::Error for BuilderError { }
+    // impl core::error::Error for BuilderError { }
 //
 
 /// A stepperbuilder creates stepper motor curves
