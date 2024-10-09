@@ -88,7 +88,7 @@ impl<B : StepperBuilder + Send + 'static, C : StepperController + Send + 'static
         // #################################
         //
         // Main driving algorithm for stepper motors
-        fn drive_rel(&mut self, delta : Delta, speed_f : Factor) -> SyncDriveFuture {
+        fn drive_rel<'a>(&mut self, delta : Delta, speed_f : Factor) -> SyncDriveFuture<'a, Self> {
             if !delta.is_finite() {
                 return SyncDriveFuture::Done(Err(SyncActuatorError::InvaldDeltaDistance(delta)));
             }
@@ -152,7 +152,7 @@ impl<B : StepperBuilder + Send + 'static, C : StepperController + Send + 'static
         }
 
         /// Absolute movements derive from relative movements ([Self::drive_rel])
-        fn drive_abs(&mut self, gamma : Gamma, speed : Factor) -> SyncDriveFuture {
+        fn drive_abs<'a>(&mut self, gamma : Gamma, speed : Factor) -> SyncDriveFuture<'a, Self> {
             let delta = gamma - self.gamma();
             self.drive_rel(delta, speed)
         }

@@ -112,19 +112,19 @@ use stepper::BuilderError;
     impl std::error::Error for SyncActuatorError { }
     
     /// A `Future` for drive operations
-    pub enum SyncDriveFuture {
+    pub enum SyncDriveFuture<'a, A : SyncActuator + ?Sized> {
         /// The movement is still in process
-        Driving,
+        Driving(&'a mut A),
         /// The movement is done, eiter successfully or not
         Done(Result<(), SyncActuatorError>)
     }
 
-    impl Future for SyncDriveFuture {
+    impl<'a, A : SyncActuator + ?Sized> Future for SyncDriveFuture<'a, A> {
         type Output = Result<(), SyncActuatorError>;
 
         fn poll(self: core::pin::Pin<&mut Self>, _cx: &mut core::task::Context<'_>) -> std::task::Poll<Self::Output> {
             match self.get_mut() {
-                Self::Driving => core::task::Poll::Pending,
+                Self::Driving(_) => core::task::Poll::Pending,
                 Self::Done(v) => core::task::Poll::Ready(v.clone())
             }
         }
@@ -141,12 +141,12 @@ use stepper::BuilderError;
         // Movement
             /// Moves the component by the relative distance as fast as possible, halts the script until 
             /// the movement is finshed and returns the actual **relative** distance travelled
-            fn drive_rel(&mut self, delta : Delta, speed : Factor) -> SyncDriveFuture;
+            fn drive_rel<'a>(&mut self, delta : Delta, speed : Factor) -> SyncDriveFuture<'a, Self>;
 
             /// Moves the component to the given position as fast as possible, halts the script until the 
             /// movement is finished and returns the actual **relative** distance travelled.
             #[inline]
-            fn drive_abs(&mut self, gamma : Gamma, speed : Factor) -> SyncDriveFuture {
+            fn drive_abs<'a>(&mut self, gamma : Gamma, speed : Factor) -> SyncDriveFuture<'a, Self> {
                 let delta = gamma - self.gamma();
                 self.drive_rel(delta, speed)
             }

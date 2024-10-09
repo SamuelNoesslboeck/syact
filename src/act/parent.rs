@@ -95,7 +95,7 @@ pub trait ActuatorParent {
         T::Child : SyncActuator
     {
         // Drive
-            fn drive_rel(&mut self, mut delta : Delta, speed : Factor) -> SyncDriveFuture {
+            fn drive_rel<'a>(&mut self, mut delta : Delta, speed : Factor) -> SyncDriveFuture<'a, T::Child> {
                 delta = self.delta_for_chlid(delta);
                 self.child_mut().drive_rel(delta, speed)
             }
