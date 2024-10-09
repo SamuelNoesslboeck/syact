@@ -48,7 +48,7 @@ impl embedded_hal::digital::OutputPin for SimPin {
 
 impl GenericPWM<SimPin, SimPin> {
     /// Creates a new generic PWM signal with default testing values
-    pub fn new_gen() -> Result<Self, crate::Error> {
+    pub fn new_gen() -> Self {
         Self::new(SimPin::new_gen(), SimPin::new_gen())
     }
 }
@@ -57,6 +57,6 @@ impl Stepper<SimPin, SimPin> {
     /// Creates a new generic stepper with both pins set to [ERR_PIN](super::pin::ERR_PIN) just for simulation and testing purposes
     #[inline]
     pub fn new_gen() -> Result<Self, BuilderError> {
-        Self::new(GenericPWM::new_gen().unwrap(), StepperConst::GEN)
+        Self::new(GenericPWM::new_gen(), StepperConst::GEN)
     }
 }

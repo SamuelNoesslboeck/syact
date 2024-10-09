@@ -4,8 +4,6 @@ use std::time::Instant;
 use embedded_hal::digital::OutputPin;
 use syunit::*;
 
-use crate::{Setup, Dismantle};
-
 // Constants
 pub const STEP_PULSE_TIME : Time = Time(1.0 / 100000.0);     // TODO: Remove minium pulse time
 const STEP_PULSE_DUR : Duration = Duration::from_micros(25);
@@ -80,8 +78,8 @@ pub struct GenericPWM<S : OutputPin, D : OutputPin> {
 
 impl<S : OutputPin, D : OutputPin> GenericPWM<S, D> {
     /// Creates a new `GenericPWM` signal from the two pins
-    pub fn new(pin_step : S, pin_dir : D) -> Result<Self, crate::Error> {
-        Ok(Self {
+    pub fn new(pin_step : S, pin_dir : D) -> Self {
+        Self {
             dir: Direction::CW,
             
             pin_step,
@@ -89,24 +87,7 @@ impl<S : OutputPin, D : OutputPin> GenericPWM<S, D> {
 
             t_pause: Duration::ZERO,
             pause_stamp: Instant::now()
-        }) 
-    }
-}
-
-impl<S : OutputPin, D : OutputPin> Setup for GenericPWM<S, D> {
-    fn setup(&mut self) -> Result<(), crate::Error> {
-        // self.pin_step.setup()?; 
-        // self.pin_dir.setup()?;
-        // TODO: Add pins setup
-
-        Ok(())
-    }
-}
-
-impl<S : OutputPin, D : OutputPin> Dismantle for GenericPWM<S, D> {
-    fn dismantle(&mut self) -> Result<(), crate::Error> {
-        // TODO: Add pins dismantle
-        Ok(())
+        }
     }
 }
 

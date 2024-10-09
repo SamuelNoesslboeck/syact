@@ -1,3 +1,7 @@
+#![crate_name = "syact_macros"]
+#![doc = include_str!("../README.md")]
+#![deny(missing_docs)]
+
 use core::str::FromStr;
 
 use proc_macro2::TokenStream;
@@ -55,13 +59,6 @@ use syn::DeriveInput;
                 }
 
                 quote::quote! {
-                    impl syact::Setup for #name {
-                        fn setup(&mut self) -> Result<(), syact::Error> {
-                            #setup_s
-                            Ok(())
-                        }
-                    }
-
                     impl syact::act::group::SyncActuatorGroup<#comp_type, #fields_count> for #name { 
                         fn for_each<'a, F, R>(&'a self, mut func : F) -> [R; #fields_count]
                         where 
@@ -135,6 +132,10 @@ use syn::DeriveInput;
         }
     }
 
+    /// # `StepperActuatorGroup` - proc_macro
+    /// 
+    /// Automatically generates an implementation for the `StepperActuatorGroup` macro for a given struct if all the underlying compoments in the struct (all the fields)
+    /// implment `StepperActuator` themselfs.
     #[proc_macro_derive(StepperActuatorGroup)]
     pub fn stepper_comp_group_derive(input : proc_macro::TokenStream) -> proc_macro::TokenStream {
         let ast : DeriveInput = syn::parse(input).unwrap();

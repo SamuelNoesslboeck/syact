@@ -9,7 +9,7 @@ use syunit::*;
 #[derive(Serialize, Deserialize)]
 pub struct Conveyor<C : SyncActuator> {
     /// The parent component (driving the conveyor)
-    device : C,
+    actuator : C,
 
     /// Radius of the powered conveyor roll in millimeters
     pub r_roll : f32
@@ -21,15 +21,17 @@ impl<C : SyncActuator> Conveyor<C> {
     /// - `r_roll` radius of the driving roll in millimeters
     pub fn new(device : C, r_roll : f32) -> Self {
         Self {
-            device, 
+            actuator: device, 
             r_roll
         }
     }
 }
 
-impl<C : SyncActuator> Setup for Conveyor<C> {
-    fn setup(&mut self) -> Result<(), crate::Error> {
-        self.device.setup()
+impl<C : SyncActuator + Setup> Setup for Conveyor<C> {
+    type Error = <C as Setup>::Error;
+
+    fn setup(&mut self) -> Result<(), Self::Error> {
+        self.actuator.setup()
     }
 }
 
@@ -38,11 +40,11 @@ impl<C : SyncActuator> Setup for Conveyor<C> {
         type Child = C;
 
         fn child(&self) -> &Self::Child {
-            &self.device
+            &self.actuator
         }
 
         fn child_mut(&mut self) -> &mut Self::Child {
-            &mut self.device
+            &mut self.actuator
         }
     }
 

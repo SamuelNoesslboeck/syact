@@ -11,7 +11,7 @@ use crate::act::parent::{ActuatorParent, RatioActuatorParent};
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Gear<C : SyncActuator> {
     /// Steppercontrol for the motor of the bearing
-    pub ctrl : C,
+    pub actuator : C,
     
     /// Angle ration from motor to bearing (velocity_b / velocity_m)
     pub ratio : f32
@@ -22,16 +22,18 @@ impl<C : SyncActuator> Gear<C> {
     /// - `device`: The parent component driving the cylinder
     pub fn new(ctrl : C, ratio : f32) -> Self {
         Self {
-            ctrl,
+            actuator: ctrl,
             ratio
         }
     }
 }
 
 // Parent
-    impl<C : SyncActuator> Setup for Gear<C> {
-        fn setup(&mut self) -> Result<(), crate::Error> {
-            self.ctrl.setup() 
+    impl<C : SyncActuator + Setup> Setup for Gear<C> {
+        type Error = <C as Setup>::Error;
+
+        fn setup(&mut self) -> Result<(), Self::Error> {
+            self.actuator.setup()
         }
     }
 
@@ -39,11 +41,11 @@ impl<C : SyncActuator> Gear<C> {
         type Child = C;
 
         fn child(&self) -> &Self::Child {
-            &self.ctrl
+            &self.actuator
         }
 
         fn child_mut(&mut self) -> &mut Self::Child {
-            &mut self.ctrl
+            &mut self.actuator
         }
     }
 

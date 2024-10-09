@@ -1,16 +1,15 @@
 use std::time::Instant;
 
+use crate::{Stepper, StepperConfig, SyncActuator};
 use crate::math::movements::DefinedActuator;
 use crate::prelude::*;
-use crate::{Setup, Stepper, StepperConfig, SyncActuator};
 
 #[tokio::test]
 #[ignore = "Value display, run manually ... "]
 async fn stepper_move_fixed_dist() {
     let mut stepper = Stepper::new_gen().unwrap();
     stepper.set_config(StepperConfig::GEN).unwrap();
-    stepper.setup().unwrap();
-    
+
     for _ in 0 .. 10 {
         let inst = Instant::now();
 
@@ -44,7 +43,7 @@ fn simple_builder() {
 #[test]
 #[ignore = "Value display, run manually ... "]
 fn complex_builder() {
-    let mut ctrl = GenericPWM::new_gen().unwrap();
+    let mut ctrl = GenericPWM::new_gen();
     let mut builder = ComplexBuilder::new(StepperConst::GEN).unwrap();
     builder.set_config(StepperConfig::GEN).unwrap();
     builder.set_microsteps(MicroSteps::from(16)).unwrap();
@@ -64,7 +63,7 @@ fn complex_builder() {
 fn builder_comparision() {
     const DELTA : Delta = Delta(0.3);
 
-    let mut ctrl = GenericPWM::new_gen().unwrap();
+    let mut ctrl = GenericPWM::new_gen();
     let mut builder = ComplexBuilder::new(StepperConst::GEN).unwrap();
     builder.set_config(StepperConfig::GEN).unwrap();
     builder.set_microsteps(MicroSteps::from(16)).unwrap();
@@ -103,7 +102,6 @@ fn builder_comparision() {
 async fn gamma_distance() {
     let mut stepper = Stepper::new_gen().unwrap();  
     stepper.set_config(StepperConfig::GEN).unwrap();
-    stepper.setup().unwrap();
 
     dbg!(stepper.gamma());
     stepper.drive_abs(Gamma(30.0), Factor::MAX).await.unwrap();

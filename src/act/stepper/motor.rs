@@ -9,7 +9,7 @@ use crate::math::movements::DefinedActuator;
 /// A stepper motor
 /// 
 /// Controlled by two pins, one giving information about the direction, the other about the step signal (PWM)
-pub struct StepperMotor<B : StepperBuilder, C : StepperController + Setup + Dismantle + Send + 'static> {
+pub struct StepperMotor<B : StepperBuilder + Send + 'static, C : StepperController + Send + 'static> {
     builder : B,
     ctrl : C, 
 
@@ -27,7 +27,7 @@ pub struct StepperMotor<B : StepperBuilder, C : StepperController + Setup + Dism
 }
 
 // Inits
-impl<B : StepperBuilder + Send + 'static + 'static, C : StepperController + Setup + Dismantle + Send + 'static> StepperMotor<B, C> {   
+impl<B : StepperBuilder + Send + 'static, C : StepperController + Send + 'static> StepperMotor<B, C> {   
     /// Creates a new stepper controller with the given stepper motor constants `consts`
     #[allow(unused_must_use)]
     pub fn new(ctrl : C, consts : StepperConst) -> Result<Self, BuilderError> {
@@ -54,29 +54,40 @@ impl<B : StepperBuilder + Send + 'static + 'static, C : StepperController + Setu
     }
 }
 
-impl<B : StepperBuilder + Send + 'static, C : StepperController + Setup + Dismantle + Send + 'static> StepperMotor<B, C> {
+impl<B : StepperBuilder + Send + 'static, C : StepperController + Send + 'static> StepperMotor<B, C> {
     /// Returns the current direction of the motor
     pub fn dir(&self) -> Direction {
         self.builder.dir()
     }
 }
 
-impl<B : StepperBuilder + Send + 'static, C : StepperController + Setup + Dismantle + Send + 'static> Setup for StepperMotor<B, C> {
-    fn setup(&mut self) -> Result<(), crate::Error> {
-        self.ctrl.setup()?;
-        Ok(())
-    }
-}
+// Auto-Implement `Setup` and `Dismantle` of `StepperController`
+    impl<B : StepperBuilder + Send + 'static, C : StepperController + Setup + Send + 'static> Setup for StepperMotor<B, C> {
+        type Error = C::Error;
 
-impl<B : StepperBuilder + Send + 'static, C : StepperController + Setup + Dismantle + Send + 'static> Dismantle for StepperMotor<B, C> {
-    fn dismantle(&mut self) -> Result<(), crate::Error> {
-        self.ctrl.dismantle()?;
-        Ok(())
+        fn setup(&mut self) -> Result<(), Self::Error> {
+            self.ctrl.setup()?;
+            Ok(())
+        }
     }
-}
 
-impl<B : StepperBuilder + Send + 'static, C : StepperController + Setup + Dismantle + Send + 'static> SyncActuator for StepperMotor<B, C> {
+    impl<B : StepperBuilder + Send + 'static, C : StepperController + Dismantle + Send + 'static> Dismantle for StepperMotor<B, C> {
+        type Error = C::Error;
+
+        fn dismantle(&mut self) -> Result<(), Self::Error> {
+            self.ctrl.dismantle()?;
+            Ok(())
+        }
+    }
+//
+
+impl<B : StepperBuilder + Send + 'static, C : StepperController + Send + 'static> SyncActuator for StepperMotor<B, C> {
     // Movement
+        // #################################
+        // #    StepperMotor::drive_rel    #
+        // #################################
+        //
+        // Main driving algorithm for stepper motors
         fn drive_rel(&mut self, delta : Delta, speed_f : Factor) -> SyncDriveFuture {
             if !delta.is_finite() {
                 return SyncDriveFuture::Done(Err(SyncActuatorError::InvaldDeltaDistance(delta)));
@@ -140,6 +151,7 @@ impl<B : StepperBuilder + Send + 'static, C : StepperController + Setup + Disman
             SyncDriveFuture::Done(Ok(()))
         }
 
+        /// Absolute movements derive from relative movements ([Self::drive_rel])
         fn drive_abs(&mut self, gamma : Gamma, speed : Factor) -> SyncDriveFuture {
             let delta = gamma - self.gamma();
             self.drive_rel(delta, speed)
@@ -167,7 +179,7 @@ impl<B : StepperBuilder + Send + 'static, C : StepperController + Setup + Disman
         }
 
         #[inline]
-        fn set_limits(&mut self, min : Option<Gamma>, max : Option<Gamma>) {
+        fn set_pos_limits(&mut self, min : Option<Gamma>, max : Option<Gamma>) {
             if let Some(min) = min {
                 self._limit_min = Some(min)
             }
@@ -178,12 +190,12 @@ impl<B : StepperBuilder + Send + 'static, C : StepperController + Setup + Disman
         }
 
         #[inline]
-        fn overwrite_limits(&mut self, min : Option<Gamma>, max : Option<Gamma>) {
+        fn overwrite_pos_limits(&mut self, min : Option<Gamma>, max : Option<Gamma>) {
             self._limit_min = min;
             self._limit_max = max;
         }
 
-        fn limits_for_gamma(&self, gamma : Gamma) -> Delta {
+        fn resolve_pos_limits_for_gamma(&self, gamma : Gamma) -> Delta {
             if let Some(ang) = self.limit_min() {
                 if gamma < ang {
                     gamma - ang
@@ -211,12 +223,12 @@ impl<B : StepperBuilder + Send + 'static, C : StepperController + Setup + Disman
             }
         }
 
-        fn set_end(&mut self, set_gamma : Gamma) {
+        fn set_endpos(&mut self, set_gamma : Gamma) {
             self.set_gamma(set_gamma);
 
             let dir = self.dir().as_bool();
     
-            self.set_limits(
+            self.set_pos_limits(
                 if dir { None } else { Some(set_gamma) },
                 if dir { Some(set_gamma) } else { None }
             )
@@ -232,14 +244,12 @@ impl<B : StepperBuilder + Send + 'static, C : StepperController + Setup + Disman
             self.builder.vars().force_load_dir
         }
 
-        fn apply_gen_force(&mut self, force : Force) -> Result<(), crate::Error> {
-            self.builder.apply_gen_force(force)?;
-            Ok(())
+        fn apply_gen_force(&mut self, force : Force) -> Result<(), BuilderError> {
+            self.builder.apply_gen_force(force)
         }
 
-        fn apply_dir_force(&mut self, force : Force) -> Result<(), crate::Error> {
-            self.builder.apply_dir_force(force)?;
-            Ok(())
+        fn apply_dir_force(&mut self, force : Force) -> Result<(), BuilderError> {
+            self.builder.apply_dir_force(force)
         }
 
         fn inertia(&self) -> Inertia {
@@ -253,7 +263,7 @@ impl<B : StepperBuilder + Send + 'static, C : StepperController + Setup + Disman
     //
 }
 
-impl<B : StepperBuilder + Send + 'static, C : StepperController + Setup + Dismantle + Send + 'static> StepperActuator for StepperMotor<B, C> 
+impl<B : StepperBuilder + Send + 'static, C : StepperController + Send + 'static> StepperActuator for StepperMotor<B, C> 
 where
     B : DefinedActuator 
 {
@@ -285,7 +295,7 @@ where
     }
 }
 
-impl<B : StepperBuilder + Send + 'static, C : StepperController + Setup + Dismantle + Send + 'static> Interruptible for StepperMotor<B, C> {
+impl<B : StepperBuilder + Send + 'static, C : StepperController + Send + 'static> Interruptible for StepperMotor<B, C> {
     // Interruptors
         fn add_interruptor(&mut self, interruptor : Box<dyn Interruptor + Send>) {
             self.interruptors.push(interruptor);
@@ -298,7 +308,7 @@ impl<B : StepperBuilder + Send + 'static, C : StepperController + Setup + Disman
     // 
 }
 
-impl<B : StepperBuilder + Send + 'static, C : StepperController + Setup + Dismantle + Send + 'static> DefinedActuator for StepperMotor<B, C> 
+impl<B : StepperBuilder + Send + 'static, C : StepperController + Send + 'static> DefinedActuator for StepperMotor<B, C> 
 where
     B : DefinedActuator 
 {

@@ -2,7 +2,7 @@ use crate::act::SyncDriveFuture;
 use crate::act::stepper::{StepperActuator, BuilderError};
 use crate::data::MicroSteps;
 use crate::math::movements::DefinedActuator;
-use crate::{SyncActuator, Setup, StepperConfig, AsyncActuator};
+use crate::{SyncActuator, StepperConfig, AsyncActuator};
 
 use syunit::*;
 
@@ -90,7 +90,7 @@ pub trait ActuatorParent {
 // ##################################
 // 
 // Automatically implements `SyncActor` for every component
-    impl<T : RatioActuatorParent + Setup> SyncActuator for T 
+    impl<T : RatioActuatorParent> SyncActuator for T 
     where
         T::Child : SyncActuator
     {
@@ -120,27 +120,27 @@ pub trait ActuatorParent {
                 self.child_mut().set_velocity_max(velocity_max)
             }
 
-            fn limits_for_gamma(&self, gamma : Gamma) -> Delta {
-                self.delta_for_parent(self.child().limits_for_gamma(
+            fn resolve_pos_limits_for_gamma(&self, gamma : Gamma) -> Delta {
+                self.delta_for_parent(self.child().resolve_pos_limits_for_gamma(
                     self.gamma_for_child(gamma)
                 ))
             }
 
-            fn set_limits(&mut self, mut min : Option<Gamma>, mut max : Option<Gamma>) {
+            fn set_pos_limits(&mut self, mut min : Option<Gamma>, mut max : Option<Gamma>) {
                 min = min.map(|g| self.gamma_for_child(g));
                 max = max.map(|g| self.gamma_for_child(g));
-                self.child_mut().set_limits(min, max)
+                self.child_mut().set_pos_limits(min, max)
             }
 
-            fn set_end(&mut self, mut set_gamma : Gamma) {
+            fn set_endpos(&mut self, mut set_gamma : Gamma) {
                 set_gamma = self.gamma_for_child(set_gamma);
-                self.child_mut().set_end(set_gamma)
+                self.child_mut().set_endpos(set_gamma)
             }
 
-            fn overwrite_limits(&mut self, mut min : Option<Gamma>, mut max : Option<Gamma>) {
+            fn overwrite_pos_limits(&mut self, mut min : Option<Gamma>, mut max : Option<Gamma>) {
                 min = min.map(|g| self.gamma_for_child(g));
                 max = max.map(|g| self.gamma_for_child(g));
-                self.child_mut().overwrite_limits(min, max)
+                self.child_mut().overwrite_pos_limits(min, max)
             }
         // 
 
@@ -153,12 +153,12 @@ pub trait ActuatorParent {
                 self.force_for_parent(self.child().force_dir())
             }
 
-            fn apply_gen_force(&mut self, mut force : Force) -> Result<(), crate::Error> {
+            fn apply_gen_force(&mut self, mut force : Force) -> Result<(), BuilderError> {
                 force = self.force_for_child(force);
                 self.child_mut().apply_gen_force(force)
             }
 
-            fn apply_dir_force(&mut self, mut force : Force) -> Result<(), crate::Error> {
+            fn apply_dir_force(&mut self, mut force : Force) -> Result<(), BuilderError> {
                 force = self.force_for_child(force);
                 self.child_mut().apply_dir_force(force)
             }
@@ -174,7 +174,7 @@ pub trait ActuatorParent {
         // 
     }
 
-    impl<T : RatioActuatorParent + Setup> StepperActuator for T 
+    impl<T : RatioActuatorParent> StepperActuator for T
     where
         T::Child : StepperActuator
     {
@@ -220,11 +220,14 @@ pub trait ActuatorParent {
         }
     }
 
-    impl<T : ActuatorParent + Setup> AsyncActuator for T
+    impl<T : ActuatorParent> AsyncActuator for T
     where 
-        T::Child : AsyncActuator 
+        T::Child : AsyncActuator
     {
-        fn drive(&mut self, dir : Direction, speed : Factor) -> Result<(), crate::Error> {
+        // Use the error type of the child (complex syntax)
+        type Error = <<T as ActuatorParent>::Child as AsyncActuator>::Error;
+
+        fn drive(&mut self, dir : Direction, speed : Factor) -> Result<(), Self::Error> {
             self.child_mut().drive(dir, speed)
         }
 

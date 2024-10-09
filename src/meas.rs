@@ -1,12 +1,12 @@
-use crate::SyncActuator;
-use crate::act::{Interruptible, InterruptReason};
+use serde::{Serialize, Deserialize};
 use syunit::*;
 
-use serde::{Serialize, Deserialize};
+use crate::SyncActuator;
+use crate::act::{InterruptReason, Interruptible, SyncActuatorError};
 
 // Submodules
-    mod endswitch;
-    pub use endswitch::*;
+    mod endstop;
+    pub use endstop::*;
 // 
 
 // Traits
@@ -21,6 +21,26 @@ use serde::{Serialize, Deserialize};
 
         /// Conduct the measurement 
         fn measure(&mut self) -> Result<V, Self::Error>;
+    }
+// 
+
+// Errors
+    /// Error that can occur when using simple measurements
+    pub enum SimpleMeasError {
+        /// There was no interrupt triggered while driving, meaning that either
+        /// - the interrupt source is out of reach (e.g. endstop is not close enough)
+        /// - the interrupt source is broken, not correctly wired or similar
+        NoInterrupt,
+        /// The motor stopped because of the wrong reason, e.g. overloading it
+        WrongInterruptReason(InterruptReason),
+        /// There was an issue with the motor itself
+        SyncActuatorError(SyncActuatorError)
+    }
+
+    impl From<SyncActuatorError> for SimpleMeasError {
+        fn from(value: SyncActuatorError) -> Self {
+            SimpleMeasError::SyncActuatorError(value)
+        }
     }
 // 
 
@@ -51,7 +71,7 @@ impl SimpleMeasParams {
 
 /// Result of a simple measurement
 #[derive(Debug, Clone, Default)]
-pub struct SimpleMeasResult {
+pub struct SimpleMeasValues {
     /// Number of samples taken
     pub samples : usize,
 
@@ -63,7 +83,7 @@ pub struct SimpleMeasResult {
     pub corr : Delta
 }
 
-impl SimpleMeasResult {
+impl SimpleMeasValues {
     /// Maximum gamma value measured
     pub fn gamma_max(&self) -> Gamma {
         *self.gammas.iter().reduce(Gamma::max_ref).expect("Gamma array must contain a value")
@@ -88,39 +108,38 @@ impl SimpleMeasResult {
 /// # Measurement data and its usage
 /// 
 /// Specifing a `sample_dist` is optional, as the script will replace it with 10% of the maximum distance if not specified
-pub async fn take_simple_meas<C : SyncActuator + Interruptible + ?Sized>(comp : &mut C, data : &SimpleMeasParams, speed : Factor) -> Result<SimpleMeasResult, crate::Error> {
+pub async fn take_simple_meas<C : SyncActuator + Interruptible + ?Sized>(comp : &mut C, data : &SimpleMeasParams, speed : Factor) -> Result<SimpleMeasValues, SimpleMeasError> {
     let mut gammas : Vec<Gamma> = Vec::new();
 
     // Init measurement
         // Drive full distance with optionally reduced speed
         comp.drive_rel(data.max_dist, data.meas_speed * speed).await?;
-
-        // Check wheiter the component has been interrupted and if it is the correct interrupt
-        if comp.intr_reason().ok_or("The measurement failed! No interrupt was triggered")? != InterruptReason::EndReached {
-            return Err("Bad interrupt reason!".into());     // TODO: Improve error message
-        }
+        
+        comp.intr_reason()      // Get the interrupt reason
+            .ok_or(SimpleMeasError::NoInterrupt)
+            .and_then(|reason|
+                if reason == InterruptReason::EndReached { Ok(()) } else { Err(SimpleMeasError::WrongInterruptReason(reason)) }
+            )?;       // If no interrupt was triggered, return `MeasError::NoInterrupt`
 
         gammas.push(comp.gamma());
     //
 
     // Samples
         for _ in 0 .. data.add_samples() {
-            println!("- Gamma: {}", comp.gamma());
-
             // Drive half of the sample distance back (faster)
             comp.drive_rel(-data.sample_dist.unwrap_or(data.max_dist * 0.25) / 2.0, speed).await?;
 
-            println!("- Gamma: {}", comp.gamma());
+            // TODO: Check for errors when moving backwards
 
             // Drive sample distance
             comp.drive_rel(data.sample_dist.unwrap_or(data.max_dist * 0.25), data.meas_speed * speed).await?;
 
-            println!("- Gamma: {}", comp.gamma());
-
             // Check wheiter the component has been interrupted and if it is the correct interrupt
-            if comp.intr_reason().ok_or("The measurement failed! No interrupt was triggered")? != InterruptReason::EndReached {
-                return Err("Bad interrupt reason!".into());     // TODO: Improve error message
-            }
+            comp.intr_reason()      // Get the interrupt reason
+                .ok_or(SimpleMeasError::NoInterrupt)
+                .and_then(|reason|
+                    if reason == InterruptReason::EndReached { Ok(()) } else { Err(SimpleMeasError::WrongInterruptReason(reason)) }
+                )?;       // If no interrupt was triggered, return `MeasError::NoInterrupt`
 
             // Add the measurement value to the list
             gammas.push(comp.gamma());
@@ -135,10 +154,10 @@ pub async fn take_simple_meas<C : SyncActuator + Interruptible + ?Sized>(comp : 
     let gamma_new = data.set_gamma + gamma_diff;
 
     // Set limits and write new distance value
-    comp.set_end(gamma_av);
+    comp.set_endpos(gamma_av);
     comp.set_gamma(gamma_new);
 
-    Ok(SimpleMeasResult {
+    Ok(SimpleMeasValues {
         samples: data.add_samples(),
 
         gammas: gammas,

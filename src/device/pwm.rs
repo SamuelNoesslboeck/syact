@@ -4,10 +4,9 @@ use std::sync::mpsc::{Sender, Receiver, channel};
 use std::thread::{self, JoinHandle};
 
 use embedded_hal::digital::OutputPin;
-// use serde::{Serialize, Deserialize};
 use syunit::*;
 
-use crate::{Setup, Dismantle};
+type AnyError = Box<dyn std::error::Error>;
 
 /// A simple software-made PWM-signal 
 #[derive(Debug)]
@@ -190,7 +189,7 @@ impl<P : OutputPin + Send + 'static> SoftwarePWM<P> {
     //
 
     /// Stops the PWM-Signal and deletes the thread, can be started again if desired with `start()`
-    pub fn stop(&mut self) -> Result<(), crate::Error> {
+    pub fn stop(&mut self) -> Result<(), AnyError> {
         self.sender.send([ Time::NAN, Time::NAN ])?;
         self.murderer.recv()?;
 
@@ -198,18 +197,6 @@ impl<P : OutputPin + Send + 'static> SoftwarePWM<P> {
     }
 }
 
-// Setup and dismantle
-impl<P : OutputPin + Send> Setup for SoftwarePWM<P> {
-    fn setup(&mut self) -> Result<(), crate::Error> {
-        Ok(())
-    }
-}
-
-impl<P : OutputPin + Send + 'static> Dismantle for SoftwarePWM<P> {
-    fn dismantle(&mut self) -> Result<(), crate::Error> {
-        self.stop()
-    }
-}
 
 // Embedded-HAL implementations
     // #[derive(Clone, Debug)]

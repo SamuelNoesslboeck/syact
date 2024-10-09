@@ -7,7 +7,7 @@ use crate::meas::Measurable;
 
 /// A simple endswitch that can trigger when reaching a destination
 #[derive(Serialize, Deserialize)]
-pub struct EndSwitch<P : InputPin> {
+pub struct EndStop<P : InputPin> {
     trigger : bool,
     _dir : Option<Direction>, 
     temp_dir : Option<Direction>,
@@ -16,7 +16,7 @@ pub struct EndSwitch<P : InputPin> {
     sys_pin : P
 }
 
-impl<P : InputPin> EndSwitch<P> {
+impl<P : InputPin> EndStop<P> {
     /// Creates a new end switch
     pub fn new(trigger : bool, dir : Option<Direction>, sys_pin : P) -> Self {
         Self {
@@ -29,7 +29,7 @@ impl<P : InputPin> EndSwitch<P> {
     }
 }
 
-impl<P : InputPin> Measurable<bool> for EndSwitch<P> {
+impl<P : InputPin> Measurable<bool> for EndStop<P> {
     type Error = P::Error; 
 
     fn measure(&mut self) -> Result<bool, Self::Error> {
@@ -37,7 +37,7 @@ impl<P : InputPin> Measurable<bool> for EndSwitch<P> {
     }
 }
 
-impl<P : InputPin> Interruptor for EndSwitch<P> {
+impl<P : InputPin> Interruptor for EndStop<P> {
     fn dir(&self) -> Option<Direction> {
         self._dir.or(self.temp_dir)
     }

@@ -8,10 +8,10 @@ pub use crate::act::stepper::*;
 pub use crate::data::{ActuatorVars, StepperConfig, StepperConst};
 pub use crate::data::servo::ServoConst;
 
-pub use crate::device::{Servo, SoftwarePWM};
+// pub use crate::device::{Servo, SoftwarePWM};
 
 pub use crate::math;
 
-pub use crate::meas::{SimpleMeasParams, EndSwitch};
+pub use crate::meas::{SimpleMeasParams, EndStop};
 
 pub use syunit::*;

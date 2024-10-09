@@ -1,5 +1,5 @@
-use crate::act::SyncDriveFuture;
-use crate::{Setup, SyncActuator};
+use crate::act::{SyncDriveFuture, SyncActuator};
+use crate::prelude::BuilderError;
 
 use syunit::*;
 
@@ -11,7 +11,7 @@ use syunit::*;
 /// The generic type `T` repesents the components in the struct
 /// 
 /// # Constant generic `C`
-pub trait SyncActuatorGroup<T, const C : usize> : Setup 
+pub trait SyncActuatorGroup<T, const C : usize>
 where 
     T : SyncActuator + ?Sized + 'static
 {
@@ -96,7 +96,7 @@ where
         #[inline(always)]
         fn limits_for_gammas(&self, gammas : &[Gamma; C]) -> [Delta; C] {
             self.for_each(|act, index| {
-                act.limits_for_gamma(gammas[index])
+                act.resolve_pos_limits_for_gamma(gammas[index])
             })
         }
 
@@ -104,7 +104,7 @@ where
         #[inline(always)]
         fn valid_gammas(&self, gammas : &[Gamma; C]) -> bool {
             self.for_each(|act, index| {
-                !act.limits_for_gamma(gammas[index]).is_normal() & gammas[index].is_finite()
+                !act.resolve_pos_limits_for_gamma(gammas[index]).is_normal() & gammas[index].is_finite()
             }).iter().all(|v| *v)
         }
 
@@ -112,7 +112,7 @@ where
         #[inline(always)]
         fn valid_gammas_verb(&self, gammas : &[Gamma; C]) -> [bool; C] {
             self.for_each(|act, index| {
-                !act.limits_for_gamma(gammas[index]).is_normal() & gammas[index].is_finite()
+                !act.resolve_pos_limits_for_gamma(gammas[index]).is_normal() & gammas[index].is_finite()
             })
         }
 
@@ -120,15 +120,15 @@ where
         #[inline(always)]
         fn set_ends(&mut self, set_dist : &[Gamma; C]) {
             self.for_each_mut(|act, index| {
-                act.set_end(set_dist[index]);
+                act.set_endpos(set_dist[index]);
             });
         }
         
-        /// Runs [SyncComp::set_limits()] for all components
+        /// Runs [SyncComp::set_pos_limits()] for all components
         #[inline(always)]
-        fn set_limits(&mut self, min : &[Option<Gamma>; C], max : &[Option<Gamma>; C]) {
+        fn set_pos_limits(&mut self, min : &[Option<Gamma>; C], max : &[Option<Gamma>; C]) {
             self.for_each_mut(|act, index| {
-                act.set_limits(min[index], max[index]);
+                act.set_pos_limits(min[index], max[index]);
             }); 
         }
     //
@@ -144,7 +144,7 @@ where
 
         /// Runs [SyncComp::apply_force_gen()] for all components
         #[inline]
-        fn apply_forces(&mut self, forces : &[Force; C]) -> Result<(), crate::Error> {
+        fn apply_forces(&mut self, forces : &[Force; C]) -> Result<(), BuilderError> {
             self.try_for_each_mut(|act, index| {
                 act.apply_gen_force(forces[index])
             })?;

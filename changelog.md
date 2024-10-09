@@ -63,7 +63,7 @@
 
 ### Bug fixes
 
-- Fixed bug that caused the measurement of an `EndSwitch` to fail
+- Fixed bug that caused the measurement of an `EndStop` to fail
 
 ## Version 0.12.0
 

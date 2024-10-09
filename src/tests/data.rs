@@ -1,7 +1,7 @@
 use crate::data::StepperConst;
 
 #[test]
-#[ignore = "Manual information display"]
+#[ignore = "Value display, run manually ... "]
 fn basic_plot() {
     let consts = StepperConst::GEN;
 

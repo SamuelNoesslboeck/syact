@@ -28,13 +28,15 @@ impl<A : SyncActuator> LinearAxis<A> {
     }
 }
 
-impl<A : SyncActuator> Setup for LinearAxis<A> {
-    fn setup(&mut self) -> Result<(), crate::Error> {
-        self.actuator.setup()
-    }
-}
-
 // Parent
+    impl<C : SyncActuator + Setup> Setup for LinearAxis<C> {
+        type Error = <C as Setup>::Error;
+
+        fn setup(&mut self) -> Result<(), Self::Error> {
+            self.actuator.setup()
+        }
+    }
+
     impl<A : SyncActuator> ActuatorParent for LinearAxis<A> {
         type Child = A;
 

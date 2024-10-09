@@ -13,13 +13,17 @@ pub struct LED<P : SetDutyCycle> {
 }
 
 impl<P : SetDutyCycle + Setup> Setup for LED<P> {
-    fn setup(&mut self) -> Result<(), crate::Error> {
+    type Error = <P as Setup>::Error;
+
+    fn setup(&mut self) -> Result<(), Self::Error> {
         self.pwm.setup()
     }
 }
 
 impl<P : SetDutyCycle + Dismantle> Dismantle for LED<P> {
-    fn dismantle(&mut self) -> Result<(), crate::Error> {
+    type Error = <P as Dismantle>::Error;
+
+    fn dismantle(&mut self) -> Result<(), Self::Error> {
         self.pwm.dismantle()
     }
 }

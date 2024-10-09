@@ -2,7 +2,7 @@ use core::future::Future;
 
 use syunit::*;
 
-use crate::Setup;
+use stepper::BuilderError;
 
 // ####################
 // #    SUBMODULES    #
@@ -137,7 +137,7 @@ use crate::Setup;
     /// 
     /// Components can have multiple layers, for example take a stepper motor with a geaerbox attached to it. The stepper motor and both combined will be a component, the later having 
     /// the stepper motor component defined as it's parent component. (See [Gear])
-    pub trait SyncActuator : Setup {
+    pub trait SyncActuator {
         // Movement
             /// Moves the component by the relative distance as fast as possible, halts the script until 
             /// the movement is finshed and returns the actual **relative** distance travelled
@@ -240,35 +240,35 @@ use crate::Setup;
             ///     Stepper::new_gen().unwrap(), 
             /// 0.5);    // Ratio is set to 0.5, which means for each radian the motor moves, the bearing moves for half a radian
             /// 
-            /// gear.set_limits(Some(LIM_MIN), Some(LIM_MAX));
+            /// gear.set_pos_limits(Some(LIM_MIN), Some(LIM_MAX));
             /// 
             /// assert_eq!(gear.limits_for_gamma(Gamma(1.5)), Delta(0.5));     // Over the maximum
             /// assert_eq!(gear.limits_for_gamma(Gamma(0.5)), Delta::ZERO);    // In range
             /// assert_eq!(gear.limits_for_gamma(Gamma(-4.0)), Delta(-2.0));   // Under the minimum
             /// 
-            /// gear.set_limits(Some(LIM_MIN_LOWER), None);                // Overwriting only `min` limit
+            /// gear.set_pos_limits(Some(LIM_MIN_LOWER), None);                // Overwriting only `min` limit
             /// 
             /// assert_eq!(gear.limits_for_gamma(Gamma(1.5)), Delta(0.5));     // Over the maximum
             /// assert_eq!(gear.limits_for_gamma(Gamma(0.5)), Delta::ZERO);    // In range
             /// assert_eq!(gear.limits_for_gamma(Gamma(-4.0)), Delta(-1.0));   // Under the minimum, but less
             /// 
-            /// gear.overwrite_limits(Some(LIM_MIN_LOWER), None);              // Overwriting only both limits with [overwrite_limits()]
+            /// gear.overwrite_pos_limits(Some(LIM_MIN_LOWER), None);              // Overwriting only both limits with [overwrite_pos_limits()]
             /// 
             /// assert_eq!(gear.limits_for_gamma(Gamma(1.5)), Delta::ZERO);    // In range, as the `max` limit has been deleted
             /// assert_eq!(gear.limits_for_gamma(Gamma(0.5)), Delta::ZERO);    // In range
             /// assert_eq!(gear.limits_for_gamma(Gamma(-4.0)), Delta(-1.0));   // Under the minimum, but less
             /// ```
-            fn limits_for_gamma(&self, gamma : Gamma) -> Delta;
+            fn resolve_pos_limits_for_gamma(&self, gamma : Gamma) -> Delta;
 
             /// Sets an endpoint in the current direction by modifying the components limits. For example, when the component is moving
             /// in the positive direction and the endpoint is set, this function will overwrite the current maximum limit with the current
             /// gamma value. The component is then not allowed to move in the current direction anymore. 
-            fn set_end(&mut self, set_gamma : Gamma);
+            fn set_endpos(&mut self, set_gamma : Gamma);
 
             /// Set the limits for the minimum and maximum angles that the component can reach, note that the limit will 
             /// be converted and transfered to the parent component if defined. 
             /// 
-            /// Unlike [SyncComp::overwrite_limits()], this function does not overwrite the current `min` or `max` limits if they
+            /// Unlike [SyncComp::overwrite_pos_limits()], this function does not overwrite the current `min` or `max` limits if they
             /// are set to `None`. 
             /// 
             /// ```rust
@@ -286,30 +286,30 @@ use crate::Setup;
             ///     Stepper::new_gen().unwrap(), 
             /// 0.5);    // Ratio is set to 0.5, which means for each radian the motor moves, the bearing moves for half a radian
             /// 
-            /// gear.set_limits(Some(LIM_MIN), Some(LIM_MAX));
+            /// gear.set_pos_limits(Some(LIM_MIN), Some(LIM_MAX));
             /// 
             /// assert_eq!(gear.limits_for_gamma(Gamma(1.5)), Delta(0.5));     // Over the maximum
             /// assert_eq!(gear.limits_for_gamma(Gamma(0.5)), Delta::ZERO);    // In range
             /// assert_eq!(gear.limits_for_gamma(Gamma(-4.0)), Delta(-2.0));   // Under the minimum
             /// 
-            /// gear.set_limits(Some(LIM_MIN_LOWER), None);                // Overwriting only `min` limit
+            /// gear.set_pos_limits(Some(LIM_MIN_LOWER), None);                // Overwriting only `min` limit
             /// 
             /// assert_eq!(gear.limits_for_gamma(Gamma(1.5)), Delta(0.5));     // Over the maximum
             /// assert_eq!(gear.limits_for_gamma(Gamma(0.5)), Delta::ZERO);    // In range
             /// assert_eq!(gear.limits_for_gamma(Gamma(-4.0)), Delta(-1.0));   // Under the minimum, but less
             /// 
-            /// gear.overwrite_limits(Some(LIM_MIN_LOWER), None);              // Overwriting only both limits with [overwrite_limits()]
+            /// gear.overwrite_pos_limits(Some(LIM_MIN_LOWER), None);              // Overwriting only both limits with [overwrite_pos_limits()]
             /// 
             /// assert_eq!(gear.limits_for_gamma(Gamma(1.5)), Delta::ZERO);    // In range, as the `max` limit has been deleted
             /// assert_eq!(gear.limits_for_gamma(Gamma(0.5)), Delta::ZERO);    // In range
             /// assert_eq!(gear.limits_for_gamma(Gamma(-4.0)), Delta(-1.0));   // Under the minimum, but less
             /// ```
-            fn set_limits(&mut self, min : Option<Gamma>, max : Option<Gamma>);
+            fn set_pos_limits(&mut self, min : Option<Gamma>, max : Option<Gamma>);
 
             /// Set the limits for the minimum and maximum angles that the component can reach, note that the limit will 
             /// be converted and transfered to the parent component if this component has one. 
             /// 
-            /// The difference to [SyncComp::set_limits()] is that this function **overwrites** the current limits set.
+            /// The difference to [SyncComp::set_pos_limits()] is that this function **overwrites** the current limits set.
             /// 
             /// ```rust
             /// use syact::prelude::*;
@@ -326,25 +326,25 @@ use crate::Setup;
             ///     Stepper::new_gen().unwrap(), 
             /// 0.5);    // Ratio is set to 0.5, which means for each radian the motor moves, the bearing moves for half a radian
             /// 
-            /// gear.set_limits(Some(LIM_MIN), Some(LIM_MAX));
+            /// gear.set_pos_limits(Some(LIM_MIN), Some(LIM_MAX));
             /// 
             /// assert_eq!(gear.limits_for_gamma(Gamma(1.5)), Delta(0.5));     // Over the maximum
             /// assert_eq!(gear.limits_for_gamma(Gamma(0.5)), Delta::ZERO);    // In range
             /// assert_eq!(gear.limits_for_gamma(Gamma(-4.0)), Delta(-2.0));   // Under the minimum
             /// 
-            /// gear.set_limits(Some(LIM_MIN_LOWER), None);                // Overwriting only `min` limit
+            /// gear.set_pos_limits(Some(LIM_MIN_LOWER), None);                // Overwriting only `min` limit
             /// 
             /// assert_eq!(gear.limits_for_gamma(Gamma(1.5)), Delta(0.5));     // Over the maximum
             /// assert_eq!(gear.limits_for_gamma(Gamma(0.5)), Delta::ZERO);    // In range
             /// assert_eq!(gear.limits_for_gamma(Gamma(-4.0)), Delta(-1.0));   // Under the minimum, but less
             /// 
-            /// gear.overwrite_limits(Some(LIM_MIN_LOWER), None);              // Overwriting only both limits with [overwrite_limits()]
+            /// gear.overwrite_pos_limits(Some(LIM_MIN_LOWER), None);              // Overwriting only both limits with [overwrite_pos_limits()]
             /// 
             /// assert_eq!(gear.limits_for_gamma(Gamma(1.5)), Delta::ZERO);    // In range, as the `max` limit has been deleted
             /// assert_eq!(gear.limits_for_gamma(Gamma(0.5)), Delta::ZERO);    // In range
             /// assert_eq!(gear.limits_for_gamma(Gamma(-4.0)), Delta(-1.0));   // Under the minimum, but less
             /// ```
-            fn overwrite_limits(&mut self, min : Option<Gamma>, max : Option<Gamma>);
+            fn overwrite_pos_limits(&mut self, min : Option<Gamma>, max : Option<Gamma>);
         // 
 
         // Load calculation
@@ -377,10 +377,10 @@ use crate::Setup;
             /// assert_eq!(Gamma(2.0), gear.gamma_for_child(Gamma(1.0)));
             /// assert_eq!(Force(0.1), gear.child().force_gen());     // Forces get smaller for smaller gears
             /// ```
-            fn apply_gen_force(&mut self, force : Force) -> Result<(), crate::Error>;
+            fn apply_gen_force(&mut self, force : Force) -> Result<(), BuilderError>;
 
             /// Value positive in CW direction
-            fn apply_dir_force(&mut self, force : Force) -> Result<(), crate::Error>;
+            fn apply_dir_force(&mut self, force : Force) -> Result<(), BuilderError>;
 
             // Inertia
             /// Returns the inertia applied to the component

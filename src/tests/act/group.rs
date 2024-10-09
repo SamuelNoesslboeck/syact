@@ -14,7 +14,7 @@ struct SomeComps {
 }
 
 #[test]
-fn group_basics() -> Result<(), syact::Error> {
+fn group_basics() -> Result<(), BuilderError> {
     let mut group = SomeComps {
         base: Gear::new(
             Stepper::new_gen()?,
@@ -28,7 +28,7 @@ fn group_basics() -> Result<(), syact::Error> {
     test(&group);
 
     group.set_config(StepperConfig::GEN);
-    group.setup()
+    Ok(())
 }
 
 // // Manual

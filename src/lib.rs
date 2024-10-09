@@ -2,6 +2,8 @@
 #![crate_name = "syact"]
 #![deny(missing_docs)]
 
+#![cfg_attr(feature = "testing", allow(unused))]
+
 // Modules
 extern crate alloc;
 
@@ -38,16 +40,6 @@ extern crate alloc;
     mod tests;
 // 
 
-// ################
-// #    ERRORS    #
-// ################
-// 
-// Different platforms require different types of errors 
-    // Wrapped types
-    /// The general error type used in the crate
-    pub type Error = Box<dyn std::error::Error>;
-//
-
 // ###########################
 // #    SETUP & DISMANTLE    #
 // ###########################
@@ -57,13 +49,16 @@ extern crate alloc;
     /// 
     /// For dynamic initialization purposes, all pin creations should run in a `setup()` function
     pub trait Setup {
+        /// Error that can occur when setting up
+        type Error;
+
         /// Calls all required functions to assure the components functionality
-        fn setup(&mut self) -> Result<(), Error> { 
+        fn setup(&mut self) -> Result<(), Self::Error> { 
             Ok(()) 
         }
 
         /// Points to `setup``, helper function
-        fn setup_inline(mut self) -> Result<Self, Error> 
+        fn setup_inline(mut self) -> Result<Self, Self::Error> 
         where 
             Self : Sized 
         {
@@ -78,24 +73,21 @@ extern crate alloc;
     /// 
     /// For dynamic initialization purposes, all pins that have previously been created with `setup()` should be dropped here
     pub trait Dismantle {
+        /// Error that can occur when dismantling
+        type Error;
+
         /// Calls all required functions to assure the component will not occupy any more resources like pins or network connections, without dropping the value
-        fn dismantle(&mut self) -> Result<(), Error> {
+        fn dismantle(&mut self) -> Result<(), Self::Error> {
             Ok(())
         }
 
         /// Calls `dismantle()` with an owned object
-        fn dismantle_inline(mut self) -> Result<Self, Error> 
+        fn dismantle_inline(mut self) -> Result<Self, Self::Error> 
         where
             Self : Sized
         {
             self.dismantle()?;
             Ok(self)
         }
-    }
-
-    /// A trait that marks a type as a boxing type for another type that includes e.g. GPIO-pins or other physical interfaces that have to be setup
-    pub trait Boxed : Setup + Dismantle {
-        /// The type that is boxed by this type
-        type Boxing;
     }
 //
