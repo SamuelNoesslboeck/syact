@@ -1,10 +1,42 @@
+use alloc::boxed::Box;
+use alloc::sync::Arc;
+use alloc::vec::Vec;
+use core::sync::atomic::Ordering::Relaxed;
+
+use atomic_float::AtomicF32;
 use syunit::*;
 
 use crate::{SyncActuator, Setup, Dismantle};
-use crate::act::{InterruptReason, Interruptible, Interruptor, SyncActuatorError, SyncDriveFuture};
+use crate::act::{InterruptReason, Interruptible, Interruptor, SyncActuatorError, SyncActuatorState};
 use crate::act::stepper::{StepperActuator, StepperController, StepperBuilder, BuilderError, DriveMode};
 use crate::data::{StepperConfig, StepperConst, MicroSteps}; 
 use crate::math::movements::DefinedActuator;
+
+pub struct StepperState {
+    pub _gamma : AtomicF32
+}
+
+impl StepperState {
+    pub fn new() -> Self {
+        StepperState {
+            _gamma: AtomicF32::new(Gamma::ZERO.0)
+        }
+    }
+}
+
+impl SyncActuatorState for StepperState {
+    fn gamma(&self) -> Gamma {
+        Gamma(self._gamma.load(Relaxed))
+    }
+
+    fn moving(&self) -> bool {
+        todo!()
+    }
+
+    fn halt(&self) {
+        todo!()
+    }
+}
 
 /// A stepper motor
 /// 
@@ -13,10 +45,7 @@ pub struct StepperMotor<B : StepperBuilder + Send + 'static, C : StepperControll
     builder : B,
     ctrl : C, 
 
-    // Atomics
-        /// The current absolute position
-        _gamma : Gamma,
-    // 
+    _state: Arc<StepperState>,
 
     _limit_min : Option<Gamma>,
     _limit_max : Option<Gamma>,
@@ -35,12 +64,12 @@ impl<B : StepperBuilder + Send + 'static, C : StepperController + Send + 'static
             builder: B::new(consts)?,
             ctrl,
 
-            _gamma : Gamma::ZERO,
+            _state : Arc::new(StepperState::new()),
 
             _limit_min: None,
             _limit_max: None,
 
-            interruptors : vec![],
+            interruptors : Vec::new(),
             _intr_reason: None
         })
     }
@@ -88,14 +117,14 @@ impl<B : StepperBuilder + Send + 'static, C : StepperController + Send + 'static
         // #################################
         //
         // Main driving algorithm for stepper motors
-        fn drive_rel<'a>(&mut self, delta : Delta, speed_f : Factor) -> SyncDriveFuture<'a, Self> {
+        fn drive_rel(&mut self, delta : Delta, speed_f : Factor) -> Result<(), SyncActuatorError> {
             if !delta.is_finite() {
-                return SyncDriveFuture::Done(Err(SyncActuatorError::InvaldDeltaDistance(delta)));
+                return Err(SyncActuatorError::InvaldDeltaDistance(delta));
             }
 
             // Set drive mode, return mapped error if one occurs
             if let Err(e) = self.builder.set_drive_mode(DriveMode::FixedDistance(delta, Velocity::ZERO, speed_f), &mut self.ctrl) {
-                return SyncDriveFuture::Done(Err(SyncActuatorError::StepperBuilderError(e)));
+                return Err(SyncActuatorError::StepperBuilderError(e));
             }
 
             while let Some(node) = self.builder.next() {
@@ -110,12 +139,12 @@ impl<B : StepperBuilder + Send + 'static, C : StepperController + Send + 'static
                         }
                     }
 
-                    if let Some(reason) = intr.check(self._gamma) {
+                    if let Some(reason) = intr.check(self._state.gamma()) {
                         intr.set_temp_dir(Some(dir_val));
                         self._intr_reason.replace(reason);
                         
                         if let Err(e) = self.builder.set_drive_mode(DriveMode::Stop, &mut self.ctrl) {
-                            return SyncDriveFuture::Done(Err(SyncActuatorError::StepperBuilderError(e)));
+                            return Err(SyncActuatorError::StepperBuilderError(e));
                         }
                     } else {
                         // Clear temp direction
@@ -124,49 +153,53 @@ impl<B : StepperBuilder + Send + 'static, C : StepperController + Send + 'static
                 }
 
                 // Make step and return error if occured
-                if let Err(e) = self.ctrl.step_no_wait(node) {
-                    return SyncDriveFuture::Done(Err(SyncActuatorError::StepperCtrlError(e)));
+                if let Err(e) = self.ctrl.step(node) {
+                    return Err(SyncActuatorError::StepperCtrlError(e));
                 }
 
                 // Check if the gamma value exeeds any limits
                 if dir_val.as_bool() {
-                    self._gamma += self.builder.step_angle();
+                    self._state._gamma.fetch_add(self.builder.step_angle().0, Relaxed);
 
                     if self.gamma() > self.limit_max().unwrap_or(Gamma::INFINITY) {
                         if let Err(e) = self.builder.set_drive_mode(DriveMode::Stop, &mut self.ctrl) {
-                            return SyncDriveFuture::Done(Err(SyncActuatorError::StepperBuilderError(e)))
+                            return Err(SyncActuatorError::StepperBuilderError(e))
                         }
                     } 
                 } else {
-                    self._gamma = self._gamma - self.builder.step_angle();
+                    self._state._gamma.fetch_sub(self.builder.step_angle().0, Relaxed);
 
                     if self.gamma() < self.limit_min().unwrap_or(Gamma::NEG_INFINITY) {
                         if let Err(e) = self.builder.set_drive_mode(DriveMode::Stop, &mut self.ctrl) {
-                            return SyncDriveFuture::Done(Err(SyncActuatorError::StepperBuilderError(e)))
+                            return Err(SyncActuatorError::StepperBuilderError(e))
                         }
                     } 
                 }
             }
 
-            SyncDriveFuture::Done(Ok(()))
+            Ok(())
         }
 
         /// Absolute movements derive from relative movements ([Self::drive_rel])
-        fn drive_abs<'a>(&mut self, gamma : Gamma, speed : Factor) -> SyncDriveFuture<'a, Self> {
+        fn drive_abs(&mut self, gamma : Gamma, speed : Factor) -> Result<(), SyncActuatorError> {
             let delta = gamma - self.gamma();
             self.drive_rel(delta, speed)
+        }
+
+        fn state(&self) -> &dyn SyncActuatorState {
+            self._state.as_ref()
         }
     // 
 
     // Position
         #[inline]
         fn gamma(&self) -> Gamma {
-            self._gamma
+            self._state.gamma()
         }   
 
         #[inline]
         fn set_gamma(&mut self, gamma : Gamma) {
-            self._gamma = gamma;
+            self._state._gamma.store(gamma.0, Relaxed);
         }
 
         #[inline]
@@ -303,7 +336,7 @@ impl<B : StepperBuilder + Send + 'static, C : StepperController + Send + 'static
 
         fn intr_reason(&mut self) -> Option<InterruptReason> {
             // Return the value and replace it with `None`
-            std::mem::replace(&mut self._intr_reason, None)
+            core::mem::replace(&mut self._intr_reason, None)
         }
     // 
 }

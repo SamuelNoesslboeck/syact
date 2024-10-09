@@ -1,4 +1,4 @@
-use core::future::Future;
+use alloc::boxed::Box;
 
 use syunit::*;
 
@@ -104,32 +104,20 @@ use stepper::BuilderError;
     }
 
     impl core::fmt::Display for SyncActuatorError {
-        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
             f.write_fmt(format_args!("{:?}", self))
         }
     }
 
-    impl std::error::Error for SyncActuatorError { }
+    // impl std::error::Error for SyncActuatorError { }
     
-    /// A `Future` for drive operations
-    pub enum SyncDriveFuture<'a, A : SyncActuator + ?Sized> {
-        /// The movement is still in process
-        Driving(&'a mut A),
-        /// The movement is done, eiter successfully or not
-        Done(Result<(), SyncActuatorError>)
-    }
+    pub trait SyncActuatorState {
+        fn gamma(&self) -> Gamma; 
 
-    impl<'a, A : SyncActuator + ?Sized> Future for SyncDriveFuture<'a, A> {
-        type Output = Result<(), SyncActuatorError>;
+        fn moving(&self) -> bool;
 
-        fn poll(self: core::pin::Pin<&mut Self>, _cx: &mut core::task::Context<'_>) -> std::task::Poll<Self::Output> {
-            match self.get_mut() {
-                Self::Driving(_) => core::task::Poll::Pending,
-                Self::Done(v) => core::task::Poll::Ready(v.clone())
-            }
-        }
-    }
-
+        fn halt(&self);
+    }   
 
     /// Trait for defining controls and components of synchronous actuators
     /// 
@@ -141,15 +129,17 @@ use stepper::BuilderError;
         // Movement
             /// Moves the component by the relative distance as fast as possible, halts the script until 
             /// the movement is finshed and returns the actual **relative** distance travelled
-            fn drive_rel<'a>(&mut self, delta : Delta, speed : Factor) -> SyncDriveFuture<'a, Self>;
+            fn drive_rel(&mut self, delta : Delta, speed : Factor) -> Result<(), SyncActuatorError>;
 
             /// Moves the component to the given position as fast as possible, halts the script until the 
             /// movement is finished and returns the actual **relative** distance travelled.
             #[inline]
-            fn drive_abs<'a>(&mut self, gamma : Gamma, speed : Factor) -> SyncDriveFuture<'a, Self> {
+            fn drive_abs(&mut self, gamma : Gamma, speed : Factor) -> Result<(), SyncActuatorError> {
                 let delta = gamma - self.gamma();
                 self.drive_rel(delta, speed)
             }
+
+            fn state(&self) -> &dyn SyncActuatorState;
         // 
 
         // Position

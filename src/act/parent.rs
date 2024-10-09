@@ -1,12 +1,12 @@
-use crate::act::SyncDriveFuture;
+use alloc::boxed::Box;
+
+use syunit::*;
+
+use crate::act::{Interruptible, SyncActuatorError};
 use crate::act::stepper::{StepperActuator, BuilderError};
 use crate::data::MicroSteps;
 use crate::math::movements::DefinedActuator;
 use crate::{SyncActuator, StepperConfig, AsyncActuator};
-
-use syunit::*;
-
-use super::Interruptible;
 
 /// A trait that marks an actuator which acts as a parent for another actuator
 pub trait ActuatorParent {
@@ -95,9 +95,13 @@ pub trait ActuatorParent {
         T::Child : SyncActuator
     {
         // Drive
-            fn drive_rel<'a>(&mut self, mut delta : Delta, speed : Factor) -> SyncDriveFuture<'a, T::Child> {
+            fn drive_rel(&mut self, mut delta : Delta, speed : Factor) -> Result<(), SyncActuatorError> {
                 delta = self.delta_for_chlid(delta);
                 self.child_mut().drive_rel(delta, speed)
+            }
+
+            fn state(&self) -> &dyn super::SyncActuatorState {
+                self.child().state() 
             }
         //  
 

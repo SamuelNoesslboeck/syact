@@ -1,5 +1,8 @@
-use crate::{SyncActuator, SyncActuatorGroup};
+use alloc::vec::Vec;
+
 use syunit::*;
+
+use crate::{SyncActuator, SyncActuatorGroup};
 
 /// An actuator that has a defined time to move for a PTP (Point-To-Point) movement
 pub trait DefinedActuator {

@@ -1,3 +1,6 @@
+use alloc::vec;
+use alloc::vec::Vec;
+
 use syunit::*;
 
 use crate::math::movements::DefinedActuator;
@@ -50,13 +53,13 @@ pub enum DriveMode {
         Controller(ControllerError)
     }
 
-    impl std::fmt::Display for BuilderError {
-        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    impl core::fmt::Display for BuilderError {
+        fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
             f.write_fmt(format_args!("{:?}", self))
         }
     }
 
-    impl std::error::Error for BuilderError { }
+    impl core::error::Error for BuilderError { }
 //
 
 /// A stepperbuilder creates stepper motor curves

@@ -1,3 +1,5 @@
+use alloc::vec::Vec;
+
 use serde::{Serialize, Deserialize};
 use syunit::*;
 
@@ -108,12 +110,12 @@ impl SimpleMeasValues {
 /// # Measurement data and its usage
 /// 
 /// Specifing a `sample_dist` is optional, as the script will replace it with 10% of the maximum distance if not specified
-pub async fn take_simple_meas<C : SyncActuator + Interruptible + ?Sized>(comp : &mut C, data : &SimpleMeasParams, speed : Factor) -> Result<SimpleMeasValues, SimpleMeasError> {
+pub fn take_simple_meas<C : SyncActuator + Interruptible + ?Sized>(comp : &mut C, data : &SimpleMeasParams, speed : Factor) -> Result<SimpleMeasValues, SimpleMeasError> {
     let mut gammas : Vec<Gamma> = Vec::new();
 
     // Init measurement
         // Drive full distance with optionally reduced speed
-        comp.drive_rel(data.max_dist, data.meas_speed * speed).await?;
+        comp.drive_rel(data.max_dist, data.meas_speed * speed)?;
         
         comp.intr_reason()      // Get the interrupt reason
             .ok_or(SimpleMeasError::NoInterrupt)
@@ -127,12 +129,12 @@ pub async fn take_simple_meas<C : SyncActuator + Interruptible + ?Sized>(comp : 
     // Samples
         for _ in 0 .. data.add_samples() {
             // Drive half of the sample distance back (faster)
-            comp.drive_rel(-data.sample_dist.unwrap_or(data.max_dist * 0.25) / 2.0, speed).await?;
+            comp.drive_rel(-data.sample_dist.unwrap_or(data.max_dist * 0.25) / 2.0, speed)?;
 
             // TODO: Check for errors when moving backwards
 
             // Drive sample distance
-            comp.drive_rel(data.sample_dist.unwrap_or(data.max_dist * 0.25), data.meas_speed * speed).await?;
+            comp.drive_rel(data.sample_dist.unwrap_or(data.max_dist * 0.25), data.meas_speed * speed)?;
 
             // Check wheiter the component has been interrupted and if it is the correct interrupt
             comp.intr_reason()      // Get the interrupt reason
