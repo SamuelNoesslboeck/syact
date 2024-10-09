@@ -1,25 +1,28 @@
 use alloc::boxed::Box;
 use alloc::sync::Arc;
 use alloc::vec::Vec;
+use core::sync::atomic::AtomicBool;
 use core::sync::atomic::Ordering::Relaxed;
 
 use atomic_float::AtomicF32;
 use syunit::*;
 
-use crate::{SyncActuator, Setup, Dismantle};
+use crate::{AsyncActuator, Dismantle, Setup, SyncActuator};
 use crate::act::{InterruptReason, Interruptible, Interruptor, SyncActuatorError, SyncActuatorState};
 use crate::act::stepper::{StepperActuator, StepperController, StepperBuilder, BuilderError, DriveMode};
 use crate::data::{StepperConfig, StepperConst, MicroSteps}; 
 use crate::math::movements::DefinedActuator;
 
 pub struct StepperState {
-    pub _gamma : AtomicF32
+    _gamma : AtomicF32,
+    _moving : AtomicBool
 }
 
 impl StepperState {
     pub fn new() -> Self {
         StepperState {
-            _gamma: AtomicF32::new(Gamma::ZERO.0)
+            _gamma: AtomicF32::new(Gamma::ZERO.0),
+            _moving: AtomicBool::new(false)
         }
     }
 }
@@ -30,7 +33,7 @@ impl SyncActuatorState for StepperState {
     }
 
     fn moving(&self) -> bool {
-        todo!()
+        self._moving.load(Relaxed)
     }
 
     fn halt(&self) {
@@ -351,5 +354,12 @@ where
 {
     fn ptp_time_for_distance(&self, gamma_0 : Gamma, gamma_t : Gamma) -> Time {
         self.builder.ptp_time_for_distance(gamma_0, gamma_t)
+    }
+}
+
+impl<B : StepperBuilder + Send + 'static, C : StepperController + Send + 'static> AsyncActuator for StepperMotor<B, C> 
+{
+    fn drive(&mut self, dir : Direction, speed : Factor) -> Result<(), Self::Error> {
+        
     }
 }
