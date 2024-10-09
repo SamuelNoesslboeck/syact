@@ -92,7 +92,7 @@ where
             });
         }
 
-        /// Runs [SyncComp::limits_for_gamma()] for all components 
+        /// Runs [SyncComp::resolve_pos_limits_for_gamma()] for all components 
         #[inline(always)]
         fn limits_for_gammas(&self, gammas : &[Gamma; C]) -> [Delta; C] {
             self.for_each(|act, index| {

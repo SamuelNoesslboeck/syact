@@ -242,21 +242,21 @@ use stepper::BuilderError;
             /// 
             /// gear.set_pos_limits(Some(LIM_MIN), Some(LIM_MAX));
             /// 
-            /// assert_eq!(gear.limits_for_gamma(Gamma(1.5)), Delta(0.5));     // Over the maximum
-            /// assert_eq!(gear.limits_for_gamma(Gamma(0.5)), Delta::ZERO);    // In range
-            /// assert_eq!(gear.limits_for_gamma(Gamma(-4.0)), Delta(-2.0));   // Under the minimum
+            /// assert_eq!(gear.resolve_pos_limits_for_gamma(Gamma(1.5)), Delta(0.5));     // Over the maximum
+            /// assert_eq!(gear.resolve_pos_limits_for_gamma(Gamma(0.5)), Delta::ZERO);    // In range
+            /// assert_eq!(gear.resolve_pos_limits_for_gamma(Gamma(-4.0)), Delta(-2.0));   // Under the minimum
             /// 
             /// gear.set_pos_limits(Some(LIM_MIN_LOWER), None);                // Overwriting only `min` limit
             /// 
-            /// assert_eq!(gear.limits_for_gamma(Gamma(1.5)), Delta(0.5));     // Over the maximum
-            /// assert_eq!(gear.limits_for_gamma(Gamma(0.5)), Delta::ZERO);    // In range
-            /// assert_eq!(gear.limits_for_gamma(Gamma(-4.0)), Delta(-1.0));   // Under the minimum, but less
+            /// assert_eq!(gear.resolve_pos_limits_for_gamma(Gamma(1.5)), Delta(0.5));     // Over the maximum
+            /// assert_eq!(gear.resolve_pos_limits_for_gamma(Gamma(0.5)), Delta::ZERO);    // In range
+            /// assert_eq!(gear.resolve_pos_limits_for_gamma(Gamma(-4.0)), Delta(-1.0));   // Under the minimum, but less
             /// 
             /// gear.overwrite_pos_limits(Some(LIM_MIN_LOWER), None);              // Overwriting only both limits with [overwrite_pos_limits()]
             /// 
-            /// assert_eq!(gear.limits_for_gamma(Gamma(1.5)), Delta::ZERO);    // In range, as the `max` limit has been deleted
-            /// assert_eq!(gear.limits_for_gamma(Gamma(0.5)), Delta::ZERO);    // In range
-            /// assert_eq!(gear.limits_for_gamma(Gamma(-4.0)), Delta(-1.0));   // Under the minimum, but less
+            /// assert_eq!(gear.resolve_pos_limits_for_gamma(Gamma(1.5)), Delta::ZERO);    // In range, as the `max` limit has been deleted
+            /// assert_eq!(gear.resolve_pos_limits_for_gamma(Gamma(0.5)), Delta::ZERO);    // In range
+            /// assert_eq!(gear.resolve_pos_limits_for_gamma(Gamma(-4.0)), Delta(-1.0));   // Under the minimum, but less
             /// ```
             fn resolve_pos_limits_for_gamma(&self, gamma : Gamma) -> Delta;
 
@@ -288,21 +288,21 @@ use stepper::BuilderError;
             /// 
             /// gear.set_pos_limits(Some(LIM_MIN), Some(LIM_MAX));
             /// 
-            /// assert_eq!(gear.limits_for_gamma(Gamma(1.5)), Delta(0.5));     // Over the maximum
-            /// assert_eq!(gear.limits_for_gamma(Gamma(0.5)), Delta::ZERO);    // In range
-            /// assert_eq!(gear.limits_for_gamma(Gamma(-4.0)), Delta(-2.0));   // Under the minimum
+            /// assert_eq!(gear.resolve_pos_limits_for_gamma(Gamma(1.5)), Delta(0.5));     // Over the maximum
+            /// assert_eq!(gear.resolve_pos_limits_for_gamma(Gamma(0.5)), Delta::ZERO);    // In range
+            /// assert_eq!(gear.resolve_pos_limits_for_gamma(Gamma(-4.0)), Delta(-2.0));   // Under the minimum
             /// 
             /// gear.set_pos_limits(Some(LIM_MIN_LOWER), None);                // Overwriting only `min` limit
             /// 
-            /// assert_eq!(gear.limits_for_gamma(Gamma(1.5)), Delta(0.5));     // Over the maximum
-            /// assert_eq!(gear.limits_for_gamma(Gamma(0.5)), Delta::ZERO);    // In range
-            /// assert_eq!(gear.limits_for_gamma(Gamma(-4.0)), Delta(-1.0));   // Under the minimum, but less
+            /// assert_eq!(gear.resolve_pos_limits_for_gamma(Gamma(1.5)), Delta(0.5));     // Over the maximum
+            /// assert_eq!(gear.resolve_pos_limits_for_gamma(Gamma(0.5)), Delta::ZERO);    // In range
+            /// assert_eq!(gear.resolve_pos_limits_for_gamma(Gamma(-4.0)), Delta(-1.0));   // Under the minimum, but less
             /// 
             /// gear.overwrite_pos_limits(Some(LIM_MIN_LOWER), None);              // Overwriting only both limits with [overwrite_pos_limits()]
             /// 
-            /// assert_eq!(gear.limits_for_gamma(Gamma(1.5)), Delta::ZERO);    // In range, as the `max` limit has been deleted
-            /// assert_eq!(gear.limits_for_gamma(Gamma(0.5)), Delta::ZERO);    // In range
-            /// assert_eq!(gear.limits_for_gamma(Gamma(-4.0)), Delta(-1.0));   // Under the minimum, but less
+            /// assert_eq!(gear.resolve_pos_limits_for_gamma(Gamma(1.5)), Delta::ZERO);    // In range, as the `max` limit has been deleted
+            /// assert_eq!(gear.resolve_pos_limits_for_gamma(Gamma(0.5)), Delta::ZERO);    // In range
+            /// assert_eq!(gear.resolve_pos_limits_for_gamma(Gamma(-4.0)), Delta(-1.0));   // Under the minimum, but less
             /// ```
             fn set_pos_limits(&mut self, min : Option<Gamma>, max : Option<Gamma>);
 
@@ -328,21 +328,21 @@ use stepper::BuilderError;
             /// 
             /// gear.set_pos_limits(Some(LIM_MIN), Some(LIM_MAX));
             /// 
-            /// assert_eq!(gear.limits_for_gamma(Gamma(1.5)), Delta(0.5));     // Over the maximum
-            /// assert_eq!(gear.limits_for_gamma(Gamma(0.5)), Delta::ZERO);    // In range
-            /// assert_eq!(gear.limits_for_gamma(Gamma(-4.0)), Delta(-2.0));   // Under the minimum
+            /// assert_eq!(gear.resolve_pos_limits_for_gamma(Gamma(1.5)), Delta(0.5));     // Over the maximum
+            /// assert_eq!(gear.resolve_pos_limits_for_gamma(Gamma(0.5)), Delta::ZERO);    // In range
+            /// assert_eq!(gear.resolve_pos_limits_for_gamma(Gamma(-4.0)), Delta(-2.0));   // Under the minimum
             /// 
             /// gear.set_pos_limits(Some(LIM_MIN_LOWER), None);                // Overwriting only `min` limit
             /// 
-            /// assert_eq!(gear.limits_for_gamma(Gamma(1.5)), Delta(0.5));     // Over the maximum
-            /// assert_eq!(gear.limits_for_gamma(Gamma(0.5)), Delta::ZERO);    // In range
-            /// assert_eq!(gear.limits_for_gamma(Gamma(-4.0)), Delta(-1.0));   // Under the minimum, but less
+            /// assert_eq!(gear.resolve_pos_limits_for_gamma(Gamma(1.5)), Delta(0.5));     // Over the maximum
+            /// assert_eq!(gear.resolve_pos_limits_for_gamma(Gamma(0.5)), Delta::ZERO);    // In range
+            /// assert_eq!(gear.resolve_pos_limits_for_gamma(Gamma(-4.0)), Delta(-1.0));   // Under the minimum, but less
             /// 
             /// gear.overwrite_pos_limits(Some(LIM_MIN_LOWER), None);              // Overwriting only both limits with [overwrite_pos_limits()]
             /// 
-            /// assert_eq!(gear.limits_for_gamma(Gamma(1.5)), Delta::ZERO);    // In range, as the `max` limit has been deleted
-            /// assert_eq!(gear.limits_for_gamma(Gamma(0.5)), Delta::ZERO);    // In range
-            /// assert_eq!(gear.limits_for_gamma(Gamma(-4.0)), Delta(-1.0));   // Under the minimum, but less
+            /// assert_eq!(gear.resolve_pos_limits_for_gamma(Gamma(1.5)), Delta::ZERO);    // In range, as the `max` limit has been deleted
+            /// assert_eq!(gear.resolve_pos_limits_for_gamma(Gamma(0.5)), Delta::ZERO);    // In range
+            /// assert_eq!(gear.resolve_pos_limits_for_gamma(Gamma(-4.0)), Delta(-1.0));   // Under the minimum, but less
             /// ```
             fn overwrite_pos_limits(&mut self, min : Option<Gamma>, max : Option<Gamma>);
         // 
