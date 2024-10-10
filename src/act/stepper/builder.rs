@@ -24,7 +24,7 @@ pub enum DriveMode {
     /// - `Factor`: The speed factor to use, references maximum 
     ConstFactor(Factor, Direction),
     /// Driving a fixed distance
-    FixedDistance(Delta, Velocity, Factor),
+    FixedDistance(RelDist, Velocity, Factor),
     /// Motor is stopping
     Stop,
     /// Signals that the motor is inactive
@@ -44,7 +44,7 @@ pub enum DriveMode {
         /// The desired exit velocity is too high
         VelocityExitTooHigh(Velocity, Velocity),
         /// The given distance is too short for the motor to stop
-        DistanceTooShort(Delta, u64, u64),
+        DistanceTooShort(RelDist, u64, u64),
         /// The load data given is too high, causing an overload
         Overload,
         /// A limit has been reached
@@ -85,7 +85,7 @@ pub trait StepperBuilder : Iterator<Item = Time> {
         fn microsteps(&self) -> MicroSteps;
 
         /// The current step angle in radians
-        fn step_angle(&self) -> Delta;
+        fn step_angle(&self) -> RelDist;
 
         /// The current movement direction
         fn dir(&self) -> Direction;
@@ -153,7 +153,7 @@ pub trait StepperBuilder : Iterator<Item = Time> {
         // Cache
         _microsteps : MicroSteps,   
         mode : DriveMode,
-        _step_angle : Delta, 
+        _step_angle : RelDist, 
         _dir : Direction,
 
         distance : u64,
@@ -263,7 +263,7 @@ pub trait StepperBuilder : Iterator<Item = Time> {
                 self.update_start_stop()
             }
 
-            fn step_angle(&self) -> Delta {
+            fn step_angle(&self) -> RelDist {
                 self._step_angle
             }
 
@@ -339,7 +339,7 @@ pub trait StepperBuilder : Iterator<Item = Time> {
                     self.distance = self._consts.steps_from_angle_abs(delta, self._microsteps);
                     self.distance_counter = 0;
 
-                    if delta >= Delta::ZERO {
+                    if delta >= RelDist::ZERO {
                         self._dir = Direction::CW;
                     } else {
                         self._dir = Direction::CCW;
@@ -355,7 +355,7 @@ pub trait StepperBuilder : Iterator<Item = Time> {
     }
 
     impl DefinedActuator for StartStopBuilder {
-        fn ptp_time_for_distance(&self, gamma_0 : Gamma, gamma_t : Gamma) -> Time {
+        fn ptp_time_for_distance(&self, gamma_0 : AbsPos, gamma_t : AbsPos) -> Time {
             (gamma_t - gamma_0) / self.velocity_max()
         }
     }
@@ -374,7 +374,7 @@ pub trait StepperBuilder : Iterator<Item = Time> {
 
         // Cache
         _microsteps : MicroSteps,
-        _step_angle : Delta, 
+        _step_angle : RelDist, 
         _dir : Direction,
 
         // Modes
@@ -580,7 +580,7 @@ pub trait StepperBuilder : Iterator<Item = Time> {
                 self._microsteps
             }
 
-            fn step_angle(&self) -> Delta {
+            fn step_angle(&self) -> RelDist {
                 self._step_angle
             }
 
@@ -680,7 +680,7 @@ pub trait StepperBuilder : Iterator<Item = Time> {
                     //     return Err(DriveError::DistanceTooShort(self.step_angle(), self.distance, self.current_speed_level as u64))
                     // }
 
-                    if delta >= Delta::ZERO {
+                    if delta >= RelDist::ZERO {
                         self._dir = Direction::CW;
                     } else {
                         self._dir = Direction::CCW;
@@ -696,7 +696,7 @@ pub trait StepperBuilder : Iterator<Item = Time> {
     }
     
     impl DefinedActuator for ComplexBuilder {
-        fn ptp_time_for_distance(&self, gamma_0 : Gamma, gamma_t : Gamma) -> Time {
+        fn ptp_time_for_distance(&self, gamma_0 : AbsPos, gamma_t : AbsPos) -> Time {
             let delta = gamma_t - gamma_0;
             let distance = self.consts().steps_from_angle_abs(delta, self.microsteps());
 

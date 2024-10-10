@@ -4,9 +4,9 @@ use syunit::*;
 #[derive(Debug, Clone, Default)]
 pub struct Limits {
     /// Limit for minimum gamma distance
-    pub min : Option<Gamma>,  
+    pub min : Option<AbsPos>,  
     /// Limit for maximum gamma distance
-    pub max : Option<Gamma>
+    pub max : Option<AbsPos>
 }
 
 impl Limits {

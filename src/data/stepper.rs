@@ -165,14 +165,14 @@ impl StepperConst {
         /// Get the angular distance of a step in radians, considering microstepping
         /// - `micro` is the amount of microsteps per full step
         #[inline(always)]
-        pub fn step_angle(&self, microsteps : MicroSteps) -> Delta {
+        pub fn step_angle(&self, microsteps : MicroSteps) -> RelDist {
             self.full_step_angle() / microsteps.as_u8() as f32
         }
 
         /// A full step angle of the motor, ignoring microstepping
         #[inline(always)]
-        pub fn full_step_angle(&self) -> Delta {
-            Delta(2.0 * PI / self.number_steps as f32)
+        pub fn full_step_angle(&self) -> RelDist {
+            RelDist(2.0 * PI / self.number_steps as f32)
         }
 
         /// Time per step for the given velocity 
@@ -211,38 +211,38 @@ impl StepperConst {
     // Steps & Angles - Conversions
         /// Converts the given angle `ang` into a absolute number of steps (always positive).
         #[inline(always)]
-        pub fn steps_from_angle_abs(&self, angle : Delta, microsteps : MicroSteps) -> u64 {
+        pub fn steps_from_angle_abs(&self, angle : RelDist, microsteps : MicroSteps) -> u64 {
             (angle.abs() / self.step_angle(microsteps)).round() as u64
         }   
 
         /// Converts the given angle `ang` into a number of steps
         #[inline(always)]
-        pub fn steps_from_angle(&self, angle : Delta, microsteps : MicroSteps) -> i64 {
+        pub fn steps_from_angle(&self, angle : RelDist, microsteps : MicroSteps) -> i64 {
             (angle / self.step_angle(microsteps)).round() as i64
         }   
 
         /// Converts the given number of steps into an angle
         #[inline(always)]
-        pub fn angle_from_steps_abs(&self, steps : u64, microsteps : MicroSteps) -> Delta {
+        pub fn angle_from_steps_abs(&self, steps : u64, microsteps : MicroSteps) -> RelDist {
             steps as f32 * self.step_angle(microsteps)
         }
 
         /// Converts the given number of steps into an angle
         #[inline(always)]
-        pub fn angle_from_steps(&self, steps : i64, microsteps : MicroSteps) -> Delta {
+        pub fn angle_from_steps(&self, steps : i64, microsteps : MicroSteps) -> RelDist {
             steps as f32 * self.step_angle(microsteps)
         }
 
         /// Rounds the given angle to the nearest step value
         #[inline(always)]
-        pub fn round_angle_to_steps(&self, angle : Delta, microsteps : MicroSteps) -> Delta {
+        pub fn round_angle_to_steps(&self, angle : RelDist, microsteps : MicroSteps) -> RelDist {
             self.angle_from_steps(self.steps_from_angle(angle, microsteps), microsteps)
         }
 
         // Comparision
         /// Checks wheither the given angle `ang` is in range (closes to) a given step count `steps`
         #[inline(always)]
-        pub fn is_in_step_range(&self, steps : i64, angle : Delta, microsteps : MicroSteps) -> bool {
+        pub fn is_in_step_range(&self, steps : i64, angle : RelDist, microsteps : MicroSteps) -> bool {
             self.steps_from_angle(angle, microsteps) == steps
         }
     //

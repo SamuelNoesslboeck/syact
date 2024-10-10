@@ -9,7 +9,7 @@ pub const ROOT_EPSILON : f32 = -1.0e-4;
 /// 
 /// The function panics if the given acceleration is not normal (`Acceleration::is_normal()`)
 #[inline]
-pub fn travel_times(delta : Delta, velocity : Velocity, acceleration : Acceleration) -> (Time, Time) {
+pub fn travel_times(delta : RelDist, velocity : Velocity, acceleration : Acceleration) -> (Time, Time) {
     if !acceleration.is_normal() {
         panic!("The given acceleration is invalid (delta: {}, velocity : {}, acceleration: {})", delta, velocity, acceleration);
     }
@@ -28,12 +28,12 @@ pub fn travel_times(delta : Delta, velocity : Velocity, acceleration : Accelerat
 }
 
 /// Time required to move a distance `delta` from a zero-velocity state with the acceleration `acceleration`
-pub fn accel_from_zero(delta : Delta, acceleration : Acceleration) -> Time {
+pub fn accel_from_zero(delta : RelDist, acceleration : Acceleration) -> Time {
     Time((2.0 * delta.0 / acceleration.0).sqrt())
 }
 
 /// The acceleration required to exit a certain distance `delta` with the given velocity `velocity`, starting with a velocity of zero
-pub fn alpha_req_for_dist(delta : Delta, velocity : Velocity) -> Acceleration {
+pub fn alpha_req_for_dist(delta : RelDist, velocity : Velocity) -> Acceleration {
     Acceleration(velocity.0 * velocity.0 / 2.0 / delta.0)
 }
 

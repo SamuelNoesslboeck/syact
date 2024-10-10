@@ -13,7 +13,7 @@ pub struct ServoConst
     pub velocity_max : Velocity,
 
     /// Maximum angle [Unit (radians)]
-    pub gamma_max : Gamma,
+    pub gamma_max : AbsPos,
 
     /// Minimum signal length [Unit s]
     pub pwm_min : Time,
@@ -32,7 +32,7 @@ impl ServoConst
     pub const ERROR : Self = Self {
         t_max: Force::ZERO,
         velocity_max: Velocity::ZERO,
-        gamma_max: Gamma::ZERO,
+        gamma_max: AbsPos::ZERO,
         pwm_min: Time::ZERO,
         pwm_max: Time::ZERO,
         f_pwm: Velocity::ZERO
@@ -43,7 +43,7 @@ impl ServoConst
     pub const MG996R : Self = Self {
         t_max: Force(1.08),
         velocity_max: Velocity(8.5),
-        gamma_max: Gamma(core::f32::consts::PI),
+        gamma_max: AbsPos(core::f32::consts::PI),
 
         pwm_min: Time(0.00075),
         pwm_max: Time(0.00225),
@@ -56,7 +56,7 @@ impl ServoConst
     }
 
     /// The default position of a servo motor
-    pub fn default_pos(&self) -> Gamma {
+    pub fn default_pos(&self) -> AbsPos {
         self.gamma_max / 2.0
     }
 
@@ -79,7 +79,7 @@ impl ServoConst
     }
 
     /// Pulse time for a given angle
-    pub fn pulse_for_angle(&self, gamma : Gamma) -> Time {
+    pub fn pulse_for_angle(&self, gamma : AbsPos) -> Time {
         self.pulse_for_factor(gamma / self.gamma_max)
     }
 }

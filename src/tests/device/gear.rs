@@ -10,5 +10,5 @@ async fn gear_basic() {
     gear.set_config(StepperConfig::GEN).unwrap();
 
     println!("Gear - Basics");
-    gear.drive_rel(Delta(1.0), Factor::MAX).unwrap();
+    gear.drive_rel(RelDist(1.0), Factor::MAX).unwrap();
 }

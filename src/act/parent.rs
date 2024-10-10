@@ -33,19 +33,19 @@ pub trait ActuatorParent {
         fn ratio(&self) -> f32;
 
         // Automatic implementations
-            fn gamma_for_child(&self, parent_gamma : Gamma) -> Gamma {
+            fn gamma_for_child(&self, parent_gamma : AbsPos) -> AbsPos {
                 parent_gamma / self.ratio()
             }
 
-            fn gamma_for_parent(&self, child_gamma : Gamma) -> Gamma {
+            fn gamma_for_parent(&self, child_gamma : AbsPos) -> AbsPos {
                 child_gamma * self.ratio()
             }
 
-            fn delta_for_chlid(&self, parent_delta : Delta) -> Delta {
+            fn delta_for_chlid(&self, parent_delta : RelDist) -> RelDist {
                 parent_delta / self.ratio()
             }
 
-            fn delta_for_parent(&self, child_delta : Delta) -> Delta {
+            fn delta_for_parent(&self, child_delta : RelDist) -> RelDist {
                 child_delta * self.ratio()
             }
 
@@ -96,7 +96,7 @@ pub trait ActuatorParent {
         T::Child : SyncActuator
     {
         // Drive
-            fn drive_rel(&mut self, mut delta : Delta, speed : Factor) -> Result<(), SyncActuatorError> {
+            fn drive_rel(&mut self, mut delta : RelDist, speed : Factor) -> Result<(), SyncActuatorError> {
                 delta = self.delta_for_chlid(delta);
                 self.child_mut().drive_rel(delta, speed)
             }
@@ -111,11 +111,11 @@ pub trait ActuatorParent {
         //  
 
         // Position
-            fn gamma(&self) -> Gamma {
+            fn gamma(&self) -> AbsPos {
                 self.gamma_for_parent(self.child().gamma())
             }
 
-            fn set_gamma(&mut self, mut gamma : Gamma) {
+            fn set_gamma(&mut self, mut gamma : AbsPos) {
                 gamma = self.gamma_for_child(gamma);
                 self.child_mut().set_gamma(gamma)
             }
@@ -129,24 +129,24 @@ pub trait ActuatorParent {
                 self.child_mut().set_velocity_max(velocity_max)
             }
 
-            fn resolve_pos_limits_for_gamma(&self, gamma : Gamma) -> Delta {
+            fn resolve_pos_limits_for_gamma(&self, gamma : AbsPos) -> RelDist {
                 self.delta_for_parent(self.child().resolve_pos_limits_for_gamma(
                     self.gamma_for_child(gamma)
                 ))
             }
 
-            fn set_pos_limits(&mut self, mut min : Option<Gamma>, mut max : Option<Gamma>) {
+            fn set_pos_limits(&mut self, mut min : Option<AbsPos>, mut max : Option<AbsPos>) {
                 min = min.map(|g| self.gamma_for_child(g));
                 max = max.map(|g| self.gamma_for_child(g));
                 self.child_mut().set_pos_limits(min, max)
             }
 
-            fn set_endpos(&mut self, mut set_gamma : Gamma) {
+            fn set_endpos(&mut self, mut set_gamma : AbsPos) {
                 set_gamma = self.gamma_for_child(set_gamma);
                 self.child_mut().set_endpos(set_gamma)
             }
 
-            fn overwrite_pos_limits(&mut self, mut min : Option<Gamma>, mut max : Option<Gamma>) {
+            fn overwrite_pos_limits(&mut self, mut min : Option<AbsPos>, mut max : Option<AbsPos>) {
                 min = min.map(|g| self.gamma_for_child(g));
                 max = max.map(|g| self.gamma_for_child(g));
                 self.child_mut().overwrite_pos_limits(min, max)
@@ -211,7 +211,7 @@ pub trait ActuatorParent {
             }
         // 
 
-        fn step_ang(&self) -> Delta {
+        fn step_ang(&self) -> RelDist {
             self.delta_for_parent(self.child().step_ang())
         }
     }
@@ -236,8 +236,8 @@ pub trait ActuatorParent {
         // Use the error type of the child (complex syntax)
         type Error = <<T as ActuatorParent>::Child as AsyncActuator>::Error;
 
-        fn drive(&mut self, dir : Direction, speed : Factor) -> Result<(), Self::Error> {
-            self.child_mut().drive(dir, speed)
+        fn drive_factor(&mut self, dir : Direction, speed : Factor) -> Result<(), Self::Error> {
+            self.child_mut().drive_factor(dir, speed)
         }
 
         fn dir(&self) -> Direction {
@@ -254,7 +254,7 @@ pub trait ActuatorParent {
     where
         T::Child : DefinedActuator
     {
-        fn ptp_time_for_distance(&self, gamma_0 : Gamma, gamma_t : Gamma) -> Time {
+        fn ptp_time_for_distance(&self, gamma_0 : AbsPos, gamma_t : AbsPos) -> Time {
             self.child().ptp_time_for_distance(gamma_0, gamma_t)
         }
     }

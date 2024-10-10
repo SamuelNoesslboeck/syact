@@ -62,14 +62,14 @@ where
     //
 
     /// Runs [SyncComp::drive_rel()] for all components
-    fn drive_rel(&mut self, deltas : [Delta; C], speed : [Factor; C]) -> Result<[(); C], SyncActuatorError> {
+    fn drive_rel(&mut self, deltas : [RelDist; C], speed : [Factor; C]) -> Result<[(); C], SyncActuatorError> {
         self.try_for_each_mut(|act, index| {
             act.drive_rel(deltas[index], speed[index])  
         })
     }
 
     /// Runs [SyncComp::drive_abs()] for all components
-    fn drive_abs(&mut self, gamma : [Gamma; C], speed : [Factor; C]) -> Result<[(); C], SyncActuatorError> {
+    fn drive_abs(&mut self, gamma : [AbsPos; C], speed : [Factor; C]) -> Result<[(); C], SyncActuatorError> {
         self.try_for_each_mut(|act, index| {
             act.drive_abs(gamma[index], speed[index])
         })
@@ -78,7 +78,7 @@ where
     // Position
         /// Runs [SyncComp::gamma()] for all components
         #[inline(always)]
-        fn gammas(&self) -> [Gamma; C] {
+        fn gammas(&self) -> [AbsPos; C] {
             self.for_each(|act, _| {
                 act.gamma()
             })
@@ -86,7 +86,7 @@ where
         
         /// Runs [SyncComp::set_gamma()] for all components
         #[inline(always)]
-        fn set_gammas(&mut self, gammas : &[Gamma; C]) {
+        fn set_gammas(&mut self, gammas : &[AbsPos; C]) {
             self.for_each_mut(|act, index| {
                 act.set_gamma(gammas[index])
             });
@@ -94,7 +94,7 @@ where
 
         /// Runs [SyncComp::resolve_pos_limits_for_gamma()] for all components 
         #[inline(always)]
-        fn limits_for_gammas(&self, gammas : &[Gamma; C]) -> [Delta; C] {
+        fn limits_for_gammas(&self, gammas : &[AbsPos; C]) -> [RelDist; C] {
             self.for_each(|act, index| {
                 act.resolve_pos_limits_for_gamma(gammas[index])
             })
@@ -102,7 +102,7 @@ where
 
         /// Checks if the given gammas are vaild, which means they are finite and in range of the components
         #[inline(always)]
-        fn valid_gammas(&self, gammas : &[Gamma; C]) -> bool {
+        fn valid_gammas(&self, gammas : &[AbsPos; C]) -> bool {
             self.for_each(|act, index| {
                 !act.resolve_pos_limits_for_gamma(gammas[index]).is_normal() & gammas[index].is_finite()
             }).iter().all(|v| *v)
@@ -110,7 +110,7 @@ where
 
         /// Same as [SyncCompGroup::valid_gammas()], but it evaluates the check for each component and returns seperated results for analysis
         #[inline(always)]
-        fn valid_gammas_verb(&self, gammas : &[Gamma; C]) -> [bool; C] {
+        fn valid_gammas_verb(&self, gammas : &[AbsPos; C]) -> [bool; C] {
             self.for_each(|act, index| {
                 !act.resolve_pos_limits_for_gamma(gammas[index]).is_normal() & gammas[index].is_finite()
             })
@@ -118,7 +118,7 @@ where
 
         /// Runs [SyncComp::set_end()] for all components
         #[inline(always)]
-        fn set_ends(&mut self, set_dist : &[Gamma; C]) {
+        fn set_ends(&mut self, set_dist : &[AbsPos; C]) {
             self.for_each_mut(|act, index| {
                 act.set_endpos(set_dist[index]);
             });
@@ -126,7 +126,7 @@ where
         
         /// Runs [SyncComp::set_pos_limits()] for all components
         #[inline(always)]
-        fn set_pos_limits(&mut self, min : &[Option<Gamma>; C], max : &[Option<Gamma>; C]) {
+        fn set_pos_limits(&mut self, min : &[Option<AbsPos>; C], max : &[Option<AbsPos>; C]) {
             self.for_each_mut(|act, index| {
                 act.set_pos_limits(min[index], max[index]);
             }); 

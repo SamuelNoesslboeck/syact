@@ -50,10 +50,10 @@ use crate::act::{InterruptReason, Interruptible, SyncActuatorError};
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct SimpleMeasParams {
     /// The gamma value to set the component to if the measurement was successful
-    pub set_gamma : Gamma,
+    pub set_gamma : AbsPos,
     /// Maximum drive distance, also determines which direction will be used. 
     /// If the maximum distance is reached before the measurement is conducted, the measurement will count as failed
-    pub max_dist : Delta,
+    pub max_dist : RelDist,
 
     /// Measurement speed factor (Optionally conduct a measurement slower)
     pub meas_speed : Factor,
@@ -61,7 +61,7 @@ pub struct SimpleMeasParams {
     /// Number of additional samples to take
     _add_samples : Option<usize>,
     /// Will take 5% of max_dist as default
-    pub sample_dist : Option<Delta>
+    pub sample_dist : Option<RelDist>
 }
 
 impl SimpleMeasParams {
@@ -78,26 +78,26 @@ pub struct SimpleMeasValues {
     pub samples : usize,
 
     /// Collection of all gamma values
-    pub gammas : Vec<Gamma>,
+    pub gammas : Vec<AbsPos>,
     /// Average gamma used for the set gamma
-    pub gamma_av : Gamma,
+    pub gamma_av : AbsPos,
     /// Correction value (offset of current postion and set-gamma reference)
-    pub corr : Delta
+    pub corr : RelDist
 }
 
 impl SimpleMeasValues {
     /// Maximum gamma value measured
-    pub fn gamma_max(&self) -> Gamma {
-        *self.gammas.iter().reduce(Gamma::max_ref).expect("Gamma array must contain a value")
+    pub fn gamma_max(&self) -> AbsPos {
+        *self.gammas.iter().reduce(AbsPos::max_ref).expect("AbsPos array must contain a value")
     }
 
     /// Minimum gamma value measured
-    pub fn gamma_min(&self) -> Gamma {
-        *self.gammas.iter().reduce(Gamma::min_ref).expect("Gamma array must contain a value")
+    pub fn gamma_min(&self) -> AbsPos {
+        *self.gammas.iter().reduce(AbsPos::min_ref).expect("AbsPos array must contain a value")
     }
 
     /// Inaccuracy accross all gamma values measured
-    pub fn max_inacc(&self) -> Delta {
+    pub fn max_inacc(&self) -> RelDist {
         self.gamma_max() - self.gamma_min()
     }
 }
@@ -111,7 +111,7 @@ impl SimpleMeasValues {
 /// 
 /// Specifing a `sample_dist` is optional, as the script will replace it with 10% of the maximum distance if not specified
 pub fn take_simple_meas<C : SyncActuator + Interruptible + ?Sized>(comp : &mut C, data : &SimpleMeasParams, speed : Factor) -> Result<SimpleMeasValues, SimpleMeasError> {
-    let mut gammas : Vec<Gamma> = Vec::new();
+    let mut gammas : Vec<AbsPos> = Vec::new();
 
     // Init measurement
         // Drive full distance with optionally reduced speed
@@ -149,7 +149,7 @@ pub fn take_simple_meas<C : SyncActuator + Interruptible + ?Sized>(comp : &mut C
     // 
 
     // The average gamma of all measurements
-    let gamma_av = Gamma(gammas.iter().map(|g| g.0).sum()) / (gammas.len() as f32);
+    let gamma_av = AbsPos(gammas.iter().map(|g| g.0).sum()) / (gammas.len() as f32);
     // Current gamma difference considering the current position and the average taken by the measurement
     let gamma_diff = comp.gamma() - gamma_av;
     // The new gamma to set the components gamma to

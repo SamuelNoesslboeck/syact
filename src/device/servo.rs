@@ -14,7 +14,7 @@ use crate::data::servo::ServoConst;
 #[derive(Debug)]
 pub struct Servo<P : OutputPin + Send> {
     /// The absolute position of the servo motor
-    gamma : Gamma,
+    gamma : AbsPos,
     /// The constants of the servo motor (depending on type)
     consts : ServoConst,
 
@@ -50,12 +50,12 @@ impl<P : OutputPin + Send + 'static> Servo<P> {
     }
 
     /// Get the *aboslute* angle of the servo 
-    pub fn gamma(&self) -> Gamma {
+    pub fn gamma(&self) -> AbsPos {
         self.gamma
     }
 
     /// Set the absolute angle of the servo. Causes the servo to drive to this angle
-    pub fn set_gamma(&mut self, gamma : Gamma) {
+    pub fn set_gamma(&mut self, gamma : AbsPos) {
         self.pwm.set_period(self.consts.pulse_for_angle(gamma), self.consts.period_time());
         self.gamma = gamma
     }
