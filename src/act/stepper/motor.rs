@@ -84,12 +84,84 @@ impl<B : StepperBuilder + Send + 'static, C : StepperController + Send + 'static
     pub fn limit_max(&self) -> Option<Gamma> {
         self._limit_max
     }
+
+    /// ######################################
+    /// #    StepperMotor::handle_builder    #
+    /// ######################################
+    ///
+    /// Main driving algorithm for stepper motors, handles the builder until no nodes are left anymore
+    /// 
+    /// ## Thread
+    /// 
+    /// Blocks the current thread and creates the step signals until the builder is finished
+    pub fn handle_builder(&mut self) -> Result<(), SyncActuatorError> {
+        while let Some(node) = self.builder.next() {
+            // Get the current direction of the motor (builder)
+            let direction = self.builder.direction();
+            // Get the current drive mode of the motor (builder)
+            let drive_mode = self.builder.drive_mode();
+
+            
+            // Check all interruptors if the motor is not stopping already
+            if *drive_mode != DriveMode::Stop {
+                for intr in self.interruptors.iter_mut() {
+                    // Check if the direction is right
+                    if let Some(i_dir) = intr.dir() {
+                        if i_dir != direction {
+                            // If the interruptors checking-direction does not match the current direction, 
+                            //     the loop skips to the next interruptor
+                            continue;
+                        }
+                    }
+
+                    // Checks if the interruptor has been triggered
+                    if let Some(reason) = intr.check(self._state.gamma()) {
+                        intr.set_temp_dir(Some(direction));
+                        self._intr_reason.replace(reason);
+                        
+                        if let Err(e) = self.builder.set_drive_mode(DriveMode::Stop, &mut self.ctrl) {
+                            return Err(SyncActuatorError::StepperBuilderError(e));
+                        }
+                    } else {
+                        // Clear temporary direction
+                        intr.set_temp_dir(None);
+                    }
+                }
+            }
+
+            // Make step and return error if occured
+            if let Err(e) = self.ctrl.step(node) {
+                return Err(SyncActuatorError::StepperCtrlError(e));
+            }
+
+            // Check if the gamma value exeeds any limits
+            if direction.as_bool() {
+                self._state._gamma.fetch_add(self.builder.step_angle().0, Relaxed);
+
+                if self.gamma() > self.limit_max().unwrap_or(Gamma::INFINITY) {
+                    if let Err(e) = self.builder.set_drive_mode(DriveMode::Stop, &mut self.ctrl) {
+                        return Err(SyncActuatorError::StepperBuilderError(e))
+                    }
+                } 
+            } else {
+                self._state._gamma.fetch_sub(self.builder.step_angle().0, Relaxed);
+
+                if self.gamma() < self.limit_min().unwrap_or(Gamma::NEG_INFINITY) {
+                    if let Err(e) = self.builder.set_drive_mode(DriveMode::Stop, &mut self.ctrl) {
+                        return Err(SyncActuatorError::StepperBuilderError(e))
+                    }
+                } 
+            }
+        }
+
+        Ok(())
+    }
 }
 
 impl<B : StepperBuilder + Send + 'static, C : StepperController + Send + 'static> StepperMotor<B, C> {
     /// Returns the current direction of the motor
     pub fn dir(&self) -> Direction {
-        self.builder.dir()
+        self.builder.direction()
     }
 }
 
@@ -115,11 +187,6 @@ impl<B : StepperBuilder + Send + 'static, C : StepperController + Send + 'static
 
 impl<B : StepperBuilder + Send + 'static, C : StepperController + Send + 'static> SyncActuator for StepperMotor<B, C> {
     // Movement
-        // #################################
-        // #    StepperMotor::drive_rel    #
-        // #################################
-        //
-        // Main driving algorithm for stepper motors
         fn drive_rel(&mut self, delta : Delta, speed_f : Factor) -> Result<(), SyncActuatorError> {
             if !delta.is_finite() {
                 return Err(SyncActuatorError::InvaldDeltaDistance(delta));
@@ -130,57 +197,7 @@ impl<B : StepperBuilder + Send + 'static, C : StepperController + Send + 'static
                 return Err(SyncActuatorError::StepperBuilderError(e));
             }
 
-            while let Some(node) = self.builder.next() {
-                let dir_val = self.builder.dir();
-
-                // Check all interruptors
-                for intr in self.interruptors.iter_mut() {
-                    // Check if the direction is right
-                    if let Some(i_dir) = intr.dir() {
-                        if i_dir != dir_val {
-                            continue;
-                        }
-                    }
-
-                    if let Some(reason) = intr.check(self._state.gamma()) {
-                        intr.set_temp_dir(Some(dir_val));
-                        self._intr_reason.replace(reason);
-                        
-                        if let Err(e) = self.builder.set_drive_mode(DriveMode::Stop, &mut self.ctrl) {
-                            return Err(SyncActuatorError::StepperBuilderError(e));
-                        }
-                    } else {
-                        // Clear temp direction
-                        intr.set_temp_dir(None);
-                    }
-                }
-
-                // Make step and return error if occured
-                if let Err(e) = self.ctrl.step(node) {
-                    return Err(SyncActuatorError::StepperCtrlError(e));
-                }
-
-                // Check if the gamma value exeeds any limits
-                if dir_val.as_bool() {
-                    self._state._gamma.fetch_add(self.builder.step_angle().0, Relaxed);
-
-                    if self.gamma() > self.limit_max().unwrap_or(Gamma::INFINITY) {
-                        if let Err(e) = self.builder.set_drive_mode(DriveMode::Stop, &mut self.ctrl) {
-                            return Err(SyncActuatorError::StepperBuilderError(e))
-                        }
-                    } 
-                } else {
-                    self._state._gamma.fetch_sub(self.builder.step_angle().0, Relaxed);
-
-                    if self.gamma() < self.limit_min().unwrap_or(Gamma::NEG_INFINITY) {
-                        if let Err(e) = self.builder.set_drive_mode(DriveMode::Stop, &mut self.ctrl) {
-                            return Err(SyncActuatorError::StepperBuilderError(e))
-                        }
-                    } 
-                }
-            }
-
-            Ok(())
+            self.handle_builder()
         }
 
         /// Absolute movements derive from relative movements ([Self::drive_rel])

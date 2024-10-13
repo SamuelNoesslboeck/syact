@@ -88,7 +88,7 @@ pub trait StepperBuilder : Iterator<Item = Time> {
         fn step_angle(&self) -> Delta;
 
         /// The current movement direction
-        fn dir(&self) -> Direction;
+        fn direction(&self) -> Direction;
     //
 
     // Setters
@@ -267,7 +267,7 @@ pub trait StepperBuilder : Iterator<Item = Time> {
                 self._step_angle
             }
 
-            fn dir(&self) -> Direction {
+            fn direction(&self) -> Direction {
                 self._dir
             }
 
@@ -409,7 +409,7 @@ pub trait StepperBuilder : Iterator<Item = Time> {
             // Iterate to max speed level or until the cap is reached
             for _ in 0 .. max_speed_level {
                 // Calculate acceleration and movement time when fully accelerating
-                let accel = self.consts().alpha_max_for_velocity(self.vars(), self.config(), vel, self.dir())
+                let accel = self.consts().alpha_max_for_velocity(self.vars(), self.config(), vel, self.direction())
                     .ok_or(BuilderError::Overload)?;
                 let ( mut move_time, _ ) = math::kin::travel_times(self.step_angle(), vel, accel);
 
@@ -584,7 +584,7 @@ pub trait StepperBuilder : Iterator<Item = Time> {
                 self._step_angle
             }
 
-            fn dir(&self) -> Direction {
+            fn direction(&self) -> Direction {
                 self._dir
             }
         //

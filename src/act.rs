@@ -145,7 +145,7 @@ use stepper::BuilderError;
             fn clone_state(&self) -> Arc<dyn SyncActuatorState>;
         // 
 
-        // Position
+        // Position & Velocity
             /// Returns the **absolute** position of the component.
             /// 
             /// ```rust
@@ -204,7 +204,9 @@ use stepper::BuilderError;
             /// - Panics if no parent component or an override is provided
             /// - Panics if the velocity  given is higher than the maximum velocity  recommended (e.g. `StepperConst::velocity_max()`)
             fn set_velocity_max(&mut self, velocity_max : Velocity);
+        //
 
+        // Position limits
             /// Returns if any limit positions have been reached. The value returned can either be radians or millimeters, 
             /// depending on the type of component.
             /// 
