@@ -3,10 +3,10 @@ use syunit::*;
 /// Stores distance limits for the component
 #[derive(Debug, Clone, Default)]
 pub struct Limits {
-    /// Limit for minimum gamma distance
-    pub min : Option<Gamma>,  
-    /// Limit for maximum gamma distance
-    pub max : Option<Gamma>
+    /// Limit for minimum abs_pos distance
+    pub min : Option<AbsPos>,  
+    /// Limit for maximum abs_pos distance
+    pub max : Option<AbsPos>
 }
 
 impl Limits {

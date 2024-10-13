@@ -49,11 +49,11 @@ use crate::act::{InterruptReason, Interruptible, SyncActuatorError};
 /// Collection of parameters required for a simple measurement
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct SimpleMeasParams {
-    /// The gamma value to set the component to if the measurement was successful
-    pub set_gamma : Gamma,
+    /// The abs_pos value to set the component to if the measurement was successful
+    pub set_abs_pos : AbsPos,
     /// Maximum drive distance, also determines which direction will be used. 
     /// If the maximum distance is reached before the measurement is conducted, the measurement will count as failed
-    pub max_dist : Delta,
+    pub max_dist : RelDist,
 
     /// Measurement speed factor (Optionally conduct a measurement slower)
     pub meas_speed : Factor,
@@ -61,7 +61,7 @@ pub struct SimpleMeasParams {
     /// Number of additional samples to take
     _add_samples : Option<usize>,
     /// Will take 5% of max_dist as default
-    pub sample_dist : Option<Delta>
+    pub sample_dist : Option<RelDist>
 }
 
 impl SimpleMeasParams {
@@ -77,28 +77,28 @@ pub struct SimpleMeasValues {
     /// Number of samples taken
     pub samples : usize,
 
-    /// Collection of all gamma values
-    pub gammas : Vec<Gamma>,
-    /// Average gamma used for the set gamma
-    pub gamma_av : Gamma,
-    /// Correction value (offset of current postion and set-gamma reference)
-    pub corr : Delta
+    /// Collection of all abs_pos values
+    pub abs_poss : Vec<AbsPos>,
+    /// Average abs_pos used for the set abs_pos
+    pub abs_pos_av : AbsPos,
+    /// Correction value (offset of current postion and set-abs_pos reference)
+    pub corr : RelDist
 }
 
 impl SimpleMeasValues {
-    /// Maximum gamma value measured
-    pub fn gamma_max(&self) -> Gamma {
-        *self.gammas.iter().reduce(Gamma::max_ref).expect("Gamma array must contain a value")
+    /// Maximum abs_pos value measured
+    pub fn abs_pos_max(&self) -> AbsPos {
+        *self.abs_poss.iter().reduce(AbsPos::max_ref).expect("AbsPos array must contain a value")
     }
 
-    /// Minimum gamma value measured
-    pub fn gamma_min(&self) -> Gamma {
-        *self.gammas.iter().reduce(Gamma::min_ref).expect("Gamma array must contain a value")
+    /// Minimum abs_pos value measured
+    pub fn abs_pos_min(&self) -> AbsPos {
+        *self.abs_poss.iter().reduce(AbsPos::min_ref).expect("AbsPos array must contain a value")
     }
 
-    /// Inaccuracy accross all gamma values measured
-    pub fn max_inacc(&self) -> Delta {
-        self.gamma_max() - self.gamma_min()
+    /// Inaccuracy accross all abs_pos values measured
+    pub fn max_inacc(&self) -> RelDist {
+        self.abs_pos_max() - self.abs_pos_min()
     }
 }
 
@@ -111,7 +111,7 @@ impl SimpleMeasValues {
 /// 
 /// Specifing a `sample_dist` is optional, as the script will replace it with 10% of the maximum distance if not specified
 pub fn take_simple_meas<C : SyncActuator + Interruptible + ?Sized>(comp : &mut C, data : &SimpleMeasParams, speed : Factor) -> Result<SimpleMeasValues, SimpleMeasError> {
-    let mut gammas : Vec<Gamma> = Vec::new();
+    let mut abs_poss : Vec<AbsPos> = Vec::new();
 
     // Init measurement
         // Drive full distance with optionally reduced speed
@@ -123,7 +123,7 @@ pub fn take_simple_meas<C : SyncActuator + Interruptible + ?Sized>(comp : &mut C
                 if reason == InterruptReason::EndReached { Ok(()) } else { Err(SimpleMeasError::WrongInterruptReason(reason)) }
             )?;       // If no interrupt was triggered, return `MeasError::NoInterrupt`
 
-        gammas.push(comp.gamma());
+        abs_poss.push(comp.abs_pos());
     //
 
     // Samples
@@ -144,26 +144,26 @@ pub fn take_simple_meas<C : SyncActuator + Interruptible + ?Sized>(comp : &mut C
                 )?;       // If no interrupt was triggered, return `MeasError::NoInterrupt`
 
             // Add the measurement value to the list
-            gammas.push(comp.gamma());
+            abs_poss.push(comp.abs_pos());
         }
     // 
 
-    // The average gamma of all measurements
-    let gamma_av = Gamma(gammas.iter().map(|g| g.0).sum()) / (gammas.len() as f32);
-    // Current gamma difference considering the current position and the average taken by the measurement
-    let gamma_diff = comp.gamma() - gamma_av;
-    // The new gamma to set the components gamma to
-    let gamma_new = data.set_gamma + gamma_diff;
+    // The average abs_pos of all measurements
+    let abs_pos_av = AbsPos(abs_poss.iter().map(|g| g.0).sum()) / (abs_poss.len() as f32);
+    // Current abs_pos difference considering the current position and the average taken by the measurement
+    let abs_pos_diff = comp.abs_pos() - abs_pos_av;
+    // The new abs_pos to set the components abs_pos to
+    let abs_pos_new = data.set_abs_pos + abs_pos_diff;
 
     // Set limits and write new distance value
-    comp.set_endpos(gamma_av);
-    comp.set_gamma(gamma_new);
+    comp.set_endpos(abs_pos_av);
+    comp.set_abs_pos(abs_pos_new);
 
     Ok(SimpleMeasValues {
         samples: data.add_samples(),
 
-        gammas: gammas,
-        gamma_av: gamma_av,
-        corr: gamma_diff
+        abs_poss: abs_poss,
+        abs_pos_av: abs_pos_av,
+        corr: abs_pos_diff
     })
 }

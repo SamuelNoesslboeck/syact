@@ -14,7 +14,7 @@ use crate::data::servo::ServoConst;
 #[derive(Debug)]
 pub struct Servo<P : OutputPin + Send> {
     /// The absolute position of the servo motor
-    gamma : Gamma,
+    abs_pos : AbsPos,
     /// The constants of the servo motor (depending on type)
     consts : ServoConst,
 
@@ -30,7 +30,7 @@ impl<P : OutputPin + Send + 'static> Servo<P> {
     /// Before any use of movement functions you must call `start()` or `setup()` in order to set up all the pins
     pub fn new(consts : ServoConst, pin : P) -> Self {
         Self {
-            gamma: consts.default_pos(),
+            abs_pos: consts.default_pos(),
             consts,
 
             pwm: SoftwarePWM::new(pin)
@@ -50,25 +50,25 @@ impl<P : OutputPin + Send + 'static> Servo<P> {
     }
 
     /// Get the *aboslute* angle of the servo 
-    pub fn gamma(&self) -> Gamma {
-        self.gamma
+    pub fn abs_pos(&self) -> AbsPos {
+        self.abs_pos
     }
 
     /// Set the absolute angle of the servo. Causes the servo to drive to this angle
-    pub fn set_gamma(&mut self, gamma : Gamma) {
-        self.pwm.set_period(self.consts.pulse_for_angle(gamma), self.consts.period_time());
-        self.gamma = gamma
+    pub fn set_abs_pos(&mut self, abs_pos : AbsPos) {
+        self.pwm.set_period(self.consts.pulse_for_angle(abs_pos), self.consts.period_time());
+        self.abs_pos = abs_pos
     }
 
     /// Get the duty-cycle-percent of the motor (values `0.0` to `1.0`)
     pub fn perc(&self) -> f32 {
-        self.gamma / self.consts.gamma_max
+        self.abs_pos / self.consts.abs_pos_max
     }
 
     /// Set the duty-cycle percent of the servo (value `0.0` to `1.0`). Causes the servo to adapt its position
     pub fn set_perc(&mut self, perc : f32) {
         self.pwm.set_period(self.consts.pulse_for_factor(perc), self.consts.period_time());
-        self.gamma = self.consts.gamma_max * perc
+        self.abs_pos = self.consts.abs_pos_max * perc
     }
 
     // Positions

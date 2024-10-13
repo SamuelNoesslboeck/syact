@@ -51,7 +51,7 @@ use stepper::BuilderError;
         fn set_temp_dir(&mut self, dir_opt : Option<Direction>);
 
         /// Runs a check of the movement process and Interrupts if it has a reason to
-        fn check(&mut self, gamma : Gamma) -> Option<InterruptReason>;
+        fn check(&mut self, abs_pos : AbsPos) -> Option<InterruptReason>;
     }
 
     /// Reasons why an interrupt was triggered
@@ -94,8 +94,8 @@ use stepper::BuilderError;
     /// General Error type for `SyncActuators`
     #[derive(Clone, Debug)]
     pub enum SyncActuatorError {
-        /// The delta distance given is invalid
-        InvaldDeltaDistance(Delta),
+        /// The rel_pos distance given is invalid
+        InvaldDeltaDistance(RelDist),
 
         // Motor specific errors
         /// An error that occured with the `StepperBuilder` for a stepper motor
@@ -113,11 +113,15 @@ use stepper::BuilderError;
     // impl std::error::Error for SyncActuatorError { }
     
     pub trait SyncActuatorState {
-        fn gamma(&self) -> Gamma; 
+        fn abs_pos(&self) -> AbsPos; 
 
         fn moving(&self) -> bool;
 
-        fn halt(&self);
+        fn direction(&self) -> Direction;
+
+        // Actions
+            fn halt(&self);
+        // 
     }   
 
     /// Trait for defining controls and components of synchronous actuators
@@ -130,16 +134,18 @@ use stepper::BuilderError;
         // Movement
             /// Moves the component by the relative distance as fast as possible, halts the script until 
             /// the movement is finshed and returns the actual **relative** distance travelled
-            fn drive_rel(&mut self, delta : Delta, speed : Factor) -> Result<(), SyncActuatorError>;
+            fn drive_rel(&mut self, rel_pos : RelDist, speed : Factor) -> Result<(), SyncActuatorError>;
 
             /// Moves the component to the given position as fast as possible, halts the script until the 
             /// movement is finished and returns the actual **relative** distance travelled.
             #[inline]
-            fn drive_abs(&mut self, gamma : Gamma, speed : Factor) -> Result<(), SyncActuatorError> {
-                let delta = gamma - self.gamma();
-                self.drive_rel(delta, speed)
+            fn drive_abs(&mut self, abs_pos : AbsPos, speed : Factor) -> Result<(), SyncActuatorError> {
+                let rel_pos = abs_pos - self.abs_pos();
+                self.drive_rel(rel_pos, speed)
             }
+        //
 
+        // State
             fn state(&self) -> &dyn SyncActuatorState;
 
             fn clone_state(&self) -> Arc<dyn SyncActuatorState>;
@@ -152,7 +158,7 @@ use stepper::BuilderError;
             /// use syact::prelude::*;
             /// 
             /// // Position of components
-            /// const POS : Gamma = Gamma(10.0);
+            /// const POS : AbsPos = AbsPos(10.0);
             /// 
             /// // Create a new cylinder (implements SyncComp)
             /// let mut cylinder = LinearAxis::new(
@@ -160,22 +166,22 @@ use stepper::BuilderError;
             ///     Stepper::new_gen().unwrap(), 
             /// 0.5);    // Ratio is set to 0.5, which means for each radian the motor moves, the cylinder moves for 0.5 mm
             /// 
-            /// cylinder.set_gamma(POS);
+            /// cylinder.set_abs_pos(POS);
             /// 
-            /// assert!((cylinder.gamma() - POS).abs() < Delta(0.05));      // Check with small tolerance
+            /// assert!((cylinder.abs_pos() - POS).abs() < RelDist(0.05));      // Check with small tolerance
             /// ```
-            fn gamma(&self) -> Gamma;
+            fn abs_pos(&self) -> AbsPos;
 
             /// Overwrite the current **absolute** position of the component without triggering actual movements. 
             /// 
             /// Be aware that only full steps can be written in distance, meaning that for position comparision a 
-            /// small tolerance has to be considered, as the value written won't be the exact gamma value given.
+            /// small tolerance has to be considered, as the value written won't be the exact abs_pos value given.
             /// 
             /// ```rust
             /// use syact::prelude::*;
             /// 
             /// // Position of components
-            /// const POS : Gamma = Gamma(10.0);
+            /// const POS : AbsPos = AbsPos(10.0);
             /// 
             /// // Create a new cylinder (implements SyncComp)
             /// let mut cylinder = LinearAxis::new(
@@ -183,11 +189,11 @@ use stepper::BuilderError;
             ///     Stepper::new_gen().unwrap(), 
             /// 0.5);    // Ratio is set to 0.5, which means for each radian the motor moves, the cylinder moves for 0.5 mm
             /// 
-            /// cylinder.set_gamma(POS);
+            /// cylinder.set_abs_pos(POS);
             /// 
-            /// assert!((cylinder.gamma() - POS).abs() < Delta(0.05));      // Check with small tolerance
+            /// assert!((cylinder.abs_pos() - POS).abs() < RelDist(0.05));      // Check with small tolerance
             /// ```
-            fn set_gamma(&mut self, gamma : Gamma);
+            fn set_abs_pos(&mut self, abs_pos : AbsPos);
 
             /// Returns the maximum velocity of the component. It can be set using `SyncComp::set_velocity_max()`. 
             /// The component cannot move faster than the velocity  given (valid for all movement operations)
@@ -206,7 +212,12 @@ use stepper::BuilderError;
             fn set_velocity_max(&mut self, velocity_max : Velocity);
         //
 
+
         // Position limits
+            fn limit_min(&self) -> Option<AbsPos>;
+
+            fn limit_max(&self) -> Option<AbsPos>;
+
             /// Returns if any limit positions have been reached. The value returned can either be radians or millimeters, 
             /// depending on the type of component.
             /// 
@@ -224,10 +235,10 @@ use stepper::BuilderError;
             /// use syact::prelude::*;
             /// 
             /// // Limits
-            /// const LIM_MAX : Gamma = Gamma(1.0);
-            /// const LIM_MIN : Gamma = Gamma(-2.0);
+            /// const LIM_MAX : AbsPos = AbsPos(1.0);
+            /// const LIM_MIN : AbsPos = AbsPos(-2.0);
             /// 
-            /// const LIM_MIN_LOWER : Gamma = Gamma(-3.0);
+            /// const LIM_MIN_LOWER : AbsPos = AbsPos(-3.0);
             /// 
             /// // Create a new gear bearing (implements SyncComp)
             /// let mut gear = Gear::new(
@@ -237,28 +248,28 @@ use stepper::BuilderError;
             /// 
             /// gear.set_pos_limits(Some(LIM_MIN), Some(LIM_MAX));
             /// 
-            /// assert_eq!(gear.resolve_pos_limits_for_gamma(Gamma(1.5)), Delta(0.5));     // Over the maximum
-            /// assert_eq!(gear.resolve_pos_limits_for_gamma(Gamma(0.5)), Delta::ZERO);    // In range
-            /// assert_eq!(gear.resolve_pos_limits_for_gamma(Gamma(-4.0)), Delta(-2.0));   // Under the minimum
+            /// assert_eq!(gear.resolve_pos_limits_for_abs_pos(AbsPos(1.5)), RelDist(0.5));     // Over the maximum
+            /// assert_eq!(gear.resolve_pos_limits_for_abs_pos(AbsPos(0.5)), RelDist::ZERO);    // In range
+            /// assert_eq!(gear.resolve_pos_limits_for_abs_pos(AbsPos(-4.0)), RelDist(-2.0));   // Under the minimum
             /// 
             /// gear.set_pos_limits(Some(LIM_MIN_LOWER), None);                // Overwriting only `min` limit
             /// 
-            /// assert_eq!(gear.resolve_pos_limits_for_gamma(Gamma(1.5)), Delta(0.5));     // Over the maximum
-            /// assert_eq!(gear.resolve_pos_limits_for_gamma(Gamma(0.5)), Delta::ZERO);    // In range
-            /// assert_eq!(gear.resolve_pos_limits_for_gamma(Gamma(-4.0)), Delta(-1.0));   // Under the minimum, but less
+            /// assert_eq!(gear.resolve_pos_limits_for_abs_pos(AbsPos(1.5)), RelDist(0.5));     // Over the maximum
+            /// assert_eq!(gear.resolve_pos_limits_for_abs_pos(AbsPos(0.5)), RelDist::ZERO);    // In range
+            /// assert_eq!(gear.resolve_pos_limits_for_abs_pos(AbsPos(-4.0)), RelDist(-1.0));   // Under the minimum, but less
             /// 
             /// gear.overwrite_pos_limits(Some(LIM_MIN_LOWER), None);              // Overwriting only both limits with [overwrite_pos_limits()]
             /// 
-            /// assert_eq!(gear.resolve_pos_limits_for_gamma(Gamma(1.5)), Delta::ZERO);    // In range, as the `max` limit has been deleted
-            /// assert_eq!(gear.resolve_pos_limits_for_gamma(Gamma(0.5)), Delta::ZERO);    // In range
-            /// assert_eq!(gear.resolve_pos_limits_for_gamma(Gamma(-4.0)), Delta(-1.0));   // Under the minimum, but less
+            /// assert_eq!(gear.resolve_pos_limits_for_abs_pos(AbsPos(1.5)), RelDist::ZERO);    // In range, as the `max` limit has been deleted
+            /// assert_eq!(gear.resolve_pos_limits_for_abs_pos(AbsPos(0.5)), RelDist::ZERO);    // In range
+            /// assert_eq!(gear.resolve_pos_limits_for_abs_pos(AbsPos(-4.0)), RelDist(-1.0));   // Under the minimum, but less
             /// ```
-            fn resolve_pos_limits_for_gamma(&self, gamma : Gamma) -> Delta;
+            fn resolve_pos_limits_for_abs_pos(&self, abs_pos : AbsPos) -> RelDist;
 
             /// Sets an endpoint in the current direction by modifying the components limits. For example, when the component is moving
             /// in the positive direction and the endpoint is set, this function will overwrite the current maximum limit with the current
-            /// gamma value. The component is then not allowed to move in the current direction anymore. 
-            fn set_endpos(&mut self, set_gamma : Gamma);
+            /// abs_pos value. The component is then not allowed to move in the current direction anymore. 
+            fn set_endpos(&mut self, set_abs_pos : AbsPos);
 
             /// Set the limits for the minimum and maximum angles that the component can reach, note that the limit will 
             /// be converted and transfered to the parent component if defined. 
@@ -270,10 +281,10 @@ use stepper::BuilderError;
             /// use syact::prelude::*;
             /// 
             /// // Limits
-            /// const LIM_MAX : Gamma = Gamma(1.0);
-            /// const LIM_MIN : Gamma = Gamma(-2.0);
+            /// const LIM_MAX : AbsPos = AbsPos(1.0);
+            /// const LIM_MIN : AbsPos = AbsPos(-2.0);
             /// 
-            /// const LIM_MIN_LOWER : Gamma = Gamma(-3.0);
+            /// const LIM_MIN_LOWER : AbsPos = AbsPos(-3.0);
             /// 
             /// // Create a new gear bearing (implements SyncComp)
             /// let mut gear = Gear::new(
@@ -283,23 +294,23 @@ use stepper::BuilderError;
             /// 
             /// gear.set_pos_limits(Some(LIM_MIN), Some(LIM_MAX));
             /// 
-            /// assert_eq!(gear.resolve_pos_limits_for_gamma(Gamma(1.5)), Delta(0.5));     // Over the maximum
-            /// assert_eq!(gear.resolve_pos_limits_for_gamma(Gamma(0.5)), Delta::ZERO);    // In range
-            /// assert_eq!(gear.resolve_pos_limits_for_gamma(Gamma(-4.0)), Delta(-2.0));   // Under the minimum
+            /// assert_eq!(gear.resolve_pos_limits_for_abs_pos(AbsPos(1.5)), RelDist(0.5));     // Over the maximum
+            /// assert_eq!(gear.resolve_pos_limits_for_abs_pos(AbsPos(0.5)), RelDist::ZERO);    // In range
+            /// assert_eq!(gear.resolve_pos_limits_for_abs_pos(AbsPos(-4.0)), RelDist(-2.0));   // Under the minimum
             /// 
             /// gear.set_pos_limits(Some(LIM_MIN_LOWER), None);                // Overwriting only `min` limit
             /// 
-            /// assert_eq!(gear.resolve_pos_limits_for_gamma(Gamma(1.5)), Delta(0.5));     // Over the maximum
-            /// assert_eq!(gear.resolve_pos_limits_for_gamma(Gamma(0.5)), Delta::ZERO);    // In range
-            /// assert_eq!(gear.resolve_pos_limits_for_gamma(Gamma(-4.0)), Delta(-1.0));   // Under the minimum, but less
+            /// assert_eq!(gear.resolve_pos_limits_for_abs_pos(AbsPos(1.5)), RelDist(0.5));     // Over the maximum
+            /// assert_eq!(gear.resolve_pos_limits_for_abs_pos(AbsPos(0.5)), RelDist::ZERO);    // In range
+            /// assert_eq!(gear.resolve_pos_limits_for_abs_pos(AbsPos(-4.0)), RelDist(-1.0));   // Under the minimum, but less
             /// 
             /// gear.overwrite_pos_limits(Some(LIM_MIN_LOWER), None);              // Overwriting only both limits with [overwrite_pos_limits()]
             /// 
-            /// assert_eq!(gear.resolve_pos_limits_for_gamma(Gamma(1.5)), Delta::ZERO);    // In range, as the `max` limit has been deleted
-            /// assert_eq!(gear.resolve_pos_limits_for_gamma(Gamma(0.5)), Delta::ZERO);    // In range
-            /// assert_eq!(gear.resolve_pos_limits_for_gamma(Gamma(-4.0)), Delta(-1.0));   // Under the minimum, but less
+            /// assert_eq!(gear.resolve_pos_limits_for_abs_pos(AbsPos(1.5)), RelDist::ZERO);    // In range, as the `max` limit has been deleted
+            /// assert_eq!(gear.resolve_pos_limits_for_abs_pos(AbsPos(0.5)), RelDist::ZERO);    // In range
+            /// assert_eq!(gear.resolve_pos_limits_for_abs_pos(AbsPos(-4.0)), RelDist(-1.0));   // Under the minimum, but less
             /// ```
-            fn set_pos_limits(&mut self, min : Option<Gamma>, max : Option<Gamma>);
+            fn set_pos_limits(&mut self, min : Option<AbsPos>, max : Option<AbsPos>);
 
             /// Set the limits for the minimum and maximum angles that the component can reach, note that the limit will 
             /// be converted and transfered to the parent component if this component has one. 
@@ -310,10 +321,10 @@ use stepper::BuilderError;
             /// use syact::prelude::*;
             /// 
             /// // Limits
-            /// const LIM_MAX : Gamma = Gamma(1.0);
-            /// const LIM_MIN : Gamma = Gamma(-2.0);
+            /// const LIM_MAX : AbsPos = AbsPos(1.0);
+            /// const LIM_MIN : AbsPos = AbsPos(-2.0);
             /// 
-            /// const LIM_MIN_LOWER : Gamma = Gamma(-3.0);
+            /// const LIM_MIN_LOWER : AbsPos = AbsPos(-3.0);
             /// 
             /// // Create a new gear bearing (implements SyncComp)
             /// let mut gear = Gear::new(
@@ -323,23 +334,23 @@ use stepper::BuilderError;
             /// 
             /// gear.set_pos_limits(Some(LIM_MIN), Some(LIM_MAX));
             /// 
-            /// assert_eq!(gear.resolve_pos_limits_for_gamma(Gamma(1.5)), Delta(0.5));     // Over the maximum
-            /// assert_eq!(gear.resolve_pos_limits_for_gamma(Gamma(0.5)), Delta::ZERO);    // In range
-            /// assert_eq!(gear.resolve_pos_limits_for_gamma(Gamma(-4.0)), Delta(-2.0));   // Under the minimum
+            /// assert_eq!(gear.resolve_pos_limits_for_abs_pos(AbsPos(1.5)), RelDist(0.5));     // Over the maximum
+            /// assert_eq!(gear.resolve_pos_limits_for_abs_pos(AbsPos(0.5)), RelDist::ZERO);    // In range
+            /// assert_eq!(gear.resolve_pos_limits_for_abs_pos(AbsPos(-4.0)), RelDist(-2.0));   // Under the minimum
             /// 
             /// gear.set_pos_limits(Some(LIM_MIN_LOWER), None);                // Overwriting only `min` limit
             /// 
-            /// assert_eq!(gear.resolve_pos_limits_for_gamma(Gamma(1.5)), Delta(0.5));     // Over the maximum
-            /// assert_eq!(gear.resolve_pos_limits_for_gamma(Gamma(0.5)), Delta::ZERO);    // In range
-            /// assert_eq!(gear.resolve_pos_limits_for_gamma(Gamma(-4.0)), Delta(-1.0));   // Under the minimum, but less
+            /// assert_eq!(gear.resolve_pos_limits_for_abs_pos(AbsPos(1.5)), RelDist(0.5));     // Over the maximum
+            /// assert_eq!(gear.resolve_pos_limits_for_abs_pos(AbsPos(0.5)), RelDist::ZERO);    // In range
+            /// assert_eq!(gear.resolve_pos_limits_for_abs_pos(AbsPos(-4.0)), RelDist(-1.0));   // Under the minimum, but less
             /// 
             /// gear.overwrite_pos_limits(Some(LIM_MIN_LOWER), None);              // Overwriting only both limits with [overwrite_pos_limits()]
             /// 
-            /// assert_eq!(gear.resolve_pos_limits_for_gamma(Gamma(1.5)), Delta::ZERO);    // In range, as the `max` limit has been deleted
-            /// assert_eq!(gear.resolve_pos_limits_for_gamma(Gamma(0.5)), Delta::ZERO);    // In range
-            /// assert_eq!(gear.resolve_pos_limits_for_gamma(Gamma(-4.0)), Delta(-1.0));   // Under the minimum, but less
+            /// assert_eq!(gear.resolve_pos_limits_for_abs_pos(AbsPos(1.5)), RelDist::ZERO);    // In range, as the `max` limit has been deleted
+            /// assert_eq!(gear.resolve_pos_limits_for_abs_pos(AbsPos(0.5)), RelDist::ZERO);    // In range
+            /// assert_eq!(gear.resolve_pos_limits_for_abs_pos(AbsPos(-4.0)), RelDist(-1.0));   // Under the minimum, but less
             /// ```
-            fn overwrite_pos_limits(&mut self, min : Option<Gamma>, max : Option<Gamma>);
+            fn overwrite_pos_limits(&mut self, min : Option<AbsPos>, max : Option<AbsPos>);
         // 
 
         // Load calculation
@@ -369,7 +380,7 @@ use stepper::BuilderError;
             /// 
             /// gear.apply_gen_force(FORCE);
             /// 
-            /// assert_eq!(Gamma(2.0), gear.gamma_for_child(Gamma(1.0)));
+            /// assert_eq!(AbsPos(2.0), gear.abs_pos_for_child(AbsPos(1.0)));
             /// assert_eq!(Force(0.1), gear.child().force_gen());     // Forces get smaller for smaller gears
             /// ```
             fn apply_gen_force(&mut self, force : Force) -> Result<(), BuilderError>;
@@ -402,7 +413,7 @@ use stepper::BuilderError;
             /// // Applies the inertia to the gearbearing component
             /// gear.apply_inertia(INERTIA);
             /// 
-            /// assert_eq!(Gamma(2.0), gear.gamma_for_child(Gamma(1.0)));
+            /// assert_eq!(AbsPos(2.0), gear.abs_pos_for_child(AbsPos(1.0)));
             /// assert_eq!(Inertia(1.0), gear.child().inertia());
             /// ```
             fn apply_inertia(&mut self, inertia : Inertia);

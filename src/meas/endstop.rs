@@ -46,7 +46,7 @@ impl<P : InputPin> Interruptor for EndStop<P> {
         self.temp_dir = dir_opt;
     }
 
-    fn check(&mut self, _gamma : Gamma) -> Option<InterruptReason> {
+    fn check(&mut self, _abs_pos : AbsPos) -> Option<InterruptReason> {
         // unwraping unsafe is safe, as no error can occur
         if unsafe { self.sys_pin.is_high().unwrap_unchecked() } == self.trigger {    
             Some(InterruptReason::EndReached)
