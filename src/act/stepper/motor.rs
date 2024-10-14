@@ -6,8 +6,8 @@ use core::sync::atomic::Ordering::Relaxed;
 use syunit::*;
 
 use crate::{AsyncActuator, Dismantle, Setup, SyncActuator};
-use crate::act::{InterruptReason, Interruptible, Interruptor, SyncActuatorError, SyncActuatorState};
-use crate::act::asyn::{AsyncActuatorError, AsyncActuatorState};
+use crate::act::{InterruptReason, Interruptible, Interruptor, ActuatorError, SyncActuatorState};
+use crate::act::asyn::AsyncActuatorState;
 use crate::act::stepper::{StepperActuator, StepperController, StepperBuilder, BuilderError, DriveMode, StepperState};
 use crate::data::{StepperConfig, StepperConst, MicroSteps}; 
 use crate::math::movements::DefinedActuator;
@@ -21,6 +21,7 @@ pub struct StepperMotor<B : StepperBuilder + Send + 'static, C : StepperControll
 
     _state: Arc<StepperState>,
 
+    // Limits
     _limit_min : Option<AbsPos>,
     _limit_max : Option<AbsPos>,
 
@@ -57,14 +58,13 @@ impl<B : StepperBuilder + Send + 'static, C : StepperController + Send + 'static
     /// ## Thread
     /// 
     /// Blocks the current thread and creates the step signals until the builder is finished
-    pub fn handle_builder(&mut self) -> Result<(), SyncActuatorError> {
+    pub fn handle_builder(&mut self) -> Result<(), ActuatorError> {
         while let Some(node) = self.builder.next() {
             // Get the current direction of the motor (builder)
             let direction = self.builder.direction();
             // Get the current drive mode of the motor (builder)
             let drive_mode = self.builder.drive_mode();
 
-            
             // Check all interruptors if the motor is not stopping already
             if *drive_mode != DriveMode::Stop {
                 for intr in self.interruptors.iter_mut() {
@@ -82,9 +82,7 @@ impl<B : StepperBuilder + Send + 'static, C : StepperController + Send + 'static
                         intr.set_temp_dir(Some(direction));
                         self._intr_reason.replace(reason);
                         
-                        if let Err(e) = self.builder.set_drive_mode(DriveMode::Stop, &mut self.ctrl) {
-                            return Err(SyncActuatorError::StepperBuilderError(e));
-                        }
+                        self.builder.set_drive_mode(DriveMode::Stop, &mut self.ctrl)?; 
                     } else {
                         // Clear temporary direction
                         intr.set_temp_dir(None);
@@ -93,26 +91,20 @@ impl<B : StepperBuilder + Send + 'static, C : StepperController + Send + 'static
             }
 
             // Make step and return error if occured
-            if let Err(e) = self.ctrl.step(node) {
-                return Err(SyncActuatorError::StepperCtrlError(e));
-            }
+            self.ctrl.step(node)?;
 
-            // Check if the abs_pos value exeeds any limits
+            // Check if the abs_pos value exeeds any limits, stop the movement if it does
             if direction.as_bool() {
                 self._state._abs_pos.fetch_add(self.builder.step_angle().0, Relaxed);
 
                 if self.abs_pos() > self.limit_max().unwrap_or(AbsPos::INFINITY) {
-                    if let Err(e) = self.builder.set_drive_mode(DriveMode::Stop, &mut self.ctrl) {
-                        return Err(SyncActuatorError::StepperBuilderError(e))
-                    }
+                    self.builder.set_drive_mode(DriveMode::Stop, &mut self.ctrl)?;
                 } 
             } else {
                 self._state._abs_pos.fetch_sub(self.builder.step_angle().0, Relaxed);
 
                 if self.abs_pos() < self.limit_min().unwrap_or(AbsPos::NEG_INFINITY) {
-                    if let Err(e) = self.builder.set_drive_mode(DriveMode::Stop, &mut self.ctrl) {
-                        return Err(SyncActuatorError::StepperBuilderError(e))
-                    }
+                    self.builder.set_drive_mode(DriveMode::Stop, &mut self.ctrl)?;
                 } 
             }
         }
@@ -150,23 +142,20 @@ impl<B : StepperBuilder + Send + 'static, C : StepperController + Send + 'static
 
 impl<B : StepperBuilder + Send + 'static, C : StepperController + Send + 'static> SyncActuator for StepperMotor<B, C> {
     // Movement
-        fn drive_rel(&mut self, rel_pos : RelDist, speed_f : Factor) -> Result<(), SyncActuatorError> {
-            if !rel_pos.is_finite() {
-                return Err(SyncActuatorError::InvaldDeltaDistance(rel_pos));
+        fn drive_rel(&mut self, rel_dist : RelDist, speed_f : Factor) -> Result<(), ActuatorError> {
+            if !rel_dist.is_finite() {
+                return Err(ActuatorError::InvaldRelativeDistance(rel_dist));
             }
 
             // Set drive mode, return mapped error if one occurs
-            if let Err(e) = self.builder.set_drive_mode(DriveMode::FixedDistance(rel_pos, Velocity::ZERO, speed_f), &mut self.ctrl) {
-                return Err(SyncActuatorError::StepperBuilderError(e));
-            }
-
+            self.builder.set_drive_mode(DriveMode::FixedDistance(rel_dist, Velocity::ZERO, speed_f), &mut self.ctrl)?;
             self.handle_builder()
         }
 
         /// Absolute movements derive from relative movements ([Self::drive_rel])
-        fn drive_abs(&mut self, abs_pos : AbsPos, speed : Factor) -> Result<(), SyncActuatorError> {
-            let rel_pos = abs_pos - self.abs_pos();
-            self.drive_rel(rel_pos, speed)
+        fn drive_abs(&mut self, abs_pos : AbsPos, speed : Factor) -> Result<(), ActuatorError> {
+            let rel_dist = abs_pos - self.abs_pos();
+            self.drive_rel(rel_dist, speed)
         }
 
         fn state(&self) -> &dyn SyncActuatorState {
@@ -349,16 +338,16 @@ where
 
 impl<B : StepperBuilder + Send + 'static, C : StepperController + Send + 'static> AsyncActuator for StepperMotor<B, C> 
 {
-    fn drive_factor(&mut self, dir : Direction, speed : Factor) -> Result<(), AsyncActuatorError> {
+    fn drive_factor(&mut self, direction : Direction, speed : Factor) -> Result<(), ActuatorError> {
         // Set drive mode, return mapped error if one occurs
-        if let Err(e) = self.builder.set_drive_mode(DriveMode::FixedDistance(rel_pos, Velocity::ZERO, speed_f), &mut self.ctrl) {
-            return Err(SyncActuatorError::StepperBuilderError(e));
-        }
-
+        self.builder.set_drive_mode(DriveMode::ConstFactor(speed, direction), &mut self.ctrl)?;
+        self.handle_builder()
     }
 
-    fn drive_speed(&mut self, dir : Direction, speed : Velocity) -> Result<(), AsyncActuatorError> {
-        
+    fn drive_speed(&mut self, direction : Direction, speed : Velocity) -> Result<(), ActuatorError> {
+        // Set drive mode, return mapped error if one occurs
+        self.builder.set_drive_mode(DriveMode::ConstVelocity(speed, direction), &mut self.ctrl)?;
+        self.handle_builder()
     }
 
     // State

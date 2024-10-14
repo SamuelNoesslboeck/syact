@@ -4,7 +4,7 @@ use serde::{Serialize, Deserialize};
 use syunit::*;
 
 use crate::SyncActuator;
-use crate::act::{InterruptReason, Interruptible, SyncActuatorError};
+use crate::act::{InterruptReason, Interruptible, ActuatorError};
 
 // Submodules
     mod endstop;
@@ -36,11 +36,11 @@ use crate::act::{InterruptReason, Interruptible, SyncActuatorError};
         /// The motor stopped because of the wrong reason, e.g. overloading it
         WrongInterruptReason(InterruptReason),
         /// There was an issue with the motor itself
-        SyncActuatorError(SyncActuatorError)
+        SyncActuatorError(ActuatorError)
     }
 
-    impl From<SyncActuatorError> for SimpleMeasError {
-        fn from(value: SyncActuatorError) -> Self {
+    impl From<ActuatorError> for SimpleMeasError {
+        fn from(value: ActuatorError) -> Self {
             SimpleMeasError::SyncActuatorError(value)
         }
     }

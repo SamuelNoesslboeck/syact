@@ -9,13 +9,13 @@ pub const ROOT_EPSILON : f32 = -1.0e-4;
 /// 
 /// The function panics if the given acceleration is not normal (`Acceleration::is_normal()`)
 #[inline]
-pub fn travel_times(rel_pos : RelDist, velocity : Velocity, acceleration : Acceleration) -> (Time, Time) {
+pub fn travel_times(rel_dist : RelDist, velocity : Velocity, acceleration : Acceleration) -> (Time, Time) {
     if !acceleration.is_normal() {
-        panic!("The given acceleration is invalid (rel_pos: {}, velocity : {}, acceleration: {})", rel_pos, velocity, acceleration);
+        panic!("The given acceleration is invalid (rel_dist: {}, velocity : {}, acceleration: {})", rel_dist, velocity, acceleration);
     }
 
     let p = velocity / acceleration;
-    let q = 2.0 * rel_pos.0 / acceleration.0; 
+    let q = 2.0 * rel_dist.0 / acceleration.0; 
 
     let inner = p.0.powi(2) + q;
     let mut root = Time(inner.sqrt());
@@ -27,14 +27,14 @@ pub fn travel_times(rel_pos : RelDist, velocity : Velocity, acceleration : Accel
     ( -p + root, -p - root )
 }
 
-/// Time required to move a distance `rel_pos` from a zero-velocity state with the acceleration `acceleration`
-pub fn accel_from_zero(rel_pos : RelDist, acceleration : Acceleration) -> Time {
-    Time((2.0 * rel_pos.0 / acceleration.0).sqrt())
+/// Time required to move a distance `rel_dist` from a zero-velocity state with the acceleration `acceleration`
+pub fn accel_from_zero(rel_dist : RelDist, acceleration : Acceleration) -> Time {
+    Time((2.0 * rel_dist.0 / acceleration.0).sqrt())
 }
 
-/// The acceleration required to exit a certain distance `rel_pos` with the given velocity `velocity`, starting with a velocity of zero
-pub fn alpha_req_for_dist(rel_pos : RelDist, velocity : Velocity) -> Acceleration {
-    Acceleration(velocity.0 * velocity.0 / 2.0 / rel_pos.0)
+/// The acceleration required to exit a certain distance `rel_dist` with the given velocity `velocity`, starting with a velocity of zero
+pub fn alpha_req_for_dist(rel_dist : RelDist, velocity : Velocity) -> Acceleration {
+    Acceleration(velocity.0 * velocity.0 / 2.0 / rel_dist.0)
 }
 
 // Stepper

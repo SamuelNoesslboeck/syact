@@ -4,8 +4,8 @@ use alloc::sync::Arc;
 use syunit::*;
 
 use crate::{SyncActuator, StepperConfig, AsyncActuator};
-use crate::act::{Interruptible, SyncActuatorError, SyncActuatorState};
-use crate::act::asyn::{AsyncActuatorError, AsyncActuatorState};
+use crate::act::{Interruptible, ActuatorError, SyncActuatorState};
+use crate::act::asyn::AsyncActuatorState;
 use crate::act::stepper::{StepperActuator, BuilderError};
 use crate::data::MicroSteps;
 use crate::math::movements::DefinedActuator;
@@ -42,12 +42,12 @@ pub trait ActuatorParent {
                 child_abs_pos * self.ratio()
             }
 
-            fn rel_pos_for_chlid(&self, parent_rel_pos : RelDist) -> RelDist {
-                parent_rel_pos / self.ratio()
+            fn rel_dist_for_chlid(&self, parent_rel_dist : RelDist) -> RelDist {
+                parent_rel_dist / self.ratio()
             }
 
-            fn rel_pos_for_parent(&self, child_rel_pos : RelDist) -> RelDist {
-                child_rel_pos * self.ratio()
+            fn rel_dist_for_parent(&self, child_rel_dist : RelDist) -> RelDist {
+                child_rel_dist * self.ratio()
             }
 
             fn velocity_for_child(&self, parent_velocity : Velocity) -> Velocity {
@@ -97,9 +97,9 @@ pub trait ActuatorParent {
         T::Child : SyncActuator
     {
         // Drive
-            fn drive_rel(&mut self, mut rel_pos : RelDist, speed : Factor) -> Result<(), SyncActuatorError> {
-                rel_pos = self.rel_pos_for_chlid(rel_pos);
-                self.child_mut().drive_rel(rel_pos, speed)
+            fn drive_rel(&mut self, mut rel_dist : RelDist, speed : Factor) -> Result<(), ActuatorError> {
+                rel_dist = self.rel_dist_for_chlid(rel_dist);
+                self.child_mut().drive_rel(rel_dist, speed)
             }
 
             fn state(&self) -> &dyn super::SyncActuatorState {
@@ -141,7 +141,7 @@ pub trait ActuatorParent {
             }
 
             fn resolve_pos_limits_for_abs_pos(&self, abs_pos : AbsPos) -> RelDist {
-                self.rel_pos_for_parent(self.child().resolve_pos_limits_for_abs_pos(
+                self.rel_dist_for_parent(self.child().resolve_pos_limits_for_abs_pos(
                     self.abs_pos_for_child(abs_pos)
                 ))
             }
@@ -223,7 +223,7 @@ pub trait ActuatorParent {
         // 
 
         fn step_ang(&self) -> RelDist {
-            self.rel_pos_for_parent(self.child().step_ang())
+            self.rel_dist_for_parent(self.child().step_ang())
         }
     }
 
@@ -245,11 +245,11 @@ pub trait ActuatorParent {
         T::Child : AsyncActuator
     {
         
-        fn drive_factor(&mut self, dir : Direction, speed : Factor) -> Result<(), AsyncActuatorError> {
+        fn drive_factor(&mut self, dir : Direction, speed : Factor) -> Result<(), ActuatorError> {
             self.child_mut().drive_factor(dir, speed)
         }
 
-        fn drive_speed(&mut self, dir : Direction, speed : Velocity) -> Result<(), AsyncActuatorError> {
+        fn drive_speed(&mut self, dir : Direction, speed : Velocity) -> Result<(), ActuatorError> {
             self.child_mut().drive_speed(dir, speed)
         }
 

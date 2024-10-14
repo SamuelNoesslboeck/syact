@@ -25,6 +25,8 @@ use stepper::BuilderError;
     /// Stepper motors and their unique methods and traits
     pub mod stepper;
     pub use stepper::{StepperActuator, Stepper};
+
+    use crate::prelude::ControllerError;
 //
 
 // #####################
@@ -88,30 +90,70 @@ use stepper::BuilderError;
     }
 //
 
-// ######################
-// #    SyncActuator    #
-// ######################
+// #######################
+// #    ActuatorError    #
+// #######################
     /// General Error type for `SyncActuators`
     #[derive(Clone, Debug)]
-    pub enum SyncActuatorError {
-        /// The rel_pos distance given is invalid
-        InvaldDeltaDistance(RelDist),
+    pub enum ActuatorError {
+        /// The rel_dist distance given is invalid
+        InvaldRelativeDistance(RelDist),
 
-        // Motor specific errors
-        /// An error that occured with the `StepperBuilder` for a stepper motor
-        StepperBuilderError(crate::act::stepper::BuilderError),
-        /// An error that occured with the `StepperController` of a stepper motor
-        StepperCtrlError(crate::act::stepper::ControllerError),
+        // Velocity errors
+            /// The velocity given is invalid somehow, depending on the context, see the function description
+            InvalidVeloicty(Velocity),
+            /// The velocity given is too high, depending on the context, see the function description
+            /// 0: `Velocity` - The given velocity
+            /// 1: `Velocity` - The velocity
+            VelocityTooHigh(Velocity, Velocity),
+        //
+
+        // Timing Error
+            /// The `Time` given is invalid somehow, depending on the context, see the function description
+            InvalidTime(Time),
+        // 
+
+        // Load
+            /// The component has been overloaded
+            Overload
+        // 
     }
 
-    impl core::fmt::Display for SyncActuatorError {
+    impl core::fmt::Display for ActuatorError {
         fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
             f.write_fmt(format_args!("{:?}", self))
         }
     }
 
-    // impl std::error::Error for SyncActuatorError { }
-    
+    // TODO: Implement std errors
+    // impl std::error::Error for ActuatorError { }
+
+    // From Stepper Errors
+        impl From<BuilderError> for ActuatorError {
+            fn from(value: BuilderError) -> Self {
+                match value {
+                    BuilderError::DistanceTooShort(dist, _, _) => Self::InvaldRelativeDistance(dist),
+                    BuilderError::InvalidVelocity(vel) => Self::InvalidVeloicty(vel),
+                    BuilderError::VelocityTooHigh(vel_given, vel_max) => Self::VelocityTooHigh(vel_given, vel_max),
+                    BuilderError::Overload => Self::Overload
+                }
+            }
+        }
+
+        impl From<ControllerError> for ActuatorError {
+            fn from(value: ControllerError) -> Self {
+                match value {
+                    ControllerError::TimeIsInvalid(time) => ActuatorError::InvalidTime(time),
+                    ControllerError::TimeTooShort(time) => ActuatorError::InvalidTime(time)
+                }
+            }
+        }
+    // 
+//
+
+// ######################
+// #    SyncActuator    #
+// ######################
     pub trait SyncActuatorState {
         fn abs_pos(&self) -> AbsPos; 
 
@@ -134,14 +176,14 @@ use stepper::BuilderError;
         // Movement
             /// Moves the component by the relative distance as fast as possible, halts the script until 
             /// the movement is finshed and returns the actual **relative** distance travelled
-            fn drive_rel(&mut self, rel_pos : RelDist, speed : Factor) -> Result<(), SyncActuatorError>;
+            fn drive_rel(&mut self, rel_dist : RelDist, speed : Factor) -> Result<(), ActuatorError>;
 
             /// Moves the component to the given position as fast as possible, halts the script until the 
             /// movement is finished and returns the actual **relative** distance travelled.
             #[inline]
-            fn drive_abs(&mut self, abs_pos : AbsPos, speed : Factor) -> Result<(), SyncActuatorError> {
-                let rel_pos = abs_pos - self.abs_pos();
-                self.drive_rel(rel_pos, speed)
+            fn drive_abs(&mut self, abs_pos : AbsPos, speed : Factor) -> Result<(), ActuatorError> {
+                let rel_dist = abs_pos - self.abs_pos();
+                self.drive_rel(rel_dist, speed)
             }
         //
 

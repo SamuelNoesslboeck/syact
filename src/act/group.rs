@@ -1,4 +1,4 @@
-use crate::act::{SyncActuator, SyncActuatorError};
+use crate::act::{SyncActuator, ActuatorError};
 use crate::prelude::BuilderError;
 
 use syunit::*;
@@ -62,14 +62,14 @@ where
     //
 
     /// Runs [SyncComp::drive_rel()] for all components
-    fn drive_rel(&mut self, rel_poss : [RelDist; C], speed : [Factor; C]) -> Result<[(); C], SyncActuatorError> {
+    fn drive_rel(&mut self, rel_dists : [RelDist; C], speed : [Factor; C]) -> Result<[(); C], ActuatorError> {
         self.try_for_each_mut(|act, index| {
-            act.drive_rel(rel_poss[index], speed[index])  
+            act.drive_rel(rel_dists[index], speed[index])  
         })
     }
 
     /// Runs [SyncComp::drive_abs()] for all components
-    fn drive_abs(&mut self, abs_pos : [AbsPos; C], speed : [Factor; C]) -> Result<[(); C], SyncActuatorError> {
+    fn drive_abs(&mut self, abs_pos : [AbsPos; C], speed : [Factor; C]) -> Result<[(); C], ActuatorError> {
         self.try_for_each_mut(|act, index| {
             act.drive_abs(abs_pos[index], speed[index])
         })
