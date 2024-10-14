@@ -155,15 +155,20 @@ use stepper::StepperBuilderError;
 // ######################
 // #    SyncActuator    #
 // ######################
+    /// The state of a `SyncActuator` is used to control the component while it is moving and to get data about the current movement
     pub trait SyncActuatorState {
+        /// Returns the current absolute position of the actuator
         fn abs_pos(&self) -> AbsPos; 
 
+        /// Returns whether the actuator is currently moving or not
         fn moving(&self) -> bool;
 
-        fn direction(&self) -> Direction;
-
         // Actions
+            /// Halt the actuator
             fn halt(&self);
+
+            /// Interrupt the movement of the actuator
+            fn interrupt(&self);
         // 
     }   
 
@@ -189,8 +194,10 @@ use stepper::StepperBuilderError;
         //
 
         // State
+            /// Returns a reference to the actuators `SyncActuatorState`
             fn state(&self) -> &dyn SyncActuatorState;
 
+            /// Returns an `Arc` reference counter to the given S
             fn clone_state(&self) -> Arc<dyn SyncActuatorState>;
         // 
 
@@ -257,8 +264,10 @@ use stepper::StepperBuilderError;
 
 
         // Position limits
+            /// The minimum position limit of the actuator, if set
             fn limit_min(&self) -> Option<AbsPos>;
 
+            /// The maximum position limit of the actuator, if set
             fn limit_max(&self) -> Option<AbsPos>;
 
             /// Returns if any limit positions have been reached. The value returned can either be radians or millimeters, 

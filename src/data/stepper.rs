@@ -17,18 +17,21 @@ pub struct StepperConfig {
 }
 
 impl StepperConfig {
+    /// The stepper is using 12 Volts and its rated current
     pub const VOLT12_NO_OVERLOAD : Self = Self {
         voltage: 12.0,
         overload_current: None
     }; 
 
+    /// The stepper is using 24 Volts and its rated current
     pub const VOLT24_NO_OVERLOAD : Self = Self {
-        voltage: 12.0,
+        voltage: 24.0,
         overload_current: None
     };
 
+    /// The stepper is using 48 Volts and its rated current
     pub const VOLT48_NO_OVERLOAD : Self = Self {
-        voltage: 12.0,
+        voltage: 48.0,
         overload_current: None
     };
 

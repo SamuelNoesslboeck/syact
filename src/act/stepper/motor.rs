@@ -111,6 +111,7 @@ impl<B : StepperBuilder + Send + 'static, C : StepperController + Send + 'static
         Ok(())
     }
 
+    /// Returns the current movement direction
     pub fn direction(&self) -> Direction {
         self.builder.direction()
     }

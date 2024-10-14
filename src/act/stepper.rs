@@ -87,12 +87,14 @@ use crate::math::movements::DefinedActuator;
 // ######################
 // #    StepperState    #
 // ######################
+    /// The state of a stepper motor, whether it is driving etc.
     pub struct StepperState {
         _abs_pos : AtomicF32,
         _moving : AtomicBool
     }
 
     impl StepperState {
+        /// Creates a new `StepperState`
         pub fn new() -> Self {
             StepperState {
                 _abs_pos: AtomicF32::new(AbsPos::ZERO.0),
@@ -114,8 +116,8 @@ use crate::math::movements::DefinedActuator;
             todo!()
         }
 
-        fn direction(&self) -> Direction {
-            todo!()
+        fn interrupt(&self) {
+            
         }
     }
 

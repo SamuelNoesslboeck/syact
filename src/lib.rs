@@ -1,6 +1,6 @@
 #![doc = include_str!("../README.md")]
 #![crate_name = "syact"]
-// #![deny(missing_docs)]
+#![deny(missing_docs)]
 #![cfg_attr(not(any(test, feature = "testing")), no_std)]
 #![cfg_attr(feature = "testing", allow(unused))]
 
