@@ -3,13 +3,14 @@ use alloc::sync::Arc;
 
 use syunit::*;
 
-use stepper::BuilderError;
+use stepper::StepperBuilderError;
 
 // ####################
 // #    SUBMODULES    #
 // ####################
     /// A module for async components like a basic DC-motor. These components cannot move certain distances or to absolute positions
     pub mod asyn;
+    pub use asyn::{AsyncActuator, AsyncActuatorState};
 
     mod comps;
     pub use comps::{Conveyor, Gear, LinearAxis};
@@ -24,9 +25,9 @@ use stepper::BuilderError;
 
     /// Stepper motors and their unique methods and traits
     pub mod stepper;
-    pub use stepper::{StepperActuator, Stepper};
+    pub use stepper::{StepperActuator, StepperMotor};
 
-    use crate::prelude::ControllerError;
+    use crate::prelude::StepperControllerError;
 //
 
 // #####################
@@ -129,22 +130,22 @@ use stepper::BuilderError;
     // impl std::error::Error for ActuatorError { }
 
     // From Stepper Errors
-        impl From<BuilderError> for ActuatorError {
-            fn from(value: BuilderError) -> Self {
+        impl From<StepperBuilderError> for ActuatorError {
+            fn from(value: StepperBuilderError) -> Self {
                 match value {
-                    BuilderError::DistanceTooShort(dist, _, _) => Self::InvaldRelativeDistance(dist),
-                    BuilderError::InvalidVelocity(vel) => Self::InvalidVeloicty(vel),
-                    BuilderError::VelocityTooHigh(vel_given, vel_max) => Self::VelocityTooHigh(vel_given, vel_max),
-                    BuilderError::Overload => Self::Overload
+                    StepperBuilderError::DistanceTooShort(dist, _, _) => Self::InvaldRelativeDistance(dist),
+                    StepperBuilderError::InvalidVelocity(vel) => Self::InvalidVeloicty(vel),
+                    StepperBuilderError::VelocityTooHigh(vel_given, vel_max) => Self::VelocityTooHigh(vel_given, vel_max),
+                    StepperBuilderError::Overload => Self::Overload
                 }
             }
         }
 
-        impl From<ControllerError> for ActuatorError {
-            fn from(value: ControllerError) -> Self {
+        impl From<StepperControllerError> for ActuatorError {
+            fn from(value: StepperControllerError) -> Self {
                 match value {
-                    ControllerError::TimeIsInvalid(time) => ActuatorError::InvalidTime(time),
-                    ControllerError::TimeTooShort(time) => ActuatorError::InvalidTime(time)
+                    StepperControllerError::TimeIsInvalid(time) => ActuatorError::InvalidTime(time),
+                    StepperControllerError::TimeTooShort(time) => ActuatorError::InvalidTime(time)
                 }
             }
         }
@@ -205,7 +206,7 @@ use stepper::BuilderError;
             /// // Create a new cylinder (implements SyncComp)
             /// let mut cylinder = LinearAxis::new(
             ///     // Stepper Motor as subcomponent (also implements SyncComp)
-            ///     Stepper::new_gen().unwrap(), 
+            ///     Stepper::default(), 
             /// 0.5);    // Ratio is set to 0.5, which means for each radian the motor moves, the cylinder moves for 0.5 mm
             /// 
             /// cylinder.set_abs_pos(POS);
@@ -228,7 +229,7 @@ use stepper::BuilderError;
             /// // Create a new cylinder (implements SyncComp)
             /// let mut cylinder = LinearAxis::new(
             ///     // Stepper Motor as subcomponent (also implements SyncComp)
-            ///     Stepper::new_gen().unwrap(), 
+            ///     Stepper::default(), 
             /// 0.5);    // Ratio is set to 0.5, which means for each radian the motor moves, the cylinder moves for 0.5 mm
             /// 
             /// cylinder.set_abs_pos(POS);
@@ -285,7 +286,7 @@ use stepper::BuilderError;
             /// // Create a new gear bearing (implements SyncComp)
             /// let mut gear = Gear::new(
             ///     // Stepper Motor as subcomponent (also implements SyncComp)
-            ///     Stepper::new_gen().unwrap(), 
+            ///     Stepper::default(), 
             /// 0.5);    // Ratio is set to 0.5, which means for each radian the motor moves, the bearing moves for half a radian
             /// 
             /// gear.set_pos_limits(Some(LIM_MIN), Some(LIM_MAX));
@@ -331,7 +332,7 @@ use stepper::BuilderError;
             /// // Create a new gear bearing (implements SyncComp)
             /// let mut gear = Gear::new(
             ///     // Stepper Motor as subcomponent (also implements SyncComp)
-            ///     Stepper::new_gen().unwrap(), 
+            ///     Stepper::default(), 
             /// 0.5);    // Ratio is set to 0.5, which means for each radian the motor moves, the bearing moves for half a radian
             /// 
             /// gear.set_pos_limits(Some(LIM_MIN), Some(LIM_MAX));
@@ -371,7 +372,7 @@ use stepper::BuilderError;
             /// // Create a new gear bearing (implements SyncComp)
             /// let mut gear = Gear::new(
             ///     // Stepper Motor as subcomponent (also implements SyncComp)
-            ///     Stepper::new_gen().unwrap(), 
+            ///     Stepper::default(), 
             /// 0.5);    // Ratio is set to 0.5, which means for each radian the motor moves, the bearing moves for half a radian
             /// 
             /// gear.set_pos_limits(Some(LIM_MIN), Some(LIM_MAX));
@@ -417,7 +418,7 @@ use stepper::BuilderError;
             /// // Create a new gear bearing (implements SyncComp)
             /// let mut gear = Gear::new(
             ///     // Stepper Motor as subcomponent (also implements SyncComp)
-            ///     Stepper::new_gen().unwrap(), 
+            ///     Stepper::default(), 
             /// 0.5);    // Ratio is set to 0.5, which means for each radian the motor moves, the bearing moves for half a radian
             /// 
             /// gear.apply_gen_force(FORCE);
@@ -425,10 +426,10 @@ use stepper::BuilderError;
             /// assert_eq!(AbsPos(2.0), gear.abs_pos_for_child(AbsPos(1.0)));
             /// assert_eq!(Force(0.1), gear.child().force_gen());     // Forces get smaller for smaller gears
             /// ```
-            fn apply_gen_force(&mut self, force : Force) -> Result<(), BuilderError>;
+            fn apply_gen_force(&mut self, force : Force) -> Result<(), StepperBuilderError>;
 
             /// Value positive in CW direction
-            fn apply_dir_force(&mut self, force : Force) -> Result<(), BuilderError>;
+            fn apply_dir_force(&mut self, force : Force) -> Result<(), StepperBuilderError>;
 
             // Inertia
             /// Returns the inertia applied to the component
@@ -449,7 +450,7 @@ use stepper::BuilderError;
             /// // Create a new gear bearing (implements SyncComp)
             /// let mut gear = Gear::new(
             ///     // Stepper Motor as subcomponent (also implements SyncComp)
-            ///     Stepper::new_gen().unwrap(), 
+            ///     Stepper::default(), 
             /// 0.5);    // Ratio is set to 0.5, which means for each radian the motor moves, the bearing moves for half a radian
             /// 
             /// // Applies the inertia to the gearbearing component

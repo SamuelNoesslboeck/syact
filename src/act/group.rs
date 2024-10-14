@@ -1,5 +1,5 @@
 use crate::act::{SyncActuator, ActuatorError};
-use crate::prelude::BuilderError;
+use crate::prelude::StepperBuilderError;
 
 use syunit::*;
 
@@ -144,7 +144,7 @@ where
 
         /// Runs [SyncComp::apply_force_gen()] for all components
         #[inline]
-        fn apply_forces(&mut self, forces : &[Force; C]) -> Result<(), BuilderError> {
+        fn apply_forces(&mut self, forces : &[Force; C]) -> Result<(), StepperBuilderError> {
             self.try_for_each_mut(|act, index| {
                 act.apply_gen_force(forces[index])
             })?;

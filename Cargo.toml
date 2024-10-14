@@ -22,10 +22,8 @@ log = "0.4.20"
 glam = "0.27.0"
 serde = { version = "1.0.192", features = [ "derive" ] }
 serde_json = "1.0.108"
-serde_repr = "0.1" 
-spin_sleep = "1.1.1" 
+spin_sleep = "1.2.1"
 syunit = "0.3.0"
-tokio = { version = "1.37.0", features = [ "full" ], optional = true }
 
 # Subcrates
 syact_macros = { path = "syact_macros" }
@@ -33,7 +31,7 @@ atomic_float = "1.1.0"
 
 [dev-dependencies]
 crossterm = "0.27.0"
-tokio = { version = "1.37.0", features = [ "full" ] }
+spin_sleep = "1.1.1" 
 
 [features]
-testing = [ "dep:tokio" ]
+testing = [ ]

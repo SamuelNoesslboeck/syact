@@ -1,8 +1,6 @@
 // ####################
 // #    SUBMODULES    #
 // ####################
-    mod comp;
-
     /// Servo motor data
     pub mod servo;
     

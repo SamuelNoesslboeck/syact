@@ -6,7 +6,7 @@ use syunit::*;
 use crate::{SyncActuator, StepperConfig, AsyncActuator};
 use crate::act::{Interruptible, ActuatorError, SyncActuatorState};
 use crate::act::asyn::AsyncActuatorState;
-use crate::act::stepper::{StepperActuator, BuilderError};
+use crate::act::stepper::{StepperActuator, StepperBuilderError};
 use crate::data::MicroSteps;
 use crate::math::movements::DefinedActuator;
 
@@ -173,12 +173,12 @@ pub trait ActuatorParent {
                 self.force_for_parent(self.child().force_dir())
             }
 
-            fn apply_gen_force(&mut self, mut force : Force) -> Result<(), BuilderError> {
+            fn apply_gen_force(&mut self, mut force : Force) -> Result<(), StepperBuilderError> {
                 force = self.force_for_child(force);
                 self.child_mut().apply_gen_force(force)
             }
 
-            fn apply_dir_force(&mut self, mut force : Force) -> Result<(), BuilderError> {
+            fn apply_dir_force(&mut self, mut force : Force) -> Result<(), StepperBuilderError> {
                 force = self.force_for_child(force);
                 self.child_mut().apply_dir_force(force)
             }
@@ -207,7 +207,7 @@ pub trait ActuatorParent {
                 self.child().config()
             }
 
-            fn set_config(&mut self, config : StepperConfig) -> Result<(), BuilderError> {
+            fn set_config(&mut self, config : StepperConfig) -> Result<(), StepperBuilderError> {
                 self.child_mut().set_config(config)
             }
         //
@@ -217,7 +217,7 @@ pub trait ActuatorParent {
                 self.child().microsteps()
             }
 
-            fn set_microsteps(&mut self, micro : MicroSteps) -> Result<(), BuilderError> {
+            fn set_microsteps(&mut self, micro : MicroSteps) -> Result<(), StepperBuilderError> {
                 self.child_mut().set_microsteps(micro)
             }
         // 

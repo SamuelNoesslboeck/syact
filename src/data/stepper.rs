@@ -3,8 +3,7 @@ use core::f32::consts::PI;
 use serde::{Serialize, Deserialize};
 use syunit::*;
 
-use crate::ActuatorVars;
-use crate::data::MicroSteps;
+use crate::data::{ActuatorVars, MicroSteps};
 use crate::math::force::torque_dyn;
 
 /// Stores data for generic components 
@@ -18,17 +17,18 @@ pub struct StepperConfig {
 }
 
 impl StepperConfig {
-    /// Generic `StepperConfig` for testing purposes
-    pub const GEN : Self = Self {
+    pub const VOLT12_NO_OVERLOAD : Self = Self {
         voltage: 12.0,
         overload_current: None
-    };  
+    }; 
 
-    /// Comp data that will case an error in calculations as it has not been yet initialized.  
-    /// 
-    /// (Has to be overwritten, will cause errors otherwise)
-    pub const ERROR : Self = Self {
-        voltage: 0.0,
+    pub const VOLT24_NO_OVERLOAD : Self = Self {
+        voltage: 12.0,
+        overload_current: None
+    };
+
+    pub const VOLT48_NO_OVERLOAD : Self = Self {
+        voltage: 12.0,
         overload_current: None
     };
 
@@ -70,19 +70,6 @@ pub struct StepperConst {
 
 impl StepperConst {
     // Constants
-        /// Error stepperdata with all zeros
-        pub const ERROR : Self = Self {
-            default_current: 0.0,
-            inductance: 0.0,
-            resistance: 0.0,
-            number_steps: 0,
-            torque_stall: Force::ZERO,
-            inertia_motor: Inertia::ZERO
-        }; 
-
-        /// Generic stepper motor data, only in use when testing for simple syntax
-        pub const GEN : Self = Self::MOT_17HE15_1504S;
-
         /// ### Stepper motor 17HE15-1504S
         /// Values for standard stepper motor, see <https://github.com/SamuelNoesslboeck/syact/docs/datasheets/17HE15_1504S.pdf>
         pub const MOT_17HE15_1504S : Self = Self {
@@ -148,7 +135,7 @@ impl StepperConst {
     /// 
     /// use syact::prelude::*;
     /// 
-    /// let data = StepperConst::GEN;
+    /// let data = StepperConst::MOT_17HE15_1504S;
     /// 
     /// assert!((data.velocity (Time(1.0/200.0), MicroSteps::default()) - Velocity(2.0 * PI)).abs() < Velocity(0.001));     
     /// ```

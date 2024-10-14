@@ -3,7 +3,7 @@ use crate::data::StepperConst;
 #[test]
 #[ignore = "Value display, run manually ... "]
 fn basic_plot() {
-    let consts = StepperConst::GEN;
+    let consts = StepperConst::MOT_17HE15_1504S;
 
     let u = 12.0;
     

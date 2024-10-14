@@ -16,22 +16,13 @@ use crate::math::movements::DefinedActuator;
 
 // Submodules
     mod builder;
-    pub use builder::{BuilderError, DriveMode, StepperBuilder, StartStopBuilder, ComplexBuilder};
+    pub use builder::{StepperBuilderError, DriveMode, StepperBuilder, StartStopBuilder, ComplexBuilder};
 
     mod ctrl;
-    pub use ctrl::{StepperController, GenericPWM, ControllerError};
+    pub use ctrl::{StepperController, StepperControllerError};
 
     mod motor;
-// 
-
-// #####################
-// #   Stepper-Types   #
-// #####################
-    /// Default `Stepper` type for high-performance systems (high resolution stepper)
-    pub type Stepper<S, D> = motor::StepperMotor<StartStopBuilder, GenericPWM<S, D>>;
-
-    /// Complex `Stepper` type for high-performance systems with greater speed but greater risk and higher calculation complexity
-    pub type ComplexStepper<S, D> = motor::StepperMotor<ComplexBuilder, GenericPWM<S, D>>;
+    pub use motor::StepperMotor;
 // 
 
 // ################################
@@ -47,7 +38,7 @@ use crate::math::movements::DefinedActuator;
             fn config(&self) -> &StepperConfig;
 
             /// Set the config used by the Stepper motor
-            fn set_config(&mut self, config : StepperConfig) -> Result<(), BuilderError>;
+            fn set_config(&mut self, config : StepperConfig) -> Result<(), StepperBuilderError>;
         // 
 
         // Microstepping
@@ -55,7 +46,7 @@ use crate::math::movements::DefinedActuator;
             fn microsteps(&self) -> MicroSteps;
 
             /// Set the amount of microsteps in a full step
-            fn set_microsteps(&mut self, micro : MicroSteps) -> Result<(), BuilderError>;
+            fn set_microsteps(&mut self, micro : MicroSteps) -> Result<(), StepperBuilderError>;
         //
 
         // Steps
@@ -84,7 +75,7 @@ use crate::math::movements::DefinedActuator;
         }
 
         /// Sets the amount of microsteps for each motor 
-        fn set_micro(&mut self, micro : [MicroSteps; C]) -> Result<(), BuilderError> {
+        fn set_micro(&mut self, micro : [MicroSteps; C]) -> Result<(), StepperBuilderError> {
             self.try_for_each_mut(|comp, index| {
                 comp.set_microsteps(micro[index])
             })?;

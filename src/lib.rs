@@ -1,7 +1,7 @@
 #![doc = include_str!("../README.md")]
 #![crate_name = "syact"]
 // #![deny(missing_docs)]
-#![cfg_attr(not(test), no_std)]
+#![cfg_attr(not(any(test, feature = "testing")), no_std)]
 #![cfg_attr(feature = "testing", allow(unused))]
 
 // Modules
@@ -10,17 +10,18 @@ extern crate alloc;
 // ####################
 // #    SUBMODULES    #
 // ####################
+    // Core submodules
         /// Actuator structures and traits
         pub mod act;
-        pub use act::{SyncActuator, SyncActuatorGroup, Stepper};
-        pub use act::asyn::AsyncActuator;
+        pub use act::{ActuatorError, AsyncActuator, AsyncActuatorState, SyncActuator, SyncActuatorGroup, SyncActuatorState};
 
         /// Various devices
         pub mod device;
+        pub use device::MiniServo;
     
         /// Structs for storing characteristics of stepper motors and devices
         pub mod data;
-        pub use data::{StepperConst, StepperConfig, ActuatorVars, MicroSteps};
+        pub use data::{MicroSteps, StepperConst, StepperConfig};
 
         /// Functions and Structs for calculating Stepper Motor procedures and operations
         pub mod math;

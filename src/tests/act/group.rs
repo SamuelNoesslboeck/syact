@@ -1,33 +1,33 @@
-use crate::tests::SimPin;
+use crate::prelude::*;
+use crate::tests::act::stepper::Stepper;
+
 use crate as syact;
 
-use syact::prelude::*;
-
 fn test<G : SyncActuatorGroup<T, 2>, T : SyncActuator + ?Sized + 'static>(_g : &G) {
-    
+    // Use group here ...
 }
 
 #[derive(StepperActuatorGroup)]
 struct SomeComps {
-    base : Gear<Stepper<SimPin, SimPin>>,
-    arm1 : LinearAxis<Stepper<SimPin, SimPin>>
+    base : Gear<Stepper>,
+    arm1 : LinearAxis<Stepper>
 }
 
 #[test]
-fn group_basics() -> Result<(), BuilderError> {
-    let mut group = SomeComps {
+fn group_basics() -> Result<(), StepperBuilderError> {
+    let group = SomeComps {
         base: Gear::new(
-            Stepper::new_gen()?,
+            Stepper::default(),
             0.2
         ),
         arm1: LinearAxis::new(
-            Stepper::new_gen()?,
+            Stepper::default(),
             0.5
         )
     }; 
+    // Test function for group
     test(&group);
 
-    group.set_config(StepperConfig::GEN);
     Ok(())
 }
 

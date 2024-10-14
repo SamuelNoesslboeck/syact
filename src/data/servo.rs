@@ -4,8 +4,7 @@ use syunit::*;
 
 /// A struct for storing all the constants of a servo motor that do not change during the process of the program
 #[derive(Debug, Default, Clone, PartialEq, PartialOrd, Serialize, Deserialize)]
-pub struct ServoConst
-{
+pub struct ServoConst {
     /// Maximum torque of servo motor 
     pub t_max : Force,
 
@@ -24,20 +23,7 @@ pub struct ServoConst
     pub f_pwm : Velocity
 }
 
-impl ServoConst 
-{
-    /// Invalid data for initialization purposes
-    /// 
-    /// DO NOT EXECUTE CALCULATION FUNCTIONS WITH THIS DATA
-    pub const ERROR : Self = Self {
-        t_max: Force::ZERO,
-        velocity_max: Velocity::ZERO,
-        abs_pos_max: AbsPos::ZERO,
-        pwm_min: Time::ZERO,
-        pwm_max: Time::ZERO,
-        f_pwm: Velocity::ZERO
-    }; 
-
+impl ServoConst {
     /// Constants for a MG996R servo motor. 
     /// See [datasheet](https://github.com/SamuelNoesslboeck/syact/blob/master/docs/datasheets/MG996R.pdf)
     pub const MG996R : Self = Self {
@@ -65,21 +51,13 @@ impl ServoConst
         1.0 / self.f_pwm
     }
 
-    /// Pulse time for a given percent
-    /// 
-    /// # Panics
-    /// 
-    /// Panics if the factors is out of range (range is `0.0` to `1.0`)
-    pub fn pulse_for_factor(&self, factor : f32) -> Time {
-        if (1.0 < factor) & (0.0 > factor) {
-            panic!("Bad factor! ({})", factor);
-        }
-
+    /// Pulse time for a given `Factor`
+    pub fn pulse_for_factor(&self, factor : Factor) -> Time {
         self.pwm_min + (self.pwm_max - self.pwm_min) * factor
     }
 
     /// Pulse time for a given angle
     pub fn pulse_for_angle(&self, abs_pos : AbsPos) -> Time {
-        self.pulse_for_factor(abs_pos / self.abs_pos_max)
+        self.pulse_for_factor(Factor::new(abs_pos / self.abs_pos_max))
     }
 }

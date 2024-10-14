@@ -8,7 +8,7 @@ use syunit::*;
 use crate::{AsyncActuator, Dismantle, Setup, SyncActuator};
 use crate::act::{InterruptReason, Interruptible, Interruptor, ActuatorError, SyncActuatorState};
 use crate::act::asyn::AsyncActuatorState;
-use crate::act::stepper::{StepperActuator, StepperController, StepperBuilder, BuilderError, DriveMode, StepperState};
+use crate::act::stepper::{StepperActuator, StepperController, StepperBuilder, StepperBuilderError, DriveMode, StepperState};
 use crate::data::{StepperConfig, StepperConst, MicroSteps}; 
 use crate::math::movements::DefinedActuator;
 
@@ -33,10 +33,9 @@ pub struct StepperMotor<B : StepperBuilder + Send + 'static, C : StepperControll
 // Inits
 impl<B : StepperBuilder + Send + 'static, C : StepperController + Send + 'static> StepperMotor<B, C> {   
     /// Creates a new stepper controller with the given stepper motor constants `consts`
-    #[allow(unused_must_use)]
-    pub fn new(ctrl : C, consts : StepperConst) -> Result<Self, BuilderError> {
+    pub fn new(ctrl : C, consts : StepperConst, config : StepperConfig) -> Result<Self, StepperBuilderError> {
         Ok(Self {
-            builder: B::new(consts)?,
+            builder: B::new(consts, config)?,
             ctrl,
 
             _state : Arc::new(StepperState::new()),
@@ -111,11 +110,8 @@ impl<B : StepperBuilder + Send + 'static, C : StepperController + Send + 'static
 
         Ok(())
     }
-}
 
-impl<B : StepperBuilder + Send + 'static, C : StepperController + Send + 'static> StepperMotor<B, C> {
-    /// Returns the current direction of the motor
-    pub fn dir(&self) -> Direction {
+    pub fn direction(&self) -> Direction {
         self.builder.direction()
     }
 }
@@ -245,7 +241,7 @@ impl<B : StepperBuilder + Send + 'static, C : StepperController + Send + 'static
         fn set_endpos(&mut self, set_abs_pos : AbsPos) {
             self.set_abs_pos(set_abs_pos);
 
-            let dir = self.dir().as_bool();
+            let dir = self.direction().as_bool();
     
             self.set_pos_limits(
                 if dir { None } else { Some(set_abs_pos) },
@@ -263,11 +259,11 @@ impl<B : StepperBuilder + Send + 'static, C : StepperController + Send + 'static
             self.builder.vars().force_load_dir
         }
 
-        fn apply_gen_force(&mut self, force : Force) -> Result<(), BuilderError> {
+        fn apply_gen_force(&mut self, force : Force) -> Result<(), StepperBuilderError> {
             self.builder.apply_gen_force(force)
         }
 
-        fn apply_dir_force(&mut self, force : Force) -> Result<(), BuilderError> {
+        fn apply_dir_force(&mut self, force : Force) -> Result<(), StepperBuilderError> {
             self.builder.apply_dir_force(force)
         }
 
@@ -295,7 +291,7 @@ where
             self.builder.config()
         }
 
-        fn set_config(&mut self, config : StepperConfig) -> Result<(), BuilderError> {
+        fn set_config(&mut self, config : StepperConfig) -> Result<(), StepperBuilderError> {
             self.builder.set_config(config)
         }
 
@@ -303,7 +299,7 @@ where
             self.builder.microsteps()
         }
 
-        fn set_microsteps(&mut self, microsteps : MicroSteps) -> Result<(), BuilderError> {
+        fn set_microsteps(&mut self, microsteps : MicroSteps) -> Result<(), StepperBuilderError> {
             self.builder.set_microsteps(microsteps)
             
         }
