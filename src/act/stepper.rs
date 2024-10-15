@@ -90,7 +90,10 @@ use crate::math::movements::DefinedActuator;
     /// The state of a stepper motor, whether it is driving etc.
     pub struct StepperState {
         _abs_pos : AtomicF32,
-        _moving : AtomicBool
+        _moving : AtomicBool,
+
+        should_halt : AtomicBool,
+        should_interrupt : AtomicBool
     }
 
     impl StepperState {
@@ -98,7 +101,10 @@ use crate::math::movements::DefinedActuator;
         pub fn new() -> Self {
             StepperState {
                 _abs_pos: AtomicF32::new(AbsPos::ZERO.0),
-                _moving: AtomicBool::new(false)
+                _moving: AtomicBool::new(false),
+
+                should_halt : AtomicBool::new(false),
+                should_interrupt : AtomicBool::new(false)
             }
         }
     }
@@ -113,11 +119,11 @@ use crate::math::movements::DefinedActuator;
         }
 
         fn halt(&self) {
-            todo!()
+            self.should_halt.store(true, Relaxed);
         }
 
         fn interrupt(&self) {
-            
+            self.should_interrupt.store(true, Relaxed);
         }
     }
 

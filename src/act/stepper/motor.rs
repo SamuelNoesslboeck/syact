@@ -58,6 +58,10 @@ impl<B : StepperBuilder + Send + 'static, C : StepperController + Send + 'static
     /// 
     /// Blocks the current thread and creates the step signals until the builder is finished
     pub fn handle_builder(&mut self) -> Result<(), ActuatorError> {
+        // Update the movement variable of the state
+        self._state._moving.store(false, Relaxed);
+        
+        // Iterate through the builder until no nodes are left
         while let Some(node) = self.builder.next() {
             // Get the current direction of the motor (builder)
             let direction = self.builder.direction();
@@ -107,6 +111,9 @@ impl<B : StepperBuilder + Send + 'static, C : StepperController + Send + 'static
                 } 
             }
         }
+
+        // No movement anymore
+        self._state._moving.store(false, Relaxed);
 
         Ok(())
     }

@@ -35,3 +35,9 @@ spin_sleep = "1.1.1"
 
 [features]
 testing = [ ]
+std = [ ]
+
+# Helper binaries
+[[bin]]
+name = "stepper_curve_printer"
+path = "bin/stepper_curve_printer.rs"

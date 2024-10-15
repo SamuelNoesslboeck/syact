@@ -4,7 +4,6 @@ use serde::{Serialize, Deserialize};
 use syunit::*;
 
 use crate::data::{ActuatorVars, MicroSteps};
-use crate::math::force::torque_dyn;
 
 /// Stores data for generic components 
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
@@ -93,31 +92,60 @@ impl StepperConst {
         }
 
         /// Torque created with the given overload (or underload) current `i`
+        /// 
+        /// ## Option
+        ///
+        /// Uses the default current if the given option is `None`
         #[inline]
-        pub fn torque_overload(&self, current : Option<f32>) -> Force {
-            self.torque_stall * current.unwrap_or(self.default_current) / self.default_current
+        pub fn torque_overload(&self, current_opt : Option<f32>) -> Force {
+            self.torque_stall * current_opt.unwrap_or(self.default_current) / self.default_current
+        }
+    // 
+
+    // Torque
+        /// Returns the current torque [Force] that a DC-Motor can produce when driving with the 
+        /// speed `velocity ` and the voltage `u` in Volts
+        /// 
+        /// # Panics
+        /// 
+        /// Panics if the given velocity is not finite
+        pub fn torque_dyn(&self, mut velocity : Velocity, voltage : f32, overload_current : Option<f32>) -> Force {
+            velocity = velocity.abs();
+
+            if !velocity.is_finite() {
+                panic!("Bad velocity ! {}", velocity);
+            }
+            
+            if velocity == Velocity::ZERO {
+                return self.torque_overload(overload_current);
+            }
+
+            let time = self.full_step_time(velocity);
+            let pow = core::f32::consts::E.powf(time / self.tau(voltage));
+
+            self.torque_overload(overload_current) * (pow - 1.0) / (pow + 1.0)
         }
     // 
 
     // Acceleration
         /// Returns the maximum acceleration that can be reached in stall
         #[inline]
-        pub fn alpha_max_stall(&self, vars : &ActuatorVars, dir : Direction) -> Option<Acceleration> {
+        pub fn acceleration_max_stall(&self, vars : &ActuatorVars, dir : Direction) -> Option<Acceleration> {
             vars.force_after_load(self.torque_stall, dir).map(|f| f / vars.inertia_after_load(self.inertia_motor))
         }
 
         /// Returns the maximum acceleration that can be reached 
         #[inline]
-        pub fn alpha_max_for_velocity(&self, vars : &ActuatorVars, config : &StepperConfig, velocity : Velocity, dir : Direction) -> Option<Acceleration> {
-            vars.force_after_load(torque_dyn(self, velocity , config.voltage, None), dir).map(|f| f / vars.inertia_after_load(self.inertia_motor))
+        pub fn acceleration_max_for_velocity(&self, vars : &ActuatorVars, config : &StepperConfig, velocity : Velocity, dir : Direction) -> Option<Acceleration> {
+            vars.force_after_load(self.torque_dyn(velocity , config.voltage, None), dir).map(|f| f / vars.inertia_after_load(self.inertia_motor))
         }
     // 
 
     // Speeds
         /// The inductivity constant [Unit s]
         #[inline(always)]
-        pub fn tau(&self) -> Time {
-            Time(self.inductance / self.resistance)
+        pub fn tau(&self, voltage : f32) -> Time {
+            Time(self.inductance * self.default_current / voltage)
         }
 
         /// Maximum speed for a stepper motor where it can be guarantied that it works properly

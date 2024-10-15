@@ -23,6 +23,10 @@ use stepper::StepperBuilderError;
     /// ALl the parent structures used
     pub mod parent;
 
+    /// Everything concerning servo-motors
+    pub mod servo;
+    pub use servo::MiniServo;
+
     /// Stepper motors and their unique methods and traits
     pub mod stepper;
     pub use stepper::{StepperActuator, StepperMotor};

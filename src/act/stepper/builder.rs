@@ -406,7 +406,7 @@ pub trait StepperBuilder : Iterator<Item = Time> {
             // Iterate to max speed level or until the cap is reached
             for _ in 0 .. max_speed_level {
                 // Calculate acceleration and movement time when fully accelerating
-                let accel = self.consts().alpha_max_for_velocity(self.vars(), self.config(), vel, self.direction())
+                let accel = self.consts().acceleration_max_for_velocity(self.vars(), self.config(), vel, self.direction())
                     .ok_or(StepperBuilderError::Overload)?;
                 let ( mut move_time, _ ) = math::kin::travel_times(self.step_angle(), vel, accel);
 
@@ -672,10 +672,9 @@ pub trait StepperBuilder : Iterator<Item = Time> {
                     self.distance = self._consts.steps_from_angle_abs(rel_dist, self._microsteps);
                     self.distance_counter = 0;
 
-                    // // TODO: Remove for full hold
-                    // if self.distance > self.current_speed_level as u64 {
-                    //     return Err(DriveError::DistanceTooShort(self.step_angle(), self.distance, self.current_speed_level as u64))
-                    // }
+                    if self.distance < self.current_speed_level as u64 {
+                        return Err(StepperBuilderError::DistanceTooShort(self.step_angle(), self.distance, self.current_speed_level as u64))
+                    }
 
                     if rel_dist >= RelDist::ZERO {
                         self._dir = Direction::CW;

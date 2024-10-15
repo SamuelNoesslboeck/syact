@@ -15,7 +15,9 @@ use crate::tests::PARAM_TIME_ACCURACY;
 // #######################
 // #    Stepper-Types    #
 // #######################
+    /// Helper stepper type for simulated stepper motors using Start-Stop control and simulated controllers
     pub type Stepper = StepperMotor<StartStopBuilder, SimulatedController>;
+    /// Helper stepper type for simulated stepper motors using complex control and simulated controllers
     pub type ComplexStepper = StepperMotor<ComplexBuilder, SimulatedController>;
 
     impl Default for Stepper {

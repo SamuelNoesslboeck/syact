@@ -13,11 +13,7 @@ extern crate alloc;
     // Core submodules
         /// Actuator structures and traits
         pub mod act;
-        pub use act::{ActuatorError, AsyncActuator, AsyncActuatorState, SyncActuator, SyncActuatorGroup, SyncActuatorState};
-
-        /// Various devices
-        pub mod device;
-        pub use device::MiniServo;
+        pub use act::{ActuatorError, AsyncActuator, AsyncActuatorState, SyncActuator, SyncActuatorGroup, SyncActuatorState, MiniServo};
     
         /// Structs for storing characteristics of stepper motors and devices
         pub mod data;
