@@ -113,7 +113,15 @@ use stepper::StepperBuilderError;
             VelocityTooHigh(Velocity, Velocity),
         //
 
-        // Timing Error
+        // Acceleration
+            InvalidAcceleration(Acceleration),
+        // 
+
+        // Jolt
+            InvalidJolt(Jolt),
+        // 
+
+        // Time errors
             /// The `Time` given is invalid somehow, depending on the context, see the function description
             InvalidTime(Time),
         // 
@@ -153,9 +161,16 @@ use stepper::StepperBuilderError;
             fn from(value: StepperBuilderError) -> Self {
                 match value {
                     StepperBuilderError::DistanceTooShort(dist, _, _) => Self::InvaldRelativeDistance(dist),
+
                     StepperBuilderError::InvalidVelocity(vel) => Self::InvalidVeloicty(vel),
                     StepperBuilderError::VelocityTooHigh(vel_given, vel_max) => Self::VelocityTooHigh(vel_given, vel_max),
+
+                    StepperBuilderError::InvalidAcceleration(acceleration) => Self::InvalidAcceleration(acceleration),
+
+                    StepperBuilderError::InvalidJolt(jolt) => Self::InvalidJolt(jolt),
+
                     StepperBuilderError::Overload => Self::Overload,
+
                     StepperBuilderError::Controller(error) => Self::from(error)
                 }
             }
@@ -240,25 +255,44 @@ use stepper::StepperBuilderError;
             /// 
             /// assert!((cylinder.abs_pos() - POS).abs() < RelDist(0.05));      // Check with small tolerance
             /// ```
-            fn set_abs_pos(&mut self, abs_pos : AbsPos);
-
-            /// Returns the maximum velocity of the component. It can be set using `SyncComp::set_velocity_max()`. 
-            /// The component cannot move faster than the velocity  given (valid for all movement operations)
-            /// 
-            /// # Panics
-            /// 
-            /// - Panics if no parent component or an override is provided
-            fn velocity_max(&self) -> Velocity;
-
-            /// Set the maximum velocity of the component, current maximum velocity  can be access with `SyncComp::velocity_max()`
-            /// 
-            /// # Panics
-            /// 
-            /// - Panics if no parent component or an override is provided
-            /// - Panics if the velocity  given is higher than the maximum velocity  recommended (e.g. `StepperConst::velocity_max()`)
-            fn set_velocity_max(&mut self, velocity_max : Velocity);
+            fn overwrite_abs_pos(&mut self, abs_pos : AbsPos);
         //
 
+        // Velocity max
+            /// Maximum velocity allowed by the user if specified
+            fn velocity_max(&self) -> Option<Velocity>;
+
+            /// Set the maximum allowed `Velocity`
+            /// 
+            /// ## Option
+            /// 
+            /// Set to `None` if no limit is wished
+            fn set_velocity_max(&mut self, velocity_opt : Option<Velocity>) -> Result<(), ActuatorError>;
+        // 
+
+        // Acceleration
+            /// Maximum acceleration that will be allowed, if specified by the user with `set_max_acceleration`
+            fn acceleration_max(&self) -> Option<Acceleration>;
+
+            /// Set the maximum allowed `Acceleration`
+            /// 
+            /// ## Option
+            /// 
+            /// Set to `None` if no limit is wished
+            fn set_acceleration_max(&mut self, acceleration_opt : Option<Acceleration>) -> Result<(), ActuatorError>;
+        // 
+
+        // Jolt
+            /// The maximum jolt, if specified by the user
+            fn jolt_max(&self) -> Option<Jolt>;
+
+            /// Set the maximum allowed `Jolt` 
+            /// 
+            /// ## Option
+            /// 
+            /// Set to `None` if no limit is wished
+            fn set_jolt_max(&mut self, jolt_opt : Option<Jolt>) -> Result<(), ActuatorError>;
+        // 
 
         // Position limits
             /// The minimum position limit of the actuator, if set
@@ -401,7 +435,30 @@ use stepper::StepperBuilderError;
             /// ```
             fn overwrite_pos_limits(&mut self, min : Option<AbsPos>, max : Option<AbsPos>);
         // 
+    }
+//
 
+// #########################################
+// #    SyncActuator - Extention traits    #
+// #########################################
+    // Movement
+        /// Further defines a `SyncActuator`, extending it with blocking movement functions
+        pub trait SyncActuatorBlocking : SyncActuator {
+            /// Moves the component by the relative distance as fast as possible, halts the script until 
+            /// the movement is finshed and returns the actual **relative** distance travelled
+            fn drive_rel(&mut self, rel_dist : RelDist, speed : Factor) -> Result<(), ActuatorError>;
+
+            /// Moves the component to the given position as fast as possible, halts the script until the 
+            /// movement is finished and returns the actual **relative** distance travelled.
+            #[inline]
+            fn drive_abs(&mut self, abs_pos : AbsPos, speed : Factor) -> Result<(), ActuatorError> {
+                let rel_dist = abs_pos - self.abs_pos();
+                self.drive_rel(rel_dist, speed)
+            }
+        }
+    // 
+
+    pub trait SyncActuatorAdvanced : SyncActuator {
         // Load calculation
             /// Will always be positive
             fn force_gen(&self) -> Force;
@@ -432,10 +489,10 @@ use stepper::StepperBuilderError;
             /// assert_eq!(AbsPos(2.0), gear.abs_pos_for_child(AbsPos(1.0)));
             /// assert_eq!(Force(0.1), gear.child().force_gen());     // Forces get smaller for smaller gears
             /// ```
-            fn apply_gen_force(&mut self, force : Force) -> Result<(), StepperBuilderError>;
+            fn apply_gen_force(&mut self, force : Force) -> Result<(), ActuatorError>;
 
             /// Value positive in CW direction
-            fn apply_dir_force(&mut self, force : Force) -> Result<(), StepperBuilderError>;
+            fn apply_dir_force(&mut self, force : Force) -> Result<(), ActuatorError>;
 
             // Inertia
             /// Returns the inertia applied to the component
@@ -465,26 +522,7 @@ use stepper::StepperBuilderError;
             /// assert_eq!(AbsPos(2.0), gear.abs_pos_for_child(AbsPos(1.0)));
             /// assert_eq!(Inertia(1.0), gear.child().inertia());
             /// ```
-            fn apply_inertia(&mut self, inertia : Inertia);
+            fn apply_inertia(&mut self, inertia : Inertia) -> Result<(), ActuatorError> ;
         // 
-    }
-//
-
-// #######################################
-// #    SyncActuator - Movement types    #
-// #######################################
-    /// Further defines a `SyncActuator`, extending it with blocking movement functions
-    pub trait SyncActuatorBlocking : SyncActuator {
-        /// Moves the component by the relative distance as fast as possible, halts the script until 
-        /// the movement is finshed and returns the actual **relative** distance travelled
-        fn drive_rel(&mut self, rel_dist : RelDist, speed : Factor) -> Result<(), ActuatorError>;
-
-        /// Moves the component to the given position as fast as possible, halts the script until the 
-        /// movement is finished and returns the actual **relative** distance travelled.
-        #[inline]
-        fn drive_abs(&mut self, abs_pos : AbsPos, speed : Factor) -> Result<(), ActuatorError> {
-            let rel_dist = abs_pos - self.abs_pos();
-            self.drive_rel(rel_dist, speed)
-        }
     }
 // 

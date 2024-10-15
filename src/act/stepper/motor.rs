@@ -5,17 +5,18 @@ use core::sync::atomic::Ordering::Relaxed;
 
 use syunit::*;
 
-use crate::{AsyncActuator, Dismantle, Setup, SyncActuator, SyncActuatorBlocking};
-use crate::act::{InterruptReason, Interruptible, Interruptor, ActuatorError, SyncActuatorState};
+use crate::{AsyncActuator, SyncActuator, SyncActuatorBlocking};
+use crate::act::{ActuatorError, InterruptReason, Interruptible, Interruptor, SyncActuatorAdvanced, SyncActuatorState};
 use crate::act::asyn::AsyncActuatorState;
 use crate::act::stepper::{StepperActuator, StepperController, StepperBuilder, StepperBuilderError, DriveMode, StepperState};
+use crate::act::stepper::builder::{StepperBuilderAdvanced, StepperBuilderSimple};
 use crate::data::{StepperConfig, StepperConst, MicroSteps}; 
 use crate::math::movements::DefinedActuator;
 
 /// A stepper motor
 /// 
 /// Controlled by two pins, one giving information about the direction, the other about the step signal (PWM)
-pub struct StepperMotor<B : StepperBuilder + Send + 'static, C : StepperController + Send + 'static> {
+pub struct StepperMotor<B : StepperBuilder, C : StepperController> {
     builder : B,
     ctrl : C, 
 
@@ -31,23 +32,7 @@ pub struct StepperMotor<B : StepperBuilder + Send + 'static, C : StepperControll
 }
 
 // Inits
-impl<B : StepperBuilder + Send + 'static, C : StepperController + Send + 'static> StepperMotor<B, C> {   
-    /// Creates a new stepper controller with the given stepper motor constants `consts`
-    pub fn new(ctrl : C, consts : StepperConst, config : StepperConfig) -> Result<Self, StepperBuilderError> {
-        Ok(Self {
-            builder: B::new(consts, config)?,
-            ctrl,
-
-            _state : Arc::new(StepperState::new()),
-
-            _limit_min: None,
-            _limit_max: None,
-
-            interruptors : Vec::new(),
-            _intr_reason: None
-        })
-    }
-
+impl<B : StepperBuilder, C : StepperController> StepperMotor<B, C> {   
     /// ######################################
     /// #    StepperMotor::handle_builder    #
     /// ######################################
@@ -124,88 +109,111 @@ impl<B : StepperBuilder + Send + 'static, C : StepperController + Send + 'static
     }
 }
 
-// Auto-Implement `Setup` and `Dismantle` of `StepperController`
-    impl<B : StepperBuilder + Send + 'static, C : StepperController + Setup + Send + 'static> Setup for StepperMotor<B, C> {
-        type Error = C::Error;
-
-        fn setup(&mut self) -> Result<(), Self::Error> {
-            self.ctrl.setup()?;
-            Ok(())
-        }
-    }
-
-    impl<B : StepperBuilder + Send + 'static, C : StepperController + Dismantle + Send + 'static> Dismantle for StepperMotor<B, C> {
-        type Error = C::Error;
-
-        fn dismantle(&mut self) -> Result<(), Self::Error> {
-            self.ctrl.dismantle()?;
-            Ok(())
-        }
-    }
-//
-
-impl<B : StepperBuilder + Send + 'static, C : StepperController + Send + 'static> SyncActuator for StepperMotor<B, C> {
-    // State
-        fn state(&self) -> &dyn SyncActuatorState {
-            self._state.as_ref()
-        }
-
-        fn clone_state(&self) -> Arc<dyn SyncActuatorState> {
-            self._state.clone()
-        }
-    // 
-
-    // Position and velocity
-        #[inline]
-        fn abs_pos(&self) -> AbsPos {
-            self._state.abs_pos()
-        }   
-
-        #[inline]
-        fn set_abs_pos(&mut self, abs_pos : AbsPos) {
-            self._state._abs_pos.store(abs_pos.0, Relaxed);
-        }
-
-        #[inline]
-        fn velocity_max(&self) -> Velocity {
-            self.builder.velocity_possible()
-        }
-
-        fn set_velocity_max(&mut self, velocity_max : Velocity) {
-            self.builder.set_velocity_max(velocity_max).unwrap();      // TODO
-        }
-    //
-
-    // Position limits
-        fn limit_max(&self) -> Option<AbsPos> {
-            self._limit_max
-        }
-
-        fn limit_min(&self) -> Option<AbsPos> {
-            self._limit_min
-        }
-        
-        #[inline]
-        fn set_pos_limits(&mut self, min : Option<AbsPos>, max : Option<AbsPos>) {
-            if let Some(min) = min {
-                self._limit_min = Some(min)
+// #######################################
+// #    SyncActuator - Implementation    #
+// #######################################
+    impl<B : StepperBuilder, C : StepperController> SyncActuator for StepperMotor<B, C> {
+        // State
+            fn state(&self) -> &dyn SyncActuatorState {
+                self._state.as_ref()
             }
 
-            if let Some(max) = max {
-                self._limit_max = Some(max);
+            fn clone_state(&self) -> Arc<dyn SyncActuatorState> {
+                self._state.clone()
             }
-        }
+        // 
 
-        #[inline]
-        fn overwrite_pos_limits(&mut self, min : Option<AbsPos>, max : Option<AbsPos>) {
-            self._limit_min = min;
-            self._limit_max = max;
-        }
+        // Position 
+            #[inline]
+            fn abs_pos(&self) -> AbsPos {
+                self._state.abs_pos()
+            }   
 
-        fn resolve_pos_limits_for_abs_pos(&self, abs_pos : AbsPos) -> RelDist {
-            if let Some(ang) = self.limit_min() {
-                if abs_pos < ang {
-                    abs_pos - ang
+            #[inline]
+            fn overwrite_abs_pos(&mut self, abs_pos : AbsPos) {
+                self._state._abs_pos.store(abs_pos.0, Relaxed);
+            }
+        //
+
+        // Velocity
+            #[inline]
+            fn velocity_max(&self) -> Option<Velocity> {
+                self.builder.velocity_max()
+            }
+
+            #[inline]
+            fn set_velocity_max(&mut self, velocity_opt : Option<Velocity>) -> Result<(), ActuatorError> {
+                self.builder.set_velocity_max(velocity_opt)?;
+                Ok(())
+            }
+        //
+
+        // Acceleration
+            #[inline]
+            fn acceleration_max(&self) -> Option<Acceleration> {
+                self.builder.acceleration_max()
+            }
+
+            fn set_acceleration_max(&mut self, acceleration_opt : Option<Acceleration>) -> Result<(), ActuatorError> {
+                self.builder.set_acceleration_max(acceleration_opt)?;
+                Ok(())
+            }
+        //
+
+        // Jolt
+            fn jolt_max(&self) -> Option<Jolt> {
+                self.builder.jolt_max()
+            }
+
+            fn set_jolt_max(&mut self, jolt_opt : Option<Jolt>) -> Result<(), ActuatorError> {
+                self.builder.set_jolt_max(jolt_opt)?;
+                Ok(())
+            }
+        //
+
+        // Position limits
+            #[inline]
+            fn limit_max(&self) -> Option<AbsPos> {
+                self._limit_max
+            }
+
+            #[inline]
+            fn limit_min(&self) -> Option<AbsPos> {
+                self._limit_min
+            }
+            
+            #[inline]
+            fn set_pos_limits(&mut self, min : Option<AbsPos>, max : Option<AbsPos>) {
+                if let Some(min) = min {
+                    self._limit_min = Some(min)
+                }
+
+                if let Some(max) = max {
+                    self._limit_max = Some(max);
+                }
+            }
+
+            #[inline]
+            fn overwrite_pos_limits(&mut self, min : Option<AbsPos>, max : Option<AbsPos>) {
+                self._limit_min = min;
+                self._limit_max = max;
+            }
+
+            fn resolve_pos_limits_for_abs_pos(&self, abs_pos : AbsPos) -> RelDist {
+                if let Some(ang) = self.limit_min() {
+                    if abs_pos < ang {
+                        abs_pos - ang
+                    } else {
+                        if let Some(ang) = self.limit_max() {
+                            if abs_pos > ang {
+                                abs_pos - ang
+                            } else { 
+                                RelDist::ZERO 
+                            }
+                        } else {
+                            RelDist::ZERO
+                        }
+                    }
                 } else {
                     if let Some(ang) = self.limit_max() {
                         if abs_pos > ang {
@@ -214,91 +222,114 @@ impl<B : StepperBuilder + Send + 'static, C : StepperController + Send + 'static
                             RelDist::ZERO 
                         }
                     } else {
-                        RelDist::ZERO
+                        RelDist::NAN
                     }
-                }
-            } else {
-                if let Some(ang) = self.limit_max() {
-                    if abs_pos > ang {
-                        abs_pos - ang
-                    } else { 
-                        RelDist::ZERO 
-                    }
-                } else {
-                    RelDist::NAN
                 }
             }
-        }
 
-        fn set_endpos(&mut self, set_abs_pos : AbsPos) {
-            self.set_abs_pos(set_abs_pos);
+            fn set_endpos(&mut self, set_abs_pos : AbsPos) {
+                self.overwrite_abs_pos(set_abs_pos);
 
-            let dir = self.direction().as_bool();
-    
-            self.set_pos_limits(
-                if dir { None } else { Some(set_abs_pos) },
-                if dir { Some(set_abs_pos) } else { None }
-            )
-        }
-    //
-
-    // Loads
-        fn force_gen(&self) -> Force {
-            self.builder.vars().force_load_gen
-        }
-
-        fn force_dir(&self) -> Force {
-            self.builder.vars().force_load_dir
-        }
-
-        fn apply_gen_force(&mut self, force : Force) -> Result<(), StepperBuilderError> {
-            self.builder.apply_gen_force(force)
-        }
-
-        fn apply_dir_force(&mut self, force : Force) -> Result<(), StepperBuilderError> {
-            self.builder.apply_dir_force(force)
-        }
-
-        fn inertia(&self) -> Inertia {
-            self.builder.vars().inertia_load
-        }
-
-        #[inline(always)]
-        fn apply_inertia(&mut self, inertia : Inertia) -> () {
-            self.builder.apply_inertia(inertia).unwrap()
-        }
-    //
-}
-
-impl<B : StepperBuilder + Send + 'static, C : StepperController + Send + 'static> SyncActuatorBlocking for StepperMotor<B, C> {
-    fn drive_rel(&mut self, rel_dist : RelDist, speed_f : Factor) -> Result<(), ActuatorError> {
-        if !rel_dist.is_finite() {
-            return Err(ActuatorError::InvaldRelativeDistance(rel_dist));
-        }
-
-        // Set drive mode, return mapped error if one occurs
-        self.builder.set_drive_mode(DriveMode::FixedDistance(rel_dist, Velocity::ZERO, speed_f), &mut self.ctrl)?;
-        self.handle_builder()
+                let dir = self.direction().as_bool();
+        
+                self.set_pos_limits(
+                    if dir { None } else { Some(set_abs_pos) },
+                    if dir { Some(set_abs_pos) } else { None }
+                )
+            }
+        //
     }
-}
 
-impl<B : StepperBuilder + Send + 'static, C : StepperController + Send + 'static> StepperActuator for StepperMotor<B, C> 
+    impl<B : StepperBuilder, C : StepperController> SyncActuatorBlocking for StepperMotor<B, C> {
+        fn drive_rel(&mut self, rel_dist : RelDist, speed_f : Factor) -> Result<(), ActuatorError> {
+            if !rel_dist.is_finite() {
+                return Err(ActuatorError::InvaldRelativeDistance(rel_dist));
+            }
+
+            // Set drive mode, return mapped error if one occurs
+            self.builder.set_drive_mode(DriveMode::FixedDistance(rel_dist, Velocity::ZERO, speed_f), &mut self.ctrl)?;
+            self.handle_builder()
+        }
+    }
+// 
+
+// ###########################
+// #    Builder dependent    #
+// ###########################
+    impl<B : StepperBuilderSimple, C : StepperController> StepperMotor<B, C> {
+        /// Creates a new stepper motor with the given controller `ctrl` 
+        pub fn new_simple(ctrl : C) -> Result<Self, StepperBuilderError> {
+            Ok(Self {
+                builder: B::new()?,
+                ctrl,
+
+                _state : Arc::new(StepperState::new()),
+
+                _limit_min: None,
+                _limit_max: None,
+
+                interruptors : Vec::new(),
+                _intr_reason: None
+            })
+        }
+    }
+
+    impl<B : StepperBuilderAdvanced, C : StepperController> StepperMotor<B, C> {
+        /// Creates a new stepper motor with the given constants `consts` and configuration `config`
+        pub fn new_advanced(ctrl : C, consts : StepperConst, config : StepperConfig) -> Result<Self, StepperBuilderError> {
+            Ok(Self {
+                builder: B::new(consts, config)?,
+                ctrl,
+
+                _state : Arc::new(StepperState::new()),
+
+                _limit_min: None,
+                _limit_max: None,
+
+                interruptors : Vec::new(),
+                _intr_reason: None
+            })
+        }
+    }
+
+    impl<B : StepperBuilderAdvanced, C : StepperController> SyncActuatorAdvanced for StepperMotor<B, C> {
+        // Loads
+            fn force_gen(&self) -> Force {
+                self.builder.vars().force_load_gen
+            }
+
+            fn force_dir(&self) -> Force {
+                self.builder.vars().force_load_dir
+            }
+
+            fn apply_gen_force(&mut self, force : Force) -> Result<(), ActuatorError> {
+                self.builder.apply_gen_force(force)?;
+                Ok(())
+            }
+
+            fn apply_dir_force(&mut self, force : Force) -> Result<(), ActuatorError> {
+                self.builder.apply_dir_force(force)?;
+                Ok(())
+            }
+
+            fn inertia(&self) -> Inertia {
+                self.builder.vars().inertia_load
+            }
+
+            #[inline(always)]
+            fn apply_inertia(&mut self, inertia : Inertia) -> Result<(), ActuatorError> {
+                self.builder.apply_inertia(inertia)?;
+                Ok(())
+            }
+        //
+    }
+// 
+
+impl<B : StepperBuilder, C : StepperController> StepperActuator for StepperMotor<B, C> 
 where
     B : DefinedActuator 
 {
     // Data
-        fn consts(&self) -> &StepperConst {
-            self.builder.consts()
-        }
-
-        fn config(&self) -> &StepperConfig {
-            self.builder.config()
-        }
-
-        fn set_config(&mut self, config : StepperConfig) -> Result<(), StepperBuilderError> {
-            self.builder.set_config(config)
-        }
-
         fn microsteps(&self) -> MicroSteps {
             self.builder.microsteps()
         }
@@ -314,7 +345,7 @@ where
     }
 }
 
-impl<B : StepperBuilder + Send + 'static, C : StepperController + Send + 'static> Interruptible for StepperMotor<B, C> {
+impl<B : StepperBuilder, C : StepperController> Interruptible for StepperMotor<B, C> {
     // Interruptors
         fn add_interruptor(&mut self, interruptor : Box<dyn Interruptor + Send>) {
             self.interruptors.push(interruptor);
@@ -327,7 +358,7 @@ impl<B : StepperBuilder + Send + 'static, C : StepperController + Send + 'static
     // 
 }
 
-impl<B : StepperBuilder + Send + 'static, C : StepperController + Send + 'static> DefinedActuator for StepperMotor<B, C> 
+impl<B : StepperBuilder, C : StepperController> DefinedActuator for StepperMotor<B, C> 
 where
     B : DefinedActuator 
 {
@@ -336,17 +367,17 @@ where
     }
 }
 
-impl<B : StepperBuilder + Send + 'static, C : StepperController + Send + 'static> AsyncActuator for StepperMotor<B, C> 
+impl<B : StepperBuilder, C : StepperController> AsyncActuator for StepperMotor<B, C> 
 {
-    fn drive_factor(&mut self, direction : Direction, speed : Factor) -> Result<(), ActuatorError> {
+    fn drive_factor(&mut self, speed : Factor, direction : Direction) -> Result<(), ActuatorError> {
         // Set drive mode, return mapped error if one occurs
         self.builder.set_drive_mode(DriveMode::ConstFactor(speed, direction), &mut self.ctrl)?;
         self.handle_builder()
     }
 
-    fn drive_speed(&mut self, direction : Direction, speed : Velocity) -> Result<(), ActuatorError> {
+    fn drive_speed(&mut self, speed : Velocity) -> Result<(), ActuatorError> {
         // Set drive mode, return mapped error if one occurs
-        self.builder.set_drive_mode(DriveMode::ConstVelocity(speed, direction), &mut self.ctrl)?;
+        self.builder.set_drive_mode(DriveMode::ConstVelocity(speed), &mut self.ctrl)?;
         self.handle_builder()
     }
 

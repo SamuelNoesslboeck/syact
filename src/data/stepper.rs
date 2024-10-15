@@ -82,6 +82,17 @@ impl StepperConst {
             torque_stall: Force(0.42), 
             inertia_motor: Inertia(0.000_005_7)
         }; 
+
+        /// ### Stepper motor 23HS45_4204S
+        /// Values for standard stepper motor, see <https://www.omc-stepperonline.com/download/23HS45-4204S.pdf>
+        pub const MOT_23HS45_4204S : Self = Self {
+            default_current: 3.8,
+            inductance: 0.0034,
+            resistance: 0.88,
+            number_steps: 400,
+            torque_stall: Force(3.0),
+            inertia_motor: Inertia(0.000_068)
+        };
     // 
 
     // Amperage

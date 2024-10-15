@@ -4,7 +4,7 @@ use core::sync::atomic::Ordering::Relaxed;
 use atomic_float::AtomicF32;
 use syunit::*;
 
-use crate::{StepperConst, SyncActuator, SyncActuatorGroup, StepperConfig};
+use crate::{SyncActuator, SyncActuatorGroup};
 use crate::act::SyncActuatorState;
 use crate::act::asyn::AsyncActuatorState;
 use crate::data::MicroSteps;
@@ -16,7 +16,7 @@ use crate::math::movements::DefinedActuator;
 
 // Submodules
     mod builder;
-    pub use builder::{StepperBuilderError, DriveMode, StepperBuilder, StartStopBuilder, ComplexBuilder};
+    pub use builder::{StepperBuilderError, DriveMode, StepperBuilder, StartStopBuilder, ComplexBuilder, StepperBuilderSimple, StepperBuilderAdvanced};
 
     mod ctrl;
     pub use ctrl::{StepperController, StepperControllerError};
@@ -30,17 +30,6 @@ use crate::math::movements::DefinedActuator;
 // ################################
     /// A component based on a stepper motor
     pub trait StepperActuator : SyncActuator + DefinedActuator {
-        /// Returns the constants of the stepper motor
-        fn consts(&self) -> &StepperConst;
-
-        // Config
-            /// Returns a reference to the `StepperConfig` used by the stepper motor
-            fn config(&self) -> &StepperConfig;
-
-            /// Set the config used by the Stepper motor
-            fn set_config(&mut self, config : StepperConfig) -> Result<(), StepperBuilderError>;
-        // 
-
         // Microstepping
             /// The amount of microsteps in a full step
             fn microsteps(&self) -> MicroSteps;
@@ -60,13 +49,6 @@ use crate::math::movements::DefinedActuator;
     where 
         T: StepperActuator + ?Sized + 'static
     {
-        /// Set the configuration for multiple stepper motors
-        fn set_config(&mut self, config : StepperConfig) {
-            self.for_each_mut(|comp, _| {
-                comp.set_config(config.clone())
-            });
-        }
-
         /// Returns the amount of microsteps every component uses
         fn microsteps(&self) -> [MicroSteps; C] {
             self.for_each(|comp, _| {

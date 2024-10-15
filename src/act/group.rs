@@ -1,6 +1,5 @@
-use crate::act::{SyncActuator, ActuatorError};
-use crate::prelude::StepperBuilderError;
 use crate::SyncActuatorBlocking;
+use crate::act::{ActuatorError, SyncActuator, SyncActuatorAdvanced};
 
 use syunit::*;
 
@@ -75,7 +74,7 @@ where
         #[inline(always)]
         fn set_abs_pos(&mut self, abs_poss : &[AbsPos; C]) {
             self.for_each_mut(|act, index| {
-                act.set_abs_pos(abs_poss[index])
+                act.overwrite_abs_pos(abs_poss[index])
             });
         }
 
@@ -122,6 +121,52 @@ where
 
     // Load calculation
         /// Runs [SyncComp::apply_inertia()] for all components
+
+        /// Returns the maximum velocitys for each component of the group
+        fn velocity_max(&self) -> [Option<Velocity>; C] {
+            self.for_each(|act, _| {
+                act.velocity_max()
+            })
+        }
+
+        /// Set the maximum velocity  of the components
+        fn set_velocity_max(&mut self, velocity_max : [Option<Velocity>; C]) {
+            self.for_each_mut(|act, index| {
+                act.set_velocity_max(velocity_max[index]);
+            });
+        }
+    // 
+}
+
+// ##############################################
+// #    SyncActuatorGroup - Extention traits    #
+// ##############################################
+    // Movements
+        /// Further extending a `SyncActuatorGroup`, extending it with blocking movements
+        pub trait SyncActuatorBlockingGroup<T, const C : usize> : SyncActuatorGroup<T, C>
+        where 
+            T : SyncActuatorBlocking + ?Sized + 'static
+        {
+            /// Runs [SyncCompBlocking::drive_rel()] for all components
+            fn drive_rel(&mut self, rel_dists : [RelDist; C], speed : [Factor; C]) -> Result<[(); C], ActuatorError> {
+                self.try_for_each_mut(|act, index| {
+                    act.drive_rel(rel_dists[index], speed[index])  
+                })
+            }
+
+            /// Runs [SyncCompBlocking::drive_abs()] for all components
+            fn drive_abs(&mut self, abs_pos : [AbsPos; C], speed : [Factor; C]) -> Result<[(); C], ActuatorError> {
+                self.try_for_each_mut(|act, index| {
+                    act.drive_abs(abs_pos[index], speed[index])
+                })
+            }
+        }
+    //
+
+    pub trait SyncActuatorAdvancedGroup<T, const C : usize> : SyncActuatorGroup<T, C>
+        where 
+            T : SyncActuatorAdvanced + ?Sized + 'static
+    {
         #[inline(always)]
         fn apply_inertias(&mut self, inertias : &[Inertia; C]) {
             self.for_each_mut(|act, index| {
@@ -131,46 +176,11 @@ where
 
         /// Runs [SyncComp::apply_force_gen()] for all components
         #[inline]
-        fn apply_forces(&mut self, forces : &[Force; C]) -> Result<(), StepperBuilderError> {
+        fn apply_forces(&mut self, forces : &[Force; C]) -> Result<(), ActuatorError> {
             self.try_for_each_mut(|act, index| {
                 act.apply_gen_force(forces[index])
             })?;
             Ok(())
         }
-
-        /// Returns the maximum velocitys for each component of the group
-        fn velocity_max(&self) -> [Velocity; C] {
-            self.for_each(|act, _| {
-                act.velocity_max()
-            })
-        }
-
-        /// Set the maximum velocity  of the components
-        fn set_velocity_max(&mut self, velocity_max : [Velocity; C]) {
-            self.for_each_mut(|act, index| {
-                act.set_velocity_max(velocity_max[index]);
-            });
-        }
-    // 
-}
-
-
-/// Further extending a `SyncActuatorGroup`, extending it with blocking movements
-pub trait SyncActuatorBlockingGroup<T, const C : usize> : SyncActuatorGroup<T, C>
-where 
-    T : SyncActuatorBlocking + ?Sized + 'static
-{
-    /// Runs [SyncCompBlocking::drive_rel()] for all components
-    fn drive_rel(&mut self, rel_dists : [RelDist; C], speed : [Factor; C]) -> Result<[(); C], ActuatorError> {
-        self.try_for_each_mut(|act, index| {
-            act.drive_rel(rel_dists[index], speed[index])  
-        })
     }
-
-    /// Runs [SyncCompBlocking::drive_abs()] for all components
-    fn drive_abs(&mut self, abs_pos : [AbsPos; C], speed : [Factor; C]) -> Result<[(); C], ActuatorError> {
-        self.try_for_each_mut(|act, index| {
-            act.drive_abs(abs_pos[index], speed[index])
-        })
-    }
-}
+//

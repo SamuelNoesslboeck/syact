@@ -3,8 +3,8 @@ use alloc::sync::Arc;
 
 use syunit::*;
 
-use crate::{AsyncActuator, StepperConfig, SyncActuator, SyncActuatorBlocking};
-use crate::act::{Interruptible, ActuatorError, SyncActuatorState};
+use crate::{AsyncActuator, SyncActuator, SyncActuatorBlocking};
+use crate::act::{ActuatorError, Interruptible, SyncActuatorAdvanced, SyncActuatorState};
 use crate::act::asyn::AsyncActuatorState;
 use crate::act::stepper::{StepperActuator, StepperBuilderError};
 use crate::data::MicroSteps;
@@ -34,52 +34,80 @@ pub trait ActuatorParent {
         fn ratio(&self) -> f32;
 
         // Automatic implementations
+            #[inline]
             fn abs_pos_for_child(&self, parent_abs_pos : AbsPos) -> AbsPos {
                 parent_abs_pos / self.ratio()
             }
 
+            #[inline]
             fn abs_pos_for_parent(&self, child_abs_pos : AbsPos) -> AbsPos {
                 child_abs_pos * self.ratio()
             }
 
+            #[inline]
             fn rel_dist_for_chlid(&self, parent_rel_dist : RelDist) -> RelDist {
                 parent_rel_dist / self.ratio()
             }
 
+            #[inline]
             fn rel_dist_for_parent(&self, child_rel_dist : RelDist) -> RelDist {
                 child_rel_dist * self.ratio()
             }
 
-            fn velocity_for_child(&self, parent_velocity : Velocity) -> Velocity {
-                parent_velocity / self.ratio()
-            }
+            // Velocity
+                #[inline]
+                fn velocity_for_child(&self, parent_velocity : Velocity) -> Velocity {
+                    parent_velocity / self.ratio()
+                }
 
-            fn velocity_for_parent(&self, child_velocity : Velocity) -> Velocity {
-                child_velocity * self.ratio()
-            }
+                #[inline]
+                fn velocity_for_parent(&self, child_velocity : Velocity) -> Velocity {
+                    child_velocity * self.ratio()
+                }
+            // 
+            
+            // Acceleration
+                #[inline]
+                fn acceleration_for_child(&self, parent_alpha : Acceleration) -> Acceleration {
+                    parent_alpha / self.ratio()
+                }
 
-            fn alpha_for_child(&self, parent_alpha : Acceleration) -> Acceleration {
-                parent_alpha / self.ratio()
-            }
+                #[inline]
+                fn acceleration_for_parent(&self, child_alpha : Acceleration) -> Acceleration {
+                    child_alpha * self.ratio()
+                }
+            //
+            
+            // Jolt    
+                #[inline]
+                fn jolt_for_child(&self, parent_jolt : Jolt) -> Jolt {
+                    parent_jolt / self.ratio()
+                }
 
-            fn alpha_for_parent(&self, child_alpha : Acceleration) -> Acceleration {
-                child_alpha * self.ratio()
-            }
+                #[inline]
+                fn jolt_for_parent(&self, child_jolt : Jolt) -> Jolt {
+                    child_jolt * self.ratio()
+                }
+            //
 
             // Implementation for Newtonmeter to Newtonmeter conversion
+            #[inline]
             fn force_for_child(&self, parent_force : Force) -> Force {
                 parent_force * self.ratio()
             }
 
+            #[inline]
             fn force_for_parent(&self, child_force : Force) -> Force {
                 child_force / self.ratio()
             }
 
             // Implementation for Newtonmeter to Newtonmeter conversion
+            #[inline]
             fn inertia_for_child(&self, parent_inertia : Inertia) -> Inertia {
                 parent_inertia * self.ratio() * self.ratio()
             }
 
+            #[inline]
             fn inertia_for_parent(&self, child_intertia : Inertia) -> Inertia {
                 child_intertia / self.ratio() / self.ratio()
             }
@@ -92,131 +120,148 @@ pub trait ActuatorParent {
 // ##################################
 // 
 // Automatically implements `SyncActor` for every component
-    impl<T : RatioActuatorParent> SyncActuator for T 
-    where
-        T::Child : SyncActuator
-    {
-        // State
-            fn state(&self) -> &dyn super::SyncActuatorState {
-                self.child().state() 
-            }
+    // SyncActuator traits
+        impl<T : RatioActuatorParent> SyncActuator for T 
+        where
+            T::Child : SyncActuator
+        {
+            // State
+                fn state(&self) -> &dyn super::SyncActuatorState {
+                    self.child().state() 
+                }
 
-            fn clone_state(&self) -> Arc<dyn SyncActuatorState> {
-                self.child().clone_state()
-            }
-        //  
+                fn clone_state(&self) -> Arc<dyn SyncActuatorState> {
+                    self.child().clone_state()
+                }
+            //  
 
-        // Position & Velocity
-            fn abs_pos(&self) -> AbsPos {
-                self.abs_pos_for_parent(self.child().abs_pos())
-            }
+            // Position
+                fn abs_pos(&self) -> AbsPos {
+                    self.abs_pos_for_parent(self.child().abs_pos())
+                }
 
-            fn set_abs_pos(&mut self, mut abs_pos : AbsPos) {
-                abs_pos = self.abs_pos_for_child(abs_pos);
-                self.child_mut().set_abs_pos(abs_pos)
-            }
+                fn overwrite_abs_pos(&mut self, mut abs_pos : AbsPos) {
+                    abs_pos = self.abs_pos_for_child(abs_pos);
+                    self.child_mut().overwrite_abs_pos(abs_pos)
+                }
+            //
 
-            fn velocity_max(&self) -> Velocity {
-                self.velocity_for_parent(self.child().velocity_max())
-            }
+            // Velocity
+                fn velocity_max(&self) -> Option<Velocity> {
+                    self.child().velocity_max().map(|velocity| self.velocity_for_parent(velocity))
+                }
 
-            fn set_velocity_max(&mut self, mut velocity_max : Velocity) {
-                velocity_max = self.velocity_for_child(velocity_max);
-                self.child_mut().set_velocity_max(velocity_max)
-            }
-        //
+                fn set_velocity_max(&mut self, mut velocity_opt : Option<Velocity>) -> Result<(), ActuatorError> {
+                    velocity_opt = velocity_opt.map(|velocity| self.velocity_for_child(velocity));
+                    self.child_mut().set_velocity_max(velocity_opt)
+                }
+            // 
 
-        // Positional limits
-            fn limit_max(&self) -> Option<AbsPos> {
-                self.child().limit_max().map(|limit| self.abs_pos_for_child(limit))
-            }
+            // Acceleration
+                fn acceleration_max(&self) -> Option<Acceleration> {
+                    self.child().acceleration_max().map(|acceleration| self.acceleration_for_parent(acceleration))
+                }
+                
+                fn set_acceleration_max(&mut self, mut acceleration_opt : Option<Acceleration>) -> Result<(), ActuatorError> {
+                    acceleration_opt = acceleration_opt.map(|acceleration| self.acceleration_for_child(acceleration));
+                    self.child_mut().set_acceleration_max(acceleration_opt)
+                }
+            // 
 
-            fn limit_min(&self) -> Option<AbsPos> {
-                self.child().limit_min().map(|limit| self.abs_pos_for_child(limit))
-            }
+            // Jolt
+                fn jolt_max(&self) -> Option<Jolt> {
+                    self.child().jolt_max().map(|jolt| self.jolt_for_parent(jolt))
+                }
 
-            fn resolve_pos_limits_for_abs_pos(&self, abs_pos : AbsPos) -> RelDist {
-                self.rel_dist_for_parent(self.child().resolve_pos_limits_for_abs_pos(
-                    self.abs_pos_for_child(abs_pos)
-                ))
-            }
+                fn set_jolt_max(&mut self, mut jolt_opt : Option<Jolt>) -> Result<(), ActuatorError> {
+                    jolt_opt = jolt_opt.map(|jolt| self.jolt_for_child(jolt));
+                    self.child_mut().set_jolt_max(jolt_opt)
+                }
+            // 
 
-            fn set_pos_limits(&mut self, mut min : Option<AbsPos>, mut max : Option<AbsPos>) {
-                min = min.map(|g| self.abs_pos_for_child(g));
-                max = max.map(|g| self.abs_pos_for_child(g));
-                self.child_mut().set_pos_limits(min, max)
-            }
+            // Positional limits
+                fn limit_max(&self) -> Option<AbsPos> {
+                    self.child().limit_max().map(|limit| self.abs_pos_for_child(limit))
+                }
 
-            fn set_endpos(&mut self, mut set_abs_pos : AbsPos) {
-                set_abs_pos = self.abs_pos_for_child(set_abs_pos);
-                self.child_mut().set_endpos(set_abs_pos)
-            }
+                fn limit_min(&self) -> Option<AbsPos> {
+                    self.child().limit_min().map(|limit| self.abs_pos_for_child(limit))
+                }
 
-            fn overwrite_pos_limits(&mut self, mut min : Option<AbsPos>, mut max : Option<AbsPos>) {
-                min = min.map(|g| self.abs_pos_for_child(g));
-                max = max.map(|g| self.abs_pos_for_child(g));
-                self.child_mut().overwrite_pos_limits(min, max)
-            }
-        // 
+                fn resolve_pos_limits_for_abs_pos(&self, abs_pos : AbsPos) -> RelDist {
+                    self.rel_dist_for_parent(self.child().resolve_pos_limits_for_abs_pos(
+                        self.abs_pos_for_child(abs_pos)
+                    ))
+                }
 
-        // Loads
-            fn force_gen(&self) -> Force {
-                self.force_for_parent(self.child().force_gen())
-            }
+                fn set_pos_limits(&mut self, mut min : Option<AbsPos>, mut max : Option<AbsPos>) {
+                    min = min.map(|g| self.abs_pos_for_child(g));
+                    max = max.map(|g| self.abs_pos_for_child(g));
+                    self.child_mut().set_pos_limits(min, max)
+                }
 
-            fn force_dir(&self) -> Force {
-                self.force_for_parent(self.child().force_dir())
-            }
+                fn set_endpos(&mut self, mut set_abs_pos : AbsPos) {
+                    set_abs_pos = self.abs_pos_for_child(set_abs_pos);
+                    self.child_mut().set_endpos(set_abs_pos)
+                }
 
-            fn apply_gen_force(&mut self, mut force : Force) -> Result<(), StepperBuilderError> {
-                force = self.force_for_child(force);
-                self.child_mut().apply_gen_force(force)
-            }
-
-            fn apply_dir_force(&mut self, mut force : Force) -> Result<(), StepperBuilderError> {
-                force = self.force_for_child(force);
-                self.child_mut().apply_dir_force(force)
-            }
-
-            fn inertia(&self) -> Inertia {
-                self.inertia_for_parent(self.child().inertia())
-            }
-
-            fn apply_inertia(&mut self, mut inertia : Inertia) {
-                inertia = self.inertia_for_child(inertia);
-                self.child_mut().apply_inertia(inertia)
-            }
-        // 
-    }
-
-    impl<T : RatioActuatorParent> SyncActuatorBlocking for T 
-    where
-        T::Child : SyncActuatorBlocking
-    {
-        fn drive_rel(&mut self, mut rel_dist : RelDist, speed : Factor) -> Result<(), ActuatorError> {
-            rel_dist = self.rel_dist_for_chlid(rel_dist);
-            self.child_mut().drive_rel(rel_dist, speed)
+                fn overwrite_pos_limits(&mut self, mut min : Option<AbsPos>, mut max : Option<AbsPos>) {
+                    min = min.map(|g| self.abs_pos_for_child(g));
+                    max = max.map(|g| self.abs_pos_for_child(g));
+                    self.child_mut().overwrite_pos_limits(min, max)
+                }
+            // 
         }
-    }
+    
+        impl<T : RatioActuatorParent> SyncActuatorBlocking for T 
+        where
+            T::Child : SyncActuatorBlocking
+        {
+            fn drive_rel(&mut self, mut rel_dist : RelDist, speed : Factor) -> Result<(), ActuatorError> {
+                rel_dist = self.rel_dist_for_chlid(rel_dist);
+                self.child_mut().drive_rel(rel_dist, speed)
+            }
+        }
+
+        impl<T : RatioActuatorParent> SyncActuatorAdvanced for T
+        where 
+            T::Child : SyncActuatorAdvanced
+        {
+            // Loads
+                fn force_gen(&self) -> Force {
+                    self.force_for_parent(self.child().force_gen())
+                }
+
+                fn force_dir(&self) -> Force {
+                    self.force_for_parent(self.child().force_dir())
+                }
+
+                fn apply_gen_force(&mut self, mut force : Force) -> Result<(), ActuatorError> {
+                    force = self.force_for_child(force);
+                    self.child_mut().apply_gen_force(force)
+                }
+
+                fn apply_dir_force(&mut self, mut force : Force) -> Result<(), ActuatorError> {
+                    force = self.force_for_child(force);
+                    self.child_mut().apply_dir_force(force)
+                }
+
+                fn inertia(&self) -> Inertia {
+                    self.inertia_for_parent(self.child().inertia())
+                }
+
+                fn apply_inertia(&mut self, mut inertia : Inertia) -> Result<(), ActuatorError> {
+                    inertia = self.inertia_for_child(inertia);
+                    self.child_mut().apply_inertia(inertia)
+                }
+            //
+        }
+    // 
 
     impl<T : RatioActuatorParent> StepperActuator for T
     where
         T::Child : StepperActuator
     {
-        fn consts(&self) -> &crate::StepperConst {
-            self.child().consts()
-        }
-
-        // Config
-            fn config(&self) -> &crate::StepperConfig {
-                self.child().config()
-            }
-
-            fn set_config(&mut self, config : StepperConfig) -> Result<(), StepperBuilderError> {
-                self.child_mut().set_config(config)
-            }
-        //
-
         // Microsteps
             fn microsteps(&self) -> MicroSteps {
                 self.child().microsteps()
@@ -250,12 +295,12 @@ pub trait ActuatorParent {
         T::Child : AsyncActuator
     {
         
-        fn drive_factor(&mut self, dir : Direction, speed : Factor) -> Result<(), ActuatorError> {
-            self.child_mut().drive_factor(dir, speed)
+        fn drive_factor(&mut self, speed : Factor, dir : Direction) -> Result<(), ActuatorError> {
+            self.child_mut().drive_factor(speed, dir)
         }
 
-        fn drive_speed(&mut self, dir : Direction, speed : Velocity) -> Result<(), ActuatorError> {
-            self.child_mut().drive_speed(dir, speed)
+        fn drive_speed(&mut self, speed : Velocity) -> Result<(), ActuatorError> {
+            self.child_mut().drive_speed(speed)
         }
 
         // State

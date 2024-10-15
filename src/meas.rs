@@ -156,7 +156,7 @@ pub fn take_simple_meas<C : SyncActuatorBlocking + Interruptible + ?Sized>(comp 
 
     // Set limits and write new distance value
     comp.set_endpos(abs_pos_av);
-    comp.set_abs_pos(abs_pos_new);
+    comp.overwrite_abs_pos(abs_pos_new);
 
     Ok(SimpleMeasValues {
         samples: data.add_samples(),

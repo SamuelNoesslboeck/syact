@@ -22,13 +22,13 @@ use crate::tests::PARAM_TIME_ACCURACY;
 
     impl Default for Stepper {
         fn default() -> Self {
-            Self::new(SimulatedController::new(), StepperConst::MOT_17HE15_1504S, StepperConfig::VOLT12_NO_OVERLOAD).unwrap()
+            Self::new_advanced(SimulatedController::new(), StepperConst::MOT_17HE15_1504S, StepperConfig::VOLT12_NO_OVERLOAD).unwrap()
         }
     }
 
     impl Default for ComplexStepper {
         fn default() -> Self {
-            Self::new(SimulatedController::new(), StepperConst::MOT_17HE15_1504S, StepperConfig::VOLT12_NO_OVERLOAD).unwrap()
+            Self::new_advanced(SimulatedController::new(), StepperConst::MOT_17HE15_1504S, StepperConfig::VOLT12_NO_OVERLOAD).unwrap()
         }
     }
 // 
