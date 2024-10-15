@@ -3,7 +3,7 @@ use alloc::sync::Arc;
 
 use syunit::*;
 
-use crate::{SyncActuator, StepperConfig, AsyncActuator};
+use crate::{AsyncActuator, StepperConfig, SyncActuator, SyncActuatorBlocking};
 use crate::act::{Interruptible, ActuatorError, SyncActuatorState};
 use crate::act::asyn::AsyncActuatorState;
 use crate::act::stepper::{StepperActuator, StepperBuilderError};
@@ -96,12 +96,7 @@ pub trait ActuatorParent {
     where
         T::Child : SyncActuator
     {
-        // Drive
-            fn drive_rel(&mut self, mut rel_dist : RelDist, speed : Factor) -> Result<(), ActuatorError> {
-                rel_dist = self.rel_dist_for_chlid(rel_dist);
-                self.child_mut().drive_rel(rel_dist, speed)
-            }
-
+        // State
             fn state(&self) -> &dyn super::SyncActuatorState {
                 self.child().state() 
             }
@@ -192,6 +187,16 @@ pub trait ActuatorParent {
                 self.child_mut().apply_inertia(inertia)
             }
         // 
+    }
+
+    impl<T : RatioActuatorParent> SyncActuatorBlocking for T 
+    where
+        T::Child : SyncActuatorBlocking
+    {
+        fn drive_rel(&mut self, mut rel_dist : RelDist, speed : Factor) -> Result<(), ActuatorError> {
+            rel_dist = self.rel_dist_for_chlid(rel_dist);
+            self.child_mut().drive_rel(rel_dist, speed)
+        }
     }
 
     impl<T : RatioActuatorParent> StepperActuator for T

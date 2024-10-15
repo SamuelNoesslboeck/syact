@@ -109,7 +109,7 @@ impl StepperConst {
         /// # Panics
         /// 
         /// Panics if the given velocity is not finite
-        pub fn torque_dyn(&self, mut velocity : Velocity, voltage : f32, overload_current : Option<f32>) -> Force {
+        pub fn torque_dyn(&self, mut velocity : Velocity, config : &StepperConfig) -> Force {
             velocity = velocity.abs();
 
             if !velocity.is_finite() {
@@ -117,13 +117,13 @@ impl StepperConst {
             }
             
             if velocity == Velocity::ZERO {
-                return self.torque_overload(overload_current);
+                return self.torque_overload(config.overload_current);
             }
 
             let time = self.full_step_time(velocity);
-            let pow = core::f32::consts::E.powf(time / self.tau(voltage));
+            let pow = core::f32::consts::E.powf(time / self.tau(config.voltage));
 
-            self.torque_overload(overload_current) * (pow - 1.0) / (pow + 1.0)
+            self.torque_overload(config.overload_current) * (pow - 1.0) / (pow + 1.0)
         }
     // 
 
@@ -137,7 +137,7 @@ impl StepperConst {
         /// Returns the maximum acceleration that can be reached 
         #[inline]
         pub fn acceleration_max_for_velocity(&self, vars : &ActuatorVars, config : &StepperConfig, velocity : Velocity, dir : Direction) -> Option<Acceleration> {
-            vars.force_after_load(self.torque_dyn(velocity , config.voltage, None), dir).map(|f| f / vars.inertia_after_load(self.inertia_motor))
+            vars.force_after_load(self.torque_dyn(velocity , config), dir).map(|f| f / vars.inertia_after_load(self.inertia_motor))
         }
     // 
 

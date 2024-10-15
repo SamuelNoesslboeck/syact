@@ -3,8 +3,7 @@ use alloc::vec::Vec;
 use serde::{Serialize, Deserialize};
 use syunit::*;
 
-use crate::SyncActuator;
-use crate::act::{InterruptReason, Interruptible, ActuatorError};
+use crate::act::{ActuatorError, InterruptReason, Interruptible, SyncActuatorBlocking};
 
 // Submodules
     mod endstop;
@@ -110,7 +109,7 @@ impl SimpleMeasValues {
 /// # Measurement data and its usage
 /// 
 /// Specifing a `sample_dist` is optional, as the script will replace it with 10% of the maximum distance if not specified
-pub fn take_simple_meas<C : SyncActuator + Interruptible + ?Sized>(comp : &mut C, data : &SimpleMeasParams, speed : Factor) -> Result<SimpleMeasValues, SimpleMeasError> {
+pub fn take_simple_meas<C : SyncActuatorBlocking + Interruptible + ?Sized>(comp : &mut C, data : &SimpleMeasParams, speed : Factor) -> Result<SimpleMeasValues, SimpleMeasError> {
     let mut abs_poss : Vec<AbsPos> = Vec::new();
 
     // Init measurement

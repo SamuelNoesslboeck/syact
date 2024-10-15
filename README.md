@@ -2,14 +2,11 @@
 
 [![Rust]]([rust-workflow])
 [![Crates.io version]][syact: crates.io]
-[![syact: rustc 1.68+]][Rust 1.68]
 
 [Rust]: https://github.com/SamuelNoesslboeck/syact/actions/workflows/rust.yml/badge.svg
 [rust-workflow]: https://github.com/SamuelNoesslboeck/syact/actions/workflows/rust.yml
 [Crates.io version]: https://img.shields.io/crates/v/syact.svg?style=flat-square
 [syact: crates.io]: https://crates.io/crates/syact
-[syact: rustc 1.68+]: https://img.shields.io/badge/syact-rustc_1.68+-lightgray.svg
-[Rust 1.68]: https://blog.rust-lang.org/2023/03/09/Rust-1.68.0.html
 
 > **Note**
 >

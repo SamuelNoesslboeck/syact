@@ -1,5 +1,5 @@
 // Simple all in one import
-pub use crate::{AsyncActuator, Setup, Dismantle, SyncActuator, SyncActuatorGroup, StepperActuatorGroup, MicroSteps};
+pub use crate::{AsyncActuator, Setup, Dismantle, SyncActuator, SyncActuatorGroup, StepperActuatorGroup, MicroSteps, SyncActuatorBlocking};
 
 pub use crate::act::{Conveyor, LinearAxis, Gear, Interruptible, Interruptor};
 pub use crate::act::parent::{ActuatorParent, RatioActuatorParent};

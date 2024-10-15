@@ -1,5 +1,6 @@
 use crate::act::{SyncActuator, ActuatorError};
 use crate::prelude::StepperBuilderError;
+use crate::SyncActuatorBlocking;
 
 use syunit::*;
 
@@ -61,24 +62,10 @@ where
             F : FnMut(&mut T, usize) -> Result<R, E>;
     //
 
-    /// Runs [SyncComp::drive_rel()] for all components
-    fn drive_rel(&mut self, rel_dists : [RelDist; C], speed : [Factor; C]) -> Result<[(); C], ActuatorError> {
-        self.try_for_each_mut(|act, index| {
-            act.drive_rel(rel_dists[index], speed[index])  
-        })
-    }
-
-    /// Runs [SyncComp::drive_abs()] for all components
-    fn drive_abs(&mut self, abs_pos : [AbsPos; C], speed : [Factor; C]) -> Result<[(); C], ActuatorError> {
-        self.try_for_each_mut(|act, index| {
-            act.drive_abs(abs_pos[index], speed[index])
-        })
-    }
-
     // Position
         /// Runs [SyncComp::abs_pos()] for all components
         #[inline(always)]
-        fn abs_poss(&self) -> [AbsPos; C] {
+        fn abs_pos(&self) -> [AbsPos; C] {
             self.for_each(|act, _| {
                 act.abs_pos()
             })
@@ -86,7 +73,7 @@ where
         
         /// Runs [SyncComp::set_abs_pos()] for all components
         #[inline(always)]
-        fn set_abs_poss(&mut self, abs_poss : &[AbsPos; C]) {
+        fn set_abs_pos(&mut self, abs_poss : &[AbsPos; C]) {
             self.for_each_mut(|act, index| {
                 act.set_abs_pos(abs_poss[index])
             });
@@ -94,7 +81,7 @@ where
 
         /// Runs [SyncComp::resolve_pos_limits_for_abs_pos()] for all components 
         #[inline(always)]
-        fn limits_for_abs_poss(&self, abs_poss : &[AbsPos; C]) -> [RelDist; C] {
+        fn limits_for_abs_pos(&self, abs_poss : &[AbsPos; C]) -> [RelDist; C] {
             self.for_each(|act, index| {
                 act.resolve_pos_limits_for_abs_pos(abs_poss[index])
             })
@@ -102,7 +89,7 @@ where
 
         /// Checks if the given abs_poss are vaild, which means they are finite and in range of the components
         #[inline(always)]
-        fn valid_abs_poss(&self, abs_poss : &[AbsPos; C]) -> bool {
+        fn valid_abs_pos(&self, abs_poss : &[AbsPos; C]) -> bool {
             self.for_each(|act, index| {
                 !act.resolve_pos_limits_for_abs_pos(abs_poss[index]).is_normal() & abs_poss[index].is_finite()
             }).iter().all(|v| *v)
@@ -110,7 +97,7 @@ where
 
         /// Same as [SyncCompGroup::valid_abs_poss()], but it evaluates the check for each component and returns seperated results for analysis
         #[inline(always)]
-        fn valid_abs_poss_verb(&self, abs_poss : &[AbsPos; C]) -> [bool; C] {
+        fn valid_abs_pos_verbose(&self, abs_poss : &[AbsPos; C]) -> [bool; C] {
             self.for_each(|act, index| {
                 !act.resolve_pos_limits_for_abs_pos(abs_poss[index]).is_normal() & abs_poss[index].is_finite()
             })
@@ -118,7 +105,7 @@ where
 
         /// Runs [SyncComp::set_end()] for all components
         #[inline(always)]
-        fn set_ends(&mut self, set_dist : &[AbsPos; C]) {
+        fn set_endpos(&mut self, set_dist : &[AbsPos; C]) {
             self.for_each_mut(|act, index| {
                 act.set_endpos(set_dist[index]);
             });
@@ -165,4 +152,25 @@ where
             });
         }
     // 
+}
+
+
+/// Further extending a `SyncActuatorGroup`, extending it with blocking movements
+pub trait SyncActuatorBlockingGroup<T, const C : usize> : SyncActuatorGroup<T, C>
+where 
+    T : SyncActuatorBlocking + ?Sized + 'static
+{
+    /// Runs [SyncCompBlocking::drive_rel()] for all components
+    fn drive_rel(&mut self, rel_dists : [RelDist; C], speed : [Factor; C]) -> Result<[(); C], ActuatorError> {
+        self.try_for_each_mut(|act, index| {
+            act.drive_rel(rel_dists[index], speed[index])  
+        })
+    }
+
+    /// Runs [SyncCompBlocking::drive_abs()] for all components
+    fn drive_abs(&mut self, abs_pos : [AbsPos; C], speed : [Factor; C]) -> Result<[(); C], ActuatorError> {
+        self.try_for_each_mut(|act, index| {
+            act.drive_abs(abs_pos[index], speed[index])
+        })
+    }
 }

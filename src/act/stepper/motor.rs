@@ -5,7 +5,7 @@ use core::sync::atomic::Ordering::Relaxed;
 
 use syunit::*;
 
-use crate::{AsyncActuator, Dismantle, Setup, SyncActuator};
+use crate::{AsyncActuator, Dismantle, Setup, SyncActuator, SyncActuatorBlocking};
 use crate::act::{InterruptReason, Interruptible, Interruptor, ActuatorError, SyncActuatorState};
 use crate::act::asyn::AsyncActuatorState;
 use crate::act::stepper::{StepperActuator, StepperController, StepperBuilder, StepperBuilderError, DriveMode, StepperState};
@@ -145,23 +145,7 @@ impl<B : StepperBuilder + Send + 'static, C : StepperController + Send + 'static
 //
 
 impl<B : StepperBuilder + Send + 'static, C : StepperController + Send + 'static> SyncActuator for StepperMotor<B, C> {
-    // Movement
-        fn drive_rel(&mut self, rel_dist : RelDist, speed_f : Factor) -> Result<(), ActuatorError> {
-            if !rel_dist.is_finite() {
-                return Err(ActuatorError::InvaldRelativeDistance(rel_dist));
-            }
-
-            // Set drive mode, return mapped error if one occurs
-            self.builder.set_drive_mode(DriveMode::FixedDistance(rel_dist, Velocity::ZERO, speed_f), &mut self.ctrl)?;
-            self.handle_builder()
-        }
-
-        /// Absolute movements derive from relative movements ([Self::drive_rel])
-        fn drive_abs(&mut self, abs_pos : AbsPos, speed : Factor) -> Result<(), ActuatorError> {
-            let rel_dist = abs_pos - self.abs_pos();
-            self.drive_rel(rel_dist, speed)
-        }
-
+    // State
         fn state(&self) -> &dyn SyncActuatorState {
             self._state.as_ref()
         }
@@ -284,6 +268,18 @@ impl<B : StepperBuilder + Send + 'static, C : StepperController + Send + 'static
             self.builder.apply_inertia(inertia).unwrap()
         }
     //
+}
+
+impl<B : StepperBuilder + Send + 'static, C : StepperController + Send + 'static> SyncActuatorBlocking for StepperMotor<B, C> {
+    fn drive_rel(&mut self, rel_dist : RelDist, speed_f : Factor) -> Result<(), ActuatorError> {
+        if !rel_dist.is_finite() {
+            return Err(ActuatorError::InvaldRelativeDistance(rel_dist));
+        }
+
+        // Set drive mode, return mapped error if one occurs
+        self.builder.set_drive_mode(DriveMode::FixedDistance(rel_dist, Velocity::ZERO, speed_f), &mut self.ctrl)?;
+        self.handle_builder()
+    }
 }
 
 impl<B : StepperBuilder + Send + 'static, C : StepperController + Send + 'static> StepperActuator for StepperMotor<B, C> 

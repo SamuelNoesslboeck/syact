@@ -183,20 +183,6 @@ use stepper::StepperBuilderError;
     /// Components can have multiple layers, for example take a stepper motor with a geaerbox attached to it. The stepper motor and both combined will be a component, the later having 
     /// the stepper motor component defined as it's parent component. (See [Gear])
     pub trait SyncActuator {
-        // Movement
-            /// Moves the component by the relative distance as fast as possible, halts the script until 
-            /// the movement is finshed and returns the actual **relative** distance travelled
-            fn drive_rel(&mut self, rel_dist : RelDist, speed : Factor) -> Result<(), ActuatorError>;
-
-            /// Moves the component to the given position as fast as possible, halts the script until the 
-            /// movement is finished and returns the actual **relative** distance travelled.
-            #[inline]
-            fn drive_abs(&mut self, abs_pos : AbsPos, speed : Factor) -> Result<(), ActuatorError> {
-                let rel_dist = abs_pos - self.abs_pos();
-                self.drive_rel(rel_dist, speed)
-            }
-        //
-
         // State
             /// Returns a reference to the actuators `SyncActuatorState`
             fn state(&self) -> &dyn SyncActuatorState;
@@ -476,3 +462,22 @@ use stepper::StepperBuilderError;
         // 
     }
 //
+
+// #######################################
+// #    SyncActuator - Movement types    #
+// #######################################
+    /// Further defines a `SyncActuator`, extending it with blocking movement functions
+    pub trait SyncActuatorBlocking : SyncActuator {
+        /// Moves the component by the relative distance as fast as possible, halts the script until 
+        /// the movement is finshed and returns the actual **relative** distance travelled
+        fn drive_rel(&mut self, rel_dist : RelDist, speed : Factor) -> Result<(), ActuatorError>;
+
+        /// Moves the component to the given position as fast as possible, halts the script until the 
+        /// movement is finished and returns the actual **relative** distance travelled.
+        #[inline]
+        fn drive_abs(&mut self, abs_pos : AbsPos, speed : Factor) -> Result<(), ActuatorError> {
+            let rel_dist = abs_pos - self.abs_pos();
+            self.drive_rel(rel_dist, speed)
+        }
+    }
+// 
