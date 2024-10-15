@@ -168,11 +168,11 @@ impl<B : StepperBuilder + Send + 'static, C : StepperController + Send + 'static
 
         #[inline]
         fn velocity_max(&self) -> Velocity {
-            self.builder.velocity_max()
+            self.builder.velocity_possible()
         }
 
         fn set_velocity_max(&mut self, velocity_max : Velocity) {
-            self.builder.set_velocity_cap(velocity_max).unwrap();      // TODO
+            self.builder.set_velocity_max(velocity_max).unwrap();      // TODO
         }
     //
 

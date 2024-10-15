@@ -20,11 +20,12 @@ impl StepperController for SimulatedController {
         Ok(())
     }
 
-    fn dir(&self) -> Direction {
+    fn direction(&self) -> Direction {
         self._dir
     }
 
-    fn set_dir(&mut self, dir : Direction) {
+    fn set_dir(&mut self, dir : Direction) -> Result<(), StepperControllerError> {
         self._dir = dir;
+        Ok(())
     }
 }

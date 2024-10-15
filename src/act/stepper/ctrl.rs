@@ -13,7 +13,9 @@ pub const STEP_PULSE_TIME : Time = Time(1.0 / 100000.0);     // TODO: Remove min
         /// The time given is too short for the driver to recognize
         TimeTooShort(Time),
         /// The time given is invalid (`<=0` / `NaN` / ... )
-        TimeIsInvalid(Time)
+        TimeIsInvalid(Time),
+        /// There is an issue with the IO of the controller
+        IOError
     }
 
     impl core::fmt::Display for StepperControllerError {
@@ -22,7 +24,9 @@ pub const STEP_PULSE_TIME : Time = Time(1.0 / 100000.0);     // TODO: Remove min
                 Self::TimeTooShort(t) => 
                     f.write_fmt(format_args!("Bad step time! Time given ({}) is smaller than STEP_PULSE_TIME ({})", t, STEP_PULSE_TIME)),
                 Self::TimeIsInvalid(t) => 
-                    f.write_fmt(format_args!("Bad step time! Time given ({}) is invalid!", t))
+                    f.write_fmt(format_args!("Bad step time! Time given ({}) is invalid!", t)),
+                Self::IOError => 
+                    f.write_fmt(format_args!("IOError! Something is wrong with the pins or other IO methods"))
             }
         }
     }
@@ -36,8 +40,8 @@ pub trait StepperController {
     fn step(&mut self, time : Time) -> Result<(), StepperControllerError>;
 
     /// The movement direction of the motor
-    fn dir(&self) -> Direction;
+    fn direction(&self) -> Direction;
 
     /// Sets the direction of the motor
-    fn set_dir(&mut self, dir : Direction);
+    fn set_dir(&mut self, dir : Direction) -> Result<(), StepperControllerError>;
 }

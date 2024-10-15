@@ -35,6 +35,8 @@ extern crate alloc;
     /// Module with all the tests required to assure the library funcitons as intended
     #[cfg(any(test, feature = "testing"))]
     mod tests;
+
+    pub use syunit as units;
 // 
 
 // ###########################

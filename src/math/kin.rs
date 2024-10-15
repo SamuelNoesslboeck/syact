@@ -28,12 +28,17 @@ pub fn travel_times(rel_dist : RelDist, velocity : Velocity, acceleration : Acce
 }
 
 /// Time required to move a distance `rel_dist` from a zero-velocity state with the acceleration `acceleration`
-pub fn accel_from_zero(rel_dist : RelDist, acceleration : Acceleration) -> Time {
+pub fn accel_from_zero_time(rel_dist : RelDist, acceleration : Acceleration) -> Time {
     Time((2.0 * rel_dist.0 / acceleration.0).sqrt())
 }
 
+/// Exit velocity when moving a distance `rel_dist` from a zero-velocity state with the acceleration `acceleration`
+pub fn accel_from_zero_velocity(rel_dist : RelDist, acceleration : Acceleration) -> Velocity {
+    Velocity((2.0 * rel_dist.0 * acceleration.0).sqrt())
+}
+
 /// The acceleration required to exit a certain distance `rel_dist` with the given velocity `velocity`, starting with a velocity of zero
-pub fn alpha_req_for_dist(rel_dist : RelDist, velocity : Velocity) -> Acceleration {
+pub fn accel_req_for_dist(rel_dist : RelDist, velocity : Velocity) -> Acceleration {
     Acceleration(velocity.0 * velocity.0 / 2.0 / rel_dist.0)
 }
 

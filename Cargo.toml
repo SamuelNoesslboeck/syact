@@ -9,8 +9,7 @@ license-file = "LICENSE"
 keywords = [ "framework", "robotics", "iot", "raspberry-pi" ]
 
 [workspace]
-members = [ "syact_macros" ]
-exclude = [ "article", "sketches" ]
+members = [ "syact_macros", "syact_std" ]
 
 [lib]
 name = "syact"
@@ -31,7 +30,6 @@ syact_macros = { path = "syact_macros" }
 
 [features]
 testing = [ ]
-std = [ ]
 
 # Helper binaries
 [[bin]]

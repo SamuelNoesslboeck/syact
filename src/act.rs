@@ -118,6 +118,11 @@ use stepper::StepperBuilderError;
             InvalidTime(Time),
         // 
 
+        // IO 
+            /// Something is wrong with the IO connections of the actuator (PINs etc.)
+            IOError,
+        // 
+
         // Load
             /// The component has been overloaded
             Overload
@@ -134,22 +139,24 @@ use stepper::StepperBuilderError;
     // impl std::error::Error for ActuatorError { }
 
     // From Stepper Errors
+        impl From<StepperControllerError> for ActuatorError {
+            fn from(value: StepperControllerError) -> Self {
+                match value {
+                    StepperControllerError::TimeIsInvalid(time) => ActuatorError::InvalidTime(time),
+                    StepperControllerError::TimeTooShort(time) => ActuatorError::InvalidTime(time),
+                    StepperControllerError::IOError => ActuatorError::IOError
+                }
+            }
+        }
+
         impl From<StepperBuilderError> for ActuatorError {
             fn from(value: StepperBuilderError) -> Self {
                 match value {
                     StepperBuilderError::DistanceTooShort(dist, _, _) => Self::InvaldRelativeDistance(dist),
                     StepperBuilderError::InvalidVelocity(vel) => Self::InvalidVeloicty(vel),
                     StepperBuilderError::VelocityTooHigh(vel_given, vel_max) => Self::VelocityTooHigh(vel_given, vel_max),
-                    StepperBuilderError::Overload => Self::Overload
-                }
-            }
-        }
-
-        impl From<StepperControllerError> for ActuatorError {
-            fn from(value: StepperControllerError) -> Self {
-                match value {
-                    StepperControllerError::TimeIsInvalid(time) => ActuatorError::InvalidTime(time),
-                    StepperControllerError::TimeTooShort(time) => ActuatorError::InvalidTime(time)
+                    StepperBuilderError::Overload => Self::Overload,
+                    StepperBuilderError::Controller(error) => Self::from(error)
                 }
             }
         }
