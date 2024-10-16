@@ -6,7 +6,7 @@ use syunit::*;
 use crate::{AsyncActuator, SyncActuator, SyncActuatorBlocking};
 use crate::act::{ActuatorError, Interruptible, SyncActuatorAdvanced, SyncActuatorState};
 use crate::act::asyn::AsyncActuatorState;
-use crate::act::stepper::{StepperActuator, StepperBuilderError};
+use crate::act::stepper::StepperActuator;
 use crate::data::MicroSteps;
 use crate::math::movements::DefinedActuator;
 
@@ -200,9 +200,9 @@ pub trait ActuatorParent {
                     self.child_mut().set_pos_limits(min, max)
                 }
 
-                fn set_endpos(&mut self, mut set_abs_pos : AbsPos) {
-                    set_abs_pos = self.abs_pos_for_child(set_abs_pos);
-                    self.child_mut().set_endpos(set_abs_pos)
+                fn set_endpos(&mut self, mut overwrite_abs_pos : AbsPos) {
+                    overwrite_abs_pos = self.abs_pos_for_child(overwrite_abs_pos);
+                    self.child_mut().set_endpos(overwrite_abs_pos)
                 }
 
                 fn overwrite_pos_limits(&mut self, mut min : Option<AbsPos>, mut max : Option<AbsPos>) {
@@ -267,7 +267,7 @@ pub trait ActuatorParent {
                 self.child().microsteps()
             }
 
-            fn set_microsteps(&mut self, micro : MicroSteps) -> Result<(), StepperBuilderError> {
+            fn set_microsteps(&mut self, micro : MicroSteps) -> Result<(), ActuatorError> {
                 self.child_mut().set_microsteps(micro)
             }
         // 

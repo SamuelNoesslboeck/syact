@@ -14,7 +14,7 @@ struct SomeComps {
 }
 
 #[test]
-fn group_basics() -> Result<(), StepperBuilderError> {
+fn group_basics() -> Result<(), ActuatorError> {
     let group = SomeComps {
         base: Gear::new(
             Stepper::default(),

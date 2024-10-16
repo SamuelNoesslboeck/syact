@@ -4,7 +4,7 @@ use core::sync::atomic::Ordering::Relaxed;
 use atomic_float::AtomicF32;
 use syunit::*;
 
-use crate::{SyncActuator, SyncActuatorGroup};
+use crate::{SyncActuator, SyncActuatorGroup, ActuatorError};
 use crate::act::SyncActuatorState;
 use crate::act::asyn::AsyncActuatorState;
 use crate::data::MicroSteps;
@@ -16,10 +16,10 @@ use crate::math::movements::DefinedActuator;
 
 // Submodules
     mod builder;
-    pub use builder::{StepperBuilderError, DriveMode, StepperBuilder, StartStopBuilder, ComplexBuilder, StepperBuilderSimple, StepperBuilderAdvanced};
+    pub use builder::{DriveMode, StepperBuilder, StartStopBuilder, ComplexBuilder, StepperBuilderSimple, StepperBuilderAdvanced};
 
     mod ctrl;
-    pub use ctrl::{StepperController, StepperControllerError};
+    pub use ctrl::StepperController;
 
     mod motor;
     pub use motor::StepperMotor;
@@ -35,7 +35,7 @@ use crate::math::movements::DefinedActuator;
             fn microsteps(&self) -> MicroSteps;
 
             /// Set the amount of microsteps in a full step
-            fn set_microsteps(&mut self, micro : MicroSteps) -> Result<(), StepperBuilderError>;
+            fn set_microsteps(&mut self, micro : MicroSteps) -> Result<(), ActuatorError>;
         //
 
         // Steps
@@ -57,7 +57,7 @@ use crate::math::movements::DefinedActuator;
         }
 
         /// Sets the amount of microsteps for each motor 
-        fn set_micro(&mut self, micro : [MicroSteps; C]) -> Result<(), StepperBuilderError> {
+        fn set_micro(&mut self, micro : [MicroSteps; C]) -> Result<(), ActuatorError> {
             self.try_for_each_mut(|comp, index| {
                 comp.set_microsteps(micro[index])
             })?;

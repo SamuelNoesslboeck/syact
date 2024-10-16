@@ -49,7 +49,7 @@ use crate::act::{ActuatorError, InterruptReason, Interruptible, SyncActuatorBloc
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct SimpleMeasParams {
     /// The abs_pos value to set the component to if the measurement was successful
-    pub set_abs_pos : AbsPos,
+    pub overwrite_abs_pos : AbsPos,
     /// Maximum drive distance, also determines which direction will be used. 
     /// If the maximum distance is reached before the measurement is conducted, the measurement will count as failed
     pub max_dist : RelDist,
@@ -152,7 +152,7 @@ pub fn take_simple_meas<C : SyncActuatorBlocking + Interruptible + ?Sized>(comp 
     // Current abs_pos difference considering the current position and the average taken by the measurement
     let abs_pos_diff = comp.abs_pos() - abs_pos_av;
     // The new abs_pos to set the components abs_pos to
-    let abs_pos_new = data.set_abs_pos + abs_pos_diff;
+    let abs_pos_new = data.overwrite_abs_pos + abs_pos_diff;
 
     // Set limits and write new distance value
     comp.set_endpos(abs_pos_av);

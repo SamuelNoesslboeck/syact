@@ -1,6 +1,6 @@
 use syunit::*;
 
-use super::{StepperBuilder, StepperBuilderError};
+use super::{StepperBuilder, ActuatorError};
 
 pub struct FreeBuilder {
 
@@ -26,7 +26,7 @@ impl StepperBuilder for FreeBuilder {
     // 
     
     // Setters
-        fn set_overload_curret(&mut self, current : Option<f32>) -> Result<(), StepperBuilderError> {
+        fn set_overload_curret(&mut self, current : Option<f32>) -> Result<(), ActuatorError> {
             todo!()
         }
     //
@@ -36,7 +36,7 @@ impl StepperBuilder for FreeBuilder {
             todo!()
         }
 
-        fn set_microsteps(&mut self, microsteps : crate::MicroSteps) -> Result<(), StepperBuilderError> {
+        fn set_microsteps(&mut self, microsteps : crate::MicroSteps) -> Result<(), ActuatorError> {
             todo!()
         }
     //
@@ -46,7 +46,7 @@ impl StepperBuilder for FreeBuilder {
             todo!()
         }
 
-        fn set_velocity_max(&mut self, velocity_opt : Option<Velocity>) -> Result<(), StepperBuilderError> {
+        fn set_velocity_max(&mut self, velocity_opt : Option<Velocity>) -> Result<(), ActuatorError> {
             todo!()
         }
     //
@@ -56,7 +56,7 @@ impl StepperBuilder for FreeBuilder {
             todo!()
         }
 
-        fn set_acceleration_max(&mut self, acceleration_opt : Option<Acceleration>) -> Result<(), StepperBuilderError> {
+        fn set_acceleration_max(&mut self, acceleration_opt : Option<Acceleration>) -> Result<(), ActuatorError> {
             todo!()
         }
     //
@@ -66,7 +66,7 @@ impl StepperBuilder for FreeBuilder {
             todo!()
         }
 
-        fn set_jolt_max(&mut self, jolt_opt : Option<Jolt>) -> Result<(), StepperBuilderError> {
+        fn set_jolt_max(&mut self, jolt_opt : Option<Jolt>) -> Result<(), ActuatorError> {
             todo!()
         }
     //
@@ -76,7 +76,7 @@ impl StepperBuilder for FreeBuilder {
             todo!()
         }
 
-        fn set_drive_mode<C : crate::prelude::StepperController>(&mut self, mode : super::DriveMode, ctrl : &mut C) -> Result<(), StepperBuilderError> {
+        fn set_drive_mode<C : crate::prelude::StepperController>(&mut self, mode : super::DriveMode, ctrl : &mut C) -> Result<(), ActuatorError> {
             todo!()
         }
     //

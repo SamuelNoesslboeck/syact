@@ -8,7 +8,7 @@ use syunit::*;
 use crate::{AsyncActuator, SyncActuator, SyncActuatorBlocking};
 use crate::act::{ActuatorError, InterruptReason, Interruptible, Interruptor, SyncActuatorAdvanced, SyncActuatorState};
 use crate::act::asyn::AsyncActuatorState;
-use crate::act::stepper::{StepperActuator, StepperController, StepperBuilder, StepperBuilderError, DriveMode, StepperState};
+use crate::act::stepper::{StepperActuator, StepperController, StepperBuilder, DriveMode, StepperState};
 use crate::act::stepper::builder::{StepperBuilderAdvanced, StepperBuilderSimple};
 use crate::data::{StepperConfig, StepperConst, MicroSteps}; 
 use crate::math::movements::DefinedActuator;
@@ -227,14 +227,14 @@ impl<B : StepperBuilder, C : StepperController> StepperMotor<B, C> {
                 }
             }
 
-            fn set_endpos(&mut self, set_abs_pos : AbsPos) {
-                self.overwrite_abs_pos(set_abs_pos);
+            fn set_endpos(&mut self, overwrite_abs_pos : AbsPos) {
+                self.overwrite_abs_pos(overwrite_abs_pos);
 
                 let dir = self.direction().as_bool();
         
                 self.set_pos_limits(
-                    if dir { None } else { Some(set_abs_pos) },
-                    if dir { Some(set_abs_pos) } else { None }
+                    if dir { None } else { Some(overwrite_abs_pos) },
+                    if dir { Some(overwrite_abs_pos) } else { None }
                 )
             }
         //
@@ -258,7 +258,7 @@ impl<B : StepperBuilder, C : StepperController> StepperMotor<B, C> {
 // ###########################
     impl<B : StepperBuilderSimple, C : StepperController> StepperMotor<B, C> {
         /// Creates a new stepper motor with the given controller `ctrl` 
-        pub fn new_simple(ctrl : C) -> Result<Self, StepperBuilderError> {
+        pub fn new_simple(ctrl : C) -> Result<Self, ActuatorError> {
             Ok(Self {
                 builder: B::new()?,
                 ctrl,
@@ -276,7 +276,7 @@ impl<B : StepperBuilder, C : StepperController> StepperMotor<B, C> {
 
     impl<B : StepperBuilderAdvanced, C : StepperController> StepperMotor<B, C> {
         /// Creates a new stepper motor with the given constants `consts` and configuration `config`
-        pub fn new_advanced(ctrl : C, consts : StepperConst, config : StepperConfig) -> Result<Self, StepperBuilderError> {
+        pub fn new_advanced(ctrl : C, consts : StepperConst, config : StepperConfig) -> Result<Self, ActuatorError> {
             Ok(Self {
                 builder: B::new(consts, config)?,
                 ctrl,
@@ -334,7 +334,7 @@ where
             self.builder.microsteps()
         }
 
-        fn set_microsteps(&mut self, microsteps : MicroSteps) -> Result<(), StepperBuilderError> {
+        fn set_microsteps(&mut self, microsteps : MicroSteps) -> Result<(), ActuatorError> {
             self.builder.set_microsteps(microsteps)
             
         }

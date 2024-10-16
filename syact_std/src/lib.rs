@@ -1,7 +1,7 @@
 #![crate_name = "syact_std"]
 
 use embedded_hal::digital::{OutputPin, PinState};
-use syact::act::stepper::{StepperController, StepperControllerError};
+use syact::act::stepper::{StepperController, ActuatorError};
 use syact::units::*;
 
 pub struct GenericPWMController<DIR : OutputPin, STEP : OutputPin> {
@@ -27,11 +27,11 @@ impl<DIR : OutputPin, STEP : OutputPin> StepperController for GenericPWMControll
         self.direction
     }
 
-    fn set_dir(&mut self, dir : Direction) -> Result<(), StepperControllerError> {
-        self.pin_dir.set_state(PinState::from(dir.as_bool())).map_err(|_| StepperControllerError::IOError)
+    fn set_dir(&mut self, dir : Direction) -> Result<(), ActuatorError> {
+        self.pin_dir.set_state(PinState::from(dir.as_bool())).map_err(|_| ActuatorError::IOError)
     }
 
-    fn step(&mut self, time : Time) -> Result<(), StepperControllerError> {
+    fn step(&mut self, time : Time) -> Result<(), ActuatorError> {
         todo!()
     }
 }

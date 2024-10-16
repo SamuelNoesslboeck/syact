@@ -3,8 +3,6 @@ use alloc::sync::Arc;
 
 use syunit::*;
 
-use stepper::StepperBuilderError;
-
 // ####################
 // #    SUBMODULES    #
 // ####################
@@ -30,8 +28,6 @@ use stepper::StepperBuilderError;
     /// Stepper motors and their unique methods and traits
     pub mod stepper;
     pub use stepper::{StepperActuator, StepperMotor};
-
-    use crate::prelude::StepperControllerError;
 //
 
 // #####################
@@ -105,8 +101,8 @@ use stepper::StepperBuilderError;
         InvaldRelativeDistance(RelDist),
 
         // Velocity errors
-            /// The velocity given is invalid somehow, depending on the context, see the function description
-            InvalidVeloicty(Velocity),
+            /// The velocity given is invalid somehow, depending on the context (see the function description)
+            InvalidVelocity(Velocity),
             /// The velocity given is too high, depending on the context, see the function description
             /// 0: `Velocity` - The given velocity
             /// 1: `Velocity` - The velocity
@@ -114,10 +110,12 @@ use stepper::StepperBuilderError;
         //
 
         // Acceleration
+            /// The `Acceleration` given is invalid somehow, depending on the context (see the function description)
             InvalidAcceleration(Acceleration),
         // 
 
         // Jolt
+            /// The `Jolt` given is invalid somehow, depending on the context (see the function description)
             InvalidJolt(Jolt),
         // 
 
@@ -145,37 +143,6 @@ use stepper::StepperBuilderError;
 
     // TODO: Implement std errors
     // impl std::error::Error for ActuatorError { }
-
-    // From Stepper Errors
-        impl From<StepperControllerError> for ActuatorError {
-            fn from(value: StepperControllerError) -> Self {
-                match value {
-                    StepperControllerError::TimeIsInvalid(time) => ActuatorError::InvalidTime(time),
-                    StepperControllerError::TimeTooShort(time) => ActuatorError::InvalidTime(time),
-                    StepperControllerError::IOError => ActuatorError::IOError
-                }
-            }
-        }
-
-        impl From<StepperBuilderError> for ActuatorError {
-            fn from(value: StepperBuilderError) -> Self {
-                match value {
-                    StepperBuilderError::DistanceTooShort(dist, _, _) => Self::InvaldRelativeDistance(dist),
-
-                    StepperBuilderError::InvalidVelocity(vel) => Self::InvalidVeloicty(vel),
-                    StepperBuilderError::VelocityTooHigh(vel_given, vel_max) => Self::VelocityTooHigh(vel_given, vel_max),
-
-                    StepperBuilderError::InvalidAcceleration(acceleration) => Self::InvalidAcceleration(acceleration),
-
-                    StepperBuilderError::InvalidJolt(jolt) => Self::InvalidJolt(jolt),
-
-                    StepperBuilderError::Overload => Self::Overload,
-
-                    StepperBuilderError::Controller(error) => Self::from(error)
-                }
-            }
-        }
-    // 
 //
 
 // ######################
@@ -228,7 +195,7 @@ use stepper::StepperBuilderError;
             ///     Stepper::default(), 
             /// 0.5);    // Ratio is set to 0.5, which means for each radian the motor moves, the cylinder moves for 0.5 mm
             /// 
-            /// cylinder.set_abs_pos(POS);
+            /// cylinder.overwrite_abs_pos(POS);
             /// 
             /// assert!((cylinder.abs_pos() - POS).abs() < RelDist(0.05));      // Check with small tolerance
             /// ```
@@ -251,7 +218,7 @@ use stepper::StepperBuilderError;
             ///     Stepper::default(), 
             /// 0.5);    // Ratio is set to 0.5, which means for each radian the motor moves, the cylinder moves for 0.5 mm
             /// 
-            /// cylinder.set_abs_pos(POS);
+            /// cylinder.overwrite_abs_pos(POS);
             /// 
             /// assert!((cylinder.abs_pos() - POS).abs() < RelDist(0.05));      // Check with small tolerance
             /// ```
@@ -352,7 +319,7 @@ use stepper::StepperBuilderError;
             /// Sets an endpoint in the current direction by modifying the components limits. For example, when the component is moving
             /// in the positive direction and the endpoint is set, this function will overwrite the current maximum limit with the current
             /// abs_pos value. The component is then not allowed to move in the current direction anymore. 
-            fn set_endpos(&mut self, set_abs_pos : AbsPos);
+            fn set_endpos(&mut self, overwrite_abs_pos : AbsPos);
 
             /// Set the limits for the minimum and maximum angles that the component can reach, note that the limit will 
             /// be converted and transfered to the parent component if defined. 
@@ -457,7 +424,8 @@ use stepper::StepperBuilderError;
             }
         }
     // 
-
+    
+    /// An advanced `SyncActuator` allows applying loads that alter the actuators movement
     pub trait SyncActuatorAdvanced : SyncActuator {
         // Load calculation
             /// Will always be positive

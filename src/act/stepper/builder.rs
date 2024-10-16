@@ -1,7 +1,7 @@
 use syunit::*;
 
-use crate::{StepperConst, StepperConfig};
-use crate::act::stepper::{StepperController, StepperControllerError};
+use crate::{StepperConst, StepperConfig, ActuatorError};
+use crate::act::stepper::StepperController;
 use crate::data::{ActuatorVars, MicroSteps};
 
 // ####################
@@ -10,7 +10,7 @@ use crate::data::{ActuatorVars, MicroSteps};
     mod complex;
     pub use complex::ComplexBuilder;
 
-    mod free;
+    // mod free;
 
     mod start_stop;
     pub use start_stop::StartStopBuilder;
@@ -41,54 +41,6 @@ pub enum DriveMode {
     Inactive
 }
 
-// #####################
-// #    ERROR-TYPES    #
-// #####################
-    /// Errors that can occur while driving a stepper motor
-    #[derive(Clone, Debug)]
-    pub enum StepperBuilderError {
-        /// The given distance is too short for the motor to stop
-        DistanceTooShort(RelDist, u64, u64),
-
-        // Velocity
-            /// Bad value for velocity, depending on context
-            /// - 0: `Velocity` - The given velocity
-            InvalidVelocity(Velocity),
-            /// The velocity given is too high, depending on the context 
-            /// - 0: `Velocity` - The given velocity
-            /// - 1: `Velocity` - The maximum velocity
-            VelocityTooHigh(Velocity, Velocity),
-        // 
-
-        // Acceleration
-            InvalidAcceleration(Acceleration),
-        // 
-
-        // Jolt
-            InvalidJolt(Jolt),
-        // 
-
-        /// The load data given is too high, causing an overload
-        Overload,
-        /// An error caused by the controller
-        Controller(StepperControllerError)
-    }
-
-    impl core::fmt::Display for StepperBuilderError {
-        fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-            f.write_fmt(format_args!("{:?}", self))
-        }
-    }
-
-    impl From<StepperControllerError> for StepperBuilderError {
-        fn from(value: StepperControllerError) -> Self {
-            Self::Controller(value)
-        }
-    }
-
-    // impl core::error::Error for BuilderError { }
-//
-
 /// A stepperbuilder creates stepper motor curves
 pub trait StepperBuilder : Iterator<Item = Time> {
     // Getters
@@ -101,7 +53,7 @@ pub trait StepperBuilder : Iterator<Item = Time> {
 
     // Setters
         /// Setting the overload current for more torque output
-        fn set_overload_curret(&mut self, current : Option<f32>) -> Result<(), StepperBuilderError>;
+        fn set_overload_curret(&mut self, current : Option<f32>) -> Result<(), ActuatorError>;
     //
 
     // Microsteps
@@ -109,7 +61,7 @@ pub trait StepperBuilder : Iterator<Item = Time> {
         fn microsteps(&self) -> MicroSteps;
 
         /// Set the amount of microsteps used by the builder
-        fn set_microsteps(&mut self, microsteps : MicroSteps) -> Result<(), StepperBuilderError>;
+        fn set_microsteps(&mut self, microsteps : MicroSteps) -> Result<(), ActuatorError>;
     // 
 
     // Velocity max
@@ -121,7 +73,7 @@ pub trait StepperBuilder : Iterator<Item = Time> {
         /// ## Option
         /// 
         /// Set to `None` if no limit is wished
-        fn set_velocity_max(&mut self, velocity_opt : Option<Velocity>) -> Result<(), StepperBuilderError>;
+        fn set_velocity_max(&mut self, velocity_opt : Option<Velocity>) -> Result<(), ActuatorError>;
     // 
 
     // Acceleration
@@ -133,7 +85,7 @@ pub trait StepperBuilder : Iterator<Item = Time> {
         /// ## Option
         /// 
         /// Set to `None` if no limit is wished
-        fn set_acceleration_max(&mut self, acceleration_opt : Option<Acceleration>) -> Result<(), StepperBuilderError>;
+        fn set_acceleration_max(&mut self, acceleration_opt : Option<Acceleration>) -> Result<(), ActuatorError>;
     // 
 
     // Jolt
@@ -145,7 +97,7 @@ pub trait StepperBuilder : Iterator<Item = Time> {
         /// ## Option
         /// 
         /// Set to `None` if no limit is wished
-        fn set_jolt_max(&mut self, jolt_opt : Option<Jolt>) -> Result<(), StepperBuilderError>;
+        fn set_jolt_max(&mut self, jolt_opt : Option<Jolt>) -> Result<(), ActuatorError>;
     // 
 
     // Regulation
@@ -153,24 +105,28 @@ pub trait StepperBuilder : Iterator<Item = Time> {
         fn drive_mode(&self) -> &DriveMode;
 
         /// Sets the drive mode
-        fn set_drive_mode<C : StepperController>(&mut self, mode : DriveMode, ctrl : &mut C) -> Result<(), StepperBuilderError>;
+        fn set_drive_mode<C : StepperController>(&mut self, mode : DriveMode, ctrl : &mut C) -> Result<(), ActuatorError>;
     //   
 }
 
 // Extension Traits
+/// Defines a general constructor for the stepper builder, using no motor or configuration data
 pub trait StepperBuilderSimple : StepperBuilder {
     // General constructor
         /// Create a new stepperbuilder
-        fn new() -> Result<Self, StepperBuilderError>
+        fn new() -> Result<Self, ActuatorError>
         where 
             Self: Sized;
     // 
 }
 
+/// Defines a general constructor for the stepper builder using motor and configuration data
+/// 
+/// Also the `StepperBuilder`
 pub trait StepperBuilderAdvanced : StepperBuilder {
     // General constructor
         /// Create a new stepperbuilder
-        fn new(consts : StepperConst, config : StepperConfig) -> Result<Self, StepperBuilderError>
+        fn new(consts : StepperConst, config : StepperConfig) -> Result<Self, ActuatorError>
         where 
             Self: Sized;
     // 
@@ -188,18 +144,18 @@ pub trait StepperBuilderAdvanced : StepperBuilder {
 
     // Setters 
         /// Set the configuration that should be used by the builder
-        fn set_config(&mut self, config : StepperConfig) -> Result<(), StepperBuilderError>;
+        fn set_config(&mut self, config : StepperConfig) -> Result<(), ActuatorError>;
     //
 
     // Loads
         /// Apply a general force, which works in both directions
-        fn apply_gen_force(&mut self, force : Force) -> Result<(), StepperBuilderError>;
+        fn apply_gen_force(&mut self, force : Force) -> Result<(), ActuatorError>;
 
         /// Apply a directional force, which only applies in one direction
         /// - Value positive in `CW` direction
-        fn apply_dir_force(&mut self, force : Force) -> Result<(), StepperBuilderError>;
+        fn apply_dir_force(&mut self, force : Force) -> Result<(), ActuatorError>;
 
         /// Apply an inertia to the builder, slowing down movements
-        fn apply_inertia(&mut self, inertia : Inertia) -> Result<(), StepperBuilderError>;
+        fn apply_inertia(&mut self, inertia : Inertia) -> Result<(), ActuatorError>;
     //
 }

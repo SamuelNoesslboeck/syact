@@ -1,6 +1,6 @@
 use syunit::*;
 
-use crate::act::stepper::{StepperController, StepperControllerError};
+use crate::prelude::*;
 
 pub struct SimulatedController {
     _dir : Direction
@@ -15,7 +15,7 @@ impl SimulatedController {
 }
 
 impl StepperController for SimulatedController {
-    fn step(&mut self, time : Time) -> Result<(), StepperControllerError> {
+    fn step(&mut self, time : Time) -> Result<(), ActuatorError> {
         spin_sleep::sleep(time.into());
         Ok(())
     }
@@ -24,7 +24,7 @@ impl StepperController for SimulatedController {
         self._dir
     }
 
-    fn set_dir(&mut self, dir : Direction) -> Result<(), StepperControllerError> {
+    fn set_dir(&mut self, dir : Direction) -> Result<(), ActuatorError> {
         self._dir = dir;
         Ok(())
     }

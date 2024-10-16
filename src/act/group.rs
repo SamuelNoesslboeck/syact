@@ -70,9 +70,9 @@ where
             })
         }
         
-        /// Runs [SyncComp::set_abs_pos()] for all components
+        /// Runs [SyncComp::overwrite_abs_pos()] for all components
         #[inline(always)]
-        fn set_abs_pos(&mut self, abs_poss : &[AbsPos; C]) {
+        fn overwrite_abs_pos(&mut self, abs_poss : &[AbsPos; C]) {
             self.for_each_mut(|act, index| {
                 act.overwrite_abs_pos(abs_poss[index])
             });
@@ -119,30 +119,44 @@ where
         }
     //
 
-    // Load calculation
-        /// Runs [SyncComp::apply_inertia()] for all components
-
-        /// Returns the maximum velocitys for each component of the group
+    // Velocity
+        /// Returns the maximum velocity for each component of the group
         fn velocity_max(&self) -> [Option<Velocity>; C] {
             self.for_each(|act, _| {
                 act.velocity_max()
             })
         }
 
-        /// Set the maximum velocity  of the components
-        fn set_velocity_max(&mut self, velocity_max : [Option<Velocity>; C]) {
-            self.for_each_mut(|act, index| {
-                act.set_velocity_max(velocity_max[index]);
-            });
+        /// Set the maximum velocity of the components
+        fn set_velocity_max(&mut self, velocity_opt : [Option<Velocity>; C]) -> Result<[(); C], ActuatorError> {
+            self.try_for_each_mut(|act, index| {
+                act.set_velocity_max(velocity_opt[index])
+            })
         }
     // 
+
+    // Acceleration
+        /// Returns the maximum acceleration for each actuator of the group
+        fn acceleration_max(&self) -> [Option<Acceleration>; C] {
+            self.for_each(|act, _| {
+                act.acceleration_max()
+            })
+        }
+
+        /// Set the maximum acceleration for each actuator of the group
+        fn set_acceleration_max(&mut self, acceleration_opt : [Option<Acceleration>; C]) -> Result<[(); C], ActuatorError> {
+            self.try_for_each_mut(|act, index| {
+                act.set_acceleration_max(acceleration_opt[index])
+            })
+        }
+    //
 }
 
 // ##############################################
 // #    SyncActuatorGroup - Extention traits    #
 // ##############################################
     // Movements
-        /// Further extending a `SyncActuatorGroup`, extending it with blocking movements
+        /// Further extending a `SyncActuatorGroup` with blocking movements
         pub trait SyncActuatorBlockingGroup<T, const C : usize> : SyncActuatorGroup<T, C>
         where 
             T : SyncActuatorBlocking + ?Sized + 'static
@@ -163,15 +177,17 @@ where
         }
     //
 
+    /// Further extending `SyncActuatorGroup` with load application
     pub trait SyncActuatorAdvancedGroup<T, const C : usize> : SyncActuatorGroup<T, C>
         where 
             T : SyncActuatorAdvanced + ?Sized + 'static
     {
-        #[inline(always)]
-        fn apply_inertias(&mut self, inertias : &[Inertia; C]) {
-            self.for_each_mut(|act, index| {
-                act.apply_inertia(inertias[index]);
-            }); 
+        /// Apply an inertia to each of the components
+        #[inline]
+        fn apply_inertias(&mut self, inertias : &[Inertia; C]) -> Result<[(); C], ActuatorError> {
+            self.try_for_each_mut(|act, index| {
+                act.apply_inertia(inertias[index])
+            })
         }
 
         /// Runs [SyncComp::apply_force_gen()] for all components

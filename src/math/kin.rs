@@ -44,11 +44,13 @@ pub fn travel_times(rel_dist : RelDist, velocity : Velocity, acceleration : Acce
     }
 //
 
-// Jolt
+// Jolt 
+    /// The time it takes a motor to move the distance `rel_dist` with the given maximum `jolt`
     pub fn jolt_from_zero_time(rel_dist : RelDist, jolt : Jolt) -> Time {
         Time((6.0 * rel_dist.0 / jolt.0).cbrt())
     }
 
+    /// The exit acceleration a motor has after moving the distance `rel_dist` with the maximum `jolt`
     pub fn jolt_from_zero_acceleration(rel_dist : RelDist, jolt : Jolt) -> Acceleration {
         Acceleration((6.0 * rel_dist.0 * jolt.0 * jolt.0).cbrt())
     }

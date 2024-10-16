@@ -9,7 +9,7 @@ use crate::data::{ActuatorVars, MicroSteps};
 use crate::math;
 use crate::math::movements::DefinedActuator;
 
-use super::{DriveMode, StepperBuilder, StepperBuilderError, DEFAULT_MAX_SPEED_LEVEL};
+use super::{DriveMode, StepperBuilder, ActuatorError, DEFAULT_MAX_SPEED_LEVEL};
 
 /// ########################
 /// #    ComplexBuilder    #
@@ -53,7 +53,7 @@ pub struct ComplexBuilder {
 
 impl ComplexBuilder {
     /// Updates the builders speed levels and times considering loads etc.
-    pub fn update(&mut self) -> Result<(), StepperBuilderError> {
+    pub fn update(&mut self) -> Result<(), ActuatorError> {
         // Store relevant values
         let max_speed_level = self.max_speed_level.unwrap_or(DEFAULT_MAX_SPEED_LEVEL);
         let velocity_cap = self.velocity_cap();
@@ -69,7 +69,7 @@ impl ComplexBuilder {
         for _ in 0 .. max_speed_level {
             // Calculate acceleration and movement time when fully accelerating
             let accel = self.consts().acceleration_max_for_velocity(self.vars(), self.config(), vel, self.direction())
-                .ok_or(StepperBuilderError::Overload)?;
+                .ok_or(ActuatorError::Overload)?;
             let ( mut move_time, _ ) = math::kin::travel_times(self.step_angle(), vel, accel);
 
             vel += accel * move_time;
@@ -114,7 +114,7 @@ impl ComplexBuilder {
     }
 
     /// Moves the builder towards the next speed-level closer to the desired velocity `vel_tar`
-    pub fn goto_velocity(&mut self, vel_tar : Velocity) -> Result<Velocity, StepperBuilderError> {
+    pub fn goto_velocity(&mut self, vel_tar : Velocity) -> Result<Velocity, ActuatorError> {
         let vel_below = self.current_speed_level.checked_sub(2)
             .map(|i| self.speed_levels[i])
             .unwrap_or(Velocity::ZERO);
@@ -125,7 +125,7 @@ impl ComplexBuilder {
                 self.current_speed_level += 1;
                 Ok(self.consts().velocity(time, self.microsteps()))
             } else {
-                Err(StepperBuilderError::VelocityTooHigh(vel_tar, *self.speed_levels.last().unwrap_or(&Velocity::ZERO)))
+                Err(ActuatorError::VelocityTooHigh(vel_tar, *self.speed_levels.last().unwrap_or(&Velocity::ZERO)))
             }
         } else if (vel_tar < vel_below) | ((vel_tar == Velocity::ZERO) & (self.current_speed_level > 0)) {
             // Desired velocity is smaller than the speed level BELOW, meaning that it is out of range of this speed level
@@ -147,6 +147,7 @@ impl ComplexBuilder {
                 .min(self.consts().velocity_max(self.config().voltage))
         }
 
+        /// The maximum velocity that is currently possible, defined by numerous factors like maximum jolt, acceleration, velocity and start-stop mechanics
         pub fn velocity_possible(&self) -> Velocity {
             self.velocity_cap().min(
                 *self.speed_levels.last().unwrap_or(&Velocity::ZERO)
@@ -210,13 +211,13 @@ impl StepperBuilder for ComplexBuilder {
     //
 
     // Setters
-        fn set_microsteps(&mut self, microsteps : MicroSteps) -> Result<(), StepperBuilderError> {
+        fn set_microsteps(&mut self, microsteps : MicroSteps) -> Result<(), ActuatorError> {
             self._step_angle = self._consts.step_angle(microsteps);
             self._microsteps = microsteps;
             self.update()
         }
 
-        fn set_overload_curret(&mut self, current : Option<f32>) -> Result<(), StepperBuilderError> {
+        fn set_overload_curret(&mut self, current : Option<f32>) -> Result<(), ActuatorError> {
             self._config.overload_current = current;
             self.update()
         }
@@ -228,13 +229,13 @@ impl StepperBuilder for ComplexBuilder {
             self._velocity_max
         }
 
-        fn set_velocity_max(&mut self, velocity_opt : Option<Velocity>) -> Result<(), StepperBuilderError> {
+        fn set_velocity_max(&mut self, velocity_opt : Option<Velocity>) -> Result<(), ActuatorError> {
             if let Some(velocity) = velocity_opt {
                 if velocity.is_normal() {
                     self._velocity_max = Some(velocity.abs()); 
                     self.update()
                 } else {
-                    Err(StepperBuilderError::InvalidVelocity(velocity))
+                    Err(ActuatorError::InvalidVelocity(velocity))
                 }
             } else {
                 self._velocity_max = None;
@@ -249,13 +250,13 @@ impl StepperBuilder for ComplexBuilder {
             self._acceleration_max   
         }
 
-        fn set_acceleration_max(&mut self, acceleration_opt : Option<Acceleration>) -> Result<(), StepperBuilderError> {
+        fn set_acceleration_max(&mut self, acceleration_opt : Option<Acceleration>) -> Result<(), ActuatorError> {
             if let Some(acceleration) = acceleration_opt {
                 if acceleration.is_normal() {
                     self._acceleration_max = Some(acceleration.abs()); 
                     self.update()
                 } else {
-                    Err(StepperBuilderError::InvalidAcceleration(acceleration))
+                    Err(ActuatorError::InvalidAcceleration(acceleration))
                 }
             } else {
                 self._acceleration_max = None;
@@ -270,13 +271,13 @@ impl StepperBuilder for ComplexBuilder {
             self._jolt_max
         }
 
-        fn set_jolt_max(&mut self, jolt_opt : Option<Jolt>) -> Result<(), StepperBuilderError> {
+        fn set_jolt_max(&mut self, jolt_opt : Option<Jolt>) -> Result<(), ActuatorError> {
             if let Some(jolt) = jolt_opt {
                 if jolt.is_normal() {
                     self._jolt_max = Some(jolt.abs()); 
                     self.update()
                 } else {
-                    Err(StepperBuilderError::InvalidJolt(jolt))
+                    Err(ActuatorError::InvalidJolt(jolt))
                 }
             } else {
                 self._jolt_max = None;
@@ -289,14 +290,14 @@ impl StepperBuilder for ComplexBuilder {
         &self.mode
     }
 
-    fn set_drive_mode<C : StepperController>(&mut self, mode : DriveMode, ctrl : &mut C) -> Result<(), StepperBuilderError> {
+    fn set_drive_mode<C : StepperController>(&mut self, mode : DriveMode, ctrl : &mut C) -> Result<(), ActuatorError> {
         match mode {
             DriveMode::ConstVelocity(mut velocity) => {
                 let dir = velocity.get_direction();
                 velocity = velocity.abs();
 
                 if velocity > self.velocity_possible() {
-                    return Err(StepperBuilderError::VelocityTooHigh(velocity, self.velocity_possible()))
+                    return Err(ActuatorError::VelocityTooHigh(velocity, self.velocity_possible()))
                 } 
 
                 if self.mode != DriveMode::Inactive {
@@ -318,14 +319,14 @@ impl StepperBuilder for ComplexBuilder {
             },
             DriveMode::FixedDistance(rel_dist, velocity_exit, _) => {
                 if velocity_exit > self.velocity_possible() {
-                    return Err(StepperBuilderError::VelocityTooHigh(velocity_exit, self.velocity_possible()))
+                    return Err(ActuatorError::VelocityTooHigh(velocity_exit, self.velocity_possible()))
                 }
 
                 self.distance = self._consts.steps_from_angle_abs(rel_dist, self._microsteps);
                 self.distance_counter = 0;
 
                 if self.distance < self.current_speed_level as u64 {
-                    return Err(StepperBuilderError::DistanceTooShort(self.step_angle(), self.distance, self.current_speed_level as u64))
+                    return Err(ActuatorError::InvaldRelativeDistance(self.step_angle()))
                 }
 
                 if rel_dist >= RelDist::ZERO {
@@ -345,7 +346,7 @@ impl StepperBuilder for ComplexBuilder {
 
 impl StepperBuilderAdvanced for ComplexBuilder {
     // General constructors
-        fn new(consts : StepperConst, config : StepperConfig) -> Result<Self, StepperBuilderError>
+        fn new(consts : StepperConst, config : StepperConfig) -> Result<Self, ActuatorError>
         where 
             Self: Sized 
         {
@@ -399,24 +400,24 @@ impl StepperBuilderAdvanced for ComplexBuilder {
     //
 
     // Setters
-        fn set_config(&mut self, config : StepperConfig) -> Result<(), StepperBuilderError> {
+        fn set_config(&mut self, config : StepperConfig) -> Result<(), ActuatorError> {
             self._config = config;
             self.update() 
         }
     // 
 
     // Loads
-        fn apply_gen_force(&mut self, force : Force) -> Result<(), StepperBuilderError> {
+        fn apply_gen_force(&mut self, force : Force) -> Result<(), ActuatorError> {
             self._vars.force_load_gen = force;
             self.update()
         }
 
-        fn apply_dir_force(&mut self, force : Force) -> Result<(), StepperBuilderError> {
+        fn apply_dir_force(&mut self, force : Force) -> Result<(), ActuatorError> {
             self._vars.force_load_dir = force;
             self.update()
         }
         
-        fn apply_inertia(&mut self, inertia : Inertia) -> Result<(), StepperBuilderError> {
+        fn apply_inertia(&mut self, inertia : Inertia) -> Result<(), ActuatorError> {
             self._vars.inertia_load = inertia;
             self.update()
         }

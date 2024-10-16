@@ -7,7 +7,7 @@ use crate::data::{ActuatorVars, MicroSteps};
 use crate::math;
 use crate::math::movements::DefinedActuator;
 
-use super::{DriveMode, StepperBuilder, StepperBuilderError};
+use super::{DriveMode, StepperBuilder, ActuatorError};
 
 
 /// ##########################
@@ -48,11 +48,11 @@ pub struct StartStopBuilder {
 
 impl StartStopBuilder {
     /// Updates the builders velocity values considering the loads etc.
-    pub fn update_start_stop(&mut self) -> Result<(), StepperBuilderError> {
+    pub fn update_start_stop(&mut self) -> Result<(), ActuatorError> {
         self.velocity_start_stop = math::kin::velocity_start_stop(
             self._vars.force_after_load_lower(
                 self._consts.torque_overload(self._config.overload_current)
-            ).ok_or(StepperBuilderError::Overload)?, 
+            ).ok_or(ActuatorError::Overload)?, 
             self._vars.inertia_after_load(self._consts.inertia_motor), 
             self._consts.number_steps * self._microsteps
         );
@@ -61,12 +61,18 @@ impl StartStopBuilder {
     }
 
     // Acceleration helper
+        /// Returns the maximum acceleration that can be reached when using the maximum jolt specified
+        /// 
+        /// ### Option
+        /// 
+        /// Returns `None` if no maximum jolt is defined
         pub fn acceleration_by_max_jolt(&self) -> Option<Acceleration> {
             self.jolt_max().map(|jolt_max| {
                 math::kin::jolt_from_zero_acceleration(self.step_angle(), jolt_max)
             })
         }
 
+        /// Returns the maximum allowed acceleration, returns `Acceleration::INFINITY` if no maximum acceleration nor a maximum jolt has been specified
         pub fn acceleration_allowed(&self) -> Acceleration {
             self.acceleration_max().unwrap_or(Acceleration::INFINITY)
                 .min(self.acceleration_by_max_jolt().unwrap_or(Acceleration::INFINITY))
@@ -79,7 +85,7 @@ impl StartStopBuilder {
             math::kin::accel_from_zero_velocity(self.step_angle(), self.acceleration_allowed())
         }
 
-        #[inline]
+        /// The maximum velocity that is currently possible, defined by numerous factors like maximum jolt, acceleration, velocity and start-stop mechanics
         pub fn velocity_possible(&self) -> Velocity {
             self.velocity_start_stop.min(
                 self._velocity_max.unwrap_or(Velocity::INFINITY)
@@ -129,7 +135,7 @@ impl StepperBuilder for StartStopBuilder {
             self._microsteps
         }
 
-        fn set_microsteps(&mut self, microsteps : MicroSteps) -> Result<(), StepperBuilderError> {
+        fn set_microsteps(&mut self, microsteps : MicroSteps) -> Result<(), ActuatorError> {
             // Update step-angle when changing microsteps
             self._step_angle = self._consts.step_angle(microsteps);
             self._microsteps = microsteps;
@@ -144,7 +150,7 @@ impl StepperBuilder for StartStopBuilder {
             self._direction
         }
 
-        fn set_overload_curret(&mut self, current : Option<f32>) -> Result<(), StepperBuilderError> {
+        fn set_overload_curret(&mut self, current : Option<f32>) -> Result<(), ActuatorError> {
             self._config.overload_current = current;
             self.update_start_stop()        // Overload current affects start stop velocity, recalculate
         }
@@ -156,13 +162,13 @@ impl StepperBuilder for StartStopBuilder {
             self._velocity_max
         }
 
-        fn set_velocity_max(&mut self, velocity_opt : Option<Velocity>) -> Result<(), StepperBuilderError> {
+        fn set_velocity_max(&mut self, velocity_opt : Option<Velocity>) -> Result<(), ActuatorError> {
             if let Some(velocity) = velocity_opt {
                 if velocity.is_normal() {
                     self._velocity_max = Some(velocity.abs()); 
                     self.update_start_stop()
                 } else {
-                    Err(StepperBuilderError::InvalidVelocity(velocity))
+                    Err(ActuatorError::InvalidVelocity(velocity))
                 }
             } else {
                 self._velocity_max = None;
@@ -177,13 +183,13 @@ impl StepperBuilder for StartStopBuilder {
             self._acceleration_max   
         }
 
-        fn set_acceleration_max(&mut self, acceleration_opt : Option<Acceleration>) -> Result<(), StepperBuilderError> {
+        fn set_acceleration_max(&mut self, acceleration_opt : Option<Acceleration>) -> Result<(), ActuatorError> {
             if let Some(acceleration) = acceleration_opt {
                 if acceleration.is_normal() {
                     self._acceleration_max = Some(acceleration.abs()); 
                     self.update_start_stop()
                 } else {
-                    Err(StepperBuilderError::InvalidAcceleration(acceleration))
+                    Err(ActuatorError::InvalidAcceleration(acceleration))
                 }
             } else {
                 self._acceleration_max = None;
@@ -198,13 +204,13 @@ impl StepperBuilder for StartStopBuilder {
             self._jolt_max
         }
 
-        fn set_jolt_max(&mut self, jolt_opt : Option<Jolt>) -> Result<(), StepperBuilderError> {
+        fn set_jolt_max(&mut self, jolt_opt : Option<Jolt>) -> Result<(), ActuatorError> {
             if let Some(jolt) = jolt_opt {
                 if jolt.is_normal() {
                     self._jolt_max = Some(jolt.abs()); 
                     self.update_start_stop()
                 } else {
-                    Err(StepperBuilderError::InvalidJolt(jolt))
+                    Err(ActuatorError::InvalidJolt(jolt))
                 }
             } else {
                 self._jolt_max = None;
@@ -218,7 +224,7 @@ impl StepperBuilder for StartStopBuilder {
         &self.mode
     }
 
-    fn set_drive_mode<C : StepperController>(&mut self, mode : DriveMode, ctrl : &mut C) -> Result<(), StepperBuilderError> {
+    fn set_drive_mode<C : StepperController>(&mut self, mode : DriveMode, ctrl : &mut C) -> Result<(), ActuatorError> {
         match mode {
             // Driving with a constant velocity, check if the velocity is possible, return error if it is not
             DriveMode::ConstVelocity(mut velocity) => {
@@ -226,7 +232,7 @@ impl StepperBuilder for StartStopBuilder {
                 velocity = velocity.abs();
 
                 if velocity > self.velocity_possible() {
-                    return Err(StepperBuilderError::VelocityTooHigh(velocity, self.velocity_possible()))
+                    return Err(ActuatorError::VelocityTooHigh(velocity, self.velocity_possible()))
                 } 
 
                 self._direction = dir;
@@ -240,7 +246,7 @@ impl StepperBuilder for StartStopBuilder {
             // Check if the exit velocity is possible, everything else is fine
             DriveMode::FixedDistance(rel_dist, velocity_exit, _) => {
                 if velocity_exit > self.velocity_possible() {
-                    return Err(StepperBuilderError::VelocityTooHigh(velocity_exit, self.velocity_possible()))
+                    return Err(ActuatorError::VelocityTooHigh(velocity_exit, self.velocity_possible()))
                 }
 
                 self.distance = self._consts.steps_from_angle_abs(rel_dist, self._microsteps);
@@ -264,7 +270,7 @@ impl StepperBuilder for StartStopBuilder {
 // Extension traits
     impl StepperBuilderAdvanced for StartStopBuilder {
         // General constructors
-            fn new(consts : StepperConst, config : StepperConfig) -> Result<Self, StepperBuilderError>
+            fn new(consts : StepperConst, config : StepperConfig) -> Result<Self, ActuatorError>
             where 
                 Self: Sized 
             {
@@ -310,24 +316,24 @@ impl StepperBuilder for StartStopBuilder {
         // 
 
         // Setters 
-            fn set_config(&mut self, config : StepperConfig) -> Result<(), StepperBuilderError> {
+            fn set_config(&mut self, config : StepperConfig) -> Result<(), ActuatorError> {
                 self._config = config;
                 self.update_start_stop()
             }
         //
 
         // Loads
-            fn apply_gen_force(&mut self, force : Force) -> Result<(), StepperBuilderError> {
+            fn apply_gen_force(&mut self, force : Force) -> Result<(), ActuatorError> {
                 self._vars.force_load_gen = force;
                 self.update_start_stop()
             }
     
-            fn apply_dir_force(&mut self, force : Force) -> Result<(), StepperBuilderError> {
+            fn apply_dir_force(&mut self, force : Force) -> Result<(), ActuatorError> {
                 self._vars.force_load_dir = force;
                 self.update_start_stop()
             }
             
-            fn apply_inertia(&mut self, inertia : Inertia) -> Result<(), StepperBuilderError> {
+            fn apply_inertia(&mut self, inertia : Inertia) -> Result<(), ActuatorError> {
                 self._vars.inertia_load = inertia;
                 self.update_start_stop()
             }
