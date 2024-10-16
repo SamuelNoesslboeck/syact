@@ -17,6 +17,7 @@ use crate::data::{ActuatorVars, MicroSteps};
 //
 
 // Constants
+    /// The maximum speed level that is used by default
     pub const DEFAULT_MAX_SPEED_LEVEL : usize = 10;
 // 
 
@@ -24,16 +25,16 @@ use crate::data::{ActuatorVars, MicroSteps};
 #[derive(Clone, Debug, PartialEq, PartialOrd)]
 pub enum DriveMode {
     /// Driving with a constant velocity
-    /// - 0 - `Velocity`: The constant velocity to drive, positive values mean CW movement
+    /// - 0 - [Velocity]: The constant velocity to drive, positive values mean CW movement
     ConstVelocity(Velocity),
     /// Driving with a constant fraction of the maximum speed
-    /// - 0 - `Factor`: The speed factor to use, references maximum 
+    /// - 0 - [Factor]: The speed factor to use, references maximum 
     /// - 1 - `Direction`: The driving direction
     ConstFactor(Factor, Direction),
     /// Driving a fixed distance
     /// - 0 - `RelDist`: The relative distance to drive
-    /// - 1 - `Velocity`: The exit velocity of the movement
-    /// - 2 - `Factor`: Factor of maximum possible speed
+    /// - 1 - [Velocity]: The exit velocity of the movement
+    /// - 2 - [Factor]: Factor of maximum possible speed
     FixedDistance(RelDist, Velocity, Factor),
     /// Motor is stopping
     Stop,
@@ -68,7 +69,7 @@ pub trait StepperBuilder : Iterator<Item = Time> {
         /// Maximum velocity allowed by the user if specified
         fn velocity_max(&self) -> Option<Velocity>;
 
-        /// Set the maximum allowed `Velocity`
+        /// Set the maximum allowed [Velocity]
         /// 
         /// ## Option
         /// 
@@ -80,7 +81,7 @@ pub trait StepperBuilder : Iterator<Item = Time> {
         /// Maximum acceleration that will be allowed, if specified by the user with `set_max_acceleration`
         fn acceleration_max(&self) -> Option<Acceleration>;
 
-        /// Set the maximum allowed `Acceleration`
+        /// Set the maximum allowed [Acceleration]
         /// 
         /// ## Option
         /// 

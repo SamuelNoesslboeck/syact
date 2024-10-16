@@ -4,18 +4,14 @@ use core::sync::atomic::Ordering::Relaxed;
 use atomic_float::AtomicF32;
 use syunit::*;
 
-use crate::{SyncActuator, SyncActuatorGroup, ActuatorError};
+use crate::{SyncActuator, ActuatorError};
 use crate::act::SyncActuatorState;
-use crate::act::asyn::AsyncActuatorState;
 use crate::data::MicroSteps;
 use crate::math::movements::DefinedActuator;
 
-// Public imports
-    pub use syact_macros::StepperActuatorGroup;
-// 
-
 // Submodules
-    mod builder;
+    #[doc = include_str!("../../documentation/act/stepper/builder.md")]
+    pub mod builder;
     pub use builder::{DriveMode, StepperBuilder, StartStopBuilder, ComplexBuilder, StepperBuilderSimple, StepperBuilderAdvanced};
 
     mod ctrl;
@@ -42,28 +38,7 @@ use crate::math::movements::DefinedActuator;
             /// The angular distance of a step considering microstepping
             fn step_ang(&self) -> RelDist;
         // 
-    }
-
-    /// A group of stepper motor based components
-    pub trait StepperActuatorGroup<T, const C : usize> : SyncActuatorGroup<T, C> 
-    where 
-        T: StepperActuator + ?Sized + 'static
-    {
-        /// Returns the amount of microsteps every component uses
-        fn microsteps(&self) -> [MicroSteps; C] {
-            self.for_each(|comp, _| {
-                comp.microsteps()
-            })
-        }
-
-        /// Sets the amount of microsteps for each motor 
-        fn set_micro(&mut self, micro : [MicroSteps; C]) -> Result<(), ActuatorError> {
-            self.try_for_each_mut(|comp, index| {
-                comp.set_microsteps(micro[index])
-            })?;
-            Ok(())
-        }
-    }
+    }    
 // 
 
 // ######################
@@ -106,16 +81,6 @@ use crate::math::movements::DefinedActuator;
 
         fn interrupt(&self) {
             self.should_interrupt.store(true, Relaxed);
-        }
-    }
-
-    impl AsyncActuatorState for StepperState {
-        fn direction(&self) -> Direction {
-            todo!()
-        }
-    
-        fn speed_factor(&self) -> Factor {
-            todo!()
         }
     }
 // 

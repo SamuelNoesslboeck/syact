@@ -51,7 +51,7 @@ impl ServoConst {
         1.0 / self.f_pwm
     }
 
-    /// Pulse time for a given `Factor`
+    /// Pulse time for a given [Factor]
     pub fn pulse_for_factor(&self, factor : Factor) -> Time {
         self.pwm_min + (self.pwm_max - self.pwm_min) * factor
     }

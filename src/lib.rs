@@ -13,8 +13,8 @@ extern crate alloc;
     // Core submodules
         /// Actuator structures and traits
         pub mod act;
-        pub use act::{ActuatorError, AsyncActuator, AsyncActuatorState, SyncActuator, SyncActuatorGroup, SyncActuatorState, MiniServo, SyncActuatorBlocking};
-    
+        pub use act::{ActuatorError, AsyncActuator, SyncActuator, SyncActuatorState, MiniServo, SyncActuatorBlocking, SyncActuatorNB, ActuatorGroup, SyncActuatorGroup};
+        
         /// Structs for storing characteristics of stepper motors and devices
         pub mod data;
         pub use data::{MicroSteps, StepperConst, StepperConfig};
@@ -26,9 +26,6 @@ extern crate alloc;
         pub mod meas;
     // 
 
-    // Include proc_macro
-    pub use syact_macros::{SyncActuatorGroup, StepperActuatorGroup};
-
     /// Easy import of the functionalities
     pub mod prelude;
 
@@ -37,6 +34,8 @@ extern crate alloc;
     mod tests;
 
     pub use syunit as units;
+
+    pub use syact_macros::actuator_group;
 // 
 
 // ###########################

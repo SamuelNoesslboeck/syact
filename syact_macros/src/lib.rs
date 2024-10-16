@@ -8,7 +8,7 @@ use proc_macro2::TokenStream;
 use syn::DeriveInput;
 
 // SyncActuatorGroup
-    fn sync_comp_group_impl(ast : DeriveInput, comp_type : TokenStream) -> proc_macro::TokenStream {
+    fn actuator_group_implement(ast : DeriveInput, comp_type : TokenStream, item : TokenStream) -> proc_macro::TokenStream {
         match ast.data {
             // Macro works only on structs
             syn::Data::Struct(data) => {
@@ -18,7 +18,6 @@ use syn::DeriveInput;
                 let fields_count = fields.len();
 
                 // Streams for different functions
-                let mut setup_s = TokenStream::new();
                 let mut for_each_s = TokenStream::new();
                 let mut for_each_mut_s = TokenStream::new();
                 let mut try_for_each_s = TokenStream::new();
@@ -34,10 +33,6 @@ use syn::DeriveInput;
                     };  
 
                     // Extend streams
-                        setup_s.extend(quote::quote! {
-                            self.#fname.setup()?;
-                        });
-
                         for_each_s.extend(quote::quote! {
                             res[#findex] = func(&self.#fname, #findex);
                         }); 
@@ -59,10 +54,12 @@ use syn::DeriveInput;
                 }
 
                 quote::quote! {
-                    impl syact::act::group::SyncActuatorGroup<#comp_type, #fields_count> for #name { 
-                        fn for_each<'a, F, R>(&'a self, mut func : F) -> [R; #fields_count]
+                    #item
+
+                    impl syact::act::group::ActuatorGroup<#comp_type, #fields_count> for #name { 
+                        fn for_each<F, R>(&self, mut func : F) -> [R; #fields_count]
                         where 
-                            F : FnMut(&'a #comp_type, usize) -> R
+                            F : FnMut(&#comp_type, usize) -> R
                         {   
                             let mut res = unsafe { core::mem::zeroed::<[R; #fields_count]>() };
                             #for_each_s             // Insert stream
@@ -78,9 +75,9 @@ use syn::DeriveInput;
                             res
                         }
                     
-                        fn try_for_each<'a, F, R, E>(&'a self, mut func : F) -> Result<[R; #fields_count], E>
+                        fn try_for_each<F, R, E>(&self, mut func : F) -> Result<[R; #fields_count], E>
                         where 
-                            F : FnMut(&'a #comp_type, usize) -> Result<R, E>
+                            F : FnMut(&#comp_type, usize) -> Result<R, E>
                         {
                             let mut res = unsafe { core::mem::zeroed::<[R; #fields_count]>() };
                             #try_for_each_s         // Insert stream
@@ -104,44 +101,35 @@ use syn::DeriveInput;
 
     /// # `SyncActuatorGroup` - proc_macro
     /// 
-    /// Automatically generates an implementation for the `SyncActuatorGroup` macro for a given struct if all the underlying compoments in the struct (all the fields)
-    /// implment `SyncActuator` themselfs.
+    /// Automatically generates an implementation for the `SyncActuatorGroup` macro for a given struct if all elements can be summarized as `dyn SyncActuator`
     #[proc_macro_derive(SyncActuatorGroup)]
-    pub fn sync_comp_group_derive(input : proc_macro::TokenStream) -> proc_macro::TokenStream {
-        let ast : DeriveInput = syn::parse(input).unwrap();
-        sync_comp_group_impl(ast, TokenStream::from_str("(dyn syact::act::SyncActuator + 'static)").unwrap())
-    }
-// 
-
-// StepperActuatorGroup
-    /// Implementation for the `StepperActuatorGroup` trait
-    fn stepper_comp_group_impl(ast : DeriveInput) -> proc_macro::TokenStream {
-        match ast.data {
-            syn::Data::Struct(data) => {
-                // The macro only works on structs
-                let name = ast.ident;
-                let fields = data.fields;
-                let fields_count = fields.len();
-
-                // Create an empty implementation
-                quote::quote! {
-                    impl syact::act::stepper::StepperActuatorGroup<dyn syact::act::stepper::StepperActuator, #fields_count> for #name { }
-                }.into()
-            },
-            _ => panic!("This macro can only be used on structs")
-        }
+    pub fn sync_actuator_group(item : proc_macro::TokenStream) -> proc_macro::TokenStream {
+        let ast : DeriveInput = syn::parse(item).unwrap();
+        actuator_group_implement(ast, TokenStream::from_str("(dyn syact::act::SyncActuator + 'static)").unwrap(), TokenStream::new())
     }
 
     /// # `StepperActuatorGroup` - proc_macro
     /// 
-    /// Automatically generates an implementation for the `StepperActuatorGroup` macro for a given struct if all the underlying compoments in the struct (all the fields)
-    /// implment `StepperActuator` themselfs.
+    /// Automatically generates an implementation for the `StepperActuatorGroup` macro for a given struct if all elements can be summarized as `dyn StepperActuator`
     #[proc_macro_derive(StepperActuatorGroup)]
-    pub fn stepper_comp_group_derive(input : proc_macro::TokenStream) -> proc_macro::TokenStream {
-        let ast : DeriveInput = syn::parse(input).unwrap();
-        let mut derive = sync_comp_group_impl(ast.clone(), TokenStream::from_str("(dyn syact::act::stepper::StepperActuator + 'static)").unwrap()); 
-        derive.extend(stepper_comp_group_impl(ast));
-        derive
+    pub fn stepper_actuator_group(item : proc_macro::TokenStream) -> proc_macro::TokenStream {
+        let ast : DeriveInput = syn::parse(item).unwrap();
+        actuator_group_implement(ast, TokenStream::from_str("(dyn syact::act::StepperActuator + 'static)").unwrap(), TokenStream::new())
+    }
+
+    /// # `AdvancedActuatorGroup` - proc_macro
+    /// 
+    /// Automatically generates an implementation for the `StepperActuatorGroup` macro for a given struct if all elements can be summarized as `dyn AdvancedActuator`
+    #[proc_macro_derive(AdvancedActuatorGroup)]
+    pub fn advanced_actuator_group(item : proc_macro::TokenStream) -> proc_macro::TokenStream {
+        let ast : DeriveInput = syn::parse(item).unwrap();
+        actuator_group_implement(ast, TokenStream::from_str("(dyn syact::act::AdvancedActuator + 'static)").unwrap(), TokenStream::new())
+    }
+
+    /// # Free macro
+    #[proc_macro_attribute]
+    pub fn actuator_group(attr : proc_macro::TokenStream, item : proc_macro::TokenStream) -> proc_macro::TokenStream {
+        let ast : DeriveInput = syn::parse(item.clone()).unwrap();
+        actuator_group_implement(ast, attr.into(), item.into())
     }
 // 
-

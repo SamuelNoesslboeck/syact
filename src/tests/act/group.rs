@@ -7,7 +7,10 @@ fn test<G : SyncActuatorGroup<T, 2>, T : SyncActuator + ?Sized + 'static>(_g : &
     // Use group here ...
 }
 
-#[derive(StepperActuatorGroup)]
+// Merging traits for implementation
+merge_actuator_traits!(SomeCompsTrait, StepperActuator, AdvancedActuator, SyncActuatorBlocking); 
+
+#[syact::actuator_group { (dyn SomeCompsTrait + 'static) }]
 struct SomeComps {
     base : Gear<Stepper>,
     arm1 : LinearAxis<Stepper>

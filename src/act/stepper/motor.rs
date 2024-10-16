@@ -6,8 +6,7 @@ use core::sync::atomic::Ordering::Relaxed;
 use syunit::*;
 
 use crate::{AsyncActuator, SyncActuator, SyncActuatorBlocking};
-use crate::act::{ActuatorError, InterruptReason, Interruptible, Interruptor, SyncActuatorAdvanced, SyncActuatorState};
-use crate::act::asyn::AsyncActuatorState;
+use crate::act::{ActuatorError, InterruptReason, Interruptible, Interruptor, AdvancedActuator, SyncActuatorState};
 use crate::act::stepper::{StepperActuator, StepperController, StepperBuilder, DriveMode, StepperState};
 use crate::act::stepper::builder::{StepperBuilderAdvanced, StepperBuilderSimple};
 use crate::data::{StepperConfig, StepperConst, MicroSteps}; 
@@ -113,16 +112,6 @@ impl<B : StepperBuilder, C : StepperController> StepperMotor<B, C> {
 // #    SyncActuator - Implementation    #
 // #######################################
     impl<B : StepperBuilder, C : StepperController> SyncActuator for StepperMotor<B, C> {
-        // State
-            fn state(&self) -> &dyn SyncActuatorState {
-                self._state.as_ref()
-            }
-
-            fn clone_state(&self) -> Arc<dyn SyncActuatorState> {
-                self._state.clone()
-            }
-        // 
-
         // Position 
             #[inline]
             fn abs_pos(&self) -> AbsPos {
@@ -241,7 +230,17 @@ impl<B : StepperBuilder, C : StepperController> StepperMotor<B, C> {
     }
 
     impl<B : StepperBuilder, C : StepperController> SyncActuatorBlocking for StepperMotor<B, C> {
-        fn drive_rel(&mut self, rel_dist : RelDist, speed_f : Factor) -> Result<(), ActuatorError> {
+        // State
+            fn state(&self) -> &dyn SyncActuatorState {
+                self._state.as_ref()
+            }
+
+            fn clone_state(&self) -> Arc<dyn SyncActuatorState> {
+                self._state.clone()
+            }
+        // 
+
+        fn drive_rel_blocking(&mut self, rel_dist : RelDist, speed_f : Factor) -> Result<(), ActuatorError> {
             if !rel_dist.is_finite() {
                 return Err(ActuatorError::InvaldRelativeDistance(rel_dist));
             }
@@ -292,7 +291,7 @@ impl<B : StepperBuilder, C : StepperController> StepperMotor<B, C> {
         }
     }
 
-    impl<B : StepperBuilderAdvanced, C : StepperController> SyncActuatorAdvanced for StepperMotor<B, C> {
+    impl<B : StepperBuilderAdvanced, C : StepperController> AdvancedActuator for StepperMotor<B, C> {
         // Loads
             fn force_gen(&self) -> Force {
                 self.builder.vars().force_load_gen
@@ -380,14 +379,4 @@ impl<B : StepperBuilder, C : StepperController> AsyncActuator for StepperMotor<B
         self.builder.set_drive_mode(DriveMode::ConstVelocity(speed), &mut self.ctrl)?;
         self.handle_builder()
     }
-
-    // State
-        fn state(&self) -> &dyn AsyncActuatorState {
-            self._state.as_ref()
-        }
-
-        fn clone_state(&self) -> Arc<dyn AsyncActuatorState> {
-            self._state.clone()
-        }
-    // 
 }

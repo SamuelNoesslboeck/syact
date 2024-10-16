@@ -1,7 +1,8 @@
 #![crate_name = "syact_std"]
 
 use embedded_hal::digital::{OutputPin, PinState};
-use syact::act::stepper::{StepperController, ActuatorError};
+use syact::ActuatorError;
+use syact::act::stepper::StepperController;
 use syact::units::*;
 
 pub struct GenericPWMController<DIR : OutputPin, STEP : OutputPin> {

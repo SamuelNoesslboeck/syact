@@ -4,8 +4,7 @@ use alloc::sync::Arc;
 use syunit::*;
 
 use crate::{AsyncActuator, SyncActuator, SyncActuatorBlocking};
-use crate::act::{ActuatorError, Interruptible, SyncActuatorAdvanced, SyncActuatorState};
-use crate::act::asyn::AsyncActuatorState;
+use crate::act::{ActuatorError, Interruptible, AdvancedActuator, SyncActuatorState};
 use crate::act::stepper::StepperActuator;
 use crate::data::MicroSteps;
 use crate::math::movements::DefinedActuator;
@@ -125,16 +124,6 @@ pub trait ActuatorParent {
         where
             T::Child : SyncActuator
         {
-            // State
-                fn state(&self) -> &dyn super::SyncActuatorState {
-                    self.child().state() 
-                }
-
-                fn clone_state(&self) -> Arc<dyn SyncActuatorState> {
-                    self.child().clone_state()
-                }
-            //  
-
             // Position
                 fn abs_pos(&self) -> AbsPos {
                     self.abs_pos_for_parent(self.child().abs_pos())
@@ -217,15 +206,25 @@ pub trait ActuatorParent {
         where
             T::Child : SyncActuatorBlocking
         {
-            fn drive_rel(&mut self, mut rel_dist : RelDist, speed : Factor) -> Result<(), ActuatorError> {
+            // State
+                fn state(&self) -> &dyn super::SyncActuatorState {
+                    self.child().state() 
+                }
+
+                fn clone_state(&self) -> Arc<dyn SyncActuatorState> {
+                    self.child().clone_state()
+                }
+            //  
+
+            fn drive_rel_blocking(&mut self, mut rel_dist : RelDist, speed : Factor) -> Result<(), ActuatorError> {
                 rel_dist = self.rel_dist_for_chlid(rel_dist);
-                self.child_mut().drive_rel(rel_dist, speed)
+                self.child_mut().drive_rel_blocking(rel_dist, speed)
             }
         }
 
-        impl<T : RatioActuatorParent> SyncActuatorAdvanced for T
+        impl<T : RatioActuatorParent> AdvancedActuator for T
         where 
-            T::Child : SyncActuatorAdvanced
+            T::Child : AdvancedActuator
         {
             // Loads
                 fn force_gen(&self) -> Force {
@@ -302,16 +301,6 @@ pub trait ActuatorParent {
         fn drive_speed(&mut self, speed : Velocity) -> Result<(), ActuatorError> {
             self.child_mut().drive_speed(speed)
         }
-
-        // State
-            fn state(&self) -> &dyn AsyncActuatorState {
-                self.child().state()
-            }
-
-            fn clone_state(&self) -> Arc<dyn AsyncActuatorState> {
-                self.child().clone_state()
-            }
-        // 
     }
 
     // Movements

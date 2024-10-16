@@ -8,7 +8,7 @@ use syunit::*;
 // ####################
     /// A module for async components like a basic DC-motor. These components cannot move certain distances or to absolute positions
     pub mod asyn;
-    pub use asyn::{AsyncActuator, AsyncActuatorState};
+    pub use asyn::AsyncActuator;
 
     mod comps;
     pub use comps::{Conveyor, Gear, LinearAxis};
@@ -16,7 +16,7 @@ use syunit::*;
     /// A module for component groups, as they are used in various robots. The components are all sharing the same 
     /// [StepperConfig](crate::data::StepperConfig) and their movements are coordinated. 
     pub mod group;
-    pub use group::SyncActuatorGroup;
+    pub use group::{ActuatorGroup, SyncActuatorGroup};
 
     /// ALl the parent structures used
     pub mod parent;
@@ -29,6 +29,25 @@ use syunit::*;
     pub mod stepper;
     pub use stepper::{StepperActuator, StepperMotor};
 //
+
+// Macros
+    /// Helper macro for merging multiple Actuator traits into one, useful for group implementation
+    #[macro_export]
+    macro_rules! merge_actuator_traits {
+        ($name:ident, $trait1:ident, $trait2:ident) => {
+            pub trait $name : $trait1 + $trait2 { }
+            impl<T : $trait1 + $trait2> $name for T { }
+        };
+        ($name:ident, $trait1:ident, $trait2:ident, $trait3:ident) => {
+            pub trait $name : $trait1 + $trait2 + $trait3 { }
+            impl<T : $trait1 + $trait2 + $trait3> $name for T { }
+        };
+        ($name:ident, $trait1:ident, $trait2:ident, $trait3:ident, $trait4:ident) => {
+            pub trait $name : $trait1 + $trait2 + $trait3 + $trait4{ }
+            impl<T : $trait1 + $trait2 + $trait3 + $trait4> $name for T { }
+        };
+    }
+// 
 
 // #####################
 // #    Interruptor    #
@@ -104,13 +123,13 @@ use syunit::*;
             /// The velocity given is invalid somehow, depending on the context (see the function description)
             InvalidVelocity(Velocity),
             /// The velocity given is too high, depending on the context, see the function description
-            /// 0: `Velocity` - The given velocity
-            /// 1: `Velocity` - The velocity
+            /// 0: [Velocity] - The given velocity
+            /// 1: [Velocity] - The velocity
             VelocityTooHigh(Velocity, Velocity),
         //
 
         // Acceleration
-            /// The `Acceleration` given is invalid somehow, depending on the context (see the function description)
+            /// The [Acceleration] given is invalid somehow, depending on the context (see the function description)
             InvalidAcceleration(Acceleration),
         // 
 
@@ -145,6 +164,82 @@ use syunit::*;
     // impl std::error::Error for ActuatorError { }
 //
 
+// ###########################
+// #    Advanced Actuator    #
+// ###########################
+    /// An advanced actuator allows applying loads that alter the actuators movement
+    pub trait AdvancedActuator {
+        // Load calculation
+            // TODO: Documentation sucks
+            /// Will always be positive
+            fn force_gen(&self) -> Force;
+
+            // TODO: Documentation sucks
+            /// Positive means CW direction
+            fn force_dir(&self) -> Force;
+
+            /// Apply a load force to the component, slowing down movements 
+            /// 
+            /// ### General force
+            /// 
+            /// Force value will always be made positive, as it will be subtracted in the calculation no matter how 
+            /// 
+            /// ```rust
+            /// use syact::prelude::*;
+            /// 
+            /// // Force to act upon the component
+            /// const FORCE : Force = Force(0.2);
+            /// 
+            /// // Create a new gear bearing (implements SyncActuator)
+            /// let mut gear = Gear::new(
+            ///     // Stepper Motor as subcomponent (also implements SyncActuator)
+            ///     Stepper::default(), 
+            /// 0.5);    // Ratio is set to 0.5, which means for each radian the motor moves, the bearing moves for half a radian
+            /// 
+            /// gear.apply_gen_force(FORCE);
+            /// 
+            /// assert_eq!(AbsPos(2.0), gear.abs_pos_for_child(AbsPos(1.0)));
+            /// assert_eq!(Force(0.1), gear.child().force_gen());     // Forces get smaller for smaller gears
+            /// ```
+            fn apply_gen_force(&mut self, force : Force) -> Result<(), ActuatorError>;
+
+            // TODO: Documentation sucks
+            /// Value positive in CW direction
+            fn apply_dir_force(&mut self, force : Force) -> Result<(), ActuatorError>;
+
+            // Inertia
+            /// Returns the inertia applied to the component
+            fn inertia(&self) -> Inertia;
+            
+            /// Apply a load inertia to the component, slowing down movements
+            /// 
+            /// # Panics
+            /// 
+            /// Panics if no parent component or override of the function has been provided.
+            /// 
+            /// ```rust
+            /// use syact::prelude::*;
+            /// 
+            /// // Inertia to act upon the component
+            /// const INERTIA : Inertia = Inertia(4.0);
+            /// 
+            /// // Create a new gear bearing (implements SyncActuator)
+            /// let mut gear = Gear::new(
+            ///     // Stepper Motor as subcomponent (also implements SyncActuator)
+            ///     Stepper::default(), 
+            /// 0.5);    // Ratio is set to 0.5, which means for each radian the motor moves, the bearing moves for half a radian
+            /// 
+            /// // Applies the inertia to the gearbearing component
+            /// gear.apply_inertia(INERTIA);
+            /// 
+            /// assert_eq!(AbsPos(2.0), gear.abs_pos_for_child(AbsPos(1.0)));
+            /// assert_eq!(Inertia(1.0), gear.child().inertia());
+            /// ```
+            fn apply_inertia(&mut self, inertia : Inertia) -> Result<(), ActuatorError> ;
+        // 
+    }
+// 
+
 // ######################
 // #    SyncActuator    #
 // ######################
@@ -172,14 +267,6 @@ use syunit::*;
     /// Components can have multiple layers, for example take a stepper motor with a geaerbox attached to it. The stepper motor and both combined will be a component, the later having 
     /// the stepper motor component defined as it's parent component. (See [Gear])
     pub trait SyncActuator {
-        // State
-            /// Returns a reference to the actuators `SyncActuatorState`
-            fn state(&self) -> &dyn SyncActuatorState;
-
-            /// Returns an `Arc` reference counter to the given S
-            fn clone_state(&self) -> Arc<dyn SyncActuatorState>;
-        // 
-
         // Position & Velocity
             /// Returns the **absolute** position of the component.
             /// 
@@ -189,9 +276,9 @@ use syunit::*;
             /// // Position of components
             /// const POS : AbsPos = AbsPos(10.0);
             /// 
-            /// // Create a new cylinder (implements SyncComp)
+            /// // Create a new cylinder (implements SyncActuator)
             /// let mut cylinder = LinearAxis::new(
-            ///     // Stepper Motor as subcomponent (also implements SyncComp)
+            ///     // Stepper Motor as subcomponent (also implements SyncActuator)
             ///     Stepper::default(), 
             /// 0.5);    // Ratio is set to 0.5, which means for each radian the motor moves, the cylinder moves for 0.5 mm
             /// 
@@ -212,9 +299,9 @@ use syunit::*;
             /// // Position of components
             /// const POS : AbsPos = AbsPos(10.0);
             /// 
-            /// // Create a new cylinder (implements SyncComp)
+            /// // Create a new cylinder (implements SyncActuator)
             /// let mut cylinder = LinearAxis::new(
-            ///     // Stepper Motor as subcomponent (also implements SyncComp)
+            ///     // Stepper Motor as subcomponent (also implements SyncActuator)
             ///     Stepper::default(), 
             /// 0.5);    // Ratio is set to 0.5, which means for each radian the motor moves, the cylinder moves for 0.5 mm
             /// 
@@ -229,7 +316,7 @@ use syunit::*;
             /// Maximum velocity allowed by the user if specified
             fn velocity_max(&self) -> Option<Velocity>;
 
-            /// Set the maximum allowed `Velocity`
+            /// Set the maximum allowed [Velocity]
             /// 
             /// ## Option
             /// 
@@ -241,7 +328,7 @@ use syunit::*;
             /// Maximum acceleration that will be allowed, if specified by the user with `set_max_acceleration`
             fn acceleration_max(&self) -> Option<Acceleration>;
 
-            /// Set the maximum allowed `Acceleration`
+            /// Set the maximum allowed [Acceleration]
             /// 
             /// ## Option
             /// 
@@ -290,9 +377,9 @@ use syunit::*;
             /// 
             /// const LIM_MIN_LOWER : AbsPos = AbsPos(-3.0);
             /// 
-            /// // Create a new gear bearing (implements SyncComp)
+            /// // Create a new gear bearing (implements SyncActuator)
             /// let mut gear = Gear::new(
-            ///     // Stepper Motor as subcomponent (also implements SyncComp)
+            ///     // Stepper Motor as subcomponent (also implements SyncActuator)
             ///     Stepper::default(), 
             /// 0.5);    // Ratio is set to 0.5, which means for each radian the motor moves, the bearing moves for half a radian
             /// 
@@ -324,7 +411,7 @@ use syunit::*;
             /// Set the limits for the minimum and maximum angles that the component can reach, note that the limit will 
             /// be converted and transfered to the parent component if defined. 
             /// 
-            /// Unlike [SyncComp::overwrite_pos_limits()], this function does not overwrite the current `min` or `max` limits if they
+            /// Unlike [SyncActuator::overwrite_pos_limits()], this function does not overwrite the current `min` or `max` limits if they
             /// are set to `None`. 
             /// 
             /// ```rust
@@ -336,9 +423,9 @@ use syunit::*;
             /// 
             /// const LIM_MIN_LOWER : AbsPos = AbsPos(-3.0);
             /// 
-            /// // Create a new gear bearing (implements SyncComp)
+            /// // Create a new gear bearing (implements SyncActuator)
             /// let mut gear = Gear::new(
-            ///     // Stepper Motor as subcomponent (also implements SyncComp)
+            ///     // Stepper Motor as subcomponent (also implements SyncActuator)
             ///     Stepper::default(), 
             /// 0.5);    // Ratio is set to 0.5, which means for each radian the motor moves, the bearing moves for half a radian
             /// 
@@ -365,7 +452,7 @@ use syunit::*;
             /// Set the limits for the minimum and maximum angles that the component can reach, note that the limit will 
             /// be converted and transfered to the parent component if this component has one. 
             /// 
-            /// The difference to [SyncComp::set_pos_limits()] is that this function **overwrites** the current limits set.
+            /// The difference to [SyncActuator::set_pos_limits()] is that this function **overwrites** the current limits set.
             /// 
             /// ```rust
             /// use syact::prelude::*;
@@ -376,9 +463,9 @@ use syunit::*;
             /// 
             /// const LIM_MIN_LOWER : AbsPos = AbsPos(-3.0);
             /// 
-            /// // Create a new gear bearing (implements SyncComp)
+            /// // Create a new gear bearing (implements SyncActuator)
             /// let mut gear = Gear::new(
-            ///     // Stepper Motor as subcomponent (also implements SyncComp)
+            ///     // Stepper Motor as subcomponent (also implements SyncActuator)
             ///     Stepper::default(), 
             /// 0.5);    // Ratio is set to 0.5, which means for each radian the motor moves, the bearing moves for half a radian
             /// 
@@ -411,86 +498,35 @@ use syunit::*;
     // Movement
         /// Further defines a `SyncActuator`, extending it with blocking movement functions
         pub trait SyncActuatorBlocking : SyncActuator {
-            /// Moves the component by the relative distance as fast as possible, halts the script until 
-            /// the movement is finshed and returns the actual **relative** distance travelled
-            fn drive_rel(&mut self, rel_dist : RelDist, speed : Factor) -> Result<(), ActuatorError>;
+            // State
+                /// Returns a reference to the actuators `SyncActuatorState`
+                fn state(&self) -> &dyn SyncActuatorState;
 
-            /// Moves the component to the given position as fast as possible, halts the script until the 
-            /// movement is finished and returns the actual **relative** distance travelled.
+                /// Returns an `Arc` reference counter to the given S
+                fn clone_state(&self) -> Arc<dyn SyncActuatorState>;
+            // 
+
+            /// Moves the component by the relative distance as fast as possible, blocks the script until the movement is finshed
+            fn drive_rel_blocking(&mut self, rel_dist : RelDist, speed : Factor) -> Result<(), ActuatorError>;
+
+            /// Moves the component to the absolute position as fast as possible, blocks the script until the movement is finshed
             #[inline]
-            fn drive_abs(&mut self, abs_pos : AbsPos, speed : Factor) -> Result<(), ActuatorError> {
+            fn drive_abs_blocking(&mut self, abs_pos : AbsPos, speed : Factor) -> Result<(), ActuatorError> {
                 let rel_dist = abs_pos - self.abs_pos();
-                self.drive_rel(rel_dist, speed)
+                self.drive_rel_blocking(rel_dist, speed)
+            }
+        }
+
+        /// Further defines a `SyncActuator`, extending it with non-blocking movement functions
+        pub trait SyncActuatorNB : SyncActuator {
+            /// Moves the component by the relative distance as fast as possible, blocks the script until the movement is finshed
+            fn drive_rel_nb(&mut self, rel_dist : RelDist, speed : Factor) -> Result<(), ActuatorError>;
+
+            /// Moves the component to the absolute position as fast as possible, blocks the script until the movement is finshed
+            fn drive_abs_blocking(&mut self, abs_pos : AbsPos, speed : Factor) -> Result<(), ActuatorError> {
+                let rel_dist = abs_pos - self.abs_pos();
+                self.drive_rel_nb(rel_dist, speed)
             }
         }
     // 
-    
-    /// An advanced `SyncActuator` allows applying loads that alter the actuators movement
-    pub trait SyncActuatorAdvanced : SyncActuator {
-        // Load calculation
-            /// Will always be positive
-            fn force_gen(&self) -> Force;
-
-            /// Positive means CW direction
-            fn force_dir(&self) -> Force;
-
-            /// Apply a load force to the component, slowing down movements 
-            /// 
-            /// ### General force
-            /// 
-            /// Force value will always be made positive, as it will be subtracted in the calculation no matter how 
-            /// 
-            /// ```rust
-            /// use syact::prelude::*;
-            /// 
-            /// // Force to act upon the component
-            /// const FORCE : Force = Force(0.2);
-            /// 
-            /// // Create a new gear bearing (implements SyncComp)
-            /// let mut gear = Gear::new(
-            ///     // Stepper Motor as subcomponent (also implements SyncComp)
-            ///     Stepper::default(), 
-            /// 0.5);    // Ratio is set to 0.5, which means for each radian the motor moves, the bearing moves for half a radian
-            /// 
-            /// gear.apply_gen_force(FORCE);
-            /// 
-            /// assert_eq!(AbsPos(2.0), gear.abs_pos_for_child(AbsPos(1.0)));
-            /// assert_eq!(Force(0.1), gear.child().force_gen());     // Forces get smaller for smaller gears
-            /// ```
-            fn apply_gen_force(&mut self, force : Force) -> Result<(), ActuatorError>;
-
-            /// Value positive in CW direction
-            fn apply_dir_force(&mut self, force : Force) -> Result<(), ActuatorError>;
-
-            // Inertia
-            /// Returns the inertia applied to the component
-            fn inertia(&self) -> Inertia;
-            
-            /// Apply a load inertia to the component, slowing down movements
-            /// 
-            /// # Panics
-            /// 
-            /// Panics if no parent component or override of the function has been provided.
-            /// 
-            /// ```rust
-            /// use syact::prelude::*;
-            /// 
-            /// // Inertia to act upon the component
-            /// const INERTIA : Inertia = Inertia(4.0);
-            /// 
-            /// // Create a new gear bearing (implements SyncComp)
-            /// let mut gear = Gear::new(
-            ///     // Stepper Motor as subcomponent (also implements SyncComp)
-            ///     Stepper::default(), 
-            /// 0.5);    // Ratio is set to 0.5, which means for each radian the motor moves, the bearing moves for half a radian
-            /// 
-            /// // Applies the inertia to the gearbearing component
-            /// gear.apply_inertia(INERTIA);
-            /// 
-            /// assert_eq!(AbsPos(2.0), gear.abs_pos_for_child(AbsPos(1.0)));
-            /// assert_eq!(Inertia(1.0), gear.child().inertia());
-            /// ```
-            fn apply_inertia(&mut self, inertia : Inertia) -> Result<(), ActuatorError> ;
-        // 
-    }
 // 

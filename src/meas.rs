@@ -114,7 +114,7 @@ pub fn take_simple_meas<C : SyncActuatorBlocking + Interruptible + ?Sized>(comp 
 
     // Init measurement
         // Drive full distance with optionally reduced speed
-        comp.drive_rel(data.max_dist, data.meas_speed * speed)?;
+        comp.drive_rel_blocking(data.max_dist, data.meas_speed * speed)?;
         
         comp.intr_reason()      // Get the interrupt reason
             .ok_or(SimpleMeasError::NoInterrupt)
@@ -128,12 +128,12 @@ pub fn take_simple_meas<C : SyncActuatorBlocking + Interruptible + ?Sized>(comp 
     // Samples
         for _ in 0 .. data.add_samples() {
             // Drive half of the sample distance back (faster)
-            comp.drive_rel(-data.sample_dist.unwrap_or(data.max_dist * 0.25) / 2.0, speed)?;
+            comp.drive_rel_blocking(-data.sample_dist.unwrap_or(data.max_dist * 0.25) / 2.0, speed)?;
 
             // TODO: Check for errors when moving backwards
 
             // Drive sample distance
-            comp.drive_rel(data.sample_dist.unwrap_or(data.max_dist * 0.25), data.meas_speed * speed)?;
+            comp.drive_rel_blocking(data.sample_dist.unwrap_or(data.max_dist * 0.25), data.meas_speed * speed)?;
 
             // Check wheiter the component has been interrupted and if it is the correct interrupt
             comp.intr_reason()      // Get the interrupt reason
