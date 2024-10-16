@@ -5,7 +5,7 @@ use core::sync::atomic::Ordering::Relaxed;
 
 use syunit::*;
 
-use crate::{AsyncActuator, SyncActuator, SyncActuatorBlocking};
+use crate::{SyncActuator, SyncActuatorBlocking};
 use crate::act::{ActuatorError, InterruptReason, Interruptible, Interruptor, AdvancedActuator, SyncActuatorState};
 use crate::act::stepper::{StepperActuator, StepperController, StepperBuilder, DriveMode, StepperState};
 use crate::act::stepper::builder::{StepperBuilderAdvanced, StepperBuilderSimple};
@@ -249,6 +249,18 @@ impl<B : StepperBuilder, C : StepperController> StepperMotor<B, C> {
             self.builder.set_drive_mode(DriveMode::FixedDistance(rel_dist, Velocity::ZERO, speed_f), &mut self.ctrl)?;
             self.handle_builder()
         }
+
+        fn drive_factor(&mut self, speed : Factor, direction : Direction) -> Result<(), ActuatorError> {
+            // Set drive mode, return mapped error if one occurs
+            self.builder.set_drive_mode(DriveMode::ConstFactor(speed, direction), &mut self.ctrl)?;
+            self.handle_builder()
+        }
+    
+        fn drive_speed(&mut self, speed : Velocity) -> Result<(), ActuatorError> {
+            // Set drive mode, return mapped error if one occurs
+            self.builder.set_drive_mode(DriveMode::ConstVelocity(speed), &mut self.ctrl)?;
+            self.handle_builder()
+        }
     }
 // 
 
@@ -363,20 +375,5 @@ where
 {
     fn ptp_time_for_distance(&self, abs_pos_0 : AbsPos, abs_pos_t : AbsPos) -> Time {
         self.builder.ptp_time_for_distance(abs_pos_0, abs_pos_t)
-    }
-}
-
-impl<B : StepperBuilder, C : StepperController> AsyncActuator for StepperMotor<B, C> 
-{
-    fn drive_factor(&mut self, speed : Factor, direction : Direction) -> Result<(), ActuatorError> {
-        // Set drive mode, return mapped error if one occurs
-        self.builder.set_drive_mode(DriveMode::ConstFactor(speed, direction), &mut self.ctrl)?;
-        self.handle_builder()
-    }
-
-    fn drive_speed(&mut self, speed : Velocity) -> Result<(), ActuatorError> {
-        // Set drive mode, return mapped error if one occurs
-        self.builder.set_drive_mode(DriveMode::ConstVelocity(speed), &mut self.ctrl)?;
-        self.handle_builder()
     }
 }

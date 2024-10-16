@@ -31,7 +31,14 @@ syact_macros = { path = "syact_macros" }
 [features]
 testing = [ ]
 
-# Helper binaries
+# Binaries
 [[bin]]
-name = "stepper_curve_printer"
-path = "bin/stepper_curve_printer.rs"
+name = "stepper_torque_curve_printer"
+path = "bin/stepper_torque_curve_printer.rs"
+
+# Builder
+  [[bin]]
+  name ="builder-start_stop_builder_printer"
+  path = "bin/builder/start_stop_builder_printer.rs"
+  required-features = [ "testing" ]
+#

@@ -220,6 +220,15 @@ pub trait ActuatorParent {
                 rel_dist = self.rel_dist_for_chlid(rel_dist);
                 self.child_mut().drive_rel_blocking(rel_dist, speed)
             }
+
+            fn drive_factor(&mut self, speed : Factor, direction : Direction) -> Result<(), ActuatorError> {
+                self.child_mut().drive_factor(speed, direction)
+            }
+
+            fn drive_speed(&mut self, mut speed : Velocity) -> Result<(), ActuatorError> {
+                speed = self.velocity_for_child(speed);
+                self.child_mut().drive_speed(speed)
+            }
         }
 
         impl<T : RatioActuatorParent> AdvancedActuator for T

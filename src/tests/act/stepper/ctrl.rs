@@ -2,11 +2,13 @@ use syunit::*;
 
 use crate::prelude::*;
 
+/// A simulated controller that does nothing
 pub struct SimulatedController {
     _dir : Direction
 }
 
 impl SimulatedController {
+    /// Creates a new simulated controller
     pub fn new() -> Self {
         Self {
             _dir: Direction::default()

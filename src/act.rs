@@ -43,7 +43,7 @@ use syunit::*;
             impl<T : $trait1 + $trait2 + $trait3> $name for T { }
         };
         ($name:ident, $trait1:ident, $trait2:ident, $trait3:ident, $trait4:ident) => {
-            pub trait $name : $trait1 + $trait2 + $trait3 + $trait4{ }
+            pub trait $name : $trait1 + $trait2 + $trait3 + $trait4 { }
             impl<T : $trait1 + $trait2 + $trait3 + $trait4> $name for T { }
         };
     }
@@ -515,6 +515,12 @@ use syunit::*;
                 let rel_dist = abs_pos - self.abs_pos();
                 self.drive_rel_blocking(rel_dist, speed)
             }
+
+            /// Starts the movement process of the component in the given direction with a given `speed` factor
+            fn drive_factor(&mut self, speed : Factor, direction : Direction) -> Result<(), ActuatorError>; 
+
+            /// Start the movement process of the component with the given velocity `speed`, positive values for `speed` mean CW movement
+            fn drive_speed(&mut self, speed : Velocity) -> Result<(), ActuatorError>;
         }
 
         /// Further defines a `SyncActuator`, extending it with non-blocking movement functions
