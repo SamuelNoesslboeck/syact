@@ -21,13 +21,15 @@ embedded-hal = "1.0.0"
 log = "0.4.20"
 serde = { version = "1.0.192", features = [ "derive" ] }
 serde_json = "1.0.108"
-spin_sleep = "1.2.1"
 
 sykin = { path = "../sykin" }
 syunit = "0.3.1"
 
 # Subcrates
 syact_macros = { path = "syact_macros" }
+
+[dev-dependencies]
+spin_sleep = "1.2.1"
 
 [features]
 testing = [ ]
