@@ -1,6 +1,6 @@
-use crate::SyncActuatorBlocking;
-use crate::act::{ActuatorError, SyncActuator, AdvancedActuator, StepperActuator};
+use crate::{ActuatorError, SyncActuator, AdvancedActuator, SyncActuatorBlocking};
 use crate::data::MicroSteps;
+use crate::sync::StepperActuator;
 
 use syunit::*;
 

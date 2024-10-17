@@ -2,7 +2,7 @@ use embedded_hal::digital::InputPin;
 use serde::{Serialize, Deserialize};
 use syunit::*;
 
-use crate::act::{Interruptor, InterruptReason};
+use crate::{Interruptor, InterruptReason};
 use crate::meas::Measurable;
 
 /// A simple endswitch that can trigger when reaching a destination

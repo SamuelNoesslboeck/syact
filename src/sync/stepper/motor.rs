@@ -5,12 +5,11 @@ use core::sync::atomic::Ordering::Relaxed;
 
 use syunit::*;
 
-use crate::{SyncActuator, SyncActuatorBlocking};
-use crate::act::{ActuatorError, InterruptReason, Interruptible, Interruptor, AdvancedActuator, SyncActuatorState};
-use crate::act::stepper::{StepperActuator, StepperController, StepperBuilder, DriveMode, StepperState};
-use crate::act::stepper::builder::{StepperBuilderAdvanced, StepperBuilderSimple};
+use crate::{SyncActuator, SyncActuatorBlocking, InterruptReason, Interruptible, Interruptor, AdvancedActuator, DefinedActuator};
 use crate::data::{StepperConfig, StepperConst, MicroSteps}; 
-use crate::math::movements::DefinedActuator;
+use crate::sync::{ActuatorError, SyncActuatorState};
+use crate::sync::stepper::{StepperActuator, StepperController, StepperBuilder, DriveMode, StepperState};
+use crate::sync::stepper::builder::{StepperBuilderAdvanced, StepperBuilderSimple};
 
 /// A stepper motor
 /// 

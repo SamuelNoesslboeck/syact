@@ -1,7 +1,7 @@
 use serde::{Serialize, Deserialize};
 
-use crate::{SyncActuator, Setup};
-use crate::act::parent::{ActuatorParent, RatioActuatorParent};
+use crate::SyncActuator;
+use crate::parent::{ActuatorParent, RatioActuatorParent};
 
 /// A gear component
 /// 
@@ -29,14 +29,6 @@ impl<C : SyncActuator> Gear<C> {
 }
 
 // Parent
-    impl<C : SyncActuator + Setup> Setup for Gear<C> {
-        type Error = <C as Setup>::Error;
-
-        fn setup(&mut self) -> Result<(), Self::Error> {
-            self.actuator.setup()
-        }
-    }
-
     impl<C : SyncActuator> ActuatorParent for Gear<C> {
         type Child = C;
 

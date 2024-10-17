@@ -56,7 +56,7 @@ use syn::DeriveInput;
                 quote::quote! {
                     #item
 
-                    impl syact::act::group::ActuatorGroup<#comp_type, #fields_count> for #name { 
+                    impl syact::group::ActuatorGroup<#comp_type, #fields_count> for #name { 
                         fn for_each<F, R>(&self, mut func : F) -> [R; #fields_count]
                         where 
                             F : FnMut(&#comp_type, usize) -> R
@@ -105,7 +105,7 @@ use syn::DeriveInput;
     #[proc_macro_derive(SyncActuatorGroup)]
     pub fn sync_actuator_group(item : proc_macro::TokenStream) -> proc_macro::TokenStream {
         let ast : DeriveInput = syn::parse(item).unwrap();
-        actuator_group_implement(ast, TokenStream::from_str("(dyn syact::act::SyncActuator + 'static)").unwrap(), TokenStream::new())
+        actuator_group_implement(ast, TokenStream::from_str("(dyn syact::SyncActuator + 'static)").unwrap(), TokenStream::new())
     }
 
     /// # `StepperActuatorGroup` - proc_macro
@@ -114,7 +114,7 @@ use syn::DeriveInput;
     #[proc_macro_derive(StepperActuatorGroup)]
     pub fn stepper_actuator_group(item : proc_macro::TokenStream) -> proc_macro::TokenStream {
         let ast : DeriveInput = syn::parse(item).unwrap();
-        actuator_group_implement(ast, TokenStream::from_str("(dyn syact::act::StepperActuator + 'static)").unwrap(), TokenStream::new())
+        actuator_group_implement(ast, TokenStream::from_str("(dyn syact::sync::stepper::StepperActuator + 'static)").unwrap(), TokenStream::new())
     }
 
     /// # `AdvancedActuatorGroup` - proc_macro
@@ -123,7 +123,7 @@ use syn::DeriveInput;
     #[proc_macro_derive(AdvancedActuatorGroup)]
     pub fn advanced_actuator_group(item : proc_macro::TokenStream) -> proc_macro::TokenStream {
         let ast : DeriveInput = syn::parse(item).unwrap();
-        actuator_group_implement(ast, TokenStream::from_str("(dyn syact::act::AdvancedActuator + 'static)").unwrap(), TokenStream::new())
+        actuator_group_implement(ast, TokenStream::from_str("(dyn syact::AdvancedActuator + 'static)").unwrap(), TokenStream::new())
     }
 
     /// # Free macro

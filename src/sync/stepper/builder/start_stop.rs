@@ -1,11 +1,9 @@
 use syunit::*;
 
-use crate::act::stepper::builder::StepperBuilderAdvanced;
-use crate::{StepperConst, StepperConfig};
-use crate::act::stepper::StepperController;
+use crate::{StepperConst, StepperConfig, DefinedActuator};
+use crate::sync::stepper::StepperController;
+use crate::sync::stepper::builder::StepperBuilderAdvanced;
 use crate::data::{ActuatorVars, MicroSteps};
-use crate::math;
-use crate::math::movements::DefinedActuator;
 
 use super::{DriveMode, StepperBuilder, ActuatorError};
 
@@ -49,13 +47,8 @@ pub struct StartStopBuilder {
 impl StartStopBuilder {
     /// Updates the builders velocity values considering the loads etc.
     pub fn update_start_stop(&mut self) -> Result<(), ActuatorError> {
-        self.velocity_start_stop = math::kin::velocity_start_stop(
-            self._vars.force_after_load_lower(
-                self._consts.torque_overload(self._config.overload_current)
-            ).ok_or(ActuatorError::Overload)?, 
-            self._vars.inertia_after_load(self._consts.inertia_motor), 
-            self._consts.number_steps * self._microsteps
-        );
+        self.velocity_start_stop = self.consts().velocity_start_stop(self.vars(), self.config(), self._microsteps)
+            .ok_or(ActuatorError::Overload)?;
 
         Ok(())
     }
@@ -68,7 +61,7 @@ impl StartStopBuilder {
         /// Returns `None` if no maximum jolt is defined
         pub fn acceleration_by_max_jolt(&self) -> Option<Acceleration> {
             self.jolt_max().map(|jolt_max| {
-                math::kin::jolt_from_zero_acceleration(self.step_angle(), jolt_max)
+                sykin::kin3::acceleration_for_distance_only_jolt(self.step_angle(), jolt_max)
             })
         }
 
@@ -82,7 +75,7 @@ impl StartStopBuilder {
     // Velocity helpers
         /// The maximum velocity that can be reached with the specified acceleration (will result in infinity if no limits are set)
         pub fn velocity_by_max_acceleration(&self) -> Velocity {
-            math::kin::accel_from_zero_velocity(self.step_angle(), self.acceleration_allowed())
+            sykin::kin2::velocity_for_distance_no_vel0(self.step_angle(), self.acceleration_allowed())
         }
 
         /// The maximum velocity that is currently possible, defined by numerous factors like maximum jolt, acceleration, velocity and start-stop mechanics

@@ -4,13 +4,13 @@ use core::sync::atomic::Ordering::Relaxed;
 use atomic_float::AtomicF32;
 use syunit::*;
 
-use crate::{SyncActuator, ActuatorError};
-use crate::act::SyncActuatorState;
+use crate::{ActuatorError, SyncActuatorState, SyncActuator, DefinedActuator};
 use crate::data::MicroSteps;
-use crate::math::movements::DefinedActuator;
 
-// Submodules
-    #[doc = include_str!("../../documentation/act/stepper/builder.md")]
+// ####################
+// #    SUBMODULES    #
+// ####################
+    #[doc = include_str!("../../documentation/sync/stepper/builder.md")]
     pub mod builder;
     pub use builder::{DriveMode, StepperBuilder, StartStopBuilder, ComplexBuilder, StepperBuilderSimple, StepperBuilderAdvanced};
 

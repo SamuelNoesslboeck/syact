@@ -3,11 +3,9 @@ use alloc::sync::Arc;
 
 use syunit::*;
 
-use crate::{AsyncActuator, SyncActuator, SyncActuatorBlocking};
-use crate::act::{ActuatorError, Interruptible, AdvancedActuator, SyncActuatorState};
-use crate::act::stepper::StepperActuator;
+use crate::{AsyncActuator, SyncActuator, SyncActuatorBlocking, ActuatorError, Interruptible, AdvancedActuator, SyncActuatorState, DefinedActuator};
 use crate::data::MicroSteps;
-use crate::math::movements::DefinedActuator;
+use crate::sync::stepper::StepperActuator;
 
 /// A trait that marks an actuator which acts as a parent for another actuator
 pub trait ActuatorParent {

@@ -1,6 +1,6 @@
 use syunit::*;
 
-use crate::act::ActuatorError;
+use crate::ActuatorError;
 
 /// A component which is asynchronous because of its hardware properties, e.g. a simple DC-Motors
 pub trait AsyncActuator {

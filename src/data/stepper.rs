@@ -152,7 +152,7 @@ impl StepperConst {
         }
     // 
 
-    // Speeds
+    // Velocity & Inductance
         /// The inductivity constant [Unit s]
         #[inline(always)]
         pub fn tau(&self, voltage : f32) -> Time {
@@ -163,6 +163,13 @@ impl StepperConst {
         #[inline(always)]
         pub fn velocity_max(&self, voltage : f32) -> Velocity {
             Velocity(PI * voltage / self.default_current / self.inductance / self.number_steps as f32)
+        }
+
+        /// Returns the start-stop-velocity for a stepper motor
+        pub fn velocity_start_stop(&self, vars : &ActuatorVars, config : &StepperConfig, microsteps : MicroSteps) -> Option<Velocity> {
+            vars.force_after_load_lower(self.torque_overload(config.overload_current)).map(|torque| {
+                Velocity((torque.0 / vars.inertia_after_load(self.inertia_motor).0 * core::f32::consts::PI / (self.number_steps * microsteps) as f32).sqrt())
+            })
         }
     // 
 

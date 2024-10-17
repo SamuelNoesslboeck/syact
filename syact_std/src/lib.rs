@@ -2,7 +2,7 @@
 
 use embedded_hal::digital::{OutputPin, PinState};
 use syact::ActuatorError;
-use syact::act::stepper::StepperController;
+use syact::sync::stepper::StepperController;
 use syact::units::*;
 
 pub struct GenericPWMController<DIR : OutputPin, STEP : OutputPin> {

@@ -1,7 +1,8 @@
 use serde::{Serialize, Deserialize};
 
-use crate::{SyncActuator, Setup};
-use crate::act::parent::{ActuatorParent, RatioActuatorParent};
+use crate::SyncActuator;
+use crate::parent::{ActuatorParent, RatioActuatorParent};
+
 use syunit::*;
 
 /// A linear axis
@@ -29,14 +30,6 @@ impl<A : SyncActuator> LinearAxis<A> {
 }
 
 // Parent
-    impl<C : SyncActuator + Setup> Setup for LinearAxis<C> {
-        type Error = <C as Setup>::Error;
-
-        fn setup(&mut self) -> Result<(), Self::Error> {
-            self.actuator.setup()
-        }
-    }
-
     impl<A : SyncActuator> ActuatorParent for LinearAxis<A> {
         type Child = A;
 

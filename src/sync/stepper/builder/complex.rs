@@ -2,12 +2,10 @@ use alloc::vec::Vec;
 
 use syunit::*;
 
-use crate::act::stepper::builder::StepperBuilderAdvanced;
-use crate::{StepperConst, StepperConfig};
-use crate::act::stepper::StepperController;
+use crate::{DefinedActuator, StepperConst, StepperConfig};
 use crate::data::{ActuatorVars, MicroSteps};
-use crate::math;
-use crate::math::movements::DefinedActuator;
+use crate::sync::stepper::StepperController;
+use crate::sync::stepper::builder::StepperBuilderAdvanced;
 
 use super::{DriveMode, StepperBuilder, ActuatorError, DEFAULT_MAX_SPEED_LEVEL};
 
@@ -70,7 +68,7 @@ impl ComplexBuilder {
             // Calculate acceleration and movement time when fully accelerating
             let accel = self.consts().acceleration_max_for_velocity(self.vars(), self.config(), vel, self.direction())
                 .ok_or(ActuatorError::Overload)?;
-            let ( mut move_time, _ ) = math::kin::travel_times(self.step_angle(), vel, accel);
+            let ( mut move_time, _ ) = sykin::kin2::time_for_distance(self.step_angle(), vel, accel);
 
             vel += accel * move_time;
 
@@ -105,13 +103,6 @@ impl ComplexBuilder {
         self.mode = DriveMode::Stop;
         self.cached_mode = Some(mode);
     }
-    
-    /// The current velocity of the builder
-    pub fn velocity_current(&self) -> Velocity {
-        self.current_speed_level.checked_sub(1)
-            .map(|i| self.speed_levels[i])
-            .unwrap_or(Velocity::ZERO)
-    }
 
     /// Moves the builder towards the next speed-level closer to the desired velocity `vel_tar`
     pub fn goto_velocity(&mut self, vel_tar : Velocity) -> Result<Velocity, ActuatorError> {
@@ -138,6 +129,13 @@ impl ComplexBuilder {
     }
 
     // Velocity
+        /// The current velocity of the builder
+        pub fn velocity_current(&self) -> Velocity {
+            self.current_speed_level.checked_sub(1)
+                .map(|i| self.speed_levels[i])
+                .unwrap_or(Velocity::ZERO)
+        }
+
         /// Returns the cap velocity
         /// - Is either the cap velocity given by the user
         /// - Or the maximum recommended velocity for a stepper motor

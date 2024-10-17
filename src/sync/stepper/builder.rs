@@ -1,8 +1,8 @@
 use syunit::*;
 
 use crate::{StepperConst, StepperConfig, ActuatorError};
-use crate::act::stepper::StepperController;
 use crate::data::{ActuatorVars, MicroSteps};
+use crate::sync::stepper::StepperController;
 
 // ####################
 // #    SUBMODULES    #

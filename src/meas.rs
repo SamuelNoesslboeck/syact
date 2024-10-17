@@ -3,7 +3,7 @@ use alloc::vec::Vec;
 use serde::{Serialize, Deserialize};
 use syunit::*;
 
-use crate::act::{ActuatorError, InterruptReason, Interruptible, SyncActuatorBlocking};
+use crate::{ActuatorError, InterruptReason, Interruptible, SyncActuatorBlocking};
 
 // Submodules
     mod endstop;
