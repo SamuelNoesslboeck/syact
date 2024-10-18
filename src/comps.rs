@@ -1,4 +1,6 @@
-// Components
+// ####################
+// #    SUBMODULES    #
+// ####################
     mod conveyor;
     pub use conveyor::Conveyor;
 

@@ -30,6 +30,7 @@ pub struct ComplexBuilder {
     _jolt_max : Option<Jolt>,
 
     // Cache
+    last_accel : Acceleration,
     _microsteps : MicroSteps,
     _step_angle : RelDist, 
     _dir : Direction,
@@ -61,23 +62,36 @@ impl ComplexBuilder {
         let mut time_sums : Vec<Time> = Vec::new();
         let mut times : Vec<Time> = Vec::new();
 
-        let mut vel = Velocity::ZERO;
+        let mut velocity_current = Velocity::ZERO;
 
         // Iterate to max speed level or until the cap is reached
         for _ in 0 .. max_speed_level {
-            // Calculate acceleration and movement time when fully accelerating
-            let accel = self.consts().acceleration_max_for_velocity(self.vars(), self.config(), vel, self.direction())
-                .ok_or(ActuatorError::Overload)?;
-            let ( mut move_time, _ ) = sykin::kin2::time_for_distance(self.step_angle(), vel, accel);
+            let mut accel_possible = self.acceleration_possible(velocity_current)?;
 
-            vel += accel * move_time;
+            // Do without jolt first
+            let ( mut move_time, _ ) = sykin::kin2::time_for_distance(self.step_angle(), velocity_current, accel_possible);
+
+            // Consider maximum jolt if set
+            if let Some(jolt_max) = self.jolt_max() {
+                // Only correct if the acceleration has exeeded the jolt value
+                if ((accel_possible - self.last_accel) / move_time) > jolt_max {
+                    // Heavy calculation of a cubic formula
+                    move_time = sykin::kin3::time_for_distance(self.step_angle(), velocity_current, self.last_accel, jolt_max);
+                    accel_possible = self.last_accel + jolt_max * move_time;
+                }
+            }
+
+            // Add acceleration to velocity
+            velocity_current += accel_possible * move_time;
 
             // If the velocity is greater than the cap, recalc values, store them, and break the loop
-            if vel > velocity_cap {
+            if velocity_current > velocity_cap {
+                // Correcting movetime and storing correct velocity
                 move_time = 2.0 * self.step_angle() / (*self.speed_levels.last().unwrap_or(&Velocity::ZERO) + velocity_cap);
-                vel = velocity_cap;
+                velocity_current = velocity_cap;
 
-                speed_levels.push(vel);
+                // Push to speed levels
+                speed_levels.push(velocity_current);
                 time_sums.push(*time_sums.last().unwrap_or(&Time::ZERO) + move_time);
                 times.push(move_time);
 
@@ -85,9 +99,11 @@ impl ComplexBuilder {
             }
 
             // Store values
-            speed_levels.push(vel);
+            speed_levels.push(velocity_current);
             time_sums.push(*time_sums.last().unwrap_or(&Time::ZERO) + move_time);
             times.push(move_time);
+
+            self.last_accel = accel_possible;
         }
 
         // Update class values
@@ -150,6 +166,15 @@ impl ComplexBuilder {
             self.velocity_cap().min(
                 *self.speed_levels.last().unwrap_or(&Velocity::ZERO)
             )
+        }
+    // 
+
+    // Acceleration
+        /// Returns the maximum acceleration possible by the motor or allowed by to user, depending on which one is lower
+        pub fn acceleration_possible(&self, velocity_current : Velocity) -> Result<Acceleration, ActuatorError> {
+            self.consts().acceleration_max_for_velocity(self.vars(), self.config(), velocity_current, self.direction())
+                .ok_or(ActuatorError::Overload)
+                .map(|accel| accel.min(self.acceleration_max().unwrap_or(Acceleration::INFINITY)))
         }
     // 
 }
@@ -360,6 +385,7 @@ impl StepperBuilderAdvanced for ComplexBuilder {
 
                 _microsteps: MicroSteps::default(),
 
+                last_accel: Acceleration::ZERO,
                 distance: 0,
                 distance_counter: 0,
                 _step_angle: consts.step_angle(MicroSteps::default()),

@@ -18,7 +18,7 @@ use syunit::*;
 // ####################
 // #    SUBMODULES    #
 // ####################
-    // Core submodules
+    // Core
         /// Everything about actuators that work asynchronously
         pub mod asyn;
         pub use asyn::AsyncActuator;

@@ -1,34 +1,45 @@
+//! ### Conveyor - General component
+//! 
+//! A conveyor powered by a synchronous actuator, for full description see [Conveyor]
+
+#[cfg(feature = "serde")]
 use serde::{Serialize, Deserialize};
 
 use crate::SyncActuator;
 use crate::parent::{ActuatorParent, RatioActuatorParent};
 
 use syunit::*;
+use syunit::metric::Millimeter;
 
-/// A simple conveyor powered by any kind of synchronous motor
+/// ### Conveyor
+/// 
+/// A conveyor powered by a synchronous actuator ([SyncActuator])
 #[derive(Debug)]
-#[derive(Serialize, Deserialize)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Conveyor<C : SyncActuator> {
-    /// The parent component (driving the conveyor)
+    /// The child actuator, driving the conveyor, must be a [SyncActuator]
     actuator : C,
 
-    /// Radius of the powered conveyor roll in millimeters
-    pub r_roll : f32
+    /// Radius of the powered conveyor roll in [Millimeter]
+    pub r_roll : Millimeter
 }
 
 impl<C : SyncActuator> Conveyor<C> {
-    /// Creates a new instance of a conveyor
-    /// - `device`: The parent component (driving the conveyor)
-    /// - `r_roll` radius of the driving roll in millimeters
-    pub fn new(device : C, r_roll : f32) -> Self {
+    /// Creates a new instance of a [Conveyor]
+    /// 
+    /// - `actuator`: The child actuator, driving the conveyor, must be a [SyncActuator]
+    /// - `r_roll` radius of the driving roll in [Millimeter]
+    pub fn new(actuator : C, r_roll : Millimeter) -> Self {
         Self {
-            actuator: device, 
+            actuator, 
             r_roll
         }
     }
 }
 
-// Parent
+// ######################################
+// #    Actuator-Parent relationship    #
+// ######################################
     impl<C : SyncActuator> ActuatorParent for Conveyor<C> {
         type Child = C;
 
@@ -43,7 +54,7 @@ impl<C : SyncActuator> Conveyor<C> {
 
     impl<C : SyncActuator> RatioActuatorParent for Conveyor<C> {
         fn ratio(&self) -> f32 {
-            self.r_roll
+            self.r_roll.0
         }
 
         // Correct unit conversions
