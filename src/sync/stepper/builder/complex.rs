@@ -25,14 +25,14 @@ pub struct ComplexBuilder {
     _config : StepperConfig,
 
     // Limits
-    _velocity_max : Option<Velocity>,
+    _velocity_max : Option<U::Velocity>,
     _acceleration_max : Option<Acceleration>,
     _jolt_max : Option<Jolt>,
 
     // Cache
     last_accel : Acceleration,
     _microsteps : MicroSteps,
-    _step_angle : RelDist, 
+    _step_angle : U::Distance, 
     _dir : Direction,
 
     // Modes
@@ -40,7 +40,7 @@ pub struct ComplexBuilder {
     cached_mode : Option<DriveMode>,
 
     // Speed levels
-    speed_levels : Vec<Velocity>,
+    speed_levels : Vec<U::Velocity>,
     time_sums : Vec<Time>,
     times : Vec<Time>,
     max_speed_level : Option<usize>,
@@ -58,11 +58,11 @@ impl ComplexBuilder {
         let velocity_cap = self.velocity_cap();
 
         // Create new arrays
-        let mut speed_levels : Vec<Velocity> = Vec::new();
+        let mut speed_levels : Vec<U::Velocity> = Vec::new();
         let mut time_sums : Vec<Time> = Vec::new();
         let mut times : Vec<Time> = Vec::new();
 
-        let mut velocity_current = Velocity::ZERO;
+        let mut velocity_current = U::Velocity::ZERO;
 
         // Iterate to max speed level or until the cap is reached
         for _ in 0 .. max_speed_level {
@@ -87,7 +87,7 @@ impl ComplexBuilder {
             // If the velocity is greater than the cap, recalc values, store them, and break the loop
             if velocity_current > velocity_cap {
                 // Correcting movetime and storing correct velocity
-                move_time = 2.0 * self.step_angle() / (*self.speed_levels.last().unwrap_or(&Velocity::ZERO) + velocity_cap);
+                move_time = 2.0 * self.step_angle() / (*self.speed_levels.last().unwrap_or(&U::Velocity::ZERO) + velocity_cap);
                 velocity_current = velocity_cap;
 
                 // Push to speed levels
@@ -121,10 +121,10 @@ impl ComplexBuilder {
     }
 
     /// Moves the builder towards the next speed-level closer to the desired velocity `vel_tar`
-    pub fn goto_velocity(&mut self, vel_tar : Velocity) -> Result<Velocity, ActuatorError> {
+    pub fn goto_velocity(&mut self, vel_tar : U::Velocity) -> Result<U::Velocity, ActuatorError> {
         let vel_below = self.current_speed_level.checked_sub(2)
             .map(|i| self.speed_levels[i])
-            .unwrap_or(Velocity::ZERO);
+            .unwrap_or(U::Velocity::ZERO);
 
         if vel_tar > self.velocity_current() {
             // Desired velocity is greater than the current speed, increasing speed level if possible
@@ -132,9 +132,9 @@ impl ComplexBuilder {
                 self.current_speed_level += 1;
                 Ok(self.consts().velocity(time, self.microsteps()))
             } else {
-                Err(ActuatorError::VelocityTooHigh(vel_tar, *self.speed_levels.last().unwrap_or(&Velocity::ZERO)))
+                Err(ActuatorError::VelocityTooHigh(vel_tar, *self.speed_levels.last().unwrap_or(&U::Velocity::ZERO)))
             }
-        } else if (vel_tar < vel_below) | ((vel_tar == Velocity::ZERO) & (self.current_speed_level > 0)) {
+        } else if (vel_tar < vel_below) | ((vel_tar == U::Velocity::ZERO) & (self.current_speed_level > 0)) {
             // Desired velocity is smaller than the speed level BELOW, meaning that it is out of range of this speed level
             self.current_speed_level = self.current_speed_level.saturating_sub(1);
             Ok(self._consts.velocity(self.times[self.current_speed_level], self._microsteps))
@@ -144,34 +144,34 @@ impl ComplexBuilder {
         }
     }
 
-    // Velocity
+    // U::Velocity
         /// The current velocity of the builder
-        pub fn velocity_current(&self) -> Velocity {
+        pub fn velocity_current(&self) -> U::Velocity {
             self.current_speed_level.checked_sub(1)
                 .map(|i| self.speed_levels[i])
-                .unwrap_or(Velocity::ZERO)
+                .unwrap_or(U::Velocity::ZERO)
         }
 
         /// Returns the cap velocity
         /// - Is either the cap velocity given by the user
         /// - Or the maximum recommended velocity for a stepper motor
         /// depends on which is lower
-        pub fn velocity_cap(&self) -> Velocity {
-            self._velocity_max.unwrap_or(Velocity::INFINITY)
+        pub fn velocity_cap(&self) -> U::Velocity {
+            self._velocity_max.unwrap_or(U::Velocity::INFINITY)
                 .min(self.consts().velocity_max(self.config().voltage))
         }
 
         /// The maximum velocity that is currently possible, defined by numerous factors like maximum jolt, acceleration, velocity and start-stop mechanics
-        pub fn velocity_possible(&self) -> Velocity {
+        pub fn velocity_possible(&self) -> U::Velocity {
             self.velocity_cap().min(
-                *self.speed_levels.last().unwrap_or(&Velocity::ZERO)
+                *self.speed_levels.last().unwrap_or(&U::Velocity::ZERO)
             )
         }
     // 
 
     // Acceleration
         /// Returns the maximum acceleration possible by the motor or allowed by to user, depending on which one is lower
-        pub fn acceleration_possible(&self, velocity_current : Velocity) -> Result<Acceleration, ActuatorError> {
+        pub fn acceleration_possible(&self, velocity_current : U::Velocity) -> Result<Acceleration, ActuatorError> {
             self.consts().acceleration_max_for_velocity(self.vars(), self.config(), velocity_current, self.direction())
                 .ok_or(ActuatorError::Overload)
                 .map(|accel| accel.min(self.acceleration_max().unwrap_or(Acceleration::INFINITY)))
@@ -197,19 +197,19 @@ impl Iterator for ComplexBuilder {
                 if ((self.distance_counter + self.current_speed_level as u64) == self.distance) & ((self.distance % 2) == 1) {
                     Some(self.speed_levels[self.current_speed_level.saturating_sub(1)])
                 } else if (self.distance_counter + self.current_speed_level as u64) > self.distance {
-                    self.goto_velocity(Velocity::ZERO).ok()
+                    self.goto_velocity(U::Velocity::ZERO).ok()
                 } else {
                     self.goto_velocity(self.velocity_possible() * factor).ok()
                 }
             },
             DriveMode::Stop => {
-                self.goto_velocity(Velocity::ZERO).ok()
+                self.goto_velocity(U::Velocity::ZERO).ok()
             },
             DriveMode::Inactive => None
         };
 
         if let Some(vel) = vel_opt {
-            if vel == Velocity::ZERO {
+            if vel == U::Velocity::ZERO {
                 vel_opt = None;
             }
         }
@@ -224,7 +224,7 @@ impl StepperBuilder for ComplexBuilder {
             self._microsteps
         }
 
-        fn step_angle(&self) -> RelDist {
+        fn step_angle(&self) -> U::Distance {
             self._step_angle
         }
 
@@ -246,13 +246,13 @@ impl StepperBuilder for ComplexBuilder {
         }
     // 
 
-    // Velocity
+    // U::Velocity
         #[inline]
-        fn velocity_max(&self) -> Option<Velocity> {
+        fn velocity_max(&self) -> Option<U::Velocity> {
             self._velocity_max
         }
 
-        fn set_velocity_max(&mut self, velocity_opt : Option<Velocity>) -> Result<(), ActuatorError> {
+        fn set_velocity_max(&mut self, velocity_opt : Option<U::Velocity>) -> Result<(), ActuatorError> {
             if let Some(velocity) = velocity_opt {
                 if velocity.is_normal() {
                     self._velocity_max = Some(velocity.abs()); 
@@ -352,7 +352,7 @@ impl StepperBuilder for ComplexBuilder {
                     return Err(ActuatorError::InvaldRelativeDistance(self.step_angle()))
                 }
 
-                if rel_dist >= RelDist::ZERO {
+                if rel_dist >= U::Distance::ZERO {
                     self._dir = Direction::CW;
                 } else {
                     self._dir = Direction::CCW;
@@ -450,7 +450,7 @@ impl StepperBuilderAdvanced for ComplexBuilder {
 
 // Math implementations
     impl DefinedActuator for ComplexBuilder {
-        fn ptp_time_for_distance(&self, abs_pos_0 : AbsPos, abs_pos_t : AbsPos) -> Time {
+        fn ptp_time_for_distance(&self, abs_pos_0 : Position, abs_pos_t : Position) -> Time {
             let rel_dist = abs_pos_t - abs_pos_0;
             let distance = self.consts().steps_from_angle_abs(rel_dist, self.microsteps());
 

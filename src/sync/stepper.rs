@@ -25,18 +25,18 @@ use crate::data::MicroSteps;
 // #    StepperActuator-Traits    #
 // ################################
     /// A component based on a stepper motor
-    pub trait StepperActuator : SyncActuator + DefinedActuator {
+    pub trait StepperActuator<U : UnitSet = Rotary> : SyncActuator<U> + DefinedActuator<U> {
         // Microstepping
             /// The amount of microsteps in a full step
             fn microsteps(&self) -> MicroSteps;
 
             /// Set the amount of microsteps in a full step
-            fn set_microsteps(&mut self, micro : MicroSteps) -> Result<(), ActuatorError>;
+            fn set_microsteps(&mut self, micro : MicroSteps) -> Result<(), ActuatorError<U>>;
         //
 
         // Steps
             /// The angular distance of a step considering microstepping
-            fn step_ang(&self) -> RelDist;
+            fn step_dist(&self) -> U::Distance;
         // 
     }    
 // 
@@ -46,6 +46,7 @@ use crate::data::MicroSteps;
 // ######################
     /// The state of a stepper motor, whether it is driving etc.
     pub struct StepperState {
+        /// Atomic `Radians`
         _abs_pos : AtomicF32,
         _moving : AtomicBool,
 
@@ -57,7 +58,7 @@ use crate::data::MicroSteps;
         /// Creates a new `StepperState`
         pub fn new() -> Self {
             StepperState {
-                _abs_pos: AtomicF32::new(AbsPos::ZERO.0),
+                _abs_pos: AtomicF32::new(Radians::ZERO.0),
                 _moving: AtomicBool::new(false),
 
                 should_halt : AtomicBool::new(false),
@@ -66,9 +67,9 @@ use crate::data::MicroSteps;
         }
     }
 
-    impl SyncActuatorState for StepperState {
-        fn abs_pos(&self) -> AbsPos {
-            AbsPos(self._abs_pos.load(Relaxed))
+    impl SyncActuatorState<Rotary> for StepperState {
+        fn pos(&self) -> PositionRad {
+            PositionRad(self._abs_pos.load(Relaxed))
         }
 
         fn moving(&self) -> bool {

@@ -61,7 +61,7 @@ fn main() {
     // Print from 0 - 80 
     for i in 0 .. 5 {
         let rpm = i as f32 * 20.0;
-        let torque = consts.torque_dyn(Velocity::from_rpm(rpm), &config);
+        let torque = consts.torque_dyn(U::Velocity::from_rpm(rpm), &config);
 
         println!("   {}\t#   {}", rpm, torque);
     }
@@ -69,7 +69,7 @@ fn main() {
     // Print from 100 - 900
     for i in 1 .. 10 {
         let rpm = i as f32 * 100.0;
-        let torque = consts.torque_dyn(Velocity::from_rpm(rpm), &config);
+        let torque = consts.torque_dyn(U::Velocity::from_rpm(rpm), &config);
 
         println!("   {}\t#   {}", rpm, torque);
     }
@@ -77,7 +77,7 @@ fn main() {
     // Print 1000 & 2000
     for i in 1 .. 3 {
         let rpm = i as f32 * 1000.0;
-        let torque = consts.torque_dyn(Velocity::from_rpm(rpm), &config);
+        let torque = consts.torque_dyn(U::Velocity::from_rpm(rpm), &config);
 
         println!("   {}\t#   {}", rpm, torque);
     }

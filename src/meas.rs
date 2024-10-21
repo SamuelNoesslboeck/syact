@@ -27,7 +27,7 @@ use crate::{ActuatorError, InterruptReason, Interruptible, SyncActuatorBlocking}
 
 // Errors
     /// Error that can occur when using simple measurements
-    pub enum SimpleMeasError {
+    pub enum SimpleMeasError<U : UnitSet> {
         /// There was no interrupt triggered while driving, meaning that either
         /// - the interrupt source is out of reach (e.g. endstop is not close enough)
         /// - the interrupt source is broken, not correctly wired or similar
@@ -35,11 +35,11 @@ use crate::{ActuatorError, InterruptReason, Interruptible, SyncActuatorBlocking}
         /// The motor stopped because of the wrong reason, e.g. overloading it
         WrongInterruptReason(InterruptReason),
         /// There was an issue with the motor itself
-        SyncActuatorError(ActuatorError)
+        SyncActuatorError(ActuatorError<U>)
     }
 
-    impl From<ActuatorError> for SimpleMeasError {
-        fn from(value: ActuatorError) -> Self {
+    impl<U : UnitSet> From<ActuatorError<U>> for SimpleMeasError<U> {
+        fn from(value: ActuatorError<U>) -> Self {
             SimpleMeasError::SyncActuatorError(value)
         }
     }
@@ -47,12 +47,12 @@ use crate::{ActuatorError, InterruptReason, Interruptible, SyncActuatorBlocking}
 
 /// Collection of parameters required for a simple measurement
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
-pub struct SimpleMeasParams {
-    /// The abs_pos value to set the component to if the measurement was successful
-    pub overwrite_abs_pos : AbsPos,
+pub struct SimpleMeasParams<U : UnitSet> {
+    /// The pos value to set the component to if the measurement was successful
+    pub overwrite_abs_pos : U::Position,
     /// Maximum drive distance, also determines which direction will be used. 
     /// If the maximum distance is reached before the measurement is conducted, the measurement will count as failed
-    pub max_dist : RelDist,
+    pub max_dist : U::Distance,
 
     /// Measurement speed factor (Optionally conduct a measurement slower)
     pub meas_speed : Factor,
@@ -60,10 +60,10 @@ pub struct SimpleMeasParams {
     /// Number of additional samples to take
     _add_samples : Option<usize>,
     /// Will take 5% of max_dist as default
-    pub sample_dist : Option<RelDist>
+    pub sample_dist : Option<U::Distance>
 }
 
-impl SimpleMeasParams {
+impl<U : UnitSet> SimpleMeasParams<U> {
     /// Number of additional samples to take
     pub fn add_samples(&self) -> usize {
         self._add_samples.unwrap_or(1)
@@ -72,31 +72,31 @@ impl SimpleMeasParams {
 
 /// Result of a simple measurement
 #[derive(Debug, Clone, Default)]
-pub struct SimpleMeasValues {
+pub struct SimpleMeasValues<U : UnitSet> {
     /// Number of samples taken
-    pub samples : usize,
+    pub sample_count : usize,
 
-    /// Collection of all abs_pos values
-    pub abs_poss : Vec<AbsPos>,
-    /// Average abs_pos used for the set abs_pos
-    pub abs_pos_av : AbsPos,
-    /// Correction value (offset of current postion and set-abs_pos reference)
-    pub corr : RelDist
+    /// Collection of all pos values
+    pub positions : Vec<U::Position>,
+    /// Average pos used for the set pos
+    pub position_avg : U::Position,
+    /// Correction value (offset of current postion and set-pos reference)
+    pub correction : U::Distance
 }
 
-impl SimpleMeasValues {
-    /// Maximum abs_pos value measured
-    pub fn abs_pos_max(&self) -> AbsPos {
-        *self.abs_poss.iter().reduce(AbsPos::max_ref).expect("AbsPos array must contain a value")
+impl<U : UnitSet> SimpleMeasValues<U> {
+    /// Maximum pos value measured
+    pub fn abs_pos_max(&self) -> U::Position {
+        *self.positions.iter().reduce(U::Position::max_ref).expect("Position array must contain a value")
     }
 
-    /// Minimum abs_pos value measured
-    pub fn abs_pos_min(&self) -> AbsPos {
-        *self.abs_poss.iter().reduce(AbsPos::min_ref).expect("AbsPos array must contain a value")
+    /// Minimum pos value measured
+    pub fn abs_pos_min(&self) -> U::Position {
+        *self.positions.iter().reduce(U::Position::min_ref).expect("Position array must contain a value")
     }
 
-    /// Inaccuracy accross all abs_pos values measured
-    pub fn max_inacc(&self) -> RelDist {
+    /// Inaccuracy accross all pos values measured
+    pub fn max_inacc(&self) -> U::Distance {
         self.abs_pos_max() - self.abs_pos_min()
     }
 }
@@ -109,8 +109,8 @@ impl SimpleMeasValues {
 /// # Measurement data and its usage
 /// 
 /// Specifing a `sample_dist` is optional, as the script will replace it with 10% of the maximum distance if not specified
-pub fn take_simple_meas<C : SyncActuatorBlocking + Interruptible + ?Sized>(comp : &mut C, data : &SimpleMeasParams, speed : Factor) -> Result<SimpleMeasValues, SimpleMeasError> {
-    let mut abs_poss : Vec<AbsPos> = Vec::new();
+pub fn take_simple_meas<U : UnitSet, C : SyncActuatorBlocking<U> + Interruptible<U> + ?Sized>(comp : &mut C, data : &SimpleMeasParams<U>, speed : Factor) -> Result<SimpleMeasValues<U>, SimpleMeasError<U>> {
+    let mut abs_poss : Vec<U::Position> = Vec::new();
 
     // Init measurement
         // Drive full distance with optionally reduced speed
@@ -122,7 +122,7 @@ pub fn take_simple_meas<C : SyncActuatorBlocking + Interruptible + ?Sized>(comp 
                 if reason == InterruptReason::EndReached { Ok(()) } else { Err(SimpleMeasError::WrongInterruptReason(reason)) }
             )?;       // If no interrupt was triggered, return `MeasError::NoInterrupt`
 
-        abs_poss.push(comp.abs_pos());
+        abs_poss.push(comp.pos());
     //
 
     // Samples
@@ -143,15 +143,15 @@ pub fn take_simple_meas<C : SyncActuatorBlocking + Interruptible + ?Sized>(comp 
                 )?;       // If no interrupt was triggered, return `MeasError::NoInterrupt`
 
             // Add the measurement value to the list
-            abs_poss.push(comp.abs_pos());
+            abs_poss.push(comp.pos());
         }
     // 
 
-    // The average abs_pos of all measurements
-    let abs_pos_av = AbsPos(abs_poss.iter().map(|g| g.0).sum()) / (abs_poss.len() as f32);
-    // Current abs_pos difference considering the current position and the average taken by the measurement
-    let abs_pos_diff = comp.abs_pos() - abs_pos_av;
-    // The new abs_pos to set the components abs_pos to
+    // The average pos of all measurements
+    let abs_pos_av = U::Position::from(abs_poss.iter().map(|g| (*g).into()).sum()) / (abs_poss.len() as f32);
+    // Current pos difference considering the current position and the average taken by the measurement
+    let abs_pos_diff = comp.pos() - abs_pos_av;
+    // The new pos to set the components pos to
     let abs_pos_new = data.overwrite_abs_pos + abs_pos_diff;
 
     // Set limits and write new distance value
@@ -159,10 +159,10 @@ pub fn take_simple_meas<C : SyncActuatorBlocking + Interruptible + ?Sized>(comp 
     comp.overwrite_abs_pos(abs_pos_new);
 
     Ok(SimpleMeasValues {
-        samples: data.add_samples(),
+        sample_count: data.add_samples(),
 
-        abs_poss: abs_poss,
-        abs_pos_av: abs_pos_av,
-        corr: abs_pos_diff
+        positions: abs_poss,
+        position_avg: abs_pos_av,
+        correction: abs_pos_diff
     })
 }

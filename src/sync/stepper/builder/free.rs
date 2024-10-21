@@ -16,7 +16,7 @@ impl Iterator for FreeBuilder {
 
 impl StepperBuilder for FreeBuilder {
     // Getters
-        fn step_angle(&self) -> RelDist {
+        fn step_angle(&self) -> U::Distance {
             todo!()
         }
 
@@ -41,12 +41,12 @@ impl StepperBuilder for FreeBuilder {
         }
     //
 
-    // Velocity
-        fn velocity_max(&self) -> Option<Velocity> {
+    // U::Velocity
+        fn velocity_max(&self) -> Option<U::Velocity> {
             todo!()
         }
 
-        fn set_velocity_max(&mut self, velocity_opt : Option<Velocity>) -> Result<(), ActuatorError> {
+        fn set_velocity_max(&mut self, velocity_opt : Option<U::Velocity>) -> Result<(), ActuatorError> {
             todo!()
         }
     //

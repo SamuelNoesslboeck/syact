@@ -12,7 +12,7 @@ use crate::data::servo::ServoConst;
 #[derive(Debug)]
 pub struct MiniServo<P : SetDutyCycle> {
     /// The absolute position of the servo motor
-    abs_pos : AbsPos,
+    pos : PositionRad,
     /// The constants of the servo motor (depending on type)
     _consts : ServoConst,
 
@@ -28,7 +28,7 @@ impl<P : SetDutyCycle> MiniServo<P> {
     /// Before any use of movement functions you must call `start()` or `setup()` in order to set up all the pins
     pub fn new(consts : ServoConst, pwm : P) -> Self {
         Self {
-            abs_pos: consts.default_pos(),
+            pos: consts.default_pos(),
             _consts: consts,
 
             pwm
@@ -54,8 +54,8 @@ impl<P : SetDutyCycle> MiniServo<P> {
 
     // Absolute position
         /// Get the *aboslute* angle of the servo 
-        pub fn abs_pos(&self) -> AbsPos {
-            self.abs_pos
+        pub fn pos(&self) -> PositionRad {
+            self.pos
         }
 
         /// Set the absolute angle of the servo. Causes the servo to drive to this angle
@@ -63,8 +63,8 @@ impl<P : SetDutyCycle> MiniServo<P> {
         /// # Panics
         /// 
         /// Panics if the given 
-        pub fn drive_abs(&mut self, abs_pos : AbsPos) -> Result<(), P::Error> {
-            self.drive_factor_pos(Factor::try_new(abs_pos / self._consts.abs_pos_max)
+        pub fn drive_abs(&mut self, pos : PositionRad) -> Result<(), P::Error> {
+            self.drive_factor_pos(Factor::try_new(pos / self._consts.position_max)
                 .expect("The given position is either invalid or out of range!"))
         }
     // 
@@ -73,7 +73,7 @@ impl<P : SetDutyCycle> MiniServo<P> {
         /// Get the duty-cycle-percent of the motor (values `0.0` to `1.0`)
         pub fn factor(&self) -> Factor {
             // Safe to use, as all operations altering the Factor are internal
-            unsafe { Factor::new_unchecked(self.abs_pos / self._consts.abs_pos_max) }
+            unsafe { Factor::new_unchecked(self.pos / self._consts.position_max) }
         }
 
         /// Set the duty-cycle percent of the servo (value `0.0` to `1.0`). Causes the servo to adapt its position

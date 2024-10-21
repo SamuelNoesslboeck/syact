@@ -1,4 +1,5 @@
 use serde::{Serialize, Deserialize};
+use syunit::*;
 
 use crate::SyncActuator;
 use crate::parent::{ActuatorParent, RatioActuatorParent};
@@ -42,7 +43,11 @@ impl<C : SyncActuator> Gear<C> {
     }
 
     impl<C : SyncActuator> RatioActuatorParent for Gear<C> {
-        fn ratio(&self) -> f32 {
+        type Input = Rotary;
+        type Output = Rotary;
+        type Ratio = f32;
+
+        fn ratio(&self) -> Self::Ratio {
             self.ratio
         }
     }

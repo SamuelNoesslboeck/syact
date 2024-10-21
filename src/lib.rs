@@ -81,7 +81,7 @@ use syunit::*;
 // #    Interruptor    #
 // #####################
     /// A trait for structs that help interrupting or watching movement processes, the most common use are measurement systems
-    pub trait Interruptor {
+    pub trait Interruptor<U : UnitSet = Rotary> {
         /// Direction of the interruptor
         /// - If `None` the interruptor is not dependent on a movement direction
         /// - If `Some` the interruptor is only active when moving in the given direction
@@ -101,7 +101,7 @@ use syunit::*;
         fn set_temp_dir(&mut self, dir_opt : Option<Direction>);
 
         /// Runs a check of the movement process and Interrupts if it has a reason to
-        fn check(&mut self, abs_pos : AbsPos) -> Option<InterruptReason>;
+        fn check(&mut self, pos : U::Position) -> Option<InterruptReason>;
     }
 
     /// Reasons why an interrupt was triggered
@@ -116,12 +116,12 @@ use syunit::*;
     }
 
     /// Represents an interruptible component, meaning `Interruptors` can be attached to modify the movement process
-    pub trait Interruptible {
+    pub trait Interruptible<U : UnitSet = Rotary> {
         /// Add an interruptor to the component, often used for measurements or other processes checking the movement
-        fn add_interruptor(&mut self, interruptor : Box<dyn Interruptor + Send>);
+        fn add_interruptor(&mut self, interruptor : Box<dyn Interruptor<U> + Send>);
 
         /// Calls `add_interruptor` on an owned object
-        fn add_interruptor_inline(mut self, interruptor : Box<dyn Interruptor + Send>) -> Self 
+        fn add_interruptor_inline(mut self, interruptor : Box<dyn Interruptor<U> + Send>) -> Self 
         where 
             Self : Sized 
         {
@@ -143,32 +143,32 @@ use syunit::*;
 // #######################
     /// General Error type for `SyncActuators`
     #[derive(Clone, Debug)]
-    pub enum ActuatorError {
+    pub enum ActuatorError<U : UnitSet = Rotary> {
         /// The rel_dist distance given is invalid
-        InvaldRelativeDistance(RelDist),
+        InvaldRelativeDistance(U::Distance),
 
-        // Velocity errors
+        // U::Velocity errors
             /// The velocity given is invalid somehow, depending on the context (see the function description)
-            InvalidVelocity(Velocity),
+            InvalidVelocity(U::Velocity),
             /// The velocity given is too high, depending on the context, see the function description
-            /// 0: [Velocity] - The given velocity
-            /// 1: [Velocity] - The velocity
-            VelocityTooHigh(Velocity, Velocity),
+            /// 0: [U::Velocity] - The given velocity
+            /// 1: [U::Velocity] - The velocity
+            VelocityTooHigh(U::Velocity, U::Velocity),
         //
 
         // Acceleration
             /// The [Acceleration] given is invalid somehow, depending on the context (see the function description)
-            InvalidAcceleration(Acceleration),
+            InvalidAcceleration(U::Acceleration),
         // 
 
         // Jolt
             /// The `Jolt` given is invalid somehow, depending on the context (see the function description)
-            InvalidJolt(Jolt),
+            InvalidJolt(U::Jolt),
         // 
 
         // Time errors
             /// The `Time` given is invalid somehow, depending on the context, see the function description
-            InvalidTime(Time),
+            InvalidTime(U::Time),
         // 
 
         // IO 
@@ -182,9 +182,9 @@ use syunit::*;
         // 
     }
 
-    impl core::fmt::Display for ActuatorError {
+    impl<U : UnitSet> core::fmt::Display for ActuatorError<U> {
         fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-            f.write_fmt(format_args!("{:?}", self))
+            f.write_fmt(format_args!("ActuatorError: {:?}", self))
         }
     }
 
@@ -196,15 +196,15 @@ use syunit::*;
 // #    Advanced Actuator    #
 // ###########################
     /// An advanced actuator allows applying loads that alter the actuators movement
-    pub trait AdvancedActuator {
+    pub trait AdvancedActuator<U : UnitSet = Rotary> {
         // Load calculation
             // TODO: Documentation sucks
             /// Will always be positive
-            fn force_gen(&self) -> Force;
+            fn force_gen(&self) -> U::Force;
 
             // TODO: Documentation sucks
             /// Positive means CW direction
-            fn force_dir(&self) -> Force;
+            fn force_dir(&self) -> U::Force;
 
             /// Apply a load force to the component, slowing down movements 
             /// 
@@ -226,18 +226,18 @@ use syunit::*;
             /// 
             /// gear.apply_gen_force(FORCE);
             /// 
-            /// assert_eq!(AbsPos(2.0), gear.abs_pos_for_child(AbsPos(1.0)));
+            /// assert_eq!(Position(2.0), gear.abs_pos_for_child(Position(1.0)));
             /// assert_eq!(Force(0.1), gear.child().force_gen());     // Forces get smaller for smaller gears
             /// ```
-            fn apply_gen_force(&mut self, force : Force) -> Result<(), ActuatorError>;
+            fn apply_gen_force(&mut self, force : U::Force) -> Result<(), ActuatorError<U>>;
 
             // TODO: Documentation sucks
             /// Value positive in CW direction
-            fn apply_dir_force(&mut self, force : Force) -> Result<(), ActuatorError>;
+            fn apply_dir_force(&mut self, force : U::Force) -> Result<(), ActuatorError<U>>;
 
             // Inertia
             /// Returns the inertia applied to the component
-            fn inertia(&self) -> Inertia;
+            fn inertia(&self) -> U::Inertia;
             
             /// Apply a load inertia to the component, slowing down movements
             /// 
@@ -260,29 +260,29 @@ use syunit::*;
             /// // Applies the inertia to the gearbearing component
             /// gear.apply_inertia(INERTIA);
             /// 
-            /// assert_eq!(AbsPos(2.0), gear.abs_pos_for_child(AbsPos(1.0)));
+            /// assert_eq!(Position(2.0), gear.abs_pos_for_child(Position(1.0)));
             /// assert_eq!(Inertia(1.0), gear.child().inertia());
             /// ```
-            fn apply_inertia(&mut self, inertia : Inertia) -> Result<(), ActuatorError> ;
+            fn apply_inertia(&mut self, inertia : U::Inertia) -> Result<(), ActuatorError<U>> ;
         // 
     }
 
     /// An actuator that has a defined time to move for a PTP (Point-To-Point) movement
-    pub trait DefinedActuator {
+    pub trait DefinedActuator<U : UnitSet = Rotary> {
         /// The time required to perform a certain PTP (Point-To-Point movement)
-        fn ptp_time_for_distance(&self, abs_pos_0 : AbsPos, abs_pos_t : AbsPos) -> Time;
+        fn ptp_time_for_distance(&self, abs_pos_0 : U::Position, abs_pos_t : U::Position) -> U::Time;
     }
 
     /// More calculation intense, no additional memory
-    pub fn ptp_speed_factors<S : SyncActuatorGroup<T, C>, T : SyncActuator + DefinedActuator + ?Sized + 'static, const C : usize>
-        (group : &mut S, abs_pos_0 : [AbsPos; C], abs_pos_t : [AbsPos; C], speed : Factor) -> [Factor; C] 
+    pub fn ptp_speed_factors<S : SyncActuatorGroup<T, C>, T : SyncActuator<U> + DefinedActuator<U> + ?Sized + 'static, U : UnitSet, const C : usize>
+        (group : &mut S, abs_pos_0 : [U::Position; C], abs_pos_t : [U::Position; C], speed : Factor) -> [Factor; C] 
     {
         let times = group.for_each(|comp, index| {
             comp.ptp_time_for_distance(abs_pos_0[index], abs_pos_t[index])
         });
 
         // Safe to unwrap, cause iterator is not empty
-        let time_max = *times.iter().reduce(Time::max_ref).unwrap();
+        let time_max = *times.iter().reduce(U::Time::max_ref).unwrap();
 
         times.iter().map(|time| Factor::try_new(*time / time_max).unwrap_or(Factor::MAX) * speed)
             .collect::<Vec<Factor>>().try_into().unwrap()

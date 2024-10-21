@@ -77,17 +77,17 @@ where
     T : SyncActuator + ?Sized + 'static
 {
     // Position
-        /// Runs [SyncActuator::abs_pos()] for all components
+        /// Runs [SyncActuator::pos()] for all components
         #[inline(always)]
-        fn abs_pos(&self) -> [AbsPos; C] {
+        fn pos(&self) -> [Position; C] {
             self.for_each(|act, _| {
-                act.abs_pos()
+                act.pos()
             })
         }
         
         /// Runs [SyncActuator::overwrite_abs_pos()] for all components
         #[inline(always)]
-        fn overwrite_abs_pos(&mut self, abs_poss : &[AbsPos; C]) {
+        fn overwrite_abs_pos(&mut self, abs_poss : &[Position; C]) {
             self.for_each_mut(|act, index| {
                 act.overwrite_abs_pos(abs_poss[index])
             });
@@ -95,7 +95,7 @@ where
 
         /// Runs [SyncActuator::resolve_pos_limits_for_abs_pos()] for all components 
         #[inline(always)]
-        fn limits_for_abs_pos(&self, abs_poss : &[AbsPos; C]) -> [RelDist; C] {
+        fn limits_for_abs_pos(&self, abs_poss : &[Position; C]) -> [U::Distance; C] {
             self.for_each(|act, index| {
                 act.resolve_pos_limits_for_abs_pos(abs_poss[index])
             })
@@ -103,7 +103,7 @@ where
 
         /// Checks if the given abs_poss are vaild, which means they are finite and in range of the components
         #[inline(always)]
-        fn valid_abs_pos(&self, abs_poss : &[AbsPos; C]) -> bool {
+        fn valid_abs_pos(&self, abs_poss : &[Position; C]) -> bool {
             self.for_each(|act, index| {
                 !act.resolve_pos_limits_for_abs_pos(abs_poss[index]).is_normal() & abs_poss[index].is_finite()
             }).iter().all(|v| *v)
@@ -111,7 +111,7 @@ where
 
         /// Same as [SyncActuatorGroup::valid_abs_pos()], but it evaluates the check for each component and returns seperated results for analysis
         #[inline(always)]
-        fn valid_abs_pos_verbose(&self, abs_poss : &[AbsPos; C]) -> [bool; C] {
+        fn valid_abs_pos_verbose(&self, abs_poss : &[Position; C]) -> [bool; C] {
             self.for_each(|act, index| {
                 !act.resolve_pos_limits_for_abs_pos(abs_poss[index]).is_normal() & abs_poss[index].is_finite()
             })
@@ -119,7 +119,7 @@ where
 
         /// Runs [SyncActuator::set_endpos()] for all components
         #[inline(always)]
-        fn set_endpos(&mut self, set_dist : &[AbsPos; C]) {
+        fn set_endpos(&mut self, set_dist : &[Position; C]) {
             self.for_each_mut(|act, index| {
                 act.set_endpos(set_dist[index]);
             });
@@ -127,23 +127,23 @@ where
         
         /// Runs [SyncActuator::set_pos_limits()] for all components
         #[inline(always)]
-        fn set_pos_limits(&mut self, min : &[Option<AbsPos>; C], max : &[Option<AbsPos>; C]) {
+        fn set_pos_limits(&mut self, min : &[Option<Position>; C], max : &[Option<Position>; C]) {
             self.for_each_mut(|act, index| {
                 act.set_pos_limits(min[index], max[index]);
             }); 
         }
     //
 
-    // Velocity
+    // U::Velocity
         /// Returns the maximum velocity for each component of the group
-        fn velocity_max(&self) -> [Option<Velocity>; C] {
+        fn velocity_max(&self) -> [Option<U::Velocity>; C] {
             self.for_each(|act, _| {
                 act.velocity_max()
             })
         }
 
         /// Set the maximum velocity of the components
-        fn set_velocity_max(&mut self, velocity_opt : [Option<Velocity>; C]) -> Result<[(); C], ActuatorError> {
+        fn set_velocity_max(&mut self, velocity_opt : [Option<U::Velocity>; C]) -> Result<[(); C], ActuatorError> {
             self.try_for_each_mut(|act, index| {
                 act.set_velocity_max(velocity_opt[index])
             })
@@ -186,16 +186,16 @@ where
             T : SyncActuatorBlocking + ?Sized + 'static
         {
             /// Runs [SyncActuatorBlocking::drive_rel_blocking()] for all components
-            fn drive_rel_blocking(&mut self, rel_dists : [RelDist; C], speed : [Factor; C]) -> Result<[(); C], ActuatorError> {
+            fn drive_rel_blocking(&mut self, rel_dists : [U::Distance; C], speed : [Factor; C]) -> Result<[(); C], ActuatorError> {
                 self.try_for_each_mut(|act, index| {
                     act.drive_rel_blocking(rel_dists[index], speed[index])  
                 })
             }
 
             /// Runs [SyncActuatorBlocking::drive_abs_blocking()] for all components
-            fn drive_abs_blocking(&mut self, abs_pos : [AbsPos; C], speed : [Factor; C]) -> Result<[(); C], ActuatorError> {
+            fn drive_abs_blocking(&mut self, pos : [Position; C], speed : [Factor; C]) -> Result<[(); C], ActuatorError> {
                 self.try_for_each_mut(|act, index| {
-                    act.drive_abs_blocking(abs_pos[index], speed[index])
+                    act.drive_abs_blocking(pos[index], speed[index])
                 })
             }
         }

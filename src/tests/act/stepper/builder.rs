@@ -22,7 +22,7 @@ fn simple_builder() {
 //     dbg!(builder.velocity_cap());
 //     dbg!(&builder);
 
-//     builder.set_drive_mode(DriveMode::FixedDistance(RelDist(0.02), Velocity::ZERO, Factor::MAX), &mut ctrl).unwrap();
+//     builder.set_drive_mode(DriveMode::FixedDistance(U::Distance(0.02), U::Velocity::ZERO, Factor::MAX), &mut ctrl).unwrap();
 
 //     for (i, node) in builder.enumerate() {
 //         println!("{}: {}", i, node);
@@ -32,17 +32,17 @@ fn simple_builder() {
 // #[test]
 // #[ignore = "Value display, run manually ... "]
 // fn builder_comparision() {
-//     const DELTA : RelDist = RelDist(0.3);
+//     const DELTA : U::Distance = U::Distance(0.3);
 
 //     let mut ctrl = SimulatedController::new_gen();
 //     let mut builder = ComplexBuilder::new(StepperConst::GEN).unwrap();
 //     builder.set_config(StepperConfig::GEN).unwrap();
 //     builder.set_microsteps(MicroSteps::from(16)).unwrap();
 
-//     builder.set_drive_mode(DriveMode::FixedDistance(DELTA, Velocity::ZERO, Factor::MAX), &mut ctrl).unwrap();
+//     builder.set_drive_mode(DriveMode::FixedDistance(DELTA, U::Velocity::ZERO, Factor::MAX), &mut ctrl).unwrap();
 
 //     let mut time_sum = Time::ZERO;
-//     let pred = builder.ptp_time_for_distance(AbsPos::ZERO, AbsPos::ZERO + DELTA);
+//     let pred = builder.ptp_time_for_distance(Position::ZERO, Position::ZERO + DELTA);
 
 //     for (_i, node) in builder.enumerate() {
 //         // println!("{}: {}", _i, node);
@@ -55,10 +55,10 @@ fn simple_builder() {
 //     builder.set_config(StepperConfig::GEN).unwrap();
 //     builder.set_microsteps(MicroSteps::from(16)).unwrap();
 
-//     builder.set_drive_mode(DriveMode::FixedDistance(DELTA, Velocity::ZERO, Factor::MAX), &mut ctrl).unwrap();
+//     builder.set_drive_mode(DriveMode::FixedDistance(DELTA, U::Velocity::ZERO, Factor::MAX), &mut ctrl).unwrap();
 
 //     let mut time_sum = Time::ZERO;
-//     let pred = builder.ptp_time_for_distance(AbsPos::ZERO, AbsPos::ZERO + DELTA);
+//     let pred = builder.ptp_time_for_distance(Position::ZERO, Position::ZERO + DELTA);
 
 //     for (_i, node) in builder.enumerate() {
 //         // println!("{}: {}", _i, node);

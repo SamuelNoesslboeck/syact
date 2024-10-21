@@ -55,13 +55,13 @@ fn main() {
     println!("{:?}", builder.consts());
     println!();
 
-    let distance : RelDist = prompt("Please enter the distance to travel (radians - default: 2.0): ", Some(RelDist(2.0)));
+    let distance : U::Distance = prompt("Please enter the distance to travel (radians - default: 2.0): ", Some(U::Distance(2.0)));
     
     builder.set_velocity_max(prompt_opt("Max velocity (optional): ")).unwrap();
     builder.set_acceleration_max(prompt_opt("Max acceleration (optional): ")).unwrap();
 
 
-    builder.set_drive_mode(DriveMode::FixedDistance(distance, Velocity::ZERO, Factor::MAX), &mut controller).unwrap();
+    builder.set_drive_mode(DriveMode::FixedDistance(distance, U::Velocity::ZERO, Factor::MAX), &mut controller).unwrap();
 
     let mut all_node = Time::ZERO;
     let mut steps = 0;

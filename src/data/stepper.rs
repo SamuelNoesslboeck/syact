@@ -1,9 +1,61 @@
 use core::f32::consts::PI;
+use core::ops::Mul;
+use core::str::FromStr;
 
 use serde::{Serialize, Deserialize};
+use syunit::metric::{KgMeter2, NewtonMeters};
 use syunit::*;
 
-use crate::data::{ActuatorVars, MicroSteps};
+use crate::data::ActuatorVars;
+
+/// Microsteps used for stepper motors
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+pub struct MicroSteps(u8);
+
+impl MicroSteps {
+    /// Get the representing `u8` value
+    pub fn as_u8(self) -> u8 {
+        self.0
+    }
+}
+
+impl From<u8> for MicroSteps {
+    fn from(value: u8) -> Self {
+        if (value & value.wrapping_sub(1)) == 0 {   // Check if power of 2
+            Self(value)
+        } else {
+            panic!("Number of microsteps must be a power of 2! ({} given)", value)
+        }
+    }
+}
+
+impl FromStr for MicroSteps {
+    type Err = <u8 as FromStr>::Err;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(Self(u8::from_str(s)?))
+    }
+}
+
+impl From<MicroSteps> for u8 {
+    fn from(value: MicroSteps) -> Self {
+        value.0
+    }
+}
+
+impl Default for MicroSteps {
+    fn default() -> Self {
+        Self(1)
+    }
+}
+
+impl Mul<MicroSteps> for u64 {
+    type Output = u64;
+
+    fn mul(self, rhs: MicroSteps) -> Self::Output {
+        self * (rhs.as_u8() as u64)
+    }
+}
 
 /// Stores data for generic components 
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
@@ -52,7 +104,6 @@ impl StepperConfig {
 /// let mut data = StepperConst::MOT_17HE15_1504S;
 ///
 /// ``` 
-/// Supports JSON-Serialize and Deserialize with the `serde_json` library
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct StepperConst {
     /// Max phase current [Unit A]
@@ -65,9 +116,9 @@ pub struct StepperConst {
     /// Step count per revolution [Unit (1)]
     pub number_steps : u64,
     /// Stall torque [Unit Nm]
-    pub torque_stall : Force,
+    pub torque_stall : NewtonMeters,
     /// Inhertia moment [Unit kg*m^2]
-    pub inertia_motor : Inertia
+    pub inertia_motor : KgMeter2
 }
 
 impl StepperConst {
@@ -79,8 +130,8 @@ impl StepperConst {
             inductance: 0.004, 
             resistance: 2.3,
             number_steps: 200, 
-            torque_stall: Force(0.42), 
-            inertia_motor: Inertia(0.000_005_7)
+            torque_stall: NewtonMeters(0.42), 
+            inertia_motor: KgMeter2(0.000_005_7)
         }; 
 
         /// ### Stepper motor 23HS45_4204S
@@ -90,15 +141,15 @@ impl StepperConst {
             inductance: 0.0034,
             resistance: 0.88,
             number_steps: 400,
-            torque_stall: Force(3.0),
-            inertia_motor: Inertia(0.000_068)
+            torque_stall: NewtonMeters(3.0),
+            inertia_motor: KgMeter2(0.000_068)
         };
     // 
 
     // Amperage
         /// Maximum overload force with the given overload (or underload) voltage `u`
         #[inline]
-        pub fn torque_overload_max(&self, voltage : f32) -> Force {
+        pub fn torque_overload_max(&self, voltage : f32) -> NewtonMeters {
             self.torque_stall * voltage / self.resistance / self.default_current
         }
 
@@ -108,7 +159,7 @@ impl StepperConst {
         ///
         /// Uses the default current if the given option is `None`
         #[inline]
-        pub fn torque_overload(&self, current_opt : Option<f32>) -> Force {
+        pub fn torque_overload(&self, current_opt : Option<f32>) -> NewtonMeters {
             self.torque_stall * current_opt.unwrap_or(self.default_current) / self.default_current
         }
     // 
@@ -120,14 +171,14 @@ impl StepperConst {
         /// # Panics
         /// 
         /// Panics if the given velocity is not finite
-        pub fn torque_dyn(&self, mut velocity : Velocity, config : &StepperConfig) -> Force {
+        pub fn torque_dyn(&self, mut velocity : RadPerSecond, config : &StepperConfig) -> NewtonMeters {
             velocity = velocity.abs();
 
             if !velocity.is_finite() {
                 panic!("Bad velocity ! {}", velocity);
             }
             
-            if velocity == Velocity::ZERO {
+            if velocity == RadPerSecond::ZERO {
                 return self.torque_overload(config.overload_current);
             }
 
@@ -141,39 +192,39 @@ impl StepperConst {
     // Acceleration
         /// Returns the maximum acceleration that can be reached in stall
         #[inline]
-        pub fn acceleration_max_stall(&self, vars : &ActuatorVars, dir : Direction) -> Option<Acceleration> {
+        pub fn acceleration_max_stall(&self, vars : &ActuatorVars, dir : Direction) -> Option<RadPerSecond2> {
             vars.force_after_load(self.torque_stall, dir).map(|f| f / vars.inertia_after_load(self.inertia_motor))
         }
 
         /// Returns the maximum acceleration that can be reached 
         #[inline]
-        pub fn acceleration_max_for_velocity(&self, vars : &ActuatorVars, config : &StepperConfig, velocity : Velocity, dir : Direction) -> Option<Acceleration> {
+        pub fn acceleration_max_for_velocity(&self, vars : &ActuatorVars, config : &StepperConfig, velocity : RadPerSecond, dir : Direction) -> Option<RadPerSecond2> {
             vars.force_after_load(self.torque_dyn(velocity , config), dir).map(|f| f / vars.inertia_after_load(self.inertia_motor))
         }
     // 
 
-    // Velocity & Inductance
+    // U::Velocity & Inductance
         /// The inductivity constant [Unit s]
         #[inline(always)]
-        pub fn tau(&self, voltage : f32) -> Time {
-            Time(self.inductance * self.default_current / voltage)
+        pub fn tau(&self, voltage : f32) -> Seconds {
+            Seconds(self.inductance * self.default_current / voltage)
         }
 
         /// Maximum speed for a stepper motor where it can be guarantied that it works properly
         #[inline(always)]
-        pub fn velocity_max(&self, voltage : f32) -> Velocity {
-            Velocity(PI * voltage / self.default_current / self.inductance / self.number_steps as f32)
+        pub fn velocity_max(&self, voltage : f32) -> RadPerSecond {
+            RadPerSecond(PI * voltage / self.default_current / self.inductance / self.number_steps as f32)
         }
 
         /// Returns the start-stop-velocity for a stepper motor
-        pub fn velocity_start_stop(&self, vars : &ActuatorVars, config : &StepperConfig, microsteps : MicroSteps) -> Option<Velocity> {
+        pub fn velocity_start_stop(&self, vars : &ActuatorVars, config : &StepperConfig, microsteps : MicroSteps) -> Option<RadPerSecond> {
             vars.force_after_load_lower(self.torque_overload(config.overload_current)).map(|torque| {
-                Velocity((torque.0 / vars.inertia_after_load(self.inertia_motor).0 * core::f32::consts::PI / (self.number_steps * microsteps) as f32).sqrt())
+                RadPerSecond((torque.0 / vars.inertia_after_load(self.inertia_motor).0 * core::f32::consts::PI / (self.number_steps * microsteps) as f32).sqrt())
             })
         }
     // 
 
-    /// Velocity for time per step [Unit 1/s]
+    /// U::Velocity for time per step [Unit 1/s]
     /// 
     /// # Panics
     /// 
@@ -186,14 +237,10 @@ impl StepperConst {
     /// 
     /// let data = StepperConst::MOT_17HE15_1504S;
     /// 
-    /// assert!((data.velocity (Time(1.0/200.0), MicroSteps::default()) - Velocity(2.0 * PI)).abs() < Velocity(0.001));     
+    /// assert!((data.velocity (Time(1.0/200.0), MicroSteps::default()) - U::Velocity(2.0 * PI)).abs() < U::Velocity(0.001));     
     /// ```
     #[inline(always)]
-    pub fn velocity(&self, step_time : Time, microsteps : MicroSteps) -> Velocity {
-        if (step_time == Time(0.0)) | (step_time == Time(-0.0)) {
-            panic!("The given step time ({}) is zero!", step_time)
-        }
-
+    pub fn velocity(&self, step_time : Seconds, microsteps : MicroSteps) -> RadPerSecond {
         self.step_angle(microsteps) / step_time
     }
 
@@ -201,14 +248,14 @@ impl StepperConst {
         /// Get the angular distance of a step in radians, considering microstepping
         /// - `micro` is the amount of microsteps per full step
         #[inline(always)]
-        pub fn step_angle(&self, microsteps : MicroSteps) -> RelDist {
+        pub fn step_angle(&self, microsteps : MicroSteps) -> Radians {
             self.full_step_angle() / microsteps.as_u8() as f32
         }
 
         /// A full step angle of the motor, ignoring microstepping
         #[inline(always)]
-        pub fn full_step_angle(&self) -> RelDist {
-            RelDist(2.0 * PI / self.number_steps as f32)
+        pub fn full_step_angle(&self) -> Radians {
+            Radians(2.0 * PI / self.number_steps as f32)
         }
 
         /// Time per step for the given velocity 
@@ -221,11 +268,7 @@ impl StepperConst {
         /// 
         /// Panics if the given `velocity ` is zero 
         #[inline]
-        pub fn step_time(&self, velocity  : Velocity, microsteps : MicroSteps) -> Time {
-            // if (velocity  == Velocity(0.0)) | (velocity  == Velocity(-0.0)) {
-            //     panic!("The given velocity  ({}) is zero!", velocity );
-            // }
-
+        pub fn step_time(&self, velocity  : RadPerSecond, microsteps : MicroSteps) -> Seconds {
             self.step_angle(microsteps) / velocity 
         }
 
@@ -235,11 +278,7 @@ impl StepperConst {
         /// 
         /// Returns the time in seconds
         #[inline]
-        pub fn full_step_time(&self, velocity  : Velocity) -> Time {
-            if (velocity  == Velocity(0.0)) | (velocity  == Velocity(-0.0)) {
-                panic!("The given velocity  ({}) is zero!", velocity );
-            }
-
+        pub fn full_step_time(&self, velocity  : RadPerSecond) -> Seconds {
             self.full_step_angle() / velocity 
         }
     // 
@@ -247,38 +286,38 @@ impl StepperConst {
     // Steps & Angles - Conversions
         /// Converts the given angle `ang` into a absolute number of steps (always positive).
         #[inline(always)]
-        pub fn steps_from_angle_abs(&self, angle : RelDist, microsteps : MicroSteps) -> u64 {
+        pub fn steps_from_angle_abs(&self, angle : Radians, microsteps : MicroSteps) -> u64 {
             (angle.abs() / self.step_angle(microsteps)).round() as u64
         }   
 
         /// Converts the given angle `ang` into a number of steps
         #[inline(always)]
-        pub fn steps_from_angle(&self, angle : RelDist, microsteps : MicroSteps) -> i64 {
+        pub fn steps_from_angle(&self, angle : Radians, microsteps : MicroSteps) -> i64 {
             (angle / self.step_angle(microsteps)).round() as i64
         }   
 
         /// Converts the given number of steps into an angle
         #[inline(always)]
-        pub fn angle_from_steps_abs(&self, steps : u64, microsteps : MicroSteps) -> RelDist {
+        pub fn angle_from_steps_abs(&self, steps : u64, microsteps : MicroSteps) -> Radians {
             steps as f32 * self.step_angle(microsteps)
         }
 
         /// Converts the given number of steps into an angle
         #[inline(always)]
-        pub fn angle_from_steps(&self, steps : i64, microsteps : MicroSteps) -> RelDist {
+        pub fn angle_from_steps(&self, steps : i64, microsteps : MicroSteps) -> Radians {
             steps as f32 * self.step_angle(microsteps)
         }
 
         /// Rounds the given angle to the nearest step value
         #[inline(always)]
-        pub fn round_angle_to_steps(&self, angle : RelDist, microsteps : MicroSteps) -> RelDist {
+        pub fn round_angle_to_steps(&self, angle : Radians, microsteps : MicroSteps) -> Radians {
             self.angle_from_steps(self.steps_from_angle(angle, microsteps), microsteps)
         }
 
         // Comparision
         /// Checks wheither the given angle `ang` is in range (closes to) a given step count `steps`
         #[inline(always)]
-        pub fn is_in_step_range(&self, steps : i64, angle : RelDist, microsteps : MicroSteps) -> bool {
+        pub fn is_in_step_range(&self, steps : i64, angle : Radians, microsteps : MicroSteps) -> bool {
             self.steps_from_angle(angle, microsteps) == steps
         }
     //

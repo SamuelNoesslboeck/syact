@@ -8,5 +8,5 @@ fn basic_plot() {
     let u = 12.0;
     
     println!("Stepper-Data");
-    println!("- Velocity-Max: {}", consts.velocity_max(u));
+    println!("- U::Velocity-Max: {}", consts.velocity_max(u));
 }

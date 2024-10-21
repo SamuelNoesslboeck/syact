@@ -1,9 +1,11 @@
+use core::sync::atomic::Ordering::Relaxed;
+
 use alloc::boxed::Box;
 use alloc::sync::Arc;
 use alloc::vec::Vec;
-use core::sync::atomic::Ordering::Relaxed;
 
 use syunit::*;
+use syunit::metric::*;
 
 use crate::{SyncActuator, SyncActuatorBlocking, InterruptReason, Interruptible, Interruptor, AdvancedActuator, DefinedActuator};
 use crate::data::{StepperConfig, StepperConst, MicroSteps}; 
@@ -21,11 +23,11 @@ pub struct StepperMotor<B : StepperBuilder, C : StepperController> {
     _state: Arc<StepperState>,
 
     // Limits
-    _limit_min : Option<AbsPos>,
-    _limit_max : Option<AbsPos>,
+    _limit_min : Option<PositionRad>,
+    _limit_max : Option<PositionRad>,
 
     // Interrupters
-    interruptors : Vec<Box<dyn Interruptor + Send>>,
+    interruptors : Vec<Box<dyn Interruptor<Rotary> + Send>>,
     _intr_reason : Option<InterruptReason>,
 }
 
@@ -64,7 +66,7 @@ impl<B : StepperBuilder, C : StepperController> StepperMotor<B, C> {
                     }
 
                     // Checks if the interruptor has been triggered
-                    if let Some(reason) = intr.check(self._state.abs_pos()) {
+                    if let Some(reason) = intr.check(self._state.pos()) {
                         intr.set_temp_dir(Some(direction));
                         self._intr_reason.replace(reason);
                         
@@ -79,17 +81,17 @@ impl<B : StepperBuilder, C : StepperController> StepperMotor<B, C> {
             // Make step and return error if occured
             self.ctrl.step(node)?;
 
-            // Check if the abs_pos value exeeds any limits, stop the movement if it does
+            // Check if the pos value exeeds any limits, stop the movement if it does
             if direction.as_bool() {
                 self._state._abs_pos.fetch_add(self.builder.step_angle().0, Relaxed);
 
-                if self.abs_pos() > self.limit_max().unwrap_or(AbsPos::INFINITY) {
+                if self.pos() > self.limit_max().unwrap_or(PositionRad::INFINITY) {
                     self.builder.set_drive_mode(DriveMode::Stop, &mut self.ctrl)?;
                 } 
             } else {
                 self._state._abs_pos.fetch_sub(self.builder.step_angle().0, Relaxed);
 
-                if self.abs_pos() < self.limit_min().unwrap_or(AbsPos::NEG_INFINITY) {
+                if self.pos() < self.limit_min().unwrap_or(PositionRad::NEG_INFINITY) {
                     self.builder.set_drive_mode(DriveMode::Stop, &mut self.ctrl)?;
                 } 
             }
@@ -113,24 +115,24 @@ impl<B : StepperBuilder, C : StepperController> StepperMotor<B, C> {
     impl<B : StepperBuilder, C : StepperController> SyncActuator for StepperMotor<B, C> {
         // Position 
             #[inline]
-            fn abs_pos(&self) -> AbsPos {
-                self._state.abs_pos()
+            fn pos(&self) -> PositionRad {
+                self._state.pos()
             }   
 
             #[inline]
-            fn overwrite_abs_pos(&mut self, abs_pos : AbsPos) {
-                self._state._abs_pos.store(abs_pos.0, Relaxed);
+            fn overwrite_abs_pos(&mut self, pos : PositionRad) {
+                self._state._abs_pos.store(pos.0, Relaxed);
             }
         //
 
-        // Velocity
+        // U::Velocity
             #[inline]
-            fn velocity_max(&self) -> Option<Velocity> {
+            fn velocity_max(&self) -> Option<RadPerSecond> {
                 self.builder.velocity_max()
             }
 
             #[inline]
-            fn set_velocity_max(&mut self, velocity_opt : Option<Velocity>) -> Result<(), ActuatorError> {
+            fn set_velocity_max(&mut self, velocity_opt : Option<RadPerSecond>) -> Result<(), ActuatorError> {
                 self.builder.set_velocity_max(velocity_opt)?;
                 Ok(())
             }
@@ -138,22 +140,22 @@ impl<B : StepperBuilder, C : StepperController> StepperMotor<B, C> {
 
         // Acceleration
             #[inline]
-            fn acceleration_max(&self) -> Option<Acceleration> {
+            fn acceleration_max(&self) -> Option<RadPerSecond2> {
                 self.builder.acceleration_max()
             }
 
-            fn set_acceleration_max(&mut self, acceleration_opt : Option<Acceleration>) -> Result<(), ActuatorError> {
+            fn set_acceleration_max(&mut self, acceleration_opt : Option<RadPerSecond2>) -> Result<(), ActuatorError> {
                 self.builder.set_acceleration_max(acceleration_opt)?;
                 Ok(())
             }
         //
 
         // Jolt
-            fn jolt_max(&self) -> Option<Jolt> {
+            fn jolt_max(&self) -> Option<RadPerSecond3> {
                 self.builder.jolt_max()
             }
 
-            fn set_jolt_max(&mut self, jolt_opt : Option<Jolt>) -> Result<(), ActuatorError> {
+            fn set_jolt_max(&mut self, jolt_opt : Option<RadPerSecond3>) -> Result<(), ActuatorError> {
                 self.builder.set_jolt_max(jolt_opt)?;
                 Ok(())
             }
@@ -161,17 +163,17 @@ impl<B : StepperBuilder, C : StepperController> StepperMotor<B, C> {
 
         // Position limits
             #[inline]
-            fn limit_max(&self) -> Option<AbsPos> {
+            fn limit_max(&self) -> Option<PositionRad> {
                 self._limit_max
             }
 
             #[inline]
-            fn limit_min(&self) -> Option<AbsPos> {
+            fn limit_min(&self) -> Option<PositionRad> {
                 self._limit_min
             }
             
             #[inline]
-            fn set_pos_limits(&mut self, min : Option<AbsPos>, max : Option<AbsPos>) {
+            fn set_pos_limits(&mut self, min : Option<PositionRad>, max : Option<PositionRad>) {
                 if let Some(min) = min {
                     self._limit_min = Some(min)
                 }
@@ -182,40 +184,41 @@ impl<B : StepperBuilder, C : StepperController> StepperMotor<B, C> {
             }
 
             #[inline]
-            fn overwrite_pos_limits(&mut self, min : Option<AbsPos>, max : Option<AbsPos>) {
+            fn overwrite_pos_limits(&mut self, min : Option<PositionRad>, max : Option<PositionRad>) {
                 self._limit_min = min;
                 self._limit_max = max;
             }
 
-            fn resolve_pos_limits_for_abs_pos(&self, abs_pos : AbsPos) -> RelDist {
+            // TODO: Make a new output type, horrible idea to wrap all information into a single unit
+            fn resolve_pos_limits_for_abs_pos(&self, pos : PositionRad) -> Radians {
                 if let Some(ang) = self.limit_min() {
-                    if abs_pos < ang {
-                        abs_pos - ang
+                    if pos < ang {
+                        pos - ang
                     } else {
                         if let Some(ang) = self.limit_max() {
-                            if abs_pos > ang {
-                                abs_pos - ang
+                            if pos > ang {
+                                pos - ang
                             } else { 
-                                RelDist::ZERO 
+                                Radians::ZERO 
                             }
                         } else {
-                            RelDist::ZERO
+                            Radians::ZERO
                         }
                     }
                 } else {
                     if let Some(ang) = self.limit_max() {
-                        if abs_pos > ang {
-                            abs_pos - ang
+                        if pos > ang {
+                            pos - ang
                         } else { 
-                            RelDist::ZERO 
+                            Radians::ZERO 
                         }
                     } else {
-                        RelDist::NAN
+                        Radians::NAN
                     }
                 }
             }
 
-            fn set_endpos(&mut self, overwrite_abs_pos : AbsPos) {
+            fn set_endpos(&mut self, overwrite_abs_pos : PositionRad) {
                 self.overwrite_abs_pos(overwrite_abs_pos);
 
                 let dir = self.direction().as_bool();
@@ -239,13 +242,13 @@ impl<B : StepperBuilder, C : StepperController> StepperMotor<B, C> {
             }
         // 
 
-        fn drive_rel_blocking(&mut self, rel_dist : RelDist, speed_f : Factor) -> Result<(), ActuatorError> {
+        fn drive_rel_blocking(&mut self, rel_dist : Radians, speed_f : Factor) -> Result<(), ActuatorError> {
             if !rel_dist.is_finite() {
                 return Err(ActuatorError::InvaldRelativeDistance(rel_dist));
             }
 
             // Set drive mode, return mapped error if one occurs
-            self.builder.set_drive_mode(DriveMode::FixedDistance(rel_dist, Velocity::ZERO, speed_f), &mut self.ctrl)?;
+            self.builder.set_drive_mode(DriveMode::FixedDistance(rel_dist, RadPerSecond::ZERO, speed_f), &mut self.ctrl)?;
             self.handle_builder()
         }
 
@@ -255,7 +258,7 @@ impl<B : StepperBuilder, C : StepperController> StepperMotor<B, C> {
             self.handle_builder()
         }
     
-        fn drive_speed(&mut self, speed : Velocity) -> Result<(), ActuatorError> {
+        fn drive_speed(&mut self, speed : RadPerSecond) -> Result<(), ActuatorError> {
             // Set drive mode, return mapped error if one occurs
             self.builder.set_drive_mode(DriveMode::ConstVelocity(speed), &mut self.ctrl)?;
             self.handle_builder()
@@ -304,30 +307,30 @@ impl<B : StepperBuilder, C : StepperController> StepperMotor<B, C> {
 
     impl<B : StepperBuilderAdvanced, C : StepperController> AdvancedActuator for StepperMotor<B, C> {
         // Loads
-            fn force_gen(&self) -> Force {
+            fn force_gen(&self) -> NewtonMeters {
                 self.builder.vars().force_load_gen
             }
 
-            fn force_dir(&self) -> Force {
+            fn force_dir(&self) -> NewtonMeters {
                 self.builder.vars().force_load_dir
             }
 
-            fn apply_gen_force(&mut self, force : Force) -> Result<(), ActuatorError> {
+            fn apply_gen_force(&mut self, force : NewtonMeters) -> Result<(), ActuatorError> {
                 self.builder.apply_gen_force(force)?;
                 Ok(())
             }
 
-            fn apply_dir_force(&mut self, force : Force) -> Result<(), ActuatorError> {
+            fn apply_dir_force(&mut self, force : NewtonMeters) -> Result<(), ActuatorError> {
                 self.builder.apply_dir_force(force)?;
                 Ok(())
             }
 
-            fn inertia(&self) -> Inertia {
+            fn inertia(&self) -> KgMeter2 {
                 self.builder.vars().inertia_load
             }
 
             #[inline(always)]
-            fn apply_inertia(&mut self, inertia : Inertia) -> Result<(), ActuatorError> {
+            fn apply_inertia(&mut self, inertia : KgMeter2) -> Result<(), ActuatorError> {
                 self.builder.apply_inertia(inertia)?;
                 Ok(())
             }
@@ -337,7 +340,7 @@ impl<B : StepperBuilder, C : StepperController> StepperMotor<B, C> {
 
 impl<B : StepperBuilder, C : StepperController> StepperActuator for StepperMotor<B, C> 
 where
-    B : DefinedActuator 
+    B : DefinedActuator
 {
     // Data
         fn microsteps(&self) -> MicroSteps {
@@ -350,7 +353,7 @@ where
         }
     //
 
-    fn step_ang(&self) -> RelDist {
+    fn step_dist(&self) -> Radians {
         self.builder.step_angle()
     }
 }
@@ -372,7 +375,7 @@ impl<B : StepperBuilder, C : StepperController> DefinedActuator for StepperMotor
 where
     B : DefinedActuator 
 {
-    fn ptp_time_for_distance(&self, abs_pos_0 : AbsPos, abs_pos_t : AbsPos) -> Time {
+    fn ptp_time_for_distance(&self, abs_pos_0 : PositionRad, abs_pos_t : PositionRad) -> Seconds {
         self.builder.ptp_time_for_distance(abs_pos_0, abs_pos_t)
     }
 }

@@ -27,15 +27,15 @@ pub struct StartStopBuilder {
     _config : StepperConfig,
 
     /// Start-Stop speed
-    velocity_start_stop : Velocity,
+    velocity_start_stop : U::Velocity,
 
     // Limits
-    _velocity_max : Option<Velocity>,
+    _velocity_max : Option<U::Velocity>,
     _acceleration_max : Option<Acceleration>,
     _jolt_max : Option<Jolt>,
 
     _microsteps : MicroSteps,   
-    _step_angle : RelDist, 
+    _step_angle : U::Distance, 
     _direction : Direction,
     mode : DriveMode,
 
@@ -72,16 +72,16 @@ impl StartStopBuilder {
         }
     // 
 
-    // Velocity helpers
+    // U::Velocity helpers
         /// The maximum velocity that can be reached with the specified acceleration (will result in infinity if no limits are set)
-        pub fn velocity_by_max_acceleration(&self) -> Velocity {
+        pub fn velocity_by_max_acceleration(&self) -> U::Velocity {
             sykin::kin2::velocity_for_distance_no_vel0(self.step_angle(), self.acceleration_allowed())
         }
 
         /// The maximum velocity that is currently possible, defined by numerous factors like maximum jolt, acceleration, velocity and start-stop mechanics
-        pub fn velocity_possible(&self) -> Velocity {
+        pub fn velocity_possible(&self) -> U::Velocity {
             self.velocity_start_stop.min(
-                self._velocity_max.unwrap_or(Velocity::INFINITY)
+                self._velocity_max.unwrap_or(U::Velocity::INFINITY)
             ).min(
                 self.velocity_by_max_acceleration()
             )
@@ -135,7 +135,7 @@ impl StepperBuilder for StartStopBuilder {
             self.update_start_stop()        // Microsteps affect start stop velocity, recalculate
         }
 
-        fn step_angle(&self) -> RelDist {
+        fn step_angle(&self) -> U::Distance {
             self._step_angle
         }
 
@@ -149,13 +149,13 @@ impl StepperBuilder for StartStopBuilder {
         }
     // 
 
-    // Velocity
+    // U::Velocity
         #[inline]
-        fn velocity_max(&self) -> Option<Velocity> {
+        fn velocity_max(&self) -> Option<U::Velocity> {
             self._velocity_max
         }
 
-        fn set_velocity_max(&mut self, velocity_opt : Option<Velocity>) -> Result<(), ActuatorError> {
+        fn set_velocity_max(&mut self, velocity_opt : Option<U::Velocity>) -> Result<(), ActuatorError> {
             if let Some(velocity) = velocity_opt {
                 if velocity.is_normal() {
                     self._velocity_max = Some(velocity.abs()); 
@@ -245,7 +245,7 @@ impl StepperBuilder for StartStopBuilder {
                 self.distance = self._consts.steps_from_angle_abs(rel_dist, self._microsteps);
                 self.distance_counter = 0;
 
-                if rel_dist >= RelDist::ZERO {
+                if rel_dist >= U::Distance::ZERO {
                     self._direction = Direction::CW;
                 } else {
                     self._direction = Direction::CCW;
@@ -271,7 +271,7 @@ impl StepperBuilder for StartStopBuilder {
                     _vars: ActuatorVars::ZERO,
                     _config: config,
     
-                    velocity_start_stop: Velocity::INFINITY,
+                    velocity_start_stop: U::Velocity::INFINITY,
     
                     _velocity_max: None,
                     _acceleration_max: None,
@@ -336,7 +336,7 @@ impl StepperBuilder for StartStopBuilder {
 
 // Math
     impl DefinedActuator for StartStopBuilder {
-        fn ptp_time_for_distance(&self, abs_pos_0 : AbsPos, abs_pos_t : AbsPos) -> Time {
+        fn ptp_time_for_distance(&self, abs_pos_0 : Position, abs_pos_t : Position) -> Time {
             (abs_pos_t - abs_pos_0) / self.velocity_possible()
         }
     }

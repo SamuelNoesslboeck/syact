@@ -25,17 +25,17 @@ use crate::sync::stepper::StepperController;
 #[derive(Clone, Debug, PartialEq, PartialOrd)]
 pub enum DriveMode {
     /// Driving with a constant velocity
-    /// - 0 - [Velocity]: The constant velocity to drive, positive values mean CW movement
-    ConstVelocity(Velocity),
+    /// - 0 - [U::Velocity]: The constant velocity to drive, positive values mean CW movement
+    ConstVelocity(U::Velocity),
     /// Driving with a constant fraction of the maximum speed
     /// - 0 - [Factor]: The speed factor to use, references maximum 
     /// - 1 - `Direction`: The driving direction
     ConstFactor(Factor, Direction),
     /// Driving a fixed distance
-    /// - 0 - `RelDist`: The relative distance to drive
-    /// - 1 - [Velocity]: The exit velocity of the movement
+    /// - 0 - `U::Distance`: The relative distance to drive
+    /// - 1 - [U::Velocity]: The exit velocity of the movement
     /// - 2 - [Factor]: Factor of maximum possible speed
-    FixedDistance(RelDist, Velocity, Factor),
+    FixedDistance(U::Distance, U::Velocity, Factor),
     /// Motor is stopping
     Stop,
     /// Signals that the motor is inactive
@@ -46,7 +46,7 @@ pub enum DriveMode {
 pub trait StepperBuilder : Iterator<Item = Time> {
     // Getters
         /// The current step angle in radians
-        fn step_angle(&self) -> RelDist;
+        fn step_angle(&self) -> U::Distance;
 
         /// The current movement direction
         fn direction(&self) -> Direction;
@@ -65,16 +65,16 @@ pub trait StepperBuilder : Iterator<Item = Time> {
         fn set_microsteps(&mut self, microsteps : MicroSteps) -> Result<(), ActuatorError>;
     // 
 
-    // Velocity max
+    // U::Velocity max
         /// Maximum velocity allowed by the user if specified
-        fn velocity_max(&self) -> Option<Velocity>;
+        fn velocity_max(&self) -> Option<U::Velocity>;
 
-        /// Set the maximum allowed [Velocity]
+        /// Set the maximum allowed [U::Velocity]
         /// 
         /// ## Option
         /// 
         /// Set to `None` if no limit is wished
-        fn set_velocity_max(&mut self, velocity_opt : Option<Velocity>) -> Result<(), ActuatorError>;
+        fn set_velocity_max(&mut self, velocity_opt : Option<U::Velocity>) -> Result<(), ActuatorError>;
     // 
 
     // Acceleration

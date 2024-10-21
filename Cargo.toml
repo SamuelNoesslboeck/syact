@@ -21,7 +21,7 @@ embedded-hal = "1.0.0"
 serde = { version = "1.0.192", features = [ "derive" ], optional = true }
 
 sykin = { path = "../sykin" }
-syunit = "0.3.2"
+syunit = { path = "../syunit" }
 
 # Subcrates
 syact_macros = { path = "syact_macros" }
