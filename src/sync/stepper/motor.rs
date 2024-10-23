@@ -11,7 +11,7 @@ use crate::{SyncActuator, SyncActuatorBlocking, InterruptReason, Interruptible, 
 use crate::data::{StepperConfig, StepperConst, MicroSteps}; 
 use crate::sync::{ActuatorError, SyncActuatorState};
 use crate::sync::stepper::{StepperActuator, StepperController, StepperBuilder, DriveMode, StepperState};
-use crate::sync::stepper::builder::{StepperBuilderAdvanced, StepperBuilderSimple};
+use crate::sync::stepper::builder::{AdvancedStepperBuilder, SimpleStepperBuilder};
 
 /// A stepper motor
 /// 
@@ -269,7 +269,7 @@ impl<B : StepperBuilder, C : StepperController> StepperMotor<B, C> {
 // ###########################
 // #    Builder dependent    #
 // ###########################
-    impl<B : StepperBuilderSimple, C : StepperController> StepperMotor<B, C> {
+    impl<B : SimpleStepperBuilder, C : StepperController> StepperMotor<B, C> {
         /// Creates a new stepper motor with the given controller `ctrl` 
         pub fn new_simple(ctrl : C) -> Result<Self, ActuatorError> {
             Ok(Self {
@@ -287,7 +287,7 @@ impl<B : StepperBuilder, C : StepperController> StepperMotor<B, C> {
         }
     }
 
-    impl<B : StepperBuilderAdvanced, C : StepperController> StepperMotor<B, C> {
+    impl<B : AdvancedStepperBuilder, C : StepperController> StepperMotor<B, C> {
         /// Creates a new stepper motor with the given constants `consts` and configuration `config`
         pub fn new_advanced(ctrl : C, consts : StepperConst, config : StepperConfig) -> Result<Self, ActuatorError> {
             Ok(Self {
@@ -305,7 +305,7 @@ impl<B : StepperBuilder, C : StepperController> StepperMotor<B, C> {
         }
     }
 
-    impl<B : StepperBuilderAdvanced, C : StepperController> AdvancedActuator for StepperMotor<B, C> {
+    impl<B : AdvancedStepperBuilder, C : StepperController> AdvancedActuator for StepperMotor<B, C> {
         // Loads
             fn force_gen(&self) -> NewtonMeters {
                 self.builder.vars().force_load_gen

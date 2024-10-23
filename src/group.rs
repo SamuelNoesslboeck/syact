@@ -72,14 +72,15 @@ where
 /// # Generic type `T`
 /// 
 /// The generic type `T` repesents the components in the struct
-pub trait SyncActuatorGroup<T, const C : usize> : ActuatorGroup<T, C>
+pub trait SyncActuatorGroup<T, U, const C : usize> : ActuatorGroup<T, C>
 where 
-    T : SyncActuator + ?Sized + 'static
+    T : SyncActuator<U> + ?Sized + 'static,
+    U : UnitSet
 {
     // Position
         /// Runs [SyncActuator::pos()] for all components
         #[inline(always)]
-        fn pos(&self) -> [Position; C] {
+        fn pos(&self) -> [U::Position; C] {
             self.for_each(|act, _| {
                 act.pos()
             })
@@ -87,7 +88,7 @@ where
         
         /// Runs [SyncActuator::overwrite_abs_pos()] for all components
         #[inline(always)]
-        fn overwrite_abs_pos(&mut self, abs_poss : &[Position; C]) {
+        fn overwrite_abs_pos(&mut self, abs_poss : &[U::Position; C]) {
             self.for_each_mut(|act, index| {
                 act.overwrite_abs_pos(abs_poss[index])
             });
@@ -95,7 +96,7 @@ where
 
         /// Runs [SyncActuator::resolve_pos_limits_for_abs_pos()] for all components 
         #[inline(always)]
-        fn limits_for_abs_pos(&self, abs_poss : &[Position; C]) -> [U::Distance; C] {
+        fn limits_for_abs_pos(&self, abs_poss : &[U::Position; C]) -> [U::Distance; C] {
             self.for_each(|act, index| {
                 act.resolve_pos_limits_for_abs_pos(abs_poss[index])
             })
@@ -103,7 +104,7 @@ where
 
         /// Checks if the given abs_poss are vaild, which means they are finite and in range of the components
         #[inline(always)]
-        fn valid_abs_pos(&self, abs_poss : &[Position; C]) -> bool {
+        fn valid_abs_pos(&self, abs_poss : &[U::Position; C]) -> bool {
             self.for_each(|act, index| {
                 !act.resolve_pos_limits_for_abs_pos(abs_poss[index]).is_normal() & abs_poss[index].is_finite()
             }).iter().all(|v| *v)
@@ -111,7 +112,7 @@ where
 
         /// Same as [SyncActuatorGroup::valid_abs_pos()], but it evaluates the check for each component and returns seperated results for analysis
         #[inline(always)]
-        fn valid_abs_pos_verbose(&self, abs_poss : &[Position; C]) -> [bool; C] {
+        fn valid_abs_pos_verbose(&self, abs_poss : &[U::Position; C]) -> [bool; C] {
             self.for_each(|act, index| {
                 !act.resolve_pos_limits_for_abs_pos(abs_poss[index]).is_normal() & abs_poss[index].is_finite()
             })
@@ -119,7 +120,7 @@ where
 
         /// Runs [SyncActuator::set_endpos()] for all components
         #[inline(always)]
-        fn set_endpos(&mut self, set_dist : &[Position; C]) {
+        fn set_endpos(&mut self, set_dist : &[U::Position; C]) {
             self.for_each_mut(|act, index| {
                 act.set_endpos(set_dist[index]);
             });
@@ -127,7 +128,7 @@ where
         
         /// Runs [SyncActuator::set_pos_limits()] for all components
         #[inline(always)]
-        fn set_pos_limits(&mut self, min : &[Option<Position>; C], max : &[Option<Position>; C]) {
+        fn set_pos_limits(&mut self, min : &[Option<U::Position>; C], max : &[Option<U::Position>; C]) {
             self.for_each_mut(|act, index| {
                 act.set_pos_limits(min[index], max[index]);
             }); 
@@ -143,7 +144,7 @@ where
         }
 
         /// Set the maximum velocity of the components
-        fn set_velocity_max(&mut self, velocity_opt : [Option<U::Velocity>; C]) -> Result<[(); C], ActuatorError> {
+        fn set_velocity_max(&mut self, velocity_opt : [Option<U::Velocity>; C]) -> Result<[(); C], ActuatorError<U>> {
             self.try_for_each_mut(|act, index| {
                 act.set_velocity_max(velocity_opt[index])
             })
@@ -152,26 +153,29 @@ where
 
     // Acceleration
         /// Returns the maximum acceleration for each actuator of the group
-        fn acceleration_max(&self) -> [Option<Acceleration>; C] {
+        fn acceleration_max(&self) -> [Option<U::Acceleration>; C] {
             self.for_each(|act, _| {
                 act.acceleration_max()
             })
         }
 
         /// Set the maximum acceleration for each actuator of the group
-        fn set_acceleration_max(&mut self, acceleration_opt : [Option<Acceleration>; C]) -> Result<[(); C], ActuatorError> {
+        fn set_acceleration_max(&mut self, acceleration_opt : [Option<U::Acceleration>; C]) -> Result<[(); C], ActuatorError<U>> {
             self.try_for_each_mut(|act, index| {
                 act.set_acceleration_max(acceleration_opt[index])
             })
         }
     //
+
+    // TODO: Add jolt to group
 }
 
 // Automatic implementation
-impl<G, T, const C : usize> SyncActuatorGroup<T, C> for G
+impl<G, T, U, const C : usize> SyncActuatorGroup<T, U, C> for G
 where 
     G : ActuatorGroup<T, C>,
-    T : SyncActuator + ?Sized + 'static
+    T : SyncActuator<U> + ?Sized + 'static,
+    U : UnitSet
 { 
     // No definitions required
 }
@@ -181,19 +185,20 @@ where
 // ##############################################
     // Movements
         /// Further extending a `SyncActuatorGroup` with blocking movements
-        pub trait SyncActuatorBlockingGroup<T, const C : usize> : SyncActuatorGroup<T, C>
+        pub trait SyncActuatorBlockingGroup<T, U, const C : usize> : SyncActuatorGroup<T, U, C>
         where 
-            T : SyncActuatorBlocking + ?Sized + 'static
+            T : SyncActuatorBlocking<U> + ?Sized + 'static,
+            U : UnitSet
         {
             /// Runs [SyncActuatorBlocking::drive_rel_blocking()] for all components
-            fn drive_rel_blocking(&mut self, rel_dists : [U::Distance; C], speed : [Factor; C]) -> Result<[(); C], ActuatorError> {
+            fn drive_rel_blocking(&mut self, rel_dists : [U::Distance; C], speed : [Factor; C]) -> Result<[(); C], ActuatorError<U>> {
                 self.try_for_each_mut(|act, index| {
                     act.drive_rel_blocking(rel_dists[index], speed[index])  
                 })
             }
 
             /// Runs [SyncActuatorBlocking::drive_abs_blocking()] for all components
-            fn drive_abs_blocking(&mut self, pos : [Position; C], speed : [Factor; C]) -> Result<[(); C], ActuatorError> {
+            fn drive_abs_blocking(&mut self, pos : [U::Position; C], speed : [Factor; C]) -> Result<[(); C], ActuatorError<U>> {
                 self.try_for_each_mut(|act, index| {
                     act.drive_abs_blocking(pos[index], speed[index])
                 })
@@ -201,10 +206,11 @@ where
         }
 
         // Automatic implementation
-        impl<G, T, const C : usize> SyncActuatorBlockingGroup<T, C> for G
+        impl<G, T, U, const C : usize> SyncActuatorBlockingGroup<T, U, C> for G
         where 
-            G : SyncActuatorGroup<T, C>,
-            T : SyncActuatorBlocking + ?Sized + 'static
+            G : SyncActuatorGroup<T, U, C>,
+            T : SyncActuatorBlocking<U> + ?Sized + 'static,
+            U : UnitSet
         { 
             // No definitions required
         }
@@ -215,13 +221,14 @@ where
 // #    AdvancedActuatorGroup    #
 // ###############################
     /// Further extending `ActuatorGroup` with load application
-    pub trait AdvancedActuatorGroup<T, const C : usize> : ActuatorGroup<T, C>
+    pub trait AdvancedActuatorGroup<T, U, const C : usize> : ActuatorGroup<T, C>
         where 
-            T : AdvancedActuator + ?Sized + 'static
+            T : AdvancedActuator<U> + ?Sized + 'static,
+            U : UnitSet
     {
         /// Apply an inertia to each of the components
         #[inline]
-        fn apply_inertias(&mut self, inertias : &[Inertia; C]) -> Result<[(); C], ActuatorError> {
+        fn apply_inertias(&mut self, inertias : &[U::Inertia; C]) -> Result<[(); C], ActuatorError<U>> {
             self.try_for_each_mut(|act, index| {
                 act.apply_inertia(inertias[index])
             })
@@ -229,7 +236,7 @@ where
 
         /// Runs [SyncActuatorAdvanced::apply_gen_force()] for all components
         #[inline]
-        fn apply_forces(&mut self, forces : &[Force; C]) -> Result<(), ActuatorError> {
+        fn apply_forces(&mut self, forces : &[U::Force; C]) -> Result<(), ActuatorError<U>> {
             self.try_for_each_mut(|act, index| {
                 act.apply_gen_force(forces[index])
             })?;
@@ -238,10 +245,11 @@ where
     }
 
     // Automatic implementation
-    impl<G, T, const C : usize> AdvancedActuatorGroup<T, C> for G 
+    impl<G, T, U, const C : usize> AdvancedActuatorGroup<T, U, C> for G 
     where 
         G : ActuatorGroup<T, C>,
-        T : AdvancedActuator + ?Sized + 'static
+        T : AdvancedActuator<U> + ?Sized + 'static,
+        U : UnitSet
     { 
         // No definitions required
     }
@@ -249,9 +257,10 @@ where
 
 // StepperActuatorGroup
     /// A group of stepper motor based components
-    pub trait StepperActuatorGroup<T, const C : usize> : SyncActuatorGroup<T, C> 
+    pub trait StepperActuatorGroup<T, U, const C : usize> : SyncActuatorGroup<T, U, C> 
     where 
-        T: StepperActuator + ?Sized + 'static
+        T: StepperActuator<U> + ?Sized + 'static,
+        U : UnitSet
     {
         /// Returns the amount of microsteps every component uses
         fn microsteps(&self) -> [MicroSteps; C] {
@@ -261,7 +270,7 @@ where
         }
 
         /// Sets the amount of microsteps for each motor 
-        fn set_micro(&mut self, micro : [MicroSteps; C]) -> Result<(), ActuatorError> {
+        fn set_micro(&mut self, micro : [MicroSteps; C]) -> Result<(), ActuatorError<U>> {
             self.try_for_each_mut(|comp, index| {
                 comp.set_microsteps(micro[index])
             })?;
@@ -269,10 +278,11 @@ where
         }
     }
 
-    impl<G, T, const C : usize> StepperActuatorGroup<T, C> for G 
+    impl<G, T, U, const C : usize> StepperActuatorGroup<T, U, C> for G 
     where 
-        G : SyncActuatorGroup<T, C>,
-        T : StepperActuator + ?Sized + 'static
+        G : SyncActuatorGroup<T, U, C>,
+        T : StepperActuator<U> + ?Sized + 'static,
+        U : UnitSet
     { 
         // No definitions required
     }

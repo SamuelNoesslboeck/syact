@@ -2,7 +2,7 @@
 name = "syact"
 authors = [ "Samuel Nösslböck <samuel.noesslboeck@gmail.com>" ]
 version = "0.14.0"
-description = "A library to control motors (mainly stepper motors) and components, read data from sensors and more"
+description = "A library to control motors (mainly stepper motors), define actuators and their interactions with each other"
 edition = "2021"
 repository = "https://github.com/SamuelNoesslboeck/syact"
 license-file = "LICENSE"
@@ -18,10 +18,10 @@ path = "src/lib.rs"
 [dependencies]
 atomic_float = "1.1.0"
 embedded-hal = "1.0.0"
-serde = { version = "1.0.192", features = [ "derive" ], optional = true }
+serde = { version = "1.0.213", features = [ "derive" ], optional = true }
 
-sykin = { path = "../sykin" }
-syunit = { path = "../syunit" }
+sykin = "0.1.0"
+syunit = "0.4.0"
 
 # Subcrates
 syact_macros = { path = "syact_macros" }

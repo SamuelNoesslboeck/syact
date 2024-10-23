@@ -1,4 +1,5 @@
 use serde::{Serialize, Deserialize};
+use syunit::metric::Millimeters;
 
 use crate::SyncActuator;
 use crate::parent::{ActuatorParent, RatioActuatorParent};
@@ -11,20 +12,15 @@ pub struct LinearAxis<A : SyncActuator> {
     /// The child component driving the linear axis
     pub actuator : A,
 
-    /// Distance traveled per rad (Unit mm)   \
-    /// `f_rte = pitch / (2pi)`
-    pub rte_ratio : f32
+    pub radius : Millimeters
 }
 
 impl<A : SyncActuator> LinearAxis<A> {
     /// Create a new linear axis instance
-    /// - `device`: The parent component driving the linear axis
-    /// - `rte_ratio`: (radius to extension ratio), millimeters travelled per radian the spindle rotated
-    ///   - `f_rte = pitch / (2pi)`
-    pub fn new(device : A, rte_ratio : f32) -> Self {
+    pub fn new(actuator : A, radius : Millimeters) -> Self {
         return LinearAxis {
-            actuator: device,
-            rte_ratio
+            actuator,
+            radius
         };
     }
 }
@@ -43,26 +39,12 @@ impl<A : SyncActuator> LinearAxis<A> {
     }
 
     impl<A : SyncActuator> RatioActuatorParent for LinearAxis<A> {
-        fn ratio(&self) -> f32 {
-            self.rte_ratio
+        type Input = MetricMM;
+        type Output = Rotary;
+        type Ratio = Millimeters;
+
+        fn ratio(&self) -> Self::Ratio {
+            self.radius
         }
-
-        // Correct unit conversions
-            fn force_for_child(&self, parent_force : Force) -> Force {
-                parent_force * (self.ratio() / 1000.0)  // Ratio in millimeters => Conversion to meters for Newtonmeters
-            }
-
-            fn force_for_parent(&self, child_force : Force) -> Force {
-                child_force / (self.ratio() / 1000.0)   // Ratio in millimeters => Conversion to meters for Newtonmeters 
-            }
-
-            fn inertia_for_child(&self, parent_inertia : Inertia) -> Inertia {
-                parent_inertia * (self.ratio() / 1000.0) * (self.ratio() / 1000.0)
-            }
-
-            fn inertia_for_parent(&self, child_intertia : Inertia) -> Inertia {
-                child_intertia / (self.ratio() / 1000.0) / (self.ratio() / 1000.0)
-            }
-        // 
     }
 // 

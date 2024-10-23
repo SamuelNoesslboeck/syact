@@ -5,7 +5,7 @@ use alloc::sync::Arc;
 
 use syunit::*;
 
-use crate::{AsyncActuator, SyncActuator, SyncActuatorBlocking, ActuatorError, Interruptible, AdvancedActuator, SyncActuatorState, DefinedActuator};
+use crate::{SyncActuator, SyncActuatorBlocking, ActuatorError, Interruptible, AdvancedActuator, SyncActuatorState};
 use crate::data::MicroSteps;
 use crate::sync::stepper::StepperActuator;
 
@@ -23,17 +23,19 @@ pub trait ActuatorParent {
 
 // Relationships
     /// A parent that relates to its child through a constant `ratio`
-    #[allow(missing_docs)]
     pub trait RatioActuatorParent : ActuatorParent 
-    where
+    where 
+        // # This implementation is very ugly I know
+        // 
+        // Kind of a yandere approach, however I have not found a way to do this with macros, maybe in a future release when I actually know more of what I am doing ...
         <Self::Input as UnitSet>::Time : From<<Self::Output as UnitSet>::Time>,
 
         <Self::Input as UnitSet>::Position : Div<Self::Ratio, Output = <Self::Output as UnitSet>::Position>,
-        <Self::Input as UnitSet>::Distance : Div<Self::Ratio, Output = <Self::Output as UnitSet>::Distance>,
         <Self::Input as UnitSet>::Velocity : Div<Self::Ratio, Output = <Self::Output as UnitSet>::Velocity>,
         <Self::Input as UnitSet>::Acceleration : Div<Self::Ratio, Output = <Self::Output as UnitSet>::Acceleration>,
         <Self::Input as UnitSet>::Jolt : Div<Self::Ratio, Output = <Self::Output as UnitSet>::Jolt>,
         <Self::Input as UnitSet>::Force : Mul<Self::Ratio, Output = <Self::Output as UnitSet>::Force>,
+        <Self::Input as UnitSet>::Inertia : InertiaUnit<Self::Ratio, Reduced = <Self::Output as UnitSet>::Inertia>,
 
         <Self::Output as UnitSet>::Position : Mul<Self::Ratio, Output = <Self::Input as UnitSet>::Position>,
         <Self::Output as UnitSet>::Distance : Mul<Self::Ratio, Output = <Self::Input as UnitSet>::Distance>,
@@ -44,7 +46,7 @@ pub trait ActuatorParent {
     {
         type Input : UnitSet;
         type Output : UnitSet;
-        type Ratio : From<f32> + Into<f32>;
+        type Ratio : Clone + Copy + From<f32> + Into<f32>;
 
         /// The linear ratio that defines the relation between the child and the parent component
         /// 
@@ -65,12 +67,13 @@ pub trait ActuatorParent {
             }
 
             #[inline]
-            fn rel_dist_for_chlid(&self, parent_rel_dist : <Self::Input as UnitSet>::Distance) -> <Self::Output as UnitSet>::Distance {
-                parent_rel_dist / self.ratio()
+            fn dist_for_child(&self, parent_rel_dist : <Self::Input as UnitSet>::Distance) -> <Self::Output as UnitSet>::Distance {
+                // Workaround, as Length / Length => Radians which have no unit :')
+                <Self::Output as UnitSet>::Distance::from(parent_rel_dist.into() / self.ratio().into())
             }
 
             #[inline]
-            fn rel_dist_for_parent(&self, child_rel_dist : <Self::Output as UnitSet>::Distance) -> <Self::Input as UnitSet>::Distance {
+            fn dist_for_parent(&self, child_rel_dist : <Self::Output as UnitSet>::Distance) -> <Self::Input as UnitSet>::Distance {
                 child_rel_dist * self.ratio()
             }
 
@@ -110,7 +113,6 @@ pub trait ActuatorParent {
                 }
             //
 
-            // Implementation for Newtonmeter to Newtonmeter conversion
             #[inline]
             fn force_for_child(&self, parent_force : <Self::Input as UnitSet>::Force) -> <Self::Output as UnitSet>::Force {
                 parent_force * self.ratio()
@@ -121,17 +123,14 @@ pub trait ActuatorParent {
                 child_force / self.ratio()
             }
 
-            // Implementation for Newtonmeter to Newtonmeter conversion
             #[inline]
             fn inertia_for_child(&self, parent_inertia : <Self::Input as UnitSet>::Inertia) -> <Self::Output as UnitSet>::Inertia {
-                // Small workaround
-                <Self::Output as UnitSet>::Inertia::new(parent_inertia.into() * self.ratio().into() * self.ratio().into())
+                <Self::Input as UnitSet>::Inertia::reduce(parent_inertia, self.ratio())
             }
 
             #[inline]
-            fn inertia_for_parent(&self, child_intertia : <Self::Output as UnitSet>::Inertia) -> <Self::Input as UnitSet>::Inertia {
-                // Small workaround
-                <Self::Input as UnitSet>::Inertia::new(child_intertia.into() / self.ratio().into() / self.ratio().into())
+            fn inertia_for_parent(&self, child_inertia : <Self::Output as UnitSet>::Inertia) -> <Self::Input as UnitSet>::Inertia {
+                <Self::Input as UnitSet>::Inertia::extend(child_inertia, self.ratio())
             }
         // 
 
@@ -165,11 +164,11 @@ pub trait ActuatorParent {
             <T::Input as UnitSet>::Time : From<<T::Output as UnitSet>::Time>,
 
             <T::Input as UnitSet>::Position : Div<T::Ratio, Output = <T::Output as UnitSet>::Position>,
-            <T::Input as UnitSet>::Distance : Div<T::Ratio, Output = <T::Output as UnitSet>::Distance>,
             <T::Input as UnitSet>::Velocity : Div<T::Ratio, Output = <T::Output as UnitSet>::Velocity>,
             <T::Input as UnitSet>::Acceleration : Div<T::Ratio, Output = <T::Output as UnitSet>::Acceleration>,
             <T::Input as UnitSet>::Jolt : Div<T::Ratio, Output = <T::Output as UnitSet>::Jolt>,
             <T::Input as UnitSet>::Force : Mul<T::Ratio, Output = <T::Output as UnitSet>::Force>,
+            <T::Input as UnitSet>::Inertia : InertiaUnit<T::Ratio, Reduced = <T::Output as UnitSet>::Inertia>,
 
             <T::Output as UnitSet>::Position : Mul<T::Ratio, Output = <T::Input as UnitSet>::Position>,
             <T::Output as UnitSet>::Distance : Mul<T::Ratio, Output = <T::Input as UnitSet>::Distance>,
@@ -186,7 +185,7 @@ pub trait ActuatorParent {
                     self.pos_for_parent(self.child().pos())
                 }
 
-                fn overwrite_abs_pos(&mut self, mut abs_pos : <T::Input as UnitSet>::Position) {
+                fn overwrite_abs_pos(&mut self, abs_pos : <T::Input as UnitSet>::Position) {
                     let abs_pos = self.pos_for_child(abs_pos);
                     self.child_mut().overwrite_abs_pos(abs_pos)
                 }
@@ -198,7 +197,7 @@ pub trait ActuatorParent {
                     self.child().velocity_max().map(|velocity| self.velocity_for_parent(velocity))
                 }
 
-                fn set_velocity_max(&mut self, mut velocity_opt : Option<<T::Input as UnitSet>::Velocity>) -> Result<(), ActuatorError<T::Input>> {
+                fn set_velocity_max(&mut self, velocity_opt : Option<<T::Input as UnitSet>::Velocity>) -> Result<(), ActuatorError<T::Input>> {
                     let velocity_opt = velocity_opt.map(|velocity| self.velocity_for_child(velocity));
                     self.child_mut().set_velocity_max(velocity_opt)
                         .map_err(|err| self.error_for_parent(err))
@@ -211,138 +210,194 @@ pub trait ActuatorParent {
                     self.child().acceleration_max().map(|acceleration| self.acceleration_for_parent(acceleration))
                 }
                 
-                fn set_acceleration_max(&mut self, mut acceleration_opt : Option<<T::Input as UnitSet>::Acceleration>) -> Result<(), ActuatorError<U>> {
-                    acceleration_opt = acceleration_opt.map(|acceleration| self.acceleration_for_child(acceleration));
+                fn set_acceleration_max(&mut self, acceleration_opt : Option<<T::Input as UnitSet>::Acceleration>) -> Result<(), ActuatorError<T::Input>> {
+                    let acceleration_opt = acceleration_opt.map(|acceleration| self.acceleration_for_child(acceleration));
                     self.child_mut().set_acceleration_max(acceleration_opt)
+                        .map_err(|err| self.error_for_parent(err))
                 }
             // 
 
             // Jolt
                 #[inline]
-                fn jolt_max(&self) -> Option<U::Jolt> {
+                fn jolt_max(&self) -> Option<<T::Input as UnitSet>::Jolt> {
                     self.child().jolt_max().map(|jolt| self.jolt_for_parent(jolt))
                 }
 
-                fn set_jolt_max(&mut self, mut jolt_opt : Option<U::Jolt>) -> Result<(), ActuatorError> {
-                    jolt_opt = jolt_opt.map(|jolt| self.jolt_for_child(jolt));
+                fn set_jolt_max(&mut self, jolt_opt : Option<<T::Input as UnitSet>::Jolt>) -> Result<(), ActuatorError<T::Input>> {
+                    let jolt_opt = jolt_opt.map(|jolt| self.jolt_for_child(jolt));
                     self.child_mut().set_jolt_max(jolt_opt)
+                        .map_err(|err| self.error_for_parent(err))
                 }
             // 
 
             // Positional limits
-                fn limit_max(&self) -> Option<AbsPos> {
-                    self.child().limit_max().map(|limit| self.pos_for_child(limit))
+                fn limit_max(&self) -> Option<<T::Input as UnitSet>::Position> {
+                    self.child().limit_max()
+                        .map(|limit| self.pos_for_parent(limit))
                 }
 
-                fn limit_min(&self) -> Option<AbsPos> {
-                    self.child().limit_min().map(|limit| self.pos_for_child(limit))
+                fn limit_min(&self) -> Option<<T::Input as UnitSet>::Position> {
+                    self.child().limit_min()
+                        .map(|limit| self.pos_for_parent(limit))
                 }
 
-                fn resolve_pos_limits_for_abs_pos(&self, abs_pos : AbsPos) -> RelDist {
-                    self.rel_dist_for_parent(self.child().resolve_pos_limits_for_abs_pos(
+                fn resolve_pos_limits_for_abs_pos(&self, abs_pos : <T::Input as UnitSet>::Position) -> <T::Input as UnitSet>::Distance {
+                    self.dist_for_parent(self.child().resolve_pos_limits_for_abs_pos(
                         self.pos_for_child(abs_pos)
                     ))
                 }
 
-                fn set_pos_limits(&mut self, mut min : Option<AbsPos>, mut max : Option<AbsPos>) {
-                    min = min.map(|g| self.pos_for_child(g));
-                    max = max.map(|g| self.pos_for_child(g));
+                fn set_pos_limits(&mut self, min : Option<<T::Input as UnitSet>::Position>, max : Option<<T::Input as UnitSet>::Position>) {
+                    let min = min.map(|g| self.pos_for_child(g));
+                    let max = max.map(|g| self.pos_for_child(g));
                     self.child_mut().set_pos_limits(min, max)
                 }
 
-                fn set_endpos(&mut self, mut overwrite_abs_pos : AbsPos) {
-                    overwrite_abs_pos = self.pos_for_child(overwrite_abs_pos);
+                fn set_endpos(&mut self, overwrite_abs_pos : <T::Input as UnitSet>::Position) {
+                    let overwrite_abs_pos = self.pos_for_child(overwrite_abs_pos);
                     self.child_mut().set_endpos(overwrite_abs_pos)
                 }
 
-                fn overwrite_pos_limits(&mut self, mut min : Option<AbsPos>, mut max : Option<AbsPos>) {
-                    min = min.map(|g| self.pos_for_child(g));
-                    max = max.map(|g| self.pos_for_child(g));
+                fn overwrite_pos_limits(&mut self, min : Option<<T::Input as UnitSet>::Position>, max : Option<<T::Input as UnitSet>::Position>) {
+                    let min = min.map(|g| self.pos_for_child(g));
+                    let max = max.map(|g| self.pos_for_child(g));
                     self.child_mut().overwrite_pos_limits(min, max)
                 }
             // 
         }
     
-        impl<T : RatioActuatorParent> SyncActuatorBlocking for T 
+        impl<T : RatioActuatorParent<Input = U, Output = U>, U : UnitSet> SyncActuatorBlocking<T::Input> for T 
         where
-            T::Child : SyncActuatorBlocking
+            T::Child : SyncActuatorBlocking<T::Input>,
+
+            <T::Input as UnitSet>::Time : From<<T::Output as UnitSet>::Time>,
+
+            <T::Input as UnitSet>::Position : Div<T::Ratio, Output = <T::Output as UnitSet>::Position>,
+            <T::Input as UnitSet>::Velocity : Div<T::Ratio, Output = <T::Output as UnitSet>::Velocity>,
+            <T::Input as UnitSet>::Acceleration : Div<T::Ratio, Output = <T::Output as UnitSet>::Acceleration>,
+            <T::Input as UnitSet>::Jolt : Div<T::Ratio, Output = <T::Output as UnitSet>::Jolt>,
+            <T::Input as UnitSet>::Force : Mul<T::Ratio, Output = <T::Output as UnitSet>::Force>,
+            <T::Input as UnitSet>::Inertia : InertiaUnit<T::Ratio, Reduced = <T::Output as UnitSet>::Inertia>,
+
+            <T::Output as UnitSet>::Position : Mul<T::Ratio, Output = <T::Input as UnitSet>::Position>,
+            <T::Output as UnitSet>::Distance : Mul<T::Ratio, Output = <T::Input as UnitSet>::Distance>,
+            <T::Output as UnitSet>::Velocity : Mul<T::Ratio, Output = <T::Input as UnitSet>::Velocity>,
+            <T::Output as UnitSet>::Acceleration : Mul<T::Ratio, Output = <T::Input as UnitSet>::Acceleration>,
+            <T::Output as UnitSet>::Jolt : Mul<T::Ratio, Output = <T::Input as UnitSet>::Jolt>,
+            <T::Output as UnitSet>::Force : Div<T::Ratio, Output = <T::Input as UnitSet>::Force>
         {
             // State
-                fn state(&self) -> &dyn super::SyncActuatorState {
+                fn state(&self) -> &dyn super::SyncActuatorState<T::Input> {
                     self.child().state() 
                 }
 
-                fn clone_state(&self) -> Arc<dyn SyncActuatorState> {
+                fn clone_state(&self) -> Arc<dyn SyncActuatorState<T::Input>> {
                     self.child().clone_state()
                 }
             //  
 
-            fn drive_rel_blocking(&mut self, mut rel_dist : RelDist, speed : Factor) -> Result<(), ActuatorError> {
-                rel_dist = self.rel_dist_for_chlid(rel_dist);
+            fn drive_rel_blocking(&mut self, mut rel_dist : U::Distance, speed : Factor) -> Result<(), ActuatorError<U>> {
+                rel_dist = self.dist_for_child(rel_dist);
                 self.child_mut().drive_rel_blocking(rel_dist, speed)
             }
 
-            fn drive_factor(&mut self, speed : Factor, direction : Direction) -> Result<(), ActuatorError> {
+            fn drive_factor(&mut self, speed : Factor, direction : Direction) -> Result<(), ActuatorError<U>> {
                 self.child_mut().drive_factor(speed, direction)
             }
 
-            fn drive_speed(&mut self, mut speed : Velocity) -> Result<(), ActuatorError> {
+            fn drive_speed(&mut self, mut speed : U::Velocity) -> Result<(), ActuatorError<U>> {
                 speed = self.velocity_for_child(speed);
                 self.child_mut().drive_speed(speed)
             }
         }
 
-        impl<T : RatioActuatorParent> AdvancedActuator for T
+        impl<T : RatioActuatorParent> AdvancedActuator<T::Input> for T
         where 
-            T::Child : AdvancedActuator
+            T::Child : AdvancedActuator<T::Output>,
+
+            <T::Input as UnitSet>::Time : From<<T::Output as UnitSet>::Time>,
+
+            <T::Input as UnitSet>::Position : Div<T::Ratio, Output = <T::Output as UnitSet>::Position>,
+            <T::Input as UnitSet>::Velocity : Div<T::Ratio, Output = <T::Output as UnitSet>::Velocity>,
+            <T::Input as UnitSet>::Acceleration : Div<T::Ratio, Output = <T::Output as UnitSet>::Acceleration>,
+            <T::Input as UnitSet>::Jolt : Div<T::Ratio, Output = <T::Output as UnitSet>::Jolt>,
+            <T::Input as UnitSet>::Force : Mul<T::Ratio, Output = <T::Output as UnitSet>::Force>,
+            <T::Input as UnitSet>::Inertia : InertiaUnit<T::Ratio, Reduced = <T::Output as UnitSet>::Inertia>,
+
+            <T::Output as UnitSet>::Position : Mul<T::Ratio, Output = <T::Input as UnitSet>::Position>,
+            <T::Output as UnitSet>::Distance : Mul<T::Ratio, Output = <T::Input as UnitSet>::Distance>,
+            <T::Output as UnitSet>::Velocity : Mul<T::Ratio, Output = <T::Input as UnitSet>::Velocity>,
+            <T::Output as UnitSet>::Acceleration : Mul<T::Ratio, Output = <T::Input as UnitSet>::Acceleration>,
+            <T::Output as UnitSet>::Jolt : Mul<T::Ratio, Output = <T::Input as UnitSet>::Jolt>,
+            <T::Output as UnitSet>::Force : Div<T::Ratio, Output = <T::Input as UnitSet>::Force>
         {
             // Loads
-                fn force_gen(&self) -> Force {
+                fn force_gen(&self) -> <T::Input as UnitSet>::Force {
                     self.force_for_parent(self.child().force_gen())
                 }
 
-                fn force_dir(&self) -> Force {
+                fn force_dir(&self) -> <T::Input as UnitSet>::Force {
                     self.force_for_parent(self.child().force_dir())
                 }
 
-                fn apply_gen_force(&mut self, mut force : Force) -> Result<(), ActuatorError> {
-                    force = self.force_for_child(force);
+                fn apply_gen_force(&mut self, force : <T::Input as UnitSet>::Force) -> Result<(), ActuatorError<T::Input>> {
+                    let force = self.force_for_child(force);
                     self.child_mut().apply_gen_force(force)
+                        .map_err(|err| self.error_for_parent(err))
                 }
 
-                fn apply_dir_force(&mut self, mut force : Force) -> Result<(), ActuatorError> {
-                    force = self.force_for_child(force);
+                fn apply_dir_force(&mut self, force : <T::Input as UnitSet>::Force) -> Result<(), ActuatorError<T::Input>> {
+                    let force = self.force_for_child(force);
                     self.child_mut().apply_dir_force(force)
+                        .map_err(|err| self.error_for_parent(err))
                 }
 
-                fn inertia(&self) -> Inertia {
+                fn inertia(&self) -> <T::Input as UnitSet>::Inertia {
                     self.inertia_for_parent(self.child().inertia())
                 }
 
-                fn apply_inertia(&mut self, mut inertia : Inertia) -> Result<(), ActuatorError> {
-                    inertia = self.inertia_for_child(inertia);
+                fn apply_inertia(&mut self, inertia : <T::Input as UnitSet>::Inertia) -> Result<(), ActuatorError<T::Input>> {
+                    let inertia = self.inertia_for_child(inertia);
                     self.child_mut().apply_inertia(inertia)
+                        .map_err(|err| self.error_for_parent(err))
                 }
             //
         }
     // 
 
-    impl<T : RatioActuatorParent> StepperActuator for T
+    impl<T : RatioActuatorParent> StepperActuator<T::Input> for T
     where
-        T::Child : StepperActuator
+        T::Child : StepperActuator<T::Output>,
+
+        <T::Input as UnitSet>::Time : From<<T::Output as UnitSet>::Time>,
+
+        <T::Input as UnitSet>::Position : Div<T::Ratio, Output = <T::Output as UnitSet>::Position>,
+        <T::Input as UnitSet>::Velocity : Div<T::Ratio, Output = <T::Output as UnitSet>::Velocity>,
+        <T::Input as UnitSet>::Acceleration : Div<T::Ratio, Output = <T::Output as UnitSet>::Acceleration>,
+        <T::Input as UnitSet>::Jolt : Div<T::Ratio, Output = <T::Output as UnitSet>::Jolt>,
+        <T::Input as UnitSet>::Force : Mul<T::Ratio, Output = <T::Output as UnitSet>::Force>,
+        <T::Input as UnitSet>::Inertia : InertiaUnit<T::Ratio, Reduced = <T::Output as UnitSet>::Inertia>,
+
+        <T::Output as UnitSet>::Position : Mul<T::Ratio, Output = <T::Input as UnitSet>::Position>,
+        <T::Output as UnitSet>::Distance : Mul<T::Ratio, Output = <T::Input as UnitSet>::Distance>,
+        <T::Output as UnitSet>::Velocity : Mul<T::Ratio, Output = <T::Input as UnitSet>::Velocity>,
+        <T::Output as UnitSet>::Acceleration : Mul<T::Ratio, Output = <T::Input as UnitSet>::Acceleration>,
+        <T::Output as UnitSet>::Jolt : Mul<T::Ratio, Output = <T::Input as UnitSet>::Jolt>,
+        <T::Output as UnitSet>::Force : Div<T::Ratio, Output = <T::Input as UnitSet>::Force>
     {
         // Microsteps
             fn microsteps(&self) -> MicroSteps {
                 self.child().microsteps()
             }
 
-            fn set_microsteps(&mut self, micro : MicroSteps) -> Result<(), ActuatorError> {
+            fn set_microsteps(&mut self, micro : MicroSteps) -> Result<(), ActuatorError<T::Input>> {
                 self.child_mut().set_microsteps(micro)
+                    .map_err(|err| self.error_for_parent(err))
             }
         // 
 
-        fn step_dist(&self) -> RelDist {
-            self.rel_dist_for_parent(self.child().step_dist())
+        fn step_dist(&self) -> <T::Input as UnitSet>::Distance {
+            self.dist_for_parent(self.child().step_dist())
         }
     }
 
@@ -359,27 +414,27 @@ pub trait ActuatorParent {
         }
     }
 
-    impl<T : ActuatorParent> AsyncActuator for T
-    where 
-        T::Child : AsyncActuator
-    {
+    // impl<T : ActuatorParent, U : UnitSet> AsyncActuator<U> for T
+    // where 
+    //     T::Child : AsyncActuator<U>
+    // {
         
-        fn drive_factor(&mut self, speed : Factor, dir : Direction) -> Result<(), ActuatorError> {
-            self.child_mut().drive_factor(speed, dir)
-        }
+    //     fn drive_factor(&mut self, speed : Factor, dir : Direction) -> Result<(), ActuatorError<U>> {
+    //         self.child_mut().drive_factor(speed, dir)
+    //     }
 
-        fn drive_speed(&mut self, speed : Velocity) -> Result<(), ActuatorError> {
-            self.child_mut().drive_speed(speed)
-        }
-    }
+    //     fn drive_speed(&mut self, speed : Velocity) -> Result<(), ActuatorError> {
+    //         self.child_mut().drive_speed(speed)
+    //     }
+    // }
 
-    // Movements
-    impl<T : ActuatorParent> DefinedActuator for T 
-    where
-        T::Child : DefinedActuator
-    {
-        fn ptp_time_for_distance(&self, abs_pos_0 : AbsPos, abs_pos_t : AbsPos) -> Time {
-            self.child().ptp_time_for_distance(abs_pos_0, abs_pos_t)
-        }
-    }
+    // // Movements
+    // impl<T : ActuatorParent> DefinedActuator for T 
+    // where
+    //     T::Child : DefinedActuator
+    // {
+    //     fn ptp_time_for_distance(&self, abs_pos_0 : AbsPos, abs_pos_t : AbsPos) -> Time {
+    //         self.child().ptp_time_for_distance(abs_pos_0, abs_pos_t)
+    //     }
+    // }
 // 

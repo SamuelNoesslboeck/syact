@@ -1,4 +1,5 @@
 use syunit::*;
+use syunit::metric::*;
 
 use crate::{StepperConst, StepperConfig, ActuatorError};
 use crate::data::{ActuatorVars, MicroSteps};
@@ -25,17 +26,17 @@ use crate::sync::stepper::StepperController;
 #[derive(Clone, Debug, PartialEq, PartialOrd)]
 pub enum DriveMode {
     /// Driving with a constant velocity
-    /// - 0 - [U::Velocity]: The constant velocity to drive, positive values mean CW movement
-    ConstVelocity(U::Velocity),
+    /// - 0 - [RadPerSecond]: The constant velocity to drive, positive values mean CW movement
+    ConstVelocity(RadPerSecond),
     /// Driving with a constant fraction of the maximum speed
     /// - 0 - [Factor]: The speed factor to use, references maximum 
     /// - 1 - `Direction`: The driving direction
     ConstFactor(Factor, Direction),
     /// Driving a fixed distance
-    /// - 0 - `U::Distance`: The relative distance to drive
-    /// - 1 - [U::Velocity]: The exit velocity of the movement
+    /// - 0 - `Radians`: The relative distance to drive
+    /// - 1 - [RadPerSecond]: The exit velocity of the movement
     /// - 2 - [Factor]: Factor of maximum possible speed
-    FixedDistance(U::Distance, U::Velocity, Factor),
+    FixedDistance(Radians, RadPerSecond, Factor),
     /// Motor is stopping
     Stop,
     /// Signals that the motor is inactive
@@ -43,10 +44,10 @@ pub enum DriveMode {
 }
 
 /// A stepperbuilder creates stepper motor curves
-pub trait StepperBuilder : Iterator<Item = Time> {
+pub trait StepperBuilder : Iterator<Item = Seconds> {
     // Getters
         /// The current step angle in radians
-        fn step_angle(&self) -> U::Distance;
+        fn step_angle(&self) -> Radians;
 
         /// The current movement direction
         fn direction(&self) -> Direction;
@@ -65,40 +66,40 @@ pub trait StepperBuilder : Iterator<Item = Time> {
         fn set_microsteps(&mut self, microsteps : MicroSteps) -> Result<(), ActuatorError>;
     // 
 
-    // U::Velocity max
+    // Velocity
         /// Maximum velocity allowed by the user if specified
-        fn velocity_max(&self) -> Option<U::Velocity>;
+        fn velocity_max(&self) -> Option<RadPerSecond>;
 
-        /// Set the maximum allowed [U::Velocity]
+        /// Set the maximum allowed [RadPerSecond]
         /// 
         /// ## Option
         /// 
         /// Set to `None` if no limit is wished
-        fn set_velocity_max(&mut self, velocity_opt : Option<U::Velocity>) -> Result<(), ActuatorError>;
+        fn set_velocity_max(&mut self, velocity_opt : Option<RadPerSecond>) -> Result<(), ActuatorError>;
     // 
 
     // Acceleration
         /// Maximum acceleration that will be allowed, if specified by the user with `set_max_acceleration`
-        fn acceleration_max(&self) -> Option<Acceleration>;
+        fn acceleration_max(&self) -> Option<RadPerSecond2>;
 
-        /// Set the maximum allowed [Acceleration]
+        /// Set the maximum allowed [RadPerSecond2]
         /// 
         /// ## Option
         /// 
         /// Set to `None` if no limit is wished
-        fn set_acceleration_max(&mut self, acceleration_opt : Option<Acceleration>) -> Result<(), ActuatorError>;
+        fn set_acceleration_max(&mut self, acceleration_opt : Option<RadPerSecond2>) -> Result<(), ActuatorError>;
     // 
 
     // Jolt
         /// The maximum jolt, if specified by the user
-        fn jolt_max(&self) -> Option<Jolt>;
+        fn jolt_max(&self) -> Option<RadPerSecond3>;
 
-        /// Set the maximum allowed `Jolt` 
+        /// Set the maximum allowed [RadPerSecond3]
         /// 
         /// ## Option
         /// 
         /// Set to `None` if no limit is wished
-        fn set_jolt_max(&mut self, jolt_opt : Option<Jolt>) -> Result<(), ActuatorError>;
+        fn set_jolt_max(&mut self, jolt_opt : Option<RadPerSecond3>) -> Result<(), ActuatorError>;
     // 
 
     // Regulation
@@ -112,7 +113,7 @@ pub trait StepperBuilder : Iterator<Item = Time> {
 
 // Extension Traits
 /// Defines a general constructor for the stepper builder, using no motor or configuration data
-pub trait StepperBuilderSimple : StepperBuilder {
+pub trait SimpleStepperBuilder : StepperBuilder {
     // General constructor
         /// Create a new stepperbuilder
         fn new() -> Result<Self, ActuatorError>
@@ -124,7 +125,7 @@ pub trait StepperBuilderSimple : StepperBuilder {
 /// Defines a general constructor for the stepper builder using motor and configuration data
 /// 
 /// Also the `StepperBuilder`
-pub trait StepperBuilderAdvanced : StepperBuilder {
+pub trait AdvancedStepperBuilder : StepperBuilder {
     // General constructor
         /// Create a new stepperbuilder
         fn new(consts : StepperConst, config : StepperConfig) -> Result<Self, ActuatorError>
@@ -150,13 +151,13 @@ pub trait StepperBuilderAdvanced : StepperBuilder {
 
     // Loads
         /// Apply a general force, which works in both directions
-        fn apply_gen_force(&mut self, force : Force) -> Result<(), ActuatorError>;
+        fn apply_gen_force(&mut self, force : NewtonMeters) -> Result<(), ActuatorError>;
 
         /// Apply a directional force, which only applies in one direction
         /// - Value positive in `CW` direction
-        fn apply_dir_force(&mut self, force : Force) -> Result<(), ActuatorError>;
+        fn apply_dir_force(&mut self, force : NewtonMeters) -> Result<(), ActuatorError>;
 
         /// Apply an inertia to the builder, slowing down movements
-        fn apply_inertia(&mut self, inertia : Inertia) -> Result<(), ActuatorError>;
+        fn apply_inertia(&mut self, inertia : KgMeter2) -> Result<(), ActuatorError>;
     //
 }

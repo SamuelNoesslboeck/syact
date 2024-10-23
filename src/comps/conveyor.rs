@@ -9,7 +9,7 @@ use crate::SyncActuator;
 use crate::parent::{ActuatorParent, RatioActuatorParent};
 
 use syunit::*;
-use syunit::metric::Millimeter;
+use syunit::metric::*;
 
 /// ### Conveyor
 /// 
@@ -21,7 +21,7 @@ pub struct Conveyor<C : SyncActuator> {
     actuator : C,
 
     /// Radius of the powered conveyor roll in [Millimeter]
-    pub r_roll : Millimeter
+    pub r_roll : Millimeters
 }
 
 impl<C : SyncActuator> Conveyor<C> {
@@ -29,7 +29,7 @@ impl<C : SyncActuator> Conveyor<C> {
     /// 
     /// - `actuator`: The child actuator, driving the conveyor, must be a [SyncActuator]
     /// - `r_roll` radius of the driving roll in [Millimeter]
-    pub fn new(actuator : C, r_roll : Millimeter) -> Self {
+    pub fn new(actuator : C, r_roll : Millimeters) -> Self {
         Self {
             actuator, 
             r_roll
@@ -53,26 +53,13 @@ impl<C : SyncActuator> Conveyor<C> {
     }
 
     impl<C : SyncActuator> RatioActuatorParent for Conveyor<C> {
-        fn ratio(&self) -> f32 {
-            self.r_roll.0
+        type Input = MetricMM;
+        type Output = Rotary;
+        type Ratio = Millimeters;
+
+
+        fn ratio(&self) -> Self::Ratio {
+            self.r_roll
         }
-
-        // Correct unit conversions
-            fn force_for_child(&self, parent_force : Force) -> Force {
-                parent_force * (self.ratio() / 1000.0)  // Ratio in millimeters => Conversion to meters for Newtonmeters
-            }
-
-            fn force_for_parent(&self, child_force : Force) -> Force {
-                child_force / (self.ratio() / 1000.0)   // Ratio in millimeters => Conversion to meters for Newtonmeters 
-            }
-
-            fn inertia_for_child(&self, parent_inertia : Inertia) -> Inertia {
-                parent_inertia * (self.ratio() / 1000.0) * (self.ratio() / 1000.0)
-            }
-
-            fn inertia_for_parent(&self, child_intertia : Inertia) -> Inertia {
-                child_intertia / (self.ratio() / 1000.0) / (self.ratio() / 1000.0)
-            }
-        // 
     }
 // 

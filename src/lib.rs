@@ -274,7 +274,7 @@ use syunit::*;
     }
 
     /// More calculation intense, no additional memory
-    pub fn ptp_speed_factors<S : SyncActuatorGroup<T, C>, T : SyncActuator<U> + DefinedActuator<U> + ?Sized + 'static, U : UnitSet, const C : usize>
+    pub fn ptp_speed_factors<S : SyncActuatorGroup<T, U, C>, T : SyncActuator<U> + DefinedActuator<U> + ?Sized + 'static, U : UnitSet, const C : usize>
         (group : &mut S, abs_pos_0 : [U::Position; C], abs_pos_t : [U::Position; C], speed : Factor) -> [Factor; C] 
     {
         let times = group.for_each(|comp, index| {

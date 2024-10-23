@@ -4,7 +4,7 @@ use core::sync::atomic::Ordering::Relaxed;
 use atomic_float::AtomicF32;
 use syunit::*;
 
-use crate::{ActuatorError, SyncActuatorState, SyncActuator, DefinedActuator};
+use crate::{ActuatorError, SyncActuatorState, SyncActuator};
 use crate::data::MicroSteps;
 
 // ####################
@@ -12,7 +12,7 @@ use crate::data::MicroSteps;
 // ####################
     #[doc = include_str!("../../documentation/sync/stepper/builder.md")]
     pub mod builder;
-    pub use builder::{DriveMode, StepperBuilder, StartStopBuilder, ComplexBuilder, StepperBuilderSimple, StepperBuilderAdvanced};
+    pub use builder::{DriveMode, StepperBuilder, StartStopBuilder, ComplexBuilder, SimpleStepperBuilder, AdvancedStepperBuilder};
 
     mod ctrl;
     pub use ctrl::StepperController;
@@ -25,7 +25,7 @@ use crate::data::MicroSteps;
 // #    StepperActuator-Traits    #
 // ################################
     /// A component based on a stepper motor
-    pub trait StepperActuator<U : UnitSet = Rotary> : SyncActuator<U> + DefinedActuator<U> {
+    pub trait StepperActuator<U : UnitSet = Rotary> : SyncActuator<U> {
         // Microstepping
             /// The amount of microsteps in a full step
             fn microsteps(&self) -> MicroSteps;
