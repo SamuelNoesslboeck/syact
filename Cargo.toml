@@ -1,38 +1,42 @@
 [package]
 name = "syact"
 authors = [ "Samuel Nösslböck <samuel.noesslboeck@gmail.com>" ]
-version = "0.13.7"
-description = "A library to control motors (mainly stepper motors) and components, read data from sensors and more"
+version = "0.14.0"
+description = "A library to control motors (mainly stepper motors), define actuators and their interactions with each other"
 edition = "2021"
 repository = "https://github.com/SamuelNoesslboeck/syact"
 license-file = "LICENSE"
 keywords = [ "framework", "robotics", "iot", "raspberry-pi" ]
 
 [workspace]
-members = [ "syact_macros" ]
-exclude = [ "article", "sketches" ]
+members = [ "syact_std" ]
 
 [lib]
 name = "syact"
 path = "src/lib.rs"
 
 [dependencies]
+atomic_float = "1.1.0"
 embedded-hal = "1.0.0"
-log = "0.4.20"
-glam = "0.27.0"
-serde = { version = "1.0.192", features = [ "derive" ] }
-serde_json = "1.0.108"
-serde_repr = "0.1" 
-spin_sleep = "1.1.1" 
-syunit = "0.2.1"
-tokio = { version = "1.37.0", features = [ "full" ], optional = true }
+serde = { version = "1.0.213", features = [ "derive" ], optional = true }   # "serde" feature
+spin_sleep = { version = "1.2.1", optional = true }                         # Only while testing!
 
-# Subcrates
-syact_macros = { path = "syact_macros" }
-
-[dev-dependencies]
-crossterm = "0.27.0"
-tokio = { version = "1.37.0", features = [ "full" ] }
+sykin = "0.1.0"
+syunit = "0.4.0"
 
 [features]
-testing = [ "dep:tokio" ]
+default = [ "serde" ]
+serde = [ "dep:serde" ]
+testing = [ "dep:spin_sleep" ]
+
+# Binaries
+[[bin]]
+name = "stepper_torque_curve_printer"
+path = "bin/stepper_torque_curve_printer.rs"
+
+# Builder
+  [[bin]]
+  name ="builder-start_stop_builder_printer"
+  path = "bin/builder/start_stop_builder_printer.rs"
+  required-features = [ "testing" ]
+#
