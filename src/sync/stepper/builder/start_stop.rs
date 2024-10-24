@@ -143,11 +143,6 @@ impl StepperBuilder for StartStopBuilder {
         fn direction(&self) -> Direction {
             self._direction
         }
-
-        fn set_overload_curret(&mut self, current : Option<f32>) -> Result<(), ActuatorError> {
-            self._config.overload_current = current;
-            self.update_start_stop()        // Overload current affects start stop velocity, recalculate
-        }
     // 
 
     // RadPerSecond
@@ -313,6 +308,12 @@ impl StepperBuilder for StartStopBuilder {
             fn set_config(&mut self, config : StepperConfig) -> Result<(), ActuatorError> {
                 self._config = config;
                 self.update_start_stop()
+            }
+
+
+            fn set_overload_curret(&mut self, current : Option<f32>) -> Result<(), ActuatorError> {
+                self._config.overload_current = current;
+                self.update_start_stop()        // Overload current affects start stop velocity, recalculate
             }
         //
 

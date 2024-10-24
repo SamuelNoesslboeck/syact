@@ -11,7 +11,8 @@ use crate::sync::stepper::StepperController;
     mod complex;
     pub use complex::ComplexBuilder;
 
-    // mod free;
+    mod free;
+    pub use free::FreeBuilder;
 
     mod start_stop;
     pub use start_stop::StartStopBuilder;
@@ -51,11 +52,6 @@ pub trait StepperBuilder : Iterator<Item = Seconds> {
 
         /// The current movement direction
         fn direction(&self) -> Direction;
-    //
-
-    // Setters
-        /// Setting the overload current for more torque output
-        fn set_overload_curret(&mut self, current : Option<f32>) -> Result<(), ActuatorError>;
     //
 
     // Microsteps
@@ -147,6 +143,9 @@ pub trait AdvancedStepperBuilder : StepperBuilder {
     // Setters 
         /// Set the configuration that should be used by the builder
         fn set_config(&mut self, config : StepperConfig) -> Result<(), ActuatorError>;
+
+        /// Setting the overload current for more torque output
+        fn set_overload_curret(&mut self, current : Option<f32>) -> Result<(), ActuatorError>;
     //
 
     // Loads

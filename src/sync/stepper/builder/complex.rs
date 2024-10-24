@@ -240,11 +240,6 @@ impl StepperBuilder for ComplexBuilder {
             self._microsteps = microsteps;
             self.update()
         }
-
-        fn set_overload_curret(&mut self, current : Option<f32>) -> Result<(), ActuatorError> {
-            self._config.overload_current = current;
-            self.update()
-        }
     // 
 
     // RadPerSecond
@@ -428,6 +423,11 @@ impl AdvancedStepperBuilder for ComplexBuilder {
         fn set_config(&mut self, config : StepperConfig) -> Result<(), ActuatorError> {
             self._config = config;
             self.update() 
+        }
+
+        fn set_overload_curret(&mut self, current : Option<f32>) -> Result<(), ActuatorError> {
+            self._config.overload_current = current;
+            self.update()
         }
     // 
 
