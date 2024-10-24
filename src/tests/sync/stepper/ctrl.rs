@@ -17,7 +17,7 @@ impl SimulatedController {
 }
 
 impl StepperController for SimulatedController {
-    fn step(&mut self, time : Time) -> Result<(), ActuatorError> {
+    fn step(&mut self, time : Seconds) -> Result<(), ActuatorError> {
         spin_sleep::sleep(time.into());
         Ok(())
     }

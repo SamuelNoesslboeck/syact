@@ -11,7 +11,6 @@ extern crate alloc;
 
 // Private imports
 use alloc::boxed::Box;
-use alloc::vec::Vec;
 
 use syunit::*;
 
@@ -33,10 +32,6 @@ use syunit::*;
         /// Functions and Structs for taking measurements with a robot for e.g. position calculation
         pub mod meas;
 
-        /// A module for actuator groups, as they are used in e.g. robots
-        pub mod group;
-        pub use group::{ActuatorGroup, SyncActuatorGroup};
-
         /// Component parent relations and their implementation
         pub mod parent;
         pub use parent::{ActuatorParent, RatioActuatorParent};
@@ -50,15 +45,14 @@ use syunit::*;
     pub mod prelude;
 
     /// Module with all the tests required to assure the library funcitons as intended
-    #[cfg(any(test, feature = "testing"))]
+    #[cfg(feature = "testing")]
     pub mod tests;
 
     pub use syunit as units;
-
-    pub use syact_macros::actuator_group;
 // 
 
 // Macros
+    // TODO: Improve docs for this macro
     /// Helper macro for merging multiple Actuator traits into one, useful for group implementation
     #[macro_export]
     macro_rules! merge_actuator_traits {
@@ -151,8 +145,8 @@ use syunit::*;
             /// The velocity given is invalid somehow, depending on the context (see the function description)
             InvalidVelocity(U::Velocity),
             /// The velocity given is too high, depending on the context, see the function description
-            /// 0: [U::Velocity] - The given velocity
-            /// 1: [U::Velocity] - The velocity
+            /// - 0: [U::Velocity] - The given velocity
+            /// - 1: [U::Velocity] - The maximum velocity
             VelocityTooHigh(U::Velocity, U::Velocity),
         //
 
@@ -216,18 +210,20 @@ use syunit::*;
             /// use syact::prelude::*;
             /// 
             /// // Force to act upon the component
-            /// const FORCE : Force = Force(0.2);
+            /// const FORCE : NewtonMeters = NewtonMeters(0.2);
             /// 
-            /// // Create a new gear bearing (implements SyncActuator)
+            /// // Create a new gear bearing (implements AdvancedActuator)
             /// let mut gear = Gear::new(
-            ///     // Stepper Motor as subcomponent (also implements SyncActuator)
+            ///     // Stepper Motor as subcomponent (also implements AdvancedActuator), `default()` function is only available for tests!
             ///     Stepper::default(), 
-            /// 0.5);    // Ratio is set to 0.5, which means for each radian the motor moves, the bearing moves for half a radian
+            ///     // Ratio is set to 0.5, which means for each radian the motor moves, the bearing moves for half a radian
+            ///     0.5
+            /// );  
             /// 
             /// gear.apply_gen_force(FORCE);
             /// 
-            /// assert_eq!(Position(2.0), gear.abs_pos_for_child(Position(1.0)));
-            /// assert_eq!(Force(0.1), gear.child().force_gen());     // Forces get smaller for smaller gears
+            /// assert_eq!(PositionRad(2.0), gear.pos_for_child(PositionRad(1.0)));
+            /// assert_eq!(NewtonMeters(0.1), gear.child().force_gen());     // Resistance gets smaller for this gear ratio
             /// ```
             fn apply_gen_force(&mut self, force : U::Force) -> Result<(), ActuatorError<U>>;
 
@@ -236,7 +232,7 @@ use syunit::*;
             fn apply_dir_force(&mut self, force : U::Force) -> Result<(), ActuatorError<U>>;
 
             // Inertia
-            /// Returns the inertia applied to the component
+            /// Returns the inertia applied to the component, see [AdvancedActuator::apply_inertia]
             fn inertia(&self) -> U::Inertia;
             
             /// Apply a load inertia to the component, slowing down movements
@@ -249,19 +245,19 @@ use syunit::*;
             /// use syact::prelude::*;
             /// 
             /// // Inertia to act upon the component
-            /// const INERTIA : Inertia = Inertia(4.0);
+            /// const INERTIA : KgMeter2 = KgMeter2(4.0);
             /// 
-            /// // Create a new gear bearing (implements SyncActuator)
+            /// // Create a new gear bearing (implements AdvancedActuator)
             /// let mut gear = Gear::new(
-            ///     // Stepper Motor as subcomponent (also implements SyncActuator)
+            ///     // Stepper Motor as subcomponent (also implements AdvancedActuator), `default()` function is only available for tests!
             ///     Stepper::default(), 
             /// 0.5);    // Ratio is set to 0.5, which means for each radian the motor moves, the bearing moves for half a radian
             /// 
             /// // Applies the inertia to the gearbearing component
             /// gear.apply_inertia(INERTIA);
             /// 
-            /// assert_eq!(Position(2.0), gear.abs_pos_for_child(Position(1.0)));
-            /// assert_eq!(Inertia(1.0), gear.child().inertia());
+            /// assert_eq!(PositionRad(2.0), gear.pos_for_child(PositionRad(1.0)));
+            /// assert_eq!(KgMeter2(1.0), gear.child().inertia());          // Inertias get smaller with the ratio^2 !
             /// ```
             fn apply_inertia(&mut self, inertia : U::Inertia) -> Result<(), ActuatorError<U>> ;
         // 
@@ -271,20 +267,5 @@ use syunit::*;
     pub trait DefinedActuator<U : UnitSet = Rotary> {
         /// The time required to perform a certain PTP (Point-To-Point movement)
         fn ptp_time_for_distance(&self, abs_pos_0 : U::Position, abs_pos_t : U::Position) -> U::Time;
-    }
-
-    /// More calculation intense, no additional memory
-    pub fn ptp_speed_factors<S : SyncActuatorGroup<T, U, C>, T : SyncActuator<U> + DefinedActuator<U> + ?Sized + 'static, U : UnitSet, const C : usize>
-        (group : &mut S, abs_pos_0 : [U::Position; C], abs_pos_t : [U::Position; C], speed : Factor) -> [Factor; C] 
-    {
-        let times = group.for_each(|comp, index| {
-            comp.ptp_time_for_distance(abs_pos_0[index], abs_pos_t[index])
-        });
-
-        // Safe to unwrap, cause iterator is not empty
-        let time_max = *times.iter().reduce(U::Time::max_ref).unwrap();
-
-        times.iter().map(|time| Factor::try_new(*time / time_max).unwrap_or(Factor::MAX) * speed)
-            .collect::<Vec<Factor>>().try_into().unwrap()
     }
 // 

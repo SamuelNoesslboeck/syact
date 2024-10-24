@@ -1,3 +1,4 @@
+#![doc = include_str!("../README.md")]
 #![crate_name = "syact_std"]
 
 use embedded_hal::digital::{OutputPin, PinState};
@@ -33,7 +34,7 @@ impl<DIR : OutputPin, STEP : OutputPin> StepperController for GenericPWMControll
         self.pin_dir.set_state(PinState::from(dir.as_bool())).map_err(|_| ActuatorError::IOError)
     }
 
-    fn step(&mut self, time : Time) -> Result<(), ActuatorError> {
+    fn step(&mut self, time : Seconds) -> Result<(), ActuatorError> {
         self.pin_step.set_high().map_err(|_| ActuatorError::IOError)?;
         spin_sleep::sleep((time / 2.0).into());
         self.pin_step.set_low().map_err(|_| ActuatorError::IOError)?;

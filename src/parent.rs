@@ -44,8 +44,11 @@ pub trait ActuatorParent {
         <Self::Output as UnitSet>::Jolt : Mul<Self::Ratio, Output = <Self::Input as UnitSet>::Jolt>,
         <Self::Output as UnitSet>::Force : Div<Self::Ratio, Output = <Self::Input as UnitSet>::Force>
     {
+        /// The input [UnitSet] of the parent component
         type Input : UnitSet;
+        /// The output [UnitSet] of the child component
         type Output : UnitSet;
+        /// The ratio type that describes the relationship between child and parent (hopefully a good one), see [RatioActuatorParent::ratio] for more info
         type Ratio : Clone + Copy + From<f32> + Into<f32>;
 
         /// The linear ratio that defines the relation between the child and the parent component
@@ -56,33 +59,39 @@ pub trait ActuatorParent {
         fn ratio(&self) -> Self::Ratio;
 
         // Automatic implementations
+            /// Convert a parent [UnitSet::Position] into a child one
             #[inline]
             fn pos_for_child(&self, parent_abs_pos : <Self::Input as UnitSet>::Position) -> <Self::Output as UnitSet>::Position {
                 parent_abs_pos / self.ratio()
             }
 
+            /// Convert a child [UnitSet::Position] into a parent one
             #[inline]
             fn pos_for_parent(&self, child_abs_pos : <Self::Output as UnitSet>::Position) -> <Self::Input as UnitSet>::Position {
                 child_abs_pos * self.ratio()
             }
 
+            /// Convert a parent [UnitSet::Distance] into a child one
             #[inline]
             fn dist_for_child(&self, parent_rel_dist : <Self::Input as UnitSet>::Distance) -> <Self::Output as UnitSet>::Distance {
                 // Workaround, as Length / Length => Radians which have no unit :')
                 <Self::Output as UnitSet>::Distance::from(parent_rel_dist.into() / self.ratio().into())
             }
 
+            /// Convert a child [UnitSet::Distance] into a parent one
             #[inline]
             fn dist_for_parent(&self, child_rel_dist : <Self::Output as UnitSet>::Distance) -> <Self::Input as UnitSet>::Distance {
                 child_rel_dist * self.ratio()
             }
 
             // Velocity
+                /// Convert a parent [UnitSet::Velocity] into a child one
                 #[inline]
                 fn velocity_for_child(&self, parent_velocity : <Self::Input as UnitSet>::Velocity) -> <Self::Output as UnitSet>::Velocity {
                     parent_velocity / self.ratio()
                 }
 
+                /// Convert a child [UnitSet::Velocity] into a parent one
                 #[inline]
                 fn velocity_for_parent(&self, child_velocity : <Self::Output as UnitSet>::Velocity) -> <Self::Input as UnitSet>::Velocity {
                     child_velocity * self.ratio()
@@ -90,11 +99,13 @@ pub trait ActuatorParent {
             // 
             
             // Acceleration
+                /// Convert a parent [UnitSet::Acceleration] into a child one
                 #[inline]
                 fn acceleration_for_child(&self, parent_alpha : <Self::Input as UnitSet>::Acceleration) -> <Self::Output as UnitSet>::Acceleration {
                     parent_alpha / self.ratio()
                 }
 
+                /// Convert a child [UnitSet::Acceleration] into a parent one
                 #[inline]
                 fn acceleration_for_parent(&self, child_alpha : <Self::Output as UnitSet>::Acceleration) -> <Self::Input as UnitSet>::Acceleration {
                     child_alpha * self.ratio()
@@ -102,32 +113,38 @@ pub trait ActuatorParent {
             //
             
             // Jolt    
+                /// Convert a parent [UnitSet::Jolt] into a child one
                 #[inline]
                 fn jolt_for_child(&self, parent_jolt : <Self::Input as UnitSet>::Jolt) -> <Self::Output as UnitSet>::Jolt {
                     parent_jolt / self.ratio()
                 }
 
+                /// Convert a child [UnitSet::Jolt] into a parent one
                 #[inline]
                 fn jolt_for_parent(&self, child_jolt : <Self::Output as UnitSet>::Jolt) -> <Self::Input as UnitSet>::Jolt {
                     child_jolt * self.ratio()
                 }
             //
-
+            
+            /// Convert a parent [UnitSet::Force] into a child one
             #[inline]
             fn force_for_child(&self, parent_force : <Self::Input as UnitSet>::Force) -> <Self::Output as UnitSet>::Force {
                 parent_force * self.ratio()
             }
 
+            /// Convert a child [UnitSet::Force] into a parent one
             #[inline]
             fn force_for_parent(&self, child_force : <Self::Output as UnitSet>::Force) -> <Self::Input as UnitSet>::Force {
                 child_force / self.ratio()
             }
 
+            /// Convert a parent [UnitSet::Inertia] into a child one
             #[inline]
             fn inertia_for_child(&self, parent_inertia : <Self::Input as UnitSet>::Inertia) -> <Self::Output as UnitSet>::Inertia {
                 <Self::Input as UnitSet>::Inertia::reduce(parent_inertia, self.ratio())
             }
 
+            /// Convert a child [UnitSet::Inertia] into a parent one
             #[inline]
             fn inertia_for_parent(&self, child_inertia : <Self::Output as UnitSet>::Inertia) -> <Self::Input as UnitSet>::Inertia {
                 <Self::Input as UnitSet>::Inertia::extend(child_inertia, self.ratio())
@@ -135,14 +152,27 @@ pub trait ActuatorParent {
         // 
 
         // Error types
+            /// Convert a child [ActuatorError] into a parent one 
             fn error_for_parent(&self, error : ActuatorError<Self::Output>) -> ActuatorError<Self::Input> {
                 match error {
-                    ActuatorError::InvaldRelativeDistance(_) => todo!(),
-                    ActuatorError::InvalidVelocity(_) => todo!(),
-                    ActuatorError::VelocityTooHigh(_, _) => todo!(),
-                    ActuatorError::InvalidAcceleration(_) => todo!(),
-                    ActuatorError::InvalidJolt(_) => todo!(),
-                    ActuatorError::InvalidTime(time) => ActuatorError::InvalidTime(<Self::Input as UnitSet>::Time::from(time)),
+                    // Convert distance
+                    ActuatorError::InvaldRelativeDistance(child_dist) => 
+                        ActuatorError::InvaldRelativeDistance(self.dist_for_parent(child_dist)),
+                    // Convert velocity
+                    ActuatorError::InvalidVelocity(child_vel) =>
+                        ActuatorError::InvalidVelocity(self.velocity_for_parent(child_vel)),
+                    ActuatorError::VelocityTooHigh(given_child_vel, max_child_vel) => 
+                        ActuatorError::VelocityTooHigh(self.velocity_for_parent(given_child_vel), self.velocity_for_parent(max_child_vel)),
+                    // Convert acceleration
+                    ActuatorError::InvalidAcceleration(child_accel) => 
+                        ActuatorError::InvalidAcceleration(self.acceleration_for_parent(child_accel)),
+                    // Convert jolt
+                    ActuatorError::InvalidJolt(child_jolt) => 
+                        ActuatorError::InvalidJolt(self.jolt_for_parent(child_jolt)),
+                        
+                    // Convert Time
+                    ActuatorError::InvalidTime(time) => 
+                        ActuatorError::InvalidTime(<Self::Input as UnitSet>::Time::from(time)),
 
                     ActuatorError::IOError => ActuatorError::IOError,
 

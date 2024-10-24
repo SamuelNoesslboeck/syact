@@ -237,7 +237,7 @@ impl StepperConst {
     /// 
     /// let data = StepperConst::MOT_17HE15_1504S;
     /// 
-    /// assert!((data.velocity (Time(1.0/200.0), MicroSteps::default()) - U::Velocity(2.0 * PI)).abs() < U::Velocity(0.001));     
+    /// assert!((data.velocity(Seconds(1.0/200.0), MicroSteps::default()) - RadPerSecond(2.0 * PI)).abs() < RadPerSecond(0.001));     
     /// ```
     #[inline(always)]
     pub fn velocity(&self, step_time : Seconds, microsteps : MicroSteps) -> RadPerSecond {

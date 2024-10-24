@@ -9,19 +9,33 @@ use syunit::*;
 /// A linear axis
 #[derive(Debug, Serialize, Deserialize)]
 pub struct LinearAxis<A : SyncActuator> {
-    /// The child component driving the linear axis
+    /// The child actuator driving the linear axis
     pub actuator : A,
-
-    pub radius : Millimeters
+    /// The effective radius of the actuator, meaning the radius where
+    /// 
+    /// ```txt
+    /// extension = radius * radians 
+    /// ```
+    /// 
+    /// is true.
+    pub effective_radius : Millimeters
 }
 
 impl<A : SyncActuator> LinearAxis<A> {
-    /// Create a new linear axis instance
-    pub fn new(actuator : A, radius : Millimeters) -> Self {
+    /// Create a new linear axis driven by a tooth belt, with the driving gear having the `radius` given in [Millimeters]
+    pub fn new_belt_axis(actuator : A, radius : Millimeters) -> Self {
         return LinearAxis {
             actuator,
-            radius
+            effective_radius: radius
         };
+    }
+
+    /// Create a new linear axis driven by a spindle with the given `pitch` in [Millimeters]
+    pub fn new_spindle_axis(actuator : A, pitch : Millimeters) -> Self {
+        return LinearAxis {
+            actuator,
+            effective_radius: pitch / 2.0 / core::f32::consts::PI   // Convert pitch to effective radius
+        }
     }
 }
 
@@ -44,7 +58,7 @@ impl<A : SyncActuator> LinearAxis<A> {
         type Ratio = Millimeters;
 
         fn ratio(&self) -> Self::Ratio {
-            self.radius
+            self.effective_radius
         }
     }
 // 

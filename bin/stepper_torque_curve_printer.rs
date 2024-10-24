@@ -1,3 +1,6 @@
+use core::f32::consts::PI;
+
+use syunit::prelude::*;
 use syact::prelude::*;
 
 pub fn prompt<T : core::str::FromStr + Copy>(msg : &str, default_opt : Option<T>) -> T {
@@ -41,7 +44,7 @@ fn main() {
 
         number_steps: prompt("Number of steps (1 - default: 200): ", Some(200)),
         torque_stall: prompt("Stall torque (Nm): ", None),
-        inertia_motor: Inertia(1.0)  // Not required
+        inertia_motor: KgMeter2(1.0)  // Not required for calculations
     };
 
     let config = StepperConfig {
@@ -61,15 +64,15 @@ fn main() {
     // Print from 0 - 80 
     for i in 0 .. 5 {
         let rpm = i as f32 * 20.0;
-        let torque = consts.torque_dyn(U::Velocity::from_rpm(rpm), &config);
+        let torque = consts.torque_dyn(RadPerSecond(rpm / 60.0 * 2.0 * PI), &config);
 
-        println!("   {}\t#   {}", rpm, torque);
+        println!("  {}\t#  {}", rpm, torque);
     }
 
     // Print from 100 - 900
     for i in 1 .. 10 {
         let rpm = i as f32 * 100.0;
-        let torque = consts.torque_dyn(U::Velocity::from_rpm(rpm), &config);
+        let torque = consts.torque_dyn(RadPerSecond(rpm / 60.0 * 2.0 * PI), &config);
 
         println!("   {}\t#   {}", rpm, torque);
     }
@@ -77,7 +80,7 @@ fn main() {
     // Print 1000 & 2000
     for i in 1 .. 3 {
         let rpm = i as f32 * 1000.0;
-        let torque = consts.torque_dyn(U::Velocity::from_rpm(rpm), &config);
+        let torque = consts.torque_dyn(RadPerSecond(rpm / 60.0 * 2.0 * PI), &config);
 
         println!("   {}\t#   {}", rpm, torque);
     }

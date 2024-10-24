@@ -45,52 +45,65 @@ use crate::ActuatorError;
     /// the stepper motor component defined as it's parent component. (See [Gear])
     pub trait SyncActuator<U : UnitSet = Rotary> {
         // Position & U::Velocity
-            /// Returns the **absolute** position of the component.
+            /// Returns the **absolute** position of the component in the components [Position unit](UnitSet::Position).
             /// 
             /// ```rust
             /// use syact::prelude::*;
             /// 
             /// // Position of components
-            /// const POS : Position = Position(10.0);
+            /// const POS : PositionMM = PositionMM(10.0);
             /// 
-            /// // Create a new cylinder (implements SyncActuator)
-            /// let mut cylinder = LinearAxis::new(
-            ///     // Stepper Motor as subcomponent (also implements SyncActuator)
+            /// // Create a new linear_axis (implements SyncActuator)
+            /// let mut linear_axis = LinearAxis::new_belt_axis(
+            ///     // Stepper Motor as subcomponent (also implements SyncActuator), `default()` function only possible in testing!
             ///     Stepper::default(), 
-            /// 0.5);    // Ratio is set to 0.5, which means for each radian the motor moves, the cylinder moves for 0.5 mm
+            ///     Millimeters(0.5)    // The radius is set to 0.5, which means for each radian the motor moves, the linear_axis moves for 0.5 mm
+            /// );    
             /// 
-            /// cylinder.overwrite_abs_pos(POS);
+            /// linear_axis.overwrite_abs_pos(POS);
             /// 
-            /// assert!((cylinder.pos() - POS).abs() < U::Distance(0.05));      // Check with small tolerance
+            /// assert!((linear_axis.pos() - POS).abs() < Millimeters(0.05));      // Check with small tolerance requred for stepper motors
             /// ```
             fn pos(&self) -> U::Position;
 
             /// Overwrite the current **absolute** position of the component without triggering actual movements. 
             /// 
+            /// ### Stepper tolerance
+            /// 
             /// Be aware that only full steps can be written in distance, meaning that for position comparision a 
-            /// small tolerance has to be considered, as the value written won't be the exact pos value given.
+            /// small tolerance has to be considered, as the value written won't be the exact position value given.
             /// 
             /// ```rust
             /// use syact::prelude::*;
             /// 
             /// // Position of components
-            /// const POS : Position = Position(10.0);
+            /// const POS : PositionMM = PositionMM(10.0);
             /// 
-            /// // Create a new cylinder (implements SyncActuator)
-            /// let mut cylinder = LinearAxis::new(
-            ///     // Stepper Motor as subcomponent (also implements SyncActuator)
+            /// // Create a new linear_axis (implements SyncActuator)
+            /// let mut linear_axis = LinearAxis::new_belt_axis(
+            ///     // Stepper Motor as subcomponent (also implements SyncActuator), `default()` function only possible in testing!
             ///     Stepper::default(), 
-            /// 0.5);    // Ratio is set to 0.5, which means for each radian the motor moves, the cylinder moves for 0.5 mm
+            ///     Millimeters(0.5)    // The radius is set to 0.5, which means for each radian the motor moves, the linear_axis moves for 0.5 mm
+            /// );    
             /// 
-            /// cylinder.overwrite_abs_pos(POS);
+            /// linear_axis.overwrite_abs_pos(POS);
             /// 
-            /// assert!((cylinder.pos() - POS).abs() < U::Distance(0.05));      // Check with small tolerance
+            /// assert!((linear_axis.pos() - POS).abs() < Millimeters(0.05));      // Check with small tolerance requred for stepper motors
             /// ```
             fn overwrite_abs_pos(&mut self, pos : U::Position);
         //
 
         // U::Velocity max
-            /// Maximum velocity allowed by the user if specified
+            /// Maximum velocity allowed by the user if specified, otherwise will return `None`
+            /// 
+            /// ```rust
+            /// use syact::prelude::*;
+            /// 
+            /// // Create a new stepper motor, `default()` only available in testing! 
+            /// let mut stepper = Stepper::default();   
+            /// 
+            /// assert_eq!(stepper.velocity_max(), None);
+            /// ```
             fn velocity_max(&self) -> Option<U::Velocity>;
 
             /// Set the maximum allowed [U::Velocity]
@@ -149,10 +162,10 @@ use crate::ActuatorError;
             /// use syact::prelude::*;
             /// 
             /// // Limits
-            /// const LIM_MAX : Position = Position(1.0);
-            /// const LIM_MIN : Position = Position(-2.0);
+            /// const LIM_MAX : PositionRad = PositionRad(1.0);
+            /// const LIM_MIN : PositionRad = PositionRad(-2.0);
             /// 
-            /// const LIM_MIN_LOWER : Position = Position(-3.0);
+            /// const LIM_MIN_LOWER : PositionRad = PositionRad(-3.0);
             /// 
             /// // Create a new gear bearing (implements SyncActuator)
             /// let mut gear = Gear::new(
@@ -162,21 +175,21 @@ use crate::ActuatorError;
             /// 
             /// gear.set_pos_limits(Some(LIM_MIN), Some(LIM_MAX));
             /// 
-            /// assert_eq!(gear.resolve_pos_limits_for_abs_pos(Position(1.5)), U::Distance(0.5));     // Over the maximum
-            /// assert_eq!(gear.resolve_pos_limits_for_abs_pos(Position(0.5)), U::Distance::ZERO);    // In range
-            /// assert_eq!(gear.resolve_pos_limits_for_abs_pos(Position(-4.0)), U::Distance(-2.0));   // Under the minimum
+            /// assert_eq!(gear.resolve_pos_limits_for_abs_pos(PositionRad(1.5)), Radians(0.5));     // Over the maximum
+            /// assert_eq!(gear.resolve_pos_limits_for_abs_pos(PositionRad(0.5)), Radians::ZERO);    // In range
+            /// assert_eq!(gear.resolve_pos_limits_for_abs_pos(PositionRad(-4.0)), Radians(-2.0));   // Under the minimum
             /// 
             /// gear.set_pos_limits(Some(LIM_MIN_LOWER), None);                // Overwriting only `min` limit
             /// 
-            /// assert_eq!(gear.resolve_pos_limits_for_abs_pos(Position(1.5)), U::Distance(0.5));     // Over the maximum
-            /// assert_eq!(gear.resolve_pos_limits_for_abs_pos(Position(0.5)), U::Distance::ZERO);    // In range
-            /// assert_eq!(gear.resolve_pos_limits_for_abs_pos(Position(-4.0)), U::Distance(-1.0));   // Under the minimum, but less
+            /// assert_eq!(gear.resolve_pos_limits_for_abs_pos(PositionRad(1.5)), Radians(0.5));     // Over the maximum
+            /// assert_eq!(gear.resolve_pos_limits_for_abs_pos(PositionRad(0.5)), Radians::ZERO);    // In range
+            /// assert_eq!(gear.resolve_pos_limits_for_abs_pos(PositionRad(-4.0)), Radians(-1.0));   // Under the minimum, but less
             /// 
             /// gear.overwrite_pos_limits(Some(LIM_MIN_LOWER), None);              // Overwriting only both limits with [overwrite_pos_limits()]
             /// 
-            /// assert_eq!(gear.resolve_pos_limits_for_abs_pos(Position(1.5)), U::Distance::ZERO);    // In range, as the `max` limit has been deleted
-            /// assert_eq!(gear.resolve_pos_limits_for_abs_pos(Position(0.5)), U::Distance::ZERO);    // In range
-            /// assert_eq!(gear.resolve_pos_limits_for_abs_pos(Position(-4.0)), U::Distance(-1.0));   // Under the minimum, but less
+            /// assert_eq!(gear.resolve_pos_limits_for_abs_pos(PositionRad(1.5)), Radians::ZERO);    // In range, as the `max` limit has been deleted
+            /// assert_eq!(gear.resolve_pos_limits_for_abs_pos(PositionRad(0.5)), Radians::ZERO);    // In range
+            /// assert_eq!(gear.resolve_pos_limits_for_abs_pos(PositionRad(-4.0)), Radians(-1.0));   // Under the minimum, but less
             /// ```
             fn resolve_pos_limits_for_abs_pos(&self, pos : U::Position) -> U::Distance;
 
@@ -195,10 +208,10 @@ use crate::ActuatorError;
             /// use syact::prelude::*;
             /// 
             /// // Limits
-            /// const LIM_MAX : Position = Position(1.0);
-            /// const LIM_MIN : Position = Position(-2.0);
+            /// const LIM_MAX : PositionRad = PositionRad(1.0);
+            /// const LIM_MIN : PositionRad = PositionRad(-2.0);
             /// 
-            /// const LIM_MIN_LOWER : Position = Position(-3.0);
+            /// const LIM_MIN_LOWER : PositionRad = PositionRad(-3.0);
             /// 
             /// // Create a new gear bearing (implements SyncActuator)
             /// let mut gear = Gear::new(
@@ -208,21 +221,21 @@ use crate::ActuatorError;
             /// 
             /// gear.set_pos_limits(Some(LIM_MIN), Some(LIM_MAX));
             /// 
-            /// assert_eq!(gear.resolve_pos_limits_for_abs_pos(Position(1.5)), U::Distance(0.5));     // Over the maximum
-            /// assert_eq!(gear.resolve_pos_limits_for_abs_pos(Position(0.5)), U::Distance::ZERO);    // In range
-            /// assert_eq!(gear.resolve_pos_limits_for_abs_pos(Position(-4.0)), U::Distance(-2.0));   // Under the minimum
+            /// assert_eq!(gear.resolve_pos_limits_for_abs_pos(PositionRad(1.5)), Radians(0.5));     // Over the maximum
+            /// assert_eq!(gear.resolve_pos_limits_for_abs_pos(PositionRad(0.5)), Radians::ZERO);    // In range
+            /// assert_eq!(gear.resolve_pos_limits_for_abs_pos(PositionRad(-4.0)), Radians(-2.0));   // Under the minimum
             /// 
             /// gear.set_pos_limits(Some(LIM_MIN_LOWER), None);                // Overwriting only `min` limit
             /// 
-            /// assert_eq!(gear.resolve_pos_limits_for_abs_pos(Position(1.5)), U::Distance(0.5));     // Over the maximum
-            /// assert_eq!(gear.resolve_pos_limits_for_abs_pos(Position(0.5)), U::Distance::ZERO);    // In range
-            /// assert_eq!(gear.resolve_pos_limits_for_abs_pos(Position(-4.0)), U::Distance(-1.0));   // Under the minimum, but less
+            /// assert_eq!(gear.resolve_pos_limits_for_abs_pos(PositionRad(1.5)), Radians(0.5));     // Over the maximum
+            /// assert_eq!(gear.resolve_pos_limits_for_abs_pos(PositionRad(0.5)), Radians::ZERO);    // In range
+            /// assert_eq!(gear.resolve_pos_limits_for_abs_pos(PositionRad(-4.0)), Radians(-1.0));   // Under the minimum, but less
             /// 
             /// gear.overwrite_pos_limits(Some(LIM_MIN_LOWER), None);              // Overwriting only both limits with [overwrite_pos_limits()]
             /// 
-            /// assert_eq!(gear.resolve_pos_limits_for_abs_pos(Position(1.5)), U::Distance::ZERO);    // In range, as the `max` limit has been deleted
-            /// assert_eq!(gear.resolve_pos_limits_for_abs_pos(Position(0.5)), U::Distance::ZERO);    // In range
-            /// assert_eq!(gear.resolve_pos_limits_for_abs_pos(Position(-4.0)), U::Distance(-1.0));   // Under the minimum, but less
+            /// assert_eq!(gear.resolve_pos_limits_for_abs_pos(PositionRad(1.5)), Radians::ZERO);    // In range, as the `max` limit has been deleted
+            /// assert_eq!(gear.resolve_pos_limits_for_abs_pos(PositionRad(0.5)), Radians::ZERO);    // In range
+            /// assert_eq!(gear.resolve_pos_limits_for_abs_pos(PositionRad(-4.0)), Radians(-1.0));   // Under the minimum, but less
             /// ```
             fn set_pos_limits(&mut self, min : Option<U::Position>, max : Option<U::Position>);
 
@@ -235,10 +248,10 @@ use crate::ActuatorError;
             /// use syact::prelude::*;
             /// 
             /// // Limits
-            /// const LIM_MAX : Position = Position(1.0);
-            /// const LIM_MIN : Position = Position(-2.0);
+            /// const LIM_MAX : PositionRad = PositionRad(1.0);
+            /// const LIM_MIN : PositionRad = PositionRad(-2.0);
             /// 
-            /// const LIM_MIN_LOWER : Position = Position(-3.0);
+            /// const LIM_MIN_LOWER : PositionRad = PositionRad(-3.0);
             /// 
             /// // Create a new gear bearing (implements SyncActuator)
             /// let mut gear = Gear::new(
@@ -248,21 +261,21 @@ use crate::ActuatorError;
             /// 
             /// gear.set_pos_limits(Some(LIM_MIN), Some(LIM_MAX));
             /// 
-            /// assert_eq!(gear.resolve_pos_limits_for_abs_pos(Position(1.5)), U::Distance(0.5));     // Over the maximum
-            /// assert_eq!(gear.resolve_pos_limits_for_abs_pos(Position(0.5)), U::Distance::ZERO);    // In range
-            /// assert_eq!(gear.resolve_pos_limits_for_abs_pos(Position(-4.0)), U::Distance(-2.0));   // Under the minimum
+            /// assert_eq!(gear.resolve_pos_limits_for_abs_pos(PositionRad(1.5)), Radians(0.5));     // Over the maximum
+            /// assert_eq!(gear.resolve_pos_limits_for_abs_pos(PositionRad(0.5)), Radians::ZERO);    // In range
+            /// assert_eq!(gear.resolve_pos_limits_for_abs_pos(PositionRad(-4.0)), Radians(-2.0));   // Under the minimum
             /// 
             /// gear.set_pos_limits(Some(LIM_MIN_LOWER), None);                // Overwriting only `min` limit
             /// 
-            /// assert_eq!(gear.resolve_pos_limits_for_abs_pos(Position(1.5)), U::Distance(0.5));     // Over the maximum
-            /// assert_eq!(gear.resolve_pos_limits_for_abs_pos(Position(0.5)), U::Distance::ZERO);    // In range
-            /// assert_eq!(gear.resolve_pos_limits_for_abs_pos(Position(-4.0)), U::Distance(-1.0));   // Under the minimum, but less
+            /// assert_eq!(gear.resolve_pos_limits_for_abs_pos(PositionRad(1.5)), Radians(0.5));     // Over the maximum
+            /// assert_eq!(gear.resolve_pos_limits_for_abs_pos(PositionRad(0.5)), Radians::ZERO);    // In range
+            /// assert_eq!(gear.resolve_pos_limits_for_abs_pos(PositionRad(-4.0)), Radians(-1.0));   // Under the minimum, but less
             /// 
             /// gear.overwrite_pos_limits(Some(LIM_MIN_LOWER), None);              // Overwriting only both limits with [overwrite_pos_limits()]
             /// 
-            /// assert_eq!(gear.resolve_pos_limits_for_abs_pos(Position(1.5)), U::Distance::ZERO);    // In range, as the `max` limit has been deleted
-            /// assert_eq!(gear.resolve_pos_limits_for_abs_pos(Position(0.5)), U::Distance::ZERO);    // In range
-            /// assert_eq!(gear.resolve_pos_limits_for_abs_pos(Position(-4.0)), U::Distance(-1.0));   // Under the minimum, but less
+            /// assert_eq!(gear.resolve_pos_limits_for_abs_pos(PositionRad(1.5)), Radians::ZERO);    // In range, as the `max` limit has been deleted
+            /// assert_eq!(gear.resolve_pos_limits_for_abs_pos(PositionRad(0.5)), Radians::ZERO);    // In range
+            /// assert_eq!(gear.resolve_pos_limits_for_abs_pos(PositionRad(-4.0)), Radians(-1.0));   // Under the minimum, but less
             /// ```
             fn overwrite_pos_limits(&mut self, min : Option<U::Position>, max : Option<U::Position>);
         // 

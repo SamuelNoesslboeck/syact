@@ -42,14 +42,14 @@ fn stepper_move_fixed_dist() {
 
         std::thread::scope(|s| {
             let handle = s.spawn(||   
-                stepper.drive_rel_blocking(U::Distance(-10.0), Factor::MAX)
+                stepper.drive_rel_blocking(Radians(-10.0), Factor::MAX)
             );
 
             handle.join().unwrap().unwrap();
         });
 
-        let elapsed_time = Time(inst.elapsed().as_secs_f32());
-        let calc_time = stepper.ptp_time_for_distance(Position(0.0), Position(10.0));
+        let elapsed_time = Seconds(inst.elapsed().as_secs_f32());
+        let calc_time = stepper.ptp_time_for_distance(PositionRad(0.0), PositionRad(10.0));
 
         assert!(((elapsed_time / calc_time) - 1.0).abs() < PARAM_TIME_ACCURACY, "Time difference too large!\n -> Elapsed Time: {}\n -> Calculated time: {}", elapsed_time, calc_time);
     }
@@ -60,8 +60,8 @@ fn abs_pos_distance() {
     let mut stepper = Stepper::default();
 
     dbg!(stepper.pos());
-    stepper.drive_abs_blocking(Position(30.0), Factor::MAX).unwrap();
+    stepper.drive_abs_blocking(PositionRad(30.0), Factor::MAX).unwrap();
     dbg!(stepper.pos());
-    stepper.drive_abs_blocking(Position(10.0), Factor::MAX).unwrap();
+    stepper.drive_abs_blocking(PositionRad(10.0), Factor::MAX).unwrap();
     dbg!(stepper.pos());
 }

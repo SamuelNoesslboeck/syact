@@ -9,7 +9,7 @@ license-file = "LICENSE"
 keywords = [ "framework", "robotics", "iot", "raspberry-pi" ]
 
 [workspace]
-members = [ "syact_macros", "syact_std" ]
+members = [ "syact_std" ]
 
 [lib]
 name = "syact"
@@ -18,21 +18,16 @@ path = "src/lib.rs"
 [dependencies]
 atomic_float = "1.1.0"
 embedded-hal = "1.0.0"
-serde = { version = "1.0.213", features = [ "derive" ], optional = true }
+serde = { version = "1.0.213", features = [ "derive" ], optional = true }   # "serde" feature
+spin_sleep = { version = "1.2.1", optional = true }                         # Only while testing!
 
 sykin = "0.1.0"
 syunit = "0.4.0"
 
-# Subcrates
-syact_macros = { path = "syact_macros" }
-
-[dev-dependencies]
-spin_sleep = "1.2.1"
-
 [features]
 default = [ "serde" ]
 serde = [ "dep:serde" ]
-testing = [ ]
+testing = [ "dep:spin_sleep" ]
 
 # Binaries
 [[bin]]
