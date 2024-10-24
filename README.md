@@ -8,6 +8,8 @@
 [Crates.io version]: https://img.shields.io/crates/v/syact.svg?style=flat-square
 [syact: crates.io]: https://crates.io/crates/syact
 
+> DOCS IN PROGRESS
+
 This library defines bindings 
 
 ## In Action
