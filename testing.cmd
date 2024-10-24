@@ -1,9 +1,5 @@
-cargo test --features testing
-
-cd syact_macros
-cargo test
-cd ..
+cargo test --verbose --features testing
 
 cd syact_std
-cargo test
+cargo test --verbose
 cd ..
