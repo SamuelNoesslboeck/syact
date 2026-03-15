@@ -1,10 +1,6 @@
 #![doc = include_str!("../README.md")]
 #![crate_name = "syact"]
-#![cfg_attr(not(any(test, feature = "testing")), no_std)]
-
-// Rules
-#![deny(missing_docs)]
-#![cfg_attr(feature = "testing", allow(unused))]
+#![no_std]
 
 // Modules
 extern crate alloc;
@@ -43,10 +39,6 @@ use syunit::*;
 
     /// Easy import of the functionalities
     pub mod prelude;
-
-    /// Module with all the tests required to assure the library funcitons as intended
-    #[cfg(feature = "testing")]
-    pub mod tests;
 
     pub use syunit as units;
 // 

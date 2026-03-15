@@ -15,7 +15,3 @@ pub use crate::sync::stepper::*;
 // Access to most units
 pub use syunit::prelude::*;
 
-// Testing
-#[cfg(feature="testing")]
-pub use crate::tests::{ComplexStepper, Stepper};
-

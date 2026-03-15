@@ -1,15 +1,12 @@
 [package]
 name = "syact"
 authors = [ "Samuel Nösslböck <samuel.noesslboeck@gmail.com>" ]
-version = "0.14.0"
-description = "A library to control motors (mainly stepper motors), define actuators and their interactions with each other"
-edition = "2021"
+version = "0.15.0"
+description = "A library to control motors, define actuators and their interactions with each other"
+edition = "2024"
 repository = "https://github.com/SamuelNoesslboeck/syact"
 license-file = "LICENSE"
-keywords = [ "framework", "robotics", "iot", "raspberry-pi" ]
-
-[workspace]
-members = [ "syact_std" ]
+keywords = [ "framework", "robotics" ]
 
 [lib]
 name = "syact"
@@ -18,8 +15,7 @@ path = "src/lib.rs"
 [dependencies]
 atomic_float = "1.1.0"
 embedded-hal = "1.0.0"
-serde = { version = "1.0.213", features = [ "derive" ], optional = true }   # "serde" feature
-spin_sleep = { version = "1.2.1", optional = true }                         # Only while testing!
+serde = { version = "*", features = [ "derive" ], optional = true }
 
 sykin = "0.1.0"
 syunit = "0.4.0"
@@ -27,16 +23,3 @@ syunit = "0.4.0"
 [features]
 default = [ "serde" ]
 serde = [ "dep:serde" ]
-testing = [ "dep:spin_sleep" ]
-
-# Binaries
-[[bin]]
-name = "stepper_torque_curve_printer"
-path = "bin/stepper_torque_curve_printer.rs"
-
-# Builder
-  [[bin]]
-  name ="builder-start_stop_builder_printer"
-  path = "bin/builder/start_stop_builder_printer.rs"
-  required-features = [ "testing" ]
-#

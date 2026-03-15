@@ -46,7 +46,8 @@ use crate::{ActuatorError, InterruptReason, Interruptible, SyncActuatorBlocking}
 // 
 
 /// Collection of parameters required for a simple measurement
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct SimpleMeasParams<U : UnitSet> {
     /// The pos value to set the component to if the measurement was successful
     pub overwrite_abs_pos : U::Position,
