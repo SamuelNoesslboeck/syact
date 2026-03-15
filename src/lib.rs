@@ -7,7 +7,6 @@ extern crate alloc;
 
 // Private imports
 use alloc::boxed::Box;
-
 use syunit::*;
 
 // ####################
@@ -15,15 +14,14 @@ use syunit::*;
 // ####################
     // Core
         /// Everything about actuators that work asynchronously
-        pub mod asyn;
+        mod asyn;
         pub use asyn::AsyncActuator;
 
-        mod comps;
-        pub use comps::{Conveyor, Gear, LinearAxis};
+        pub mod comps;
+        // pub use comps::{Conveyor, Gear, LinearAxis};
 
         /// Structs for storing characteristics of stepper motors and so on
         pub mod data;
-        pub use data::{MicroSteps, StepperConst, StepperConfig};
 
         /// Functions and Structs for taking measurements with a robot for e.g. position calculation
         pub mod meas;

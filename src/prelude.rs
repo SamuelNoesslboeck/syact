@@ -3,14 +3,12 @@ pub use crate::{ActuatorError, AdvancedActuator, SyncActuator, SyncActuatorBlock
 
 pub use crate::comps::{Conveyor, Gear, LinearAxis};
 
-pub use crate::data::{ActuatorVars, StepperConfig, StepperConst, MicroSteps};
+pub use crate::data::ActuatorVars;
 pub use crate::data::servo::ServoConst;
 
 pub use crate::meas::{SimpleMeasParams, EndStop};
 
 pub use crate::parent::{ActuatorParent, RatioActuatorParent};
-
-pub use crate::sync::stepper::*;
 
 // Access to most units
 pub use syunit::prelude::*;
