@@ -1,12 +1,19 @@
 # Changelogs
 
+## Version 0.15.0
+
+> Full overhaul of library
+
+- Outsourcing of stepper motors to `systep` library
+- Removing groups and according macros for the library
+
 ## Version 0.11.2
 
 ### Enhancements
 
 - Added DC motors
 - Introduced changelog
-- Added github workflow
+- Added GitHub workflow
 
 ### Bug fixes
 

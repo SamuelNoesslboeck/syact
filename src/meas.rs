@@ -1,5 +1,6 @@
 use alloc::vec::Vec;
 
+#[cfg(feature = "serde")]
 use serde::{Serialize, Deserialize};
 use syunit::*;
 

@@ -1,32 +1,38 @@
 # syact
 
-[![Rust]]([rust-workflow])
-[![Crates.io version]][syact: crates.io]
+A library that defines actuators and their interaction with each other.
 
-[Rust]: https://github.com/SamuelNoesslboeck/syact/actions/workflows/rust.yml/badge.svg
-[rust-workflow]: https://github.com/SamuelNoesslboeck/syact/actions/workflows/rust.yml
-[Crates.io version]: https://img.shields.io/crates/v/syact.svg?style=flat-square
-[syact: crates.io]: https://crates.io/crates/syact
-
-> DOCS IN PROGRESS
-
-This library defines bindings 
+This library is intended to define bindings that can then be implemented by device-specific library, making their components available for use by general libraries like [sybot](https://github.com/SamuelNoesslboeck/sybot).
 
 ## In Action
 
-## Features & Documentation
+```rust
+use syact::prelude::*;
 
-- Bindings & Interfaces
-  - [Actuators](documentation/act.md)
-  - Measurements
-- Components
-  - [x] Linear Axis
-  - [x] Gear
-  - [x] Conveyor
-  
-## Getting started
+// Position of components
+const POS : PositionMM = PositionMM(10.0);
 
+// Create a new linear_axis (implements SyncActuator as their sub-component does)
+let mut linear_axis = LinearAxis::new_belt_axis(
+    // Some Demo-Actuator implementing (also implements SyncActuator)
+    DemoActuator::new(), 
+    Millimeters(0.5)    // The radius is set to 0.5, which means for each radian the motor moves, the linear_axis moves for 0.5 mm
+);    
 
+linear_axis.overwrite_abs_pos(POS);
+
+assert!((linear_axis.pos() - POS).abs() < Millimeters(0.001));      // Check with small tolerance requred for stepper motors
+```
+
+## Further libraries
+
+- **Basic libraries**
+  - [syunit](https://github.com/SamuelNoesslboeck/syunit): Flexible unit system and basis for many traits in this library, furthermore embedded into it in the `units` module
+  - [sykin](https://github.com/SamuelNoesslboeck/sykin): Basic kinematic equations
+- **Advanced libraries**
+  - [sybot](https://github.com/SamuelNoesslboeck/sybot): Follow up library that defines robots out of traits in this library
+- **Device-specific libraries**
+  - [systep](https://github.com/SamuelNoesslboeck/systep): Stepper motors and drivers library, implementing `embedded-hal`
 
 ## Issues and requests
 

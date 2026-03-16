@@ -1,13 +1,15 @@
+#[cfg(feature = "serde")]
 use serde::{Serialize, Deserialize};
+
+use syunit::*;
 use syunit::metric::Millimeters;
 
 use crate::SyncActuator;
 use crate::parent::{ActuatorParent, RatioActuatorParent};
 
-use syunit::*;
-
 /// A linear axis
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct LinearAxis<A : SyncActuator> {
     /// The child actuator driving the linear axis
     pub actuator : A,

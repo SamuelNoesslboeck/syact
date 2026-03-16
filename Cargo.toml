@@ -2,7 +2,7 @@
 name = "syact"
 authors = [ "Samuel Nösslböck <samuel.noesslboeck@gmail.com>" ]
 version = "0.15.0"
-description = "A library to control motors, define actuators and their interactions with each other"
+description = "A library that defines actuators and their interaction with each other"
 edition = "2024"
 repository = "https://github.com/SamuelNoesslboeck/syact"
 license-file = "LICENSE"
@@ -23,6 +23,7 @@ syunit = "0.4.0"
 [features]
 default = [ "serde" ]
 serde = [ "dep:serde" ]
+testing = [ ]
 
 [[test]]
 name = "main_tests"

@@ -13,3 +13,6 @@ pub use crate::parent::{ActuatorParent, RatioActuatorParent};
 // Access to most units
 pub use syunit::prelude::*;
 
+// Testing
+#[cfg(any(test, feature = "testing"))]
+pub use crate::tests::*;

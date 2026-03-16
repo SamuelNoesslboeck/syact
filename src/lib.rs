@@ -1,6 +1,7 @@
 #![doc = include_str!("../README.md")]
 #![crate_name = "syact"]
 #![no_std]
+#![deny(missing_docs)]
 
 // Modules
 extern crate alloc;
@@ -17,8 +18,8 @@ use syunit::*;
         mod asyn;
         pub use asyn::AsyncActuator;
 
+        /// Common components and their implementations, like gears, linear axes etc.
         pub mod comps;
-        // pub use comps::{Conveyor, Gear, LinearAxis};
 
         /// Structs for storing characteristics of stepper motors and so on
         pub mod data;
@@ -35,10 +36,17 @@ use syunit::*;
         pub use sync::{SyncActuator, SyncActuatorState, SyncActuatorBlocking, SyncActuatorNB}; 
     // 
 
-    /// Easy import of the functionalities
+    /// Embed unit system library
     pub mod prelude;
-
     pub use syunit as units;
+
+    // Testing
+    #[cfg(any(feature = "testing", test))]
+    mod tests;
+    #[cfg(any(feature = "testing", test))]
+    pub use tests::*;
+
+    use crate::data::ActuatorVars;
 // 
 
 // Macros
@@ -113,7 +121,7 @@ use syunit::*;
             self
         }
 
-        /// Returns the interrupt reason if there is any (returns `None` otherwise)
+        /// Returns the stored interrupt reason if there is any (returns `None` otherwise)
         /// 
         /// # Note
         /// 
@@ -205,7 +213,7 @@ use syunit::*;
             /// // Create a new gear bearing (implements AdvancedActuator)
             /// let mut gear = Gear::new(
             ///     // Stepper Motor as subcomponent (also implements AdvancedActuator), `default()` function is only available for tests!
-            ///     Stepper::default(), 
+            ///     DemoActuator::new(), 
             ///     // Ratio is set to 0.5, which means for each radian the motor moves, the bearing moves for half a radian
             ///     0.5
             /// );  
@@ -240,7 +248,7 @@ use syunit::*;
             /// // Create a new gear bearing (implements AdvancedActuator)
             /// let mut gear = Gear::new(
             ///     // Stepper Motor as subcomponent (also implements AdvancedActuator), `default()` function is only available for tests!
-            ///     Stepper::default(), 
+            ///     DemoActuator::new(), 
             /// 0.5);    // Ratio is set to 0.5, which means for each radian the motor moves, the bearing moves for half a radian
             /// 
             /// // Applies the inertia to the gearbearing component

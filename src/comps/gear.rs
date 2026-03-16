@@ -1,15 +1,14 @@
+#[cfg(feature = "serde")]
 use serde::{Serialize, Deserialize};
+
 use syunit::*;
 
 use crate::SyncActuator;
 use crate::parent::{ActuatorParent, RatioActuatorParent};
 
-/// A gear component
-/// 
-/// # Gears
-/// 
-/// 
-#[derive(Debug, Serialize, Deserialize)]
+/// A gear component, translating the incomming movement by a given ratio
+#[derive(Clone, Debug)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Gear<C : SyncActuator> {
     /// Steppercontrol for the motor of the bearing
     pub actuator : C,

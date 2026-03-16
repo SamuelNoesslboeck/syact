@@ -1,10 +1,12 @@
+#[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
 use syunit::*;
 use syunit::metric::*;
 
 /// A struct for storing all the constants of a servo motor that do not change during the process of the program
-#[derive(Debug, Default, Clone, PartialEq, PartialOrd, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, PartialEq, PartialOrd)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct ServoConst {
     /// Maximum torque of servo motor 
     pub t_max : NewtonMeters,
@@ -12,7 +14,7 @@ pub struct ServoConst {
     /// Maximum angular velocity [Unit rad/s]
     pub velocity_max : RadPerSecond,
 
-    /// Maximum angle [Unit (radians)]
+    /// Maximum angle [Unit radians]
     pub position_max : PositionRad,
 
     /// Minimum signal length [Unit s]

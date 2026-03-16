@@ -9,8 +9,9 @@ use crate::ActuatorError;
 // #    SUBMODULES    #
 // ####################
     /// Everything concerning servo-motors
+    #[deprecated]
     pub mod servo;
-    pub use servo::MiniServo;
+    // pub use servo::MiniServo;
 //
 
 // ######################
@@ -51,14 +52,14 @@ use crate::ActuatorError;
             /// 
             /// // Create a new linear_axis (implements SyncActuator)
             /// let mut linear_axis = LinearAxis::new_belt_axis(
-            ///     // Stepper Motor as subcomponent (also implements SyncActuator), `default()` function only possible in testing!
-            ///     Stepper::default(), 
+            ///     // Some demo actuator (implements SyncActuator)
+            ///     DemoActuator::new(), 
             ///     Millimeters(0.5)    // The radius is set to 0.5, which means for each radian the motor moves, the linear_axis moves for 0.5 mm
             /// );    
             /// 
             /// linear_axis.overwrite_abs_pos(POS);
             /// 
-            /// assert!((linear_axis.pos() - POS).abs() < Millimeters(0.05));      // Check with small tolerance requred for stepper motors
+            /// assert!((linear_axis.pos() - POS).abs() < Millimeters(0.001));      // Check with small tolerance requred for stepper motors
             /// ```
             fn pos(&self) -> U::Position;
 
@@ -77,8 +78,8 @@ use crate::ActuatorError;
             /// 
             /// // Create a new linear_axis (implements SyncActuator)
             /// let mut linear_axis = LinearAxis::new_belt_axis(
-            ///     // Stepper Motor as subcomponent (also implements SyncActuator), `default()` function only possible in testing!
-            ///     Stepper::default(), 
+            ///     // Some demo actuator (implements SyncActuator)
+            ///     DemoActuator::new(), 
             ///     Millimeters(0.5)    // The radius is set to 0.5, which means for each radian the motor moves, the linear_axis moves for 0.5 mm
             /// );    
             /// 
@@ -95,8 +96,8 @@ use crate::ActuatorError;
             /// ```rust
             /// use syact::prelude::*;
             /// 
-            /// // Create a new stepper motor, `default()` only available in testing! 
-            /// let mut stepper = Stepper::default();   
+            /// // Create a new demo actuator (only available when testing)
+            /// let mut stepper = DemoActuator::new();   
             /// 
             /// assert_eq!(stepper.velocity_max(), None);
             /// ```
@@ -165,8 +166,8 @@ use crate::ActuatorError;
             /// 
             /// // Create a new gear bearing (implements SyncActuator)
             /// let mut gear = Gear::new(
-            ///     // Stepper Motor as subcomponent (also implements SyncActuator)
-            ///     Stepper::default(), 
+            ///     // A demo actuator (implements SyncActuator)
+            ///     DemoActuator::new(), 
             /// 0.5);    // Ratio is set to 0.5, which means for each radian the motor moves, the bearing moves for half a radian
             /// 
             /// gear.set_pos_limits(Some(LIM_MIN), Some(LIM_MAX));
@@ -187,7 +188,33 @@ use crate::ActuatorError;
             /// assert_eq!(gear.resolve_pos_limits_for_abs_pos(PositionRad(0.5)), Radians::ZERO);    // In range
             /// assert_eq!(gear.resolve_pos_limits_for_abs_pos(PositionRad(-4.0)), Radians(-1.0));   // Under the minimum, but less
             /// ```
-            fn resolve_pos_limits_for_abs_pos(&self, pos : U::Position) -> U::Distance;
+            fn resolve_pos_limits_for_abs_pos(&self, pos : U::Position) -> U::Distance {
+                                if let Some(ang) = self.limit_min() {
+                    if pos < ang {
+                        pos - ang
+                    } else {
+                        if let Some(ang) = self.limit_max() {
+                            if pos > ang {
+                                pos - ang
+                            } else { 
+                                U::Distance::ZERO
+                            }
+                        } else {
+                            U::Distance::ZERO
+                        }
+                    }
+                } else {
+                    if let Some(ang) = self.limit_max() {
+                        if pos > ang {
+                            pos - ang
+                        } else { 
+                            U::Distance::ZERO
+                        }
+                    } else {
+                        U::Distance::NAN
+                    }
+                }
+            }
 
             /// Sets an endpoint in the current direction by modifying the components limits. For example, when the component is moving
             /// in the positive direction and the endpoint is set, this function will overwrite the current maximum limit with the current
@@ -211,8 +238,8 @@ use crate::ActuatorError;
             /// 
             /// // Create a new gear bearing (implements SyncActuator)
             /// let mut gear = Gear::new(
-            ///     // Stepper Motor as subcomponent (also implements SyncActuator)
-            ///     Stepper::default(), 
+            ///     // A demo actuator (implements SyncActuator)
+            ///     DemoActuator::new(), 
             /// 0.5);    // Ratio is set to 0.5, which means for each radian the motor moves, the bearing moves for half a radian
             /// 
             /// gear.set_pos_limits(Some(LIM_MIN), Some(LIM_MAX));
@@ -251,8 +278,8 @@ use crate::ActuatorError;
             /// 
             /// // Create a new gear bearing (implements SyncActuator)
             /// let mut gear = Gear::new(
-            ///     // Stepper Motor as subcomponent (also implements SyncActuator)
-            ///     Stepper::default(), 
+            ///     // A demo actuator (implements SyncActuator)
+            ///     DemoActuator::new(), 
             /// 0.5);    // Ratio is set to 0.5, which means for each radian the motor moves, the bearing moves for half a radian
             /// 
             /// gear.set_pos_limits(Some(LIM_MIN), Some(LIM_MAX));
@@ -315,7 +342,7 @@ use crate::ActuatorError;
             fn drive_rel_nb(&mut self, rel_dist : U::Distance, speed : Factor) -> Result<(), ActuatorError<U>>;
 
             /// Moves the component to the absolute position as fast as possible, blocks the script until the movement is finshed
-            fn drive_abs_blocking(&mut self, pos : U::Position, speed : Factor) -> Result<(), ActuatorError<U>> {
+            fn drive_abs_nb(&mut self, pos : U::Position, speed : Factor) -> Result<(), ActuatorError<U>> {
                 let rel_dist = pos - self.pos();
                 self.drive_rel_nb(rel_dist, speed)
             }

@@ -1,18 +1,20 @@
 use embedded_hal::digital::InputPin;
+#[cfg(feature = "serde")]
 use serde::{Serialize, Deserialize};
+
 use syunit::*;
 
 use crate::{Interruptor, InterruptReason};
 use crate::meas::Measurable;
 
 /// A simple endswitch that can trigger when reaching a destination
-#[derive(Serialize, Deserialize)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct EndStop<P : InputPin> {
     trigger : bool,
     _dir : Option<Direction>, 
     temp_dir : Option<Direction>,
 
-    #[serde(skip)]
+    #[cfg_attr(feature = "serde", serde(skip))]
     sys_pin : P
 }
 
