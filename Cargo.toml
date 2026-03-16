@@ -15,7 +15,7 @@ path = "src/lib.rs"
 [dependencies]
 atomic_float = "1.1.0"
 embedded-hal = "1.0.0"
-serde = { version = "*", features = [ "derive" ], optional = true }
+serde = { version = "1.0.228", features = [ "derive" ], optional = true }
 
 sykin = "0.1.0"
 syunit = "0.4.0"
