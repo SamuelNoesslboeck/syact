@@ -45,8 +45,6 @@ use syunit::*;
     mod tests;
     #[cfg(any(feature = "testing", test))]
     pub use tests::*;
-
-    use crate::data::ActuatorVars;
 // 
 
 // Macros
