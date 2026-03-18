@@ -101,6 +101,22 @@ impl SyncActuator<Rotary> for DemoActuator {
         self._limit_min = min;
         self._limit_max = max;
     }
+    
+    fn clone_state(&self) -> alloc::sync::Arc<dyn crate::SyncActuatorState<Rotary>> {
+        todo!()
+    }
+    
+    async fn drive_rel(&mut self, rel_dist : <Rotary as UnitSet>::Distance, speed : Factor) -> Result<(), ActuatorError<Rotary>> {
+        todo!()
+    }
+    
+    async fn drive_factor(&mut self, speed : Factor, direction : Direction) -> Result<(), ActuatorError<Rotary>> {
+        todo!()
+    }
+    
+    async fn drive_speed(&mut self, speed : <Rotary as UnitSet>::Velocity) -> Result<(), ActuatorError<Rotary>> {
+        todo!()
+    }
 }
 
 impl AdvancedActuator for DemoActuator {

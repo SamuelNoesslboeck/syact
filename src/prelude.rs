@@ -1,5 +1,5 @@
 // Simple all in one import
-pub use crate::{ActuatorError, AdvancedActuator, SyncActuator, SyncActuatorBlocking, SyncActuatorNB, AsyncActuator, DefinedActuator, merge_actuator_traits};
+pub use crate::{ActuatorError, AdvancedActuator, SyncActuator, AsyncActuator, DefinedActuator};
 
 pub use crate::comps::{Conveyor, Gear, LinearAxis};
 

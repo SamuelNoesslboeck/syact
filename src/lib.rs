@@ -1,7 +1,8 @@
 #![doc = include_str!("../README.md")]
 #![crate_name = "syact"]
 #![no_std]
-#![deny(missing_docs)]
+// #![deny(missing_docs)]
+#![allow(async_fn_in_trait)]
 
 // Modules
 extern crate alloc;
@@ -24,6 +25,9 @@ use syunit::*;
         /// Structs for storing characteristics of stepper motors and so on
         pub mod data;
 
+        /// Structures and traits for grouping different types of components
+        pub mod group;
+
         /// Functions and Structs for taking measurements with a robot for e.g. position calculation
         pub mod meas;
 
@@ -33,7 +37,7 @@ use syunit::*;
 
         /// Everything about actuators that work synchronously
         pub mod sync;
-        pub use sync::{SyncActuator, SyncActuatorState, SyncActuatorBlocking, SyncActuatorNB}; 
+        pub use sync::{SyncActuator, SyncActuatorState}; 
     // 
 
     /// Embed unit system library
@@ -45,26 +49,6 @@ use syunit::*;
     mod tests;
     #[cfg(any(feature = "testing", test))]
     pub use tests::*;
-// 
-
-// Macros
-    // TODO: Improve docs for this macro
-    /// Helper macro for merging multiple Actuator traits into one, useful for group implementation
-    #[macro_export]
-    macro_rules! merge_actuator_traits {
-        ($name:ident, $trait1:ident, $trait2:ident) => {
-            pub trait $name : $trait1 + $trait2 { }
-            impl<T : $trait1 + $trait2> $name for T { }
-        };
-        ($name:ident, $trait1:ident, $trait2:ident, $trait3:ident) => {
-            pub trait $name : $trait1 + $trait2 + $trait3 { }
-            impl<T : $trait1 + $trait2 + $trait3> $name for T { }
-        };
-        ($name:ident, $trait1:ident, $trait2:ident, $trait3:ident, $trait4:ident) => {
-            pub trait $name : $trait1 + $trait2 + $trait3 + $trait4 { }
-            impl<T : $trait1 + $trait2 + $trait3 + $trait4> $name for T { }
-        };
-    }
 // 
 
 // #####################
@@ -186,7 +170,7 @@ use syunit::*;
 // #    Advanced Actuator    #
 // ###########################
     /// An advanced actuator allows applying loads that alter the actuators movement
-    pub trait AdvancedActuator<U : UnitSet = Rotary> {
+    pub trait AdvancedActuator<U : UnitSet = Rotary> : SyncActuator<U> {
         // Load calculation
             // TODO: Documentation sucks
             /// Will always be positive
@@ -260,7 +244,7 @@ use syunit::*;
     }
 
     /// An actuator that has a defined time to move for a PTP (Point-To-Point) movement
-    pub trait DefinedActuator<U : UnitSet = Rotary> {
+    pub trait DefinedActuator<U : UnitSet = Rotary> : SyncActuator<U> {
         /// The time required to perform a certain PTP (Point-To-Point movement)
         fn ptp_time_for_distance(&self, abs_pos_0 : U::Position, abs_pos_t : U::Position) -> U::Time;
     }

@@ -1,4 +1,5 @@
-// Private imports
+use core::pin::Pin;
+use alloc::boxed::Box;
 use alloc::sync::Arc;
 
 use syunit::*;
@@ -41,7 +42,7 @@ use crate::ActuatorError;
     /// Components can have multiple layers, for example take a stepper motor with a geaerbox attached to it. The stepper motor and both combined will be a component, the later having 
     /// the stepper motor component defined as it's parent component. (See [Gear])
     pub trait SyncActuator<U : UnitSet = Rotary> {
-        // Position & U::Velocity
+        // Position
             /// Returns the **absolute** position of the component in the components [Position unit](UnitSet::Position).
             /// 
             /// ```rust
@@ -90,7 +91,7 @@ use crate::ActuatorError;
             fn overwrite_abs_pos(&mut self, pos : U::Position);
         //
 
-        // U::Velocity max
+        // Velocity Max
             /// Maximum velocity allowed by the user if specified, otherwise will return `None`
             /// 
             /// ```rust
@@ -111,7 +112,7 @@ use crate::ActuatorError;
             fn set_velocity_max(&mut self, velocity_opt : Option<U::Velocity>) -> Result<(), ActuatorError<U>>;
         // 
 
-        // Acceleration
+        // Acceleration max
             /// Maximum acceleration that will be allowed, if specified by the user with `set_max_acceleration`
             fn acceleration_max(&self) -> Option<U::Acceleration>;
 
@@ -123,7 +124,7 @@ use crate::ActuatorError;
             fn set_acceleration_max(&mut self, acceleration_opt : Option<U::Acceleration>) -> Result<(), ActuatorError<U>>;
         // 
 
-        // Jolt
+        // Jolt max 
             /// The maximum jolt, if specified by the user
             fn jolt_max(&self) -> Option<U::Jolt>;
 
@@ -302,50 +303,27 @@ use crate::ActuatorError;
             /// ```
             fn overwrite_pos_limits(&mut self, min : Option<U::Position>, max : Option<U::Position>);
         // 
-    }
-//
 
-// #########################################
-// #    SyncActuator - Extention traits    #
-// #########################################
-    // Movement
-        /// Further defines a `SyncActuator`, extending it with blocking movement functions
-        pub trait SyncActuatorBlocking<U : UnitSet = Rotary> : SyncActuator<U> {
-            // State
-                /// Returns a reference to the actuators `SyncActuatorState`
-                fn state(&self) -> &dyn SyncActuatorState<U>;
+        // State
+            /// Returns an `Arc` reference counter to the given S
+            fn clone_state(&self) -> Arc<dyn SyncActuatorState<U>>;
+        // 
 
-                /// Returns an `Arc` reference counter to the given S
-                fn clone_state(&self) -> Arc<dyn SyncActuatorState<U>>;
-            // 
+        // Movement
+            /// Moves the component by the relative distance as fast as possible
+            async fn drive_rel(&mut self, rel_dist : U::Distance, speed : Factor) -> Result<(), ActuatorError<U>>;
 
-            /// Moves the component by the relative distance as fast as possible, blocks the script until the movement is finshed
-            fn drive_rel_blocking(&mut self, rel_dist : U::Distance, speed : Factor) -> Result<(), ActuatorError<U>>;
-
-            /// Moves the component to the absolute position as fast as possible, blocks the script until the movement is finshed
-            #[inline]
-            fn drive_abs_blocking(&mut self, pos : U::Position, speed : Factor) -> Result<(), ActuatorError<U>> {
+            /// Moves the component to the absolute position as fast as possible
+            async fn drive_abs(&mut self, pos : U::Position, speed : Factor) -> Result<(), ActuatorError<U>> {
                 let rel_dist = pos - self.pos();
-                self.drive_rel_blocking(rel_dist, speed)
+                self.drive_rel(rel_dist, speed).await
             }
 
-            /// Starts the movement process of the component in the given direction with a given `speed` factor
-            fn drive_factor(&mut self, speed : Factor, direction : Direction) -> Result<(), ActuatorError<U>>; 
+            /// Moves the actuator with a factor of the maximum speed possible 
+            async fn drive_factor(&mut self, speed : Factor, direction : Direction) -> Result<(), ActuatorError<U>>; 
 
             /// Start the movement process of the component with the given velocity `speed`, positive values for `speed` mean CW movement
-            fn drive_speed(&mut self, speed : U::Velocity) -> Result<(), ActuatorError<U>>;
-        }
-
-        /// Further defines a `SyncActuator`, extending it with non-blocking movement functions
-        pub trait SyncActuatorNB<U : UnitSet = Rotary> : SyncActuator<U> {
-            /// Moves the component by the relative distance as fast as possible, blocks the script until the movement is finshed
-            fn drive_rel_nb(&mut self, rel_dist : U::Distance, speed : Factor) -> Result<(), ActuatorError<U>>;
-
-            /// Moves the component to the absolute position as fast as possible, blocks the script until the movement is finshed
-            fn drive_abs_nb(&mut self, pos : U::Position, speed : Factor) -> Result<(), ActuatorError<U>> {
-                let rel_dist = pos - self.pos();
-                self.drive_rel_nb(rel_dist, speed)
-            }
-        }
-    // 
-// 
+            async fn drive_speed(&mut self, speed : U::Velocity) -> Result<(), ActuatorError<U>>;
+        // 
+    }
+//

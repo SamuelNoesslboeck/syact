@@ -4,7 +4,7 @@ use alloc::vec::Vec;
 use serde::{Serialize, Deserialize};
 use syunit::*;
 
-use crate::{ActuatorError, InterruptReason, Interruptible, SyncActuatorBlocking};
+use crate::{ActuatorError, InterruptReason, Interruptible, SyncActuator};
 
 // Submodules
     mod endstop;
@@ -111,12 +111,12 @@ impl<U : UnitSet> SimpleMeasValues<U> {
 /// # Measurement data and its usage
 /// 
 /// Specifing a `sample_dist` is optional, as the script will replace it with 10% of the maximum distance if not specified
-pub fn take_simple_meas<U : UnitSet, C : SyncActuatorBlocking<U> + Interruptible<U> + ?Sized>(comp : &mut C, data : &SimpleMeasParams<U>, speed : Factor) -> Result<SimpleMeasValues<U>, SimpleMeasError<U>> {
+pub async fn take_simple_meas<U : UnitSet, C : SyncActuator<U> + Interruptible<U> + ?Sized>(comp : &mut C, data : &SimpleMeasParams<U>, speed : Factor) -> Result<SimpleMeasValues<U>, SimpleMeasError<U>> {
     let mut abs_poss : Vec<U::Position> = Vec::new();
 
     // Init measurement
         // Drive full distance with optionally reduced speed
-        comp.drive_rel_blocking(data.max_dist, data.meas_speed * speed)?;
+        comp.drive_rel(data.max_dist, data.meas_speed * speed).await?;
         
         comp.intr_reason()      // Get the interrupt reason
             .ok_or(SimpleMeasError::NoInterrupt)
@@ -130,12 +130,12 @@ pub fn take_simple_meas<U : UnitSet, C : SyncActuatorBlocking<U> + Interruptible
     // Samples
         for _ in 0 .. data.add_samples() {
             // Drive half of the sample distance back (faster)
-            comp.drive_rel_blocking(-data.sample_dist.unwrap_or(data.max_dist * 0.25) / 2.0, speed)?;
+            comp.drive_rel(-data.sample_dist.unwrap_or(data.max_dist * 0.25) / 2.0, speed).await?;
 
             // TODO: Check for errors when moving backwards
 
             // Drive sample distance
-            comp.drive_rel_blocking(data.sample_dist.unwrap_or(data.max_dist * 0.25), data.meas_speed * speed)?;
+            comp.drive_rel(data.sample_dist.unwrap_or(data.max_dist * 0.25), data.meas_speed * speed).await?;
 
             // Check wheiter the component has been interrupted and if it is the correct interrupt
             comp.intr_reason()      // Get the interrupt reason
