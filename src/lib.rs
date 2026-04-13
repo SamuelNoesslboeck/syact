@@ -17,7 +17,7 @@ use syunit::*;
     // Core
         /// Everything about actuators that work asynchronously
         mod asyn;
-        pub use asyn::AsyncActuator;
+        pub use asyn::{AsyncActuator, PWMDcDriver};
 
         /// Common components and their implementations, like gears, linear axes etc.
         pub mod comps;

@@ -1,7 +1,7 @@
 [package]
 name = "syact"
 authors = [ "Samuel Nösslböck <samuel.noesslboeck@gmail.com>" ]
-version = "0.15.0"
+version = "0.15.1"
 description = "A library that defines actuators and their interaction with each other"
 edition = "2024"
 repository = "https://github.com/SamuelNoesslboeck/syact"
