@@ -5,15 +5,16 @@ use crate::ActuatorError;
 
 /// A component which is asynchronous because of its hardware properties, e.g. a simple DC-Motors
 pub trait AsyncActuator<U : UnitSet> {
-    // Getters
-    /// The current speed of the actuator
-    fn speed(&self) -> U::Velocity;
+    /* Getters */
+        /// The current speed of the actuator
+        fn speed(&self) -> U::Velocity;
 
-    /// The current factor of the actuator
-    fn factor(&self) -> Factor;
+        /// The current factor of the actuator, representing a "power level" where `1.0` is the full capacity
+        fn factor(&self) -> Factor;
 
-    /// The current direction of the actuator
-    fn dir(&self) -> Direction;
+        /// The current direction of the actuator
+        fn dir(&self) -> Direction;
+    /**/
 
     /// Starts the movement process of the component in the given direction with a given `speed` factor
     fn drive_factor(&mut self, speed : Factor, direction : Direction) -> Result<(), ActuatorError<U>>; 
@@ -28,47 +29,45 @@ pub trait AsyncActuator<U : UnitSet> {
 /// A generic PWM DC-Motor driver with two PWM pins, one for forward, the other for backward
 /// 
 /// Note that for DC-Motors speed is hard to define properly, especially under load, so mostly use the `drive_factor` functions
-pub struct PWMDcDriver<FW : SetDutyCycle, BW : SetDutyCycle> {
-    pin_fw : FW,
-    pin_bw : BW,
-
-    pub max_speed : RadPerSecond,
+pub struct PwmDcDriver<FW : SetDutyCycle, BW : SetDutyCycle> 
+where
+    FW::Error : Into<ActuatorError>,
+    BW::Error : Into<ActuatorError>
+{
+    pub pin_fw : FW,
+    pub pin_bw : BW,
 
     __factor : Factor,
     __dir : Direction
 }
 
-impl<FW : SetDutyCycle, BW : SetDutyCycle> PWMDcDriver<FW, BW> {
+impl<FW : SetDutyCycle, BW : SetDutyCycle> PwmDcDriver<FW, BW> 
+where
+    FW::Error : Into<ActuatorError>,
+    BW::Error : Into<ActuatorError>
+{
     /// Creates a new DcDriver
-    pub fn init(pin_fw : FW, pin_bw : BW, max_speed : RadPerSecond) -> Self {
+    pub fn init(pin_fw : FW, pin_bw : BW) -> Self {
         Self {
-            pin_fw, pin_bw,
-            max_speed,
+            pin_fw, 
+            pin_bw,
 
             __factor: Factor::MIN,
             __dir: Default::default()
         }
     }
-}
 
-impl<FW : SetDutyCycle, BW : SetDutyCycle> AsyncActuator<Rotary> for PWMDcDriver<FW, BW> 
-where
-    FW::Error : Into<ActuatorError>,
-    BW::Error : Into<ActuatorError>
-{
-    fn speed(&self) -> RadPerSecond {
-        self.max_speed * self.__factor
-    }
+    /* Getters */
+        pub fn factor(&self) -> Factor {
+            self.__factor
+        }
 
-    fn factor(&self) -> Factor {
-        self.__factor
-    }
+        pub fn dir(&self) -> Direction {
+            self.__dir
+        }
+    /**/
 
-    fn dir(&self) -> Direction {
-        self.__dir
-    }
-
-    fn drive_factor(&mut self, speed : Factor, direction : Direction) -> Result<(), ActuatorError> {
+    pub fn drive_factor(&mut self, speed : Factor, direction : Direction) -> Result<(), ActuatorError> {
         self.__factor = speed;
         self.__dir = direction;
 
@@ -88,13 +87,7 @@ where
         Ok(())
     }
 
-    fn drive_speed(&mut self, speed : RadPerSecond) -> Result<(), ActuatorError> {
-        let dir = Direction::from_bool(speed.is_sign_positive());
-        let fac = Factor::new(speed.abs() / self.max_speed);
-        self.drive_factor(fac, dir)
-    }
-    
-    fn stop(&mut self) -> Result<(), ActuatorError<Rotary>> {
+    pub fn stop(&mut self) -> Result<(), ActuatorError<Rotary>> {
         self.pin_fw.set_duty_cycle_fully_off()
             .map_err(|err| err.into())?;
         self.pin_bw.set_duty_cycle_fully_off()
@@ -102,3 +95,5 @@ where
         Ok(())
     }
 }
+
+// TODO: Create DCMotor structure
