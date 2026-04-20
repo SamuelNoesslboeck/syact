@@ -25,9 +25,6 @@ use syunit::*;
         /// Structs for storing characteristics of stepper motors and so on
         pub mod data;
 
-        /// Structures and traits for grouping different types of components
-        pub mod group;
-
         /// Functions and Structs for taking measurements with a robot for e.g. position calculation
         pub mod meas;
 
