@@ -241,7 +241,7 @@ use syunit::*;
     }
 
     /// An actuator that has a defined time to move for a PTP (Point-To-Point) movement
-    pub trait DefinedActuator<U : UnitSet = Rotary> : SyncActuator<U> {
+    pub trait DefinedActuator<U : UnitSet = Rotary> {
         /// The time required to perform a certain PTP (Point-To-Point movement)
         fn ptp_time_for_distance(&self, abs_pos_0 : U::Position, abs_pos_t : U::Position) -> U::Time;
     }
