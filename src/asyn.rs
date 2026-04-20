@@ -17,13 +17,13 @@ pub trait AsyncActuator<U : UnitSet> {
     /**/
 
     /// Starts the movement process of the component in the given direction with a given `speed` factor
-    fn drive_factor(&mut self, speed : Factor, direction : Direction) -> Result<(), ActuatorError<U>>; 
+    async fn drive_factor(&mut self, speed : Factor, direction : Direction) -> Result<(), ActuatorError<U>>; 
 
     /// Start the movement process of the component with the given velocity `speed`, positive values for `speed` mean CW movement
-    fn drive_speed(&mut self, speed : U::Velocity) -> Result<(), ActuatorError<U>>;
+    async fn drive_speed(&mut self, speed : U::Velocity) -> Result<(), ActuatorError<U>>;
 
     /// Fully halts the actuator
-    fn stop(&mut self) -> Result<(), ActuatorError<U>>;
+    async fn stop(&mut self) -> Result<(), ActuatorError<U>>;
 }
 
 /// A generic PWM DC-Motor driver with two PWM pins, one for forward, the other for backward
@@ -34,10 +34,14 @@ where
     FW::Error : Into<ActuatorError>,
     BW::Error : Into<ActuatorError>
 {
+    /// Pin that controlls the forward PWM signal for the DcMotor controller
     pub pin_fw : FW,
+    /// Pin that controlls the backward PWM signal for the DcMotor controller
     pub pin_bw : BW,
 
+    /// Current factor that is being driven
     __factor : Factor,
+    /// Current direction that is being driven
     __dir : Direction
 }
 
@@ -58,15 +62,18 @@ where
     }
 
     /* Getters */
+        /// Current factor that is being driven, with `1.0` being full capacity and `0.0` off
         pub fn factor(&self) -> Factor {
             self.__factor
         }
 
+        /// Current movement direction
         pub fn dir(&self) -> Direction {
             self.__dir
         }
     /**/
 
+    /// 
     pub fn drive_factor(&mut self, speed : Factor, direction : Direction) -> Result<(), ActuatorError> {
         self.__factor = speed;
         self.__dir = direction;
@@ -87,6 +94,7 @@ where
         Ok(())
     }
 
+    /// Halts and turns off the actuator
     pub fn stop(&mut self) -> Result<(), ActuatorError<Rotary>> {
         self.pin_fw.set_duty_cycle_fully_off()
             .map_err(|err| err.into())?;
