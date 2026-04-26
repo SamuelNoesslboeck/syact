@@ -26,9 +26,7 @@ pub trait AsyncActuator<U : UnitSet> {
     async fn stop(&mut self) -> Result<(), ActuatorError<U>>;
 }
 
-/// A generic PWM DC-Motor driver with two PWM pins, one for forward, the other for backward
-/// 
-/// Note that for DC-Motors speed is hard to define properly, especially under load, so mostly use the `drive_factor` functions
+/// A generic PWM DC-Motor driver with two PWM pins, one forward, the other backward
 pub struct PwmDcDriver<FW : SetDutyCycle, BW : SetDutyCycle> 
 where
     FW::Error : Into<ActuatorError>,

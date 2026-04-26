@@ -1,11 +1,10 @@
 use core::ops::{Div, Mul};
 
 use alloc::boxed::Box;
-use alloc::sync::Arc;
 
 use syunit::*;
 
-use crate::{SyncActuator, ActuatorError, Interruptible, AdvancedActuator, SyncActuatorState};
+use crate::{SyncActuator, ActuatorError, Interruptible, AdvancedActuator};
 
 /// A trait that marks an actuator which acts as a parent for another actuator
 pub trait ActuatorParent {
@@ -173,8 +172,12 @@ pub trait ActuatorParent {
                         ActuatorError::InvalidTime(<Self::Input as UnitSet>::Time::from(time)),
 
                     ActuatorError::IOError => ActuatorError::IOError,
+                    ActuatorError::PinError => ActuatorError::PinError,
+                    ActuatorError::InterfaceError => ActuatorError::InterfaceError,
 
-                    ActuatorError::Overload => ActuatorError::Overload
+                    ActuatorError::Overload => ActuatorError::Overload,
+                    ActuatorError::ForceOverload(given_force, max_force) 
+                        => ActuatorError::ForceOverload(self.force_for_parent(given_force), self.force_for_parent(max_force))
                 }
             }
         // 
@@ -186,32 +189,6 @@ pub trait ActuatorParent {
 // ##################################
 // 
 // Automatically implements `SyncActuator` for every component
-    // SyncActuator traits
-        pub struct RatioState<O : UnitSet> {
-            _ratio : f32,
-            _ref_state : Arc<dyn SyncActuatorState<O>>
-        }
-
-        impl<I : UnitSet, O : UnitSet> SyncActuatorState<I> for RatioState<O> {
-            fn pos(&self) -> I::Position {
-                // Pos for parent
-                let val : f32 = (self._ref_state.pos() * self._ratio).into();
-                I::Position::from(val)
-            }
-
-            fn moving(&self) -> bool {
-                self._ref_state.moving()
-            }
-
-            fn halt(&self) {
-                self._ref_state.halt();
-            }
-
-            fn interrupt(&self) {
-                self._ref_state.interrupt();
-            }
-        }
-
         impl<T : RatioActuatorParent> SyncActuator<T::Input> for T 
         where
             <T::Input as UnitSet>::Time : From<<T::Output as UnitSet>::Time>,
@@ -243,6 +220,16 @@ pub trait ActuatorParent {
                     self.child_mut().overwrite_abs_pos(abs_pos)
                 }
             //
+
+            // State
+                fn velocity(&self) -> <T::Input as UnitSet>::Velocity {
+                    self.velocity_for_parent(self.child().velocity())
+                }
+
+                fn is_moving(&self) -> bool {
+                    self.child().is_moving()
+                }
+            // 
 
             // Velocity
                 #[inline]
@@ -315,14 +302,6 @@ pub trait ActuatorParent {
                     let min = min.map(|g| self.pos_for_child(g));
                     let max = max.map(|g| self.pos_for_child(g));
                     self.child_mut().overwrite_pos_limits(min, max)
-                }
-                
-                fn clone_state(&self) -> Arc<dyn SyncActuatorState<T::Input>> {
-                    todo!()
-                    // Arc::new(RatioState {
-                    //     _ratio: self.ratio().into(),
-                    //     _ref_state: self.child().clone_state()
-                    // })
                 }
                 
                 async fn drive_rel(&mut self, rel_dist : <T::Input as UnitSet>::Distance, speed : Factor) -> Result<(), ActuatorError<T::Input>> {

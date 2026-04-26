@@ -34,7 +34,7 @@ use syunit::*;
 
         /// Everything about actuators that work synchronously
         pub mod sync;
-        pub use sync::{SyncActuator, SyncActuatorState}; 
+        pub use sync::SyncActuator; 
     // 
 
     /// Embed unit system library
@@ -145,11 +145,15 @@ use syunit::*;
         // IO 
             /// Something is wrong with the IO connections of the actuator (PINs etc.)
             IOError,
+            PinError,
+            InterfaceError,
         // 
 
         // Load
             /// The component has been overloaded
-            Overload
+            Overload,
+            /// Too much force has been loaded onto the component `(0: Given force, 1: Maximum force)`
+            ForceOverload(U::Force, U::Force)
         // 
     }
 

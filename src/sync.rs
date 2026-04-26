@@ -1,5 +1,3 @@
-use alloc::sync::Arc;
-
 use syunit::*;
 
 use crate::ActuatorError;
@@ -16,23 +14,6 @@ use crate::ActuatorError;
 // ######################
 // #    SyncActuator    #
 // ######################
-    /// The state of a `SyncActuator` is used to control the component while it is moving and to get data about the current movement
-    pub trait SyncActuatorState<U : UnitSet = Rotary> {
-        /// Returns the current absolute position of the actuator
-        fn pos(&self) -> U::Position; 
-
-        /// Returns whether the actuator is currently moving or not
-        fn moving(&self) -> bool;
-
-        // Actions
-            /// Halt the actuator
-            fn halt(&self);
-
-            /// Interrupt the movement of the actuator
-            fn interrupt(&self);
-        // 
-    }   
-
     /// Trait for defining controls and components of synchronous actuators
     /// 
     /// # Parent components
@@ -88,6 +69,14 @@ use crate::ActuatorError;
             /// ```
             fn overwrite_abs_pos(&mut self, pos : U::Position);
         //
+
+        // Status
+            /// Returns the current velocity of the actuator
+            fn velocity(&self) -> U::Velocity;
+
+            /// Whether the actuator is currently moving
+            fn is_moving(&self) -> bool;
+        // 
 
         // Velocity Max
             /// Maximum velocity allowed by the user if specified, otherwise will return `None`
@@ -300,11 +289,6 @@ use crate::ActuatorError;
             /// assert_eq!(gear.resolve_pos_limits_for_abs_pos(PositionRad(-4.0)), Radians(-1.0));   // Under the minimum, but less
             /// ```
             fn overwrite_pos_limits(&mut self, min : Option<U::Position>, max : Option<U::Position>);
-        // 
-
-        // State
-            /// Returns an `Arc` reference counter to the given S
-            fn clone_state(&self) -> Arc<dyn SyncActuatorState<U>>;
         // 
 
         // Movement
