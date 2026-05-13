@@ -52,7 +52,7 @@ use syunit::*;
 // #    Interruptor    #
 // #####################
     /// A trait for structs that help interrupting or watching movement processes, the most common use are measurement systems
-    pub trait Interruptor<U : UnitSet = Rotary> {
+    pub trait Interruptor {
         /// Direction of the interruptor
         /// - If `None` the interruptor is not dependent on a movement direction
         /// - If `Some` the interruptor is only active when moving in the given direction
@@ -72,7 +72,7 @@ use syunit::*;
         fn set_temp_dir(&mut self, dir_opt : Option<Direction>);
 
         /// Runs a check of the movement process and Interrupts if it has a reason to
-        fn check(&mut self, pos : U::Position) -> Option<InterruptReason>;
+        fn check(&mut self) -> Option<InterruptReason>;
     }
 
     /// Reasons why an interrupt was triggered
@@ -87,12 +87,12 @@ use syunit::*;
     }
 
     /// Represents an interruptible component, meaning `Interruptors` can be attached to modify the movement process
-    pub trait Interruptible<U : UnitSet = Rotary> {
+    pub trait Interruptible {
         /// Add an interruptor to the component, often used for measurements or other processes checking the movement
-        fn add_interruptor(&mut self, interruptor : Box<dyn Interruptor<U> + Send>);
+        fn add_interruptor(&mut self, interruptor : Box<dyn Interruptor + Send>);
 
         /// Calls `add_interruptor` on an owned object
-        fn add_interruptor_inline(mut self, interruptor : Box<dyn Interruptor<U> + Send>) -> Self 
+        fn add_interruptor_inline(mut self, interruptor : Box<dyn Interruptor + Send>) -> Self 
         where 
             Self : Sized 
         {

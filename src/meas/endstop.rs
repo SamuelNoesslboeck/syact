@@ -39,7 +39,7 @@ impl<P : InputPin> Measurable<bool> for EndStop<P> {
     }
 }
 
-impl<P : InputPin> Interruptor<Rotary> for EndStop<P> {
+impl<P : InputPin> Interruptor for EndStop<P> {
     fn dir(&self) -> Option<Direction> {
         self._dir.or(self.temp_dir)
     }
@@ -48,9 +48,8 @@ impl<P : InputPin> Interruptor<Rotary> for EndStop<P> {
         self.temp_dir = dir_opt;
     }
 
-    fn check(&mut self, _abs_pos : PositionRad) -> Option<InterruptReason> {
-        // TODO: Add errors to implementation
-        // unwraping unsafe is safe, as no error can occur
+    fn check(&mut self) -> Option<InterruptReason> {
+        // TODO: Add errors to implementation!!!
         if unsafe { self.sys_pin.is_high().unwrap_unchecked() } == self.trigger {    
             Some(InterruptReason::EndReached)
         } else {

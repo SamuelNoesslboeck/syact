@@ -28,6 +28,7 @@ use crate::{ActuatorError, InterruptReason, Interruptible, SyncActuator};
 
 // Errors
     /// Error that can occur when using simple measurements
+    #[derive(Debug)]
     pub enum SimpleMeasError<U : UnitSet> {
         /// There was no interrupt triggered while driving, meaning that either
         /// - the interrupt source is out of reach (e.g. endstop is not close enough)
@@ -139,7 +140,7 @@ impl<U : UnitSet> SimpleMeasValues<U> {
 /// # Measurement data and its usage
 /// 
 /// Specifing a `sample_dist` is optional, as the script will replace it with 10% of the maximum distance if not specified
-pub async fn take_simple_meas<U : UnitSet, C : SyncActuator<U> + Interruptible<U> + ?Sized>(comp : &mut C, data : &SimpleMeasParams<U>, speed : Factor) -> Result<SimpleMeasValues<U>, SimpleMeasError<U>> {
+pub async fn take_simple_meas<U : UnitSet, C : SyncActuator<U> + Interruptible + ?Sized>(comp : &mut C, data : &SimpleMeasParams<U>, speed : Factor) -> Result<SimpleMeasValues<U>, SimpleMeasError<U>> {
     let mut abs_poss : Vec<U::Position> = Vec::new();
 
     // Init measurement
