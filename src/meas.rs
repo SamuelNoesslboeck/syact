@@ -51,7 +51,7 @@ use crate::{ActuatorError, InterruptReason, Interruptible, SyncActuator};
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct SimpleMeasParams<U : UnitSet> {
     /// The pos value to set the component to if the measurement was successful
-    pub overwrite_abs_pos : U::Position,
+    pub new_abs_pos : U::Position,
     /// Maximum drive distance, also determines which direction will be used. 
     /// If the maximum distance is reached before the measurement is conducted, the measurement will count as failed
     pub max_dist : U::Distance,
@@ -61,14 +61,42 @@ pub struct SimpleMeasParams<U : UnitSet> {
 
     /// Number of additional samples to take
     _add_samples : Option<usize>,
-    /// Will take 5% of max_dist as default
-    pub sample_dist : Option<U::Distance>
+    /// Distance the component drives back to take additional samples
+    _sample_dist : Option<U::Distance>
 }
 
 impl<U : UnitSet> SimpleMeasParams<U> {
-    /// Number of additional samples to take
+    pub fn new(new_abs_pos : U::Position, max_dist : U::Distance, meas_speed : Factor) -> Self {
+        Self {
+            new_abs_pos,
+            max_dist,
+            meas_speed,
+
+            _add_samples: None,
+            _sample_dist: None
+        }
+    }
+
+    pub fn with_sample_count(mut self, count : usize) -> Self {
+        self._add_samples = Some(count);
+        self
+    }
+
+    pub fn with_sample_distance(mut self, dist : U::Distance) -> Self {
+        self._sample_dist = Some(dist);
+        self
+    }
+
+    /// Number of additional samples to take, defaulting to 0
     pub fn add_samples(&self) -> usize {
-        self._add_samples.unwrap_or(1)
+        self._add_samples.unwrap_or(0)
+    }
+
+    /// Distance the component drives back to take additional samples, defaulting to 10% of max distance
+    pub fn sample_dist(&self) -> U::Distance {
+        self._sample_dist.unwrap_or(
+            self.max_dist * 0.1
+        )
     }
 }
 
@@ -130,12 +158,12 @@ pub async fn take_simple_meas<U : UnitSet, C : SyncActuator<U> + Interruptible<U
     // Samples
         for _ in 0 .. data.add_samples() {
             // Drive half of the sample distance back (faster)
-            comp.drive_rel(-data.sample_dist.unwrap_or(data.max_dist * 0.25) / 2.0, speed).await?;
+            comp.drive_rel(-data.sample_dist() / 2.0, speed).await?;
 
             // TODO: Check for errors when moving backwards
 
             // Drive sample distance
-            comp.drive_rel(data.sample_dist.unwrap_or(data.max_dist * 0.25), data.meas_speed * speed).await?;
+            comp.drive_rel(data.sample_dist(), data.meas_speed * speed).await?;
 
             // Check wheiter the component has been interrupted and if it is the correct interrupt
             comp.intr_reason()      // Get the interrupt reason
@@ -154,7 +182,7 @@ pub async fn take_simple_meas<U : UnitSet, C : SyncActuator<U> + Interruptible<U
     // Current pos difference considering the current position and the average taken by the measurement
     let abs_pos_diff = comp.pos() - abs_pos_av;
     // The new pos to set the components pos to
-    let abs_pos_new = data.overwrite_abs_pos + abs_pos_diff;
+    let abs_pos_new = data.new_abs_pos + abs_pos_diff;
 
     // Set limits and write new distance value
     comp.set_endpos(abs_pos_av);
