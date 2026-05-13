@@ -66,7 +66,7 @@ pub struct SimpleMeasParams<U : UnitSet> {
 }
 
 impl<U : UnitSet> SimpleMeasParams<U> {
-    pub fn new(new_abs_pos : U::Position, max_dist : U::Distance, meas_speed : Factor) -> Self {
+    pub const fn new(new_abs_pos : U::Position, max_dist : U::Distance, meas_speed : Factor) -> Self {
         Self {
             new_abs_pos,
             max_dist,
@@ -77,12 +77,12 @@ impl<U : UnitSet> SimpleMeasParams<U> {
         }
     }
 
-    pub fn with_sample_count(mut self, count : usize) -> Self {
+    pub const fn with_sample_count(mut self, count : usize) -> Self {
         self._add_samples = Some(count);
         self
     }
 
-    pub fn with_sample_distance(mut self, dist : U::Distance) -> Self {
+    pub const fn with_sample_distance(mut self, dist : U::Distance) -> Self {
         self._sample_dist = Some(dist);
         self
     }
