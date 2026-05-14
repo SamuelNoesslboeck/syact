@@ -99,15 +99,15 @@ impl SyncActuator<Rotary> for DemoActuator {
         self.vars.lim.max = max;
     }
     
-    async fn drive_rel(&mut self, rel_dist : <Rotary as UnitSet>::Distance, speed : Factor) -> Result<(), ActuatorError<Rotary>> {
+    fn drive_rel(&mut self, rel_dist : <Rotary as UnitSet>::Distance, speed : Factor) -> Result<(), ActuatorError<Rotary>> {
         todo!()
     }
     
-    async fn drive_factor(&mut self, speed : Factor, direction : Direction) -> Result<(), ActuatorError<Rotary>> {
+    fn drive_factor(&mut self, speed : Factor, direction : Direction) -> Result<(), ActuatorError<Rotary>> {
         todo!()
     }
     
-    async fn drive_speed(&mut self, speed : <Rotary as UnitSet>::Velocity) -> Result<(), ActuatorError<Rotary>> {
+    fn drive_speed(&mut self, speed : <Rotary as UnitSet>::Velocity) -> Result<(), ActuatorError<Rotary>> {
         todo!()
     }
     

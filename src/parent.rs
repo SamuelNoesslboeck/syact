@@ -304,20 +304,20 @@ pub trait ActuatorParent {
                     self.child_mut().overwrite_pos_limits(min, max)
                 }
                 
-                async fn drive_rel(&mut self, rel_dist : <T::Input as UnitSet>::Distance, speed : Factor) -> Result<(), ActuatorError<T::Input>> {
+                fn drive_rel(&mut self, rel_dist : <T::Input as UnitSet>::Distance, speed : Factor) -> Result<(), ActuatorError<T::Input>> {
                     let dist = self.dist_for_child(rel_dist);
-                    self.child_mut().drive_rel(dist, speed).await
+                    self.child_mut().drive_rel(dist, speed)
                         .map_err(|err| self.error_for_parent(err))
                 }
                 
-                async fn drive_factor(&mut self, speed : Factor, direction : Direction) -> Result<(), ActuatorError<T::Input>> {
-                    self.child_mut().drive_factor(speed, direction).await
+                fn drive_factor(&mut self, speed : Factor, direction : Direction) -> Result<(), ActuatorError<T::Input>> {
+                    self.child_mut().drive_factor(speed, direction)
                         .map_err(|err| self.error_for_parent(err))
                 }
                 
-                async fn drive_speed(&mut self, speed : <T::Input as UnitSet>::Velocity) -> Result<(), ActuatorError<T::Input>> {
+                fn drive_speed(&mut self, speed : <T::Input as UnitSet>::Velocity) -> Result<(), ActuatorError<T::Input>> {
                     let speed = self.velocity_for_child(speed);
-                    self.child_mut().drive_speed(speed).await
+                    self.child_mut().drive_speed(speed)
                         .map_err(|err| self.error_for_parent(err))
                 }
             // 

@@ -293,19 +293,19 @@ use crate::ActuatorError;
 
         // Movement
             /// Moves the component by the relative distance as fast as possible
-            async fn drive_rel(&mut self, rel_dist : U::Distance, speed : Factor) -> Result<(), ActuatorError<U>>;
+            fn drive_rel(&mut self, rel_dist : U::Distance, speed : Factor) -> Result<(), ActuatorError<U>>;
 
             /// Moves the component to the absolute position as fast as possible
-            async fn drive_abs(&mut self, pos : U::Position, speed : Factor) -> Result<(), ActuatorError<U>> {
+            fn drive_abs(&mut self, pos : U::Position, speed : Factor) -> Result<(), ActuatorError<U>> {
                 let rel_dist = pos - self.pos();
-                self.drive_rel(rel_dist, speed).await
+                self.drive_rel(rel_dist, speed)
             }
 
             /// Moves the actuator with a factor of the maximum speed possible 
-            async fn drive_factor(&mut self, speed : Factor, direction : Direction) -> Result<(), ActuatorError<U>>; 
+            fn drive_factor(&mut self, speed : Factor, direction : Direction) -> Result<(), ActuatorError<U>>; 
 
             /// Start the movement process of the component with the given velocity `speed`, positive values for `speed` mean CW movement
-            async fn drive_speed(&mut self, speed : U::Velocity) -> Result<(), ActuatorError<U>>;
+            fn drive_speed(&mut self, speed : U::Velocity) -> Result<(), ActuatorError<U>>;
         // 
     }
 //

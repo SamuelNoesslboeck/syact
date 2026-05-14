@@ -2,7 +2,6 @@
 #![crate_name = "syact"]
 #![no_std]
 // #![deny(missing_docs)]
-#![allow(async_fn_in_trait)]
 
 // Modules
 extern crate alloc;
