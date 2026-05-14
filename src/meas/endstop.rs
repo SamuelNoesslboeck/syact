@@ -51,7 +51,7 @@ impl<P : InputPin> Interruptor for EndStop<P> {
     fn check(&mut self) -> Option<InterruptReason> {
         // TODO: Add errors to implementation!!!
         if unsafe { self.sys_pin.is_high().unwrap_unchecked() } == self.trigger {    
-            Some(InterruptReason::LimitReached)
+            Some(InterruptReason::HardwareEndReached)
         } else {
             None
         }
