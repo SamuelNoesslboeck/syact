@@ -59,11 +59,15 @@ pub struct SimpleMeasParams<U : UnitSet> {
 
     /// Measurement speed factor (Optionally conduct a measurement slower)
     pub meas_speed : Factor,
-
-    /// Number of additional samples to take
-    _add_samples : Option<usize>,
-    /// Distance the component drives back to take additional samples
-    _sample_dist : Option<U::Distance>
+    
+    /* Optionals */
+        /// Number of additional samples to take
+        _add_samples : Option<usize>,
+        /// Distance the component drives back to take additional samples
+        _sample_dist : Option<U::Distance>,
+        /// Whether or not the limits should be set after a successful measurement
+        pub set_limit : bool
+    /**/
 }
 
 impl<U : UnitSet> SimpleMeasParams<U> {
@@ -74,17 +78,27 @@ impl<U : UnitSet> SimpleMeasParams<U> {
             meas_speed,
 
             _add_samples: None,
-            _sample_dist: None
+            _sample_dist: None,
+            set_limit: false
         }
     }
 
-    pub const fn with_sample_count(mut self, count : usize) -> Self {
+    /// Additional samples to be taken for accuracy
+    pub const fn with_add_samples(mut self, count : usize) -> Self {
         self._add_samples = Some(count);
         self
     }
 
+    /// The distance to be used for samples
     pub const fn with_sample_distance(mut self, dist : U::Distance) -> Self {
+        // TODO: Add check for valid distance
+        
         self._sample_dist = Some(dist);
+        self
+    }
+
+    pub const fn with_setting_limit(mut self) -> Self {
+        self.set_limit = true;
         self
     }
 
@@ -140,37 +154,46 @@ impl<U : UnitSet> SimpleMeasValues<U> {
 /// # Measurement data and its usage
 /// 
 /// Specifing a `sample_dist` is optional, as the script will replace it with 10% of the maximum distance if not specified
-pub async fn take_simple_meas<U : UnitSet, C : SyncActuator<U> + Interruptible + ?Sized>(comp : &mut C, data : &SimpleMeasParams<U>, speed : Factor) -> Result<SimpleMeasValues<U>, SimpleMeasError<U>> {
+pub async fn take_simple_meas<U : UnitSet, C : SyncActuator<U> + Interruptible + ?Sized>(comp : &mut C, params : &SimpleMeasParams<U>, speed : Factor) -> Result<SimpleMeasValues<U>, SimpleMeasError<U>> {
     let mut abs_poss : Vec<U::Position> = Vec::new();
 
     // Init measurement
         // Drive full distance with optionally reduced speed
-        comp.drive_rel(data.max_dist, data.meas_speed * speed).await?;
+        comp.drive_rel(params.max_dist, params.meas_speed * speed).await?;
         
+        // Check whether the component has been interrupted and if it is the correct interrupt
         comp.intr_reason()      // Get the interrupt reason
             .ok_or(SimpleMeasError::NoInterrupt)
             .and_then(|reason|
-                if reason == InterruptReason::EndReached { Ok(()) } else { Err(SimpleMeasError::WrongInterruptReason(reason)) }
-            )?;       // If no interrupt was triggered, return `MeasError::NoInterrupt`
+                if reason == InterruptReason::HardwareEndReached { 
+                    Ok(())  // Let hardware interrupts pass for measurements
+                } else { 
+                    Err(SimpleMeasError::WrongInterruptReason(reason))  
+                }
+            )?;       // If no interrupt was triggered, return `MeasError::NoInterrupt`    
 
         abs_poss.push(comp.pos());
     //
 
-    // Samples
-        for _ in 0 .. data.add_samples() {
+    // Additional samples
+        for _ in 0 .. params.add_samples() {
             // Drive half of the sample distance back (faster)
-            comp.drive_rel(-data.sample_dist() / 2.0, speed).await?;
+            comp.drive_rel(-params.sample_dist(), speed).await?;
 
             // TODO: Check for errors when moving backwards
 
             // Drive sample distance
-            comp.drive_rel(data.sample_dist(), data.meas_speed * speed).await?;
+            comp.drive_rel(params.sample_dist() * 1.5, params.meas_speed * speed).await?;
 
-            // Check wheiter the component has been interrupted and if it is the correct interrupt
+            // Check whether the component has been interrupted and if it is the correct interrupt
             comp.intr_reason()      // Get the interrupt reason
                 .ok_or(SimpleMeasError::NoInterrupt)
                 .and_then(|reason|
-                    if reason == InterruptReason::EndReached { Ok(()) } else { Err(SimpleMeasError::WrongInterruptReason(reason)) }
+                    if reason == InterruptReason::HardwareEndReached { 
+                        Ok(())  // Let hardware interrupts pass for measurements
+                    } else { 
+                        Err(SimpleMeasError::WrongInterruptReason(reason))  
+                    }
                 )?;       // If no interrupt was triggered, return `MeasError::NoInterrupt`
 
             // Add the measurement value to the list
@@ -183,14 +206,17 @@ pub async fn take_simple_meas<U : UnitSet, C : SyncActuator<U> + Interruptible +
     // Current pos difference considering the current position and the average taken by the measurement
     let abs_pos_diff = comp.pos() - abs_pos_av;
     // The new pos to set the components pos to
-    let abs_pos_new = data.new_abs_pos + abs_pos_diff;
+    let abs_pos_new = params.new_abs_pos + abs_pos_diff;
 
     // Set limits and write new distance value
-    comp.set_endpos(abs_pos_av);
     comp.overwrite_abs_pos(abs_pos_new);
 
+    if params.set_limit {
+        comp.set_endpos(abs_pos_av);
+    }
+
     Ok(SimpleMeasValues {
-        sample_count: data.add_samples(),
+        sample_count: params.add_samples() + 1,
 
         positions: abs_poss,
         position_avg: abs_pos_av,

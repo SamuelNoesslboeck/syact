@@ -78,8 +78,10 @@ use syunit::*;
     /// Reasons why an interrupt was triggered
     #[derive(PartialEq, Eq, PartialOrd, Ord, Debug, Clone, Copy)]
     pub enum InterruptReason {
-        /// A virtual end or a switch has been reached
-        EndReached,
+        /// A hardware end has been reached (switch, etc.)
+        HardwareEndReached,
+        /// A virtual component limit has been reached
+        LimitReached,
         /// The component has been overloaded
         Overload,
         /// Another error has occured
