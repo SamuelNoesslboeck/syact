@@ -34,8 +34,8 @@ impl ServoConst {
         velocity_max: RadPerSecond(8.5),
         position_max: PositionRad(core::f32::consts::PI),
 
-        duty_min: unsafe { Factor::new_unchecked(0.05) },
-        duty_max: unsafe { Factor::new_unchecked(0.1) },
+        duty_min: unsafe { Factor::new_unchecked(0.025) },
+        duty_max: unsafe { Factor::new_unchecked(0.125) },
         f_pwm: Hertz(50.0)
     };
 
