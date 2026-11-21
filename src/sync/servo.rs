@@ -26,13 +26,17 @@ impl<P : SetDutyCycle> MiniServo<P> {
     /// # Setup
     /// 
     /// Before any use of movement functions you must call `start()` or `setup()` in order to set up all the pins
-    pub fn new(consts : ServoConst, pwm : P) -> Self {
-        Self {
+    pub fn new(consts : ServoConst, pwm : P) -> Result<Self, P::Error> {
+        let mut s = Self {
             pos: consts.default_pos(),
             _consts: consts,
 
             pwm
-        }
+        };
+
+        s.drive_default_pos()?;
+
+        Ok(s)
     }
  
     /// Returns a reference to the `ServoConst` of the driver
@@ -52,6 +56,21 @@ impl<P : SetDutyCycle> MiniServo<P> {
         }
     //  
 
+    // Factor
+        /// Get the duty-cycle-percent of the motor (values `0.0` to `1.0`)
+        pub fn pos_factor(&self) -> Factor {
+            // Safe to use, as all operations altering the Factor are internal
+            unsafe { Factor::new_unchecked(self.pos / self._consts.position_max) }
+        }
+
+        /// Set the duty-cycle percent of the servo (value `0.0` to `1.0`). Causes the servo to adapt its position
+        pub fn drive_factor_pos(&mut self, factor : Factor) -> Result<(), P::Error> {
+            self.pos = self._consts.position_max * factor;
+            self.pwm.set_duty_cycle(factor.get_duty_for(self.pwm.max_duty_cycle()))
+        }
+    // 
+
+
     // Absolute position
         /// Get the *aboslute* angle of the servo 
         pub fn pos(&self) -> PositionRad {
@@ -66,19 +85,6 @@ impl<P : SetDutyCycle> MiniServo<P> {
         pub fn drive_abs(&mut self, pos : PositionRad) -> Result<(), P::Error> {
             self.drive_factor_pos(Factor::try_new(pos / self._consts.position_max)
                 .expect("The given position is either invalid or out of range!"))
-        }
-    // 
-    
-    // Factor
-        /// Get the duty-cycle-percent of the motor (values `0.0` to `1.0`)
-        pub fn factor(&self) -> Factor {
-            // Safe to use, as all operations altering the Factor are internal
-            unsafe { Factor::new_unchecked(self.pos / self._consts.position_max) }
-        }
-
-        /// Set the duty-cycle percent of the servo (value `0.0` to `1.0`). Causes the servo to adapt its position
-        pub fn drive_factor_pos(&mut self, factor : Factor) -> Result<(), P::Error> {
-            self.pwm.set_duty_cycle(factor.get_duty_for(self.pwm.max_duty_cycle()))
         }
     // 
 
