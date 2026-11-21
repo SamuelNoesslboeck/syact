@@ -66,7 +66,9 @@ impl<P : SetDutyCycle> MiniServo<P> {
         /// Set the duty-cycle percent of the servo (value `0.0` to `1.0`). Causes the servo to adapt its position
         pub fn drive_factor_pos(&mut self, factor : Factor) -> Result<(), P::Error> {
             self.pos = self._consts.position_max * factor;
-            self.pwm.set_duty_cycle(factor.get_duty_for(self.pwm.max_duty_cycle()))
+            self.pwm.set_duty_cycle(
+                self._consts.duty_for_factor(factor).get_duty_for(self.pwm.max_duty_cycle())
+            )
         }
     // 
 
