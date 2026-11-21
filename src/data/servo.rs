@@ -17,10 +17,10 @@ pub struct ServoConst {
     /// Maximum angle [Unit radians]
     pub position_max : PositionRad,
 
-    /// Minimum signal length [Unit s]
-    pub pwm_min : Seconds,
-    /// Maximum signal length [Unit s]
-    pub pwm_max : Seconds,
+    /// Duty at minimum position
+    pub duty_min : Factor,
+    /// Duty at maximum position
+    pub duty_max : Factor,
 
     /// Default frequency
     pub f_pwm : Hertz
@@ -34,14 +34,14 @@ impl ServoConst {
         velocity_max: RadPerSecond(8.5),
         position_max: PositionRad(core::f32::consts::PI),
 
-        pwm_min: Seconds(0.00075),
-        pwm_max: Seconds(0.00225),
+        duty_min: unsafe { Factor::new_unchecked(0.05) },
+        duty_max: unsafe { Factor::new_unchecked(0.1) },
         f_pwm: Hertz(50.0)
     };
 
-    /// The default pulse time of a servo motor (mid position)
-    pub fn default_pulse(&self) -> Seconds {
-        (self.pwm_min + self.pwm_max) / 2.0
+    /// The default duty of a servo in default (mid) position
+    pub fn default_duty(&self) -> Factor {
+        Factor::new((self.duty_min.as_f32() + self.duty_max.as_f32()) / 2.0)
     }
 
     /// The default position of a servo motor
@@ -55,12 +55,12 @@ impl ServoConst {
     }
 
     /// Pulse time for a given [Factor]
-    pub fn pulse_for_factor(&self, factor : Factor) -> Seconds {
-        self.pwm_min + (self.pwm_max - self.pwm_min) * factor
+    pub fn duty_for_factor(&self, factor : Factor) -> Factor {
+        Factor::new(self.duty_min.as_f32() + (self.duty_max.as_f32() - self.duty_min.as_f32()) * factor.as_f32())
     }
 
     /// Pulse time for a given angle
-    pub fn pulse_for_angle(&self, pos : PositionRad) -> Seconds {
-        self.pulse_for_factor(Factor::new(pos / self.position_max))
+    pub fn duty_for_pos(&self, pos : PositionRad) -> Factor {
+        self.duty_for_factor(Factor::new(pos / self.position_max))
     }
 }

@@ -121,11 +121,11 @@ impl SyncActuator<Rotary> for DemoActuator {
 }
 
 impl AdvancedActuator for DemoActuator {
-    fn force_gen(&self) -> <Rotary as UnitSet>::Force {
+    fn load_force_gen(&self) -> <Rotary as UnitSet>::Force {
         self.vars.force_load_gen
     }
     
-    fn force_dir(&self) -> <Rotary as UnitSet>::Force {
+    fn load_force_dir(&self) -> <Rotary as UnitSet>::Force {
         self.vars.force_load_dir
     }
     

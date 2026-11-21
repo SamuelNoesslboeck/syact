@@ -346,12 +346,12 @@ pub trait ActuatorParent {
         <T::Output as UnitSet>::Force : Div<T::Ratio, Output = <T::Input as UnitSet>::Force>
     {
         // Loads
-            fn force_gen(&self) -> <T::Input as UnitSet>::Force {
-                self.force_for_parent(self.child().force_gen())
+            fn load_force_gen(&self) -> <T::Input as UnitSet>::Force {
+                self.force_for_parent(self.child().load_force_gen())
             }
 
-            fn force_dir(&self) -> <T::Input as UnitSet>::Force {
-                self.force_for_parent(self.child().force_dir())
+            fn load_force_dir(&self) -> <T::Input as UnitSet>::Force {
+                self.force_for_parent(self.child().load_force_dir())
             }
 
             fn apply_gen_force(&mut self, force : <T::Input as UnitSet>::Force) -> Result<(), ActuatorError<T::Input>> {

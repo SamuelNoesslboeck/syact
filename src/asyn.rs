@@ -17,13 +17,13 @@ pub trait AsyncActuator<U : UnitSet> {
     /**/
 
     /// Starts the movement process of the component in the given direction with a given `speed` factor
-    async fn drive_factor(&mut self, speed : Factor, direction : Direction) -> Result<(), ActuatorError<U>>; 
+    fn drive_factor(&mut self, speed : Factor, direction : Direction) -> Result<(), ActuatorError<U>>; 
 
     /// Start the movement process of the component with the given velocity `speed`, positive values for `speed` mean CW movement
-    async fn drive_speed(&mut self, speed : U::Velocity) -> Result<(), ActuatorError<U>>;
+    fn drive_speed(&mut self, speed : U::Velocity) -> Result<(), ActuatorError<U>>;
 
     /// Fully halts the actuator
-    async fn stop(&mut self) -> Result<(), ActuatorError<U>>;
+    fn stop(&mut self) -> Result<(), ActuatorError<U>>;
 }
 
 /// A generic PWM DC-Motor driver with two PWM pins, one forward, the other backward

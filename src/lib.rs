@@ -13,28 +13,26 @@ use syunit::*;
 // ####################
 // #    SUBMODULES    #
 // ####################
-    // Core
-        /// Everything about actuators that work asynchronously
-        mod asyn;
-        pub use asyn::{AsyncActuator, PwmDcDriver};
+    /// Everything about actuators that work asynchronously
+    mod asyn;
+    pub use asyn::{AsyncActuator, PwmDcDriver};
 
-        /// Common components and their implementations, like gears, linear axes etc.
-        pub mod comps;
+    /// Common components and their implementations, like gears, linear axes etc.
+    pub mod comps;
 
-        /// Structs for storing characteristics of stepper motors and so on
-        pub mod data;
+    /// Structs for storing characteristics of stepper motors and so on
+    pub mod data;
 
-        /// Functions and Structs for taking measurements with a robot for e.g. position calculation
-        pub mod meas;
+    /// Functions and Structs for taking measurements with a robot for e.g. position calculation
+    pub mod meas;
 
-        /// Component parent relations and their implementation
-        pub mod parent;
-        pub use parent::{ActuatorParent, RatioActuatorParent};
+    /// Component parent relations and their implementation
+    pub mod parent;
+    pub use parent::{ActuatorParent, RatioActuatorParent};
 
-        /// Everything about actuators that work synchronously
-        pub mod sync;
-        pub use sync::SyncActuator; 
-    // 
+    /// Everything about actuators that work synchronously
+    pub mod sync;
+    pub use sync::SyncActuator; 
 
     /// Embed unit system library
     pub mod prelude;
@@ -174,13 +172,12 @@ use syunit::*;
     /// An advanced actuator allows applying loads that alter the actuators movement
     pub trait AdvancedActuator<U : UnitSet = Rotary> : SyncActuator<U> {
         // Load calculation
-            // TODO: Documentation sucks
-            /// Will always be positive
-            fn force_gen(&self) -> U::Force;
+            /// Returns the general load force, meaning load force that applies in both directions
+            /// (most of the time friction)
+            fn load_force_gen(&self) -> U::Force;
 
-            // TODO: Documentation sucks
-            /// Positive means CW direction
-            fn force_dir(&self) -> U::Force;
+            /// Returns the directional load force, meaning load force that is directionally dependent
+            fn load_force_dir(&self) -> U::Force;
 
             /// Apply a load force to the component, slowing down movements 
             /// 

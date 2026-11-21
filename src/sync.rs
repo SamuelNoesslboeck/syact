@@ -6,9 +6,8 @@ use crate::ActuatorError;
 // #    SUBMODULES    #
 // ####################
     /// Everything concerning servo-motors
-    #[deprecated]
     pub mod servo;
-    // pub use servo::MiniServo;
+    pub use servo::MiniServo;
 //
 
 // ######################
