@@ -4,7 +4,8 @@ use alloc::boxed::Box;
 
 use syunit::*;
 
-use crate::{SyncActuator, ActuatorError, Interruptible, AdvancedActuator};
+use crate::intr::Interruptor;
+use crate::{SyncActuator, ActuatorError, Interruptible, AdvSyncActuator};
 
 /// A trait that marks an actuator which acts as a parent for another actuator
 pub trait ActuatorParent {
@@ -209,8 +210,23 @@ pub trait ActuatorParent {
 
             T::Child : SyncActuator<T::Output>
         {
-            // Position
-                #[inline]
+            /* Variables */
+                fn acc_vars<F, R>(&self, _ : F) -> R
+                    where
+                        F : FnOnce(&crate::prelude::ActuatorVars<T::Input>) -> R
+                {
+                    panic!("Do not use these accessors in parent components!")
+                }
+
+                fn acc_vars_mut<F, R>(&mut self, _ : F) -> R
+                where
+                    F : FnOnce(&mut crate::prelude::ActuatorVars<T::Input>) -> R
+                {
+                    panic!("Do not use these accessors in parent components!")
+                }
+            /**/
+
+            /* Position */
                 fn pos(&self) -> <T::Input as UnitSet>::Position {
                     self.pos_for_parent(self.child().pos())
                 }
@@ -219,9 +235,13 @@ pub trait ActuatorParent {
                     let abs_pos = self.pos_for_child(abs_pos);
                     self.child_mut().overwrite_abs_pos(abs_pos)
                 }
-            //
+            /**/
 
             // State
+                fn direction(&self) -> Direction {
+                    self.child().direction()
+                }
+
                 fn velocity(&self) -> <T::Input as UnitSet>::Velocity {
                     self.velocity_for_parent(self.child().velocity())
                 }
@@ -310,14 +330,14 @@ pub trait ActuatorParent {
                         .map_err(|err| self.error_for_parent(err))
                 }
                 
-                fn drive_factor(&mut self, speed : Factor, direction : Direction) -> Result<(), ActuatorError<T::Input>> {
-                    self.child_mut().drive_factor(speed, direction)
+                fn drive_cont_factor(&mut self, speed : Factor, direction : Direction) -> Result<(), ActuatorError<T::Input>> {
+                    self.child_mut().drive_cont_factor(speed, direction)
                         .map_err(|err| self.error_for_parent(err))
                 }
                 
-                fn drive_speed(&mut self, speed : <T::Input as UnitSet>::Velocity) -> Result<(), ActuatorError<T::Input>> {
+                fn drive_cont_speed(&mut self, speed : <T::Input as UnitSet>::Velocity) -> Result<(), ActuatorError<T::Input>> {
                     let speed = self.velocity_for_child(speed);
-                    self.child_mut().drive_speed(speed)
+                    self.child_mut().drive_cont_speed(speed)
                         .map_err(|err| self.error_for_parent(err))
                 }
             // 
@@ -325,9 +345,9 @@ pub trait ActuatorParent {
     
     //
 
-    impl<T : RatioActuatorParent> AdvancedActuator<T::Input> for T
+    impl<T : RatioActuatorParent> AdvSyncActuator<T::Input> for T
     where 
-        T::Child : AdvancedActuator<T::Output>,
+        T::Child : AdvSyncActuator<T::Output>,
 
         <T::Input as UnitSet>::Time : From<<T::Output as UnitSet>::Time>,
 
@@ -366,13 +386,13 @@ pub trait ActuatorParent {
                     .map_err(|err| self.error_for_parent(err))
             }
 
-            fn inertia(&self) -> <T::Input as UnitSet>::Inertia {
-                self.inertia_for_parent(self.child().inertia())
+            fn load_inertia(&self) -> <T::Input as UnitSet>::Inertia {
+                self.inertia_for_parent(self.child().load_inertia())
             }
 
-            fn apply_inertia(&mut self, inertia : <T::Input as UnitSet>::Inertia) -> Result<(), ActuatorError<T::Input>> {
+            fn apply_load_inertia(&mut self, inertia : <T::Input as UnitSet>::Inertia) -> Result<(), ActuatorError<T::Input>> {
                 let inertia = self.inertia_for_child(inertia);
-                self.child_mut().apply_inertia(inertia)
+                self.child_mut().apply_load_inertia(inertia)
                     .map_err(|err| self.error_for_parent(err))
             }
         //
@@ -382,12 +402,12 @@ pub trait ActuatorParent {
     where
         T::Child : Interruptible
     {
-        fn add_interruptor(&mut self, interruptor : Box<dyn super::Interruptor + Send>) {
+        fn add_interruptor(&mut self, interruptor : Box<dyn Interruptor + Send>) {
             self.child_mut().add_interruptor(interruptor)
         }
 
-        fn intr_reason(&mut self) -> Option<super::InterruptReason> {
-            self.child_mut().intr_reason()
+        fn fetch_intr_reason(&mut self) -> Option<super::InterruptReason> {
+            self.child_mut().fetch_intr_reason()
         }
     }
 // 

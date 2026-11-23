@@ -1,35 +1,77 @@
 #![allow(missing_docs)]
 
+use alloc::boxed::Box;
+use alloc::vec::Vec;
 use syunit::metric::KgMeter2;
 use syunit::metric::NewtonMeters;
 
-use crate::ActuatorError;
-use crate::AdvancedActuator;
-use crate::SyncActuator;
+use crate::InterruptReason;
+use crate::{ActuatorError, AdvSyncActuator, Interruptible, SyncActuator};
 use crate::data::ActuatorVars;
+use crate::intr::Interruptor;
 use crate::units::*;
 
-/// Testing
-#[derive(Clone, Debug, Default)]
+const DEMO_ACT_MAX_SPEED : RadPerSecond = RadPerSecond(50.0);
+
+/// A demo actuator that does no actual movements but simulates the behaviour of an actuator structure
 pub struct DemoActuator {
     _pos : PositionRad,
+    _vel : RadPerSecond,
+    _dir : Direction,
 
-    _velocity_max : Option<RadPerSecond>,
-    _acceleration_max : Option<RadPerSecond2>,
-    _jolt_max : Option<RadPerSecond3>,
-
-    dir : Direction,
+    intr : Vec<Box<dyn Interruptor>>,
+    intr_reason : Option<InterruptReason>,
 
     vars : ActuatorVars
 }
 
 impl DemoActuator {
     pub fn new() -> Self {
-        Self::default()
+        Self {
+            _pos: PositionRad::ZERO,
+            _vel: RadPerSecond::ZERO,
+            _dir: Direction::default(),
+
+            intr: Vec::new(),
+            intr_reason: None,
+
+            vars: ActuatorVars::default()
+        }
     }
 }
 
 impl SyncActuator<Rotary> for DemoActuator {
+    /* Variable accessors */
+        fn acc_vars<F, R>(&self, f : F) -> R
+            where
+                F : FnOnce(&ActuatorVars<Rotary>) -> R
+        {
+            f(&self.vars)
+        }
+
+        fn acc_vars_mut<F, R>(&mut self, f : F) -> R
+        where
+            F : FnOnce(&mut ActuatorVars<Rotary>) -> R
+        {
+            f(&mut self.vars)
+        }
+    /**/
+
+    /* State */
+        fn direction(&self) -> Direction {
+            self._dir
+        }
+
+        fn velocity(&self) -> RadPerSecond {
+            self._vel
+        }
+        
+        fn is_moving(&self) -> bool {
+            false       // Demo actuator does all movements instantly
+        }
+    /**/
+
+
     fn pos(&self) -> PositionRad {
         self._pos
     }
@@ -37,114 +79,68 @@ impl SyncActuator<Rotary> for DemoActuator {
     fn overwrite_abs_pos(&mut self, pos : PositionRad) {
         self._pos = pos;
     }
+    
+    fn drive_rel(&mut self, rel_dist : <Rotary as UnitSet>::Distance, _speed : Factor) -> Result<(), ActuatorError<Rotary>> {
+        self._dir = rel_dist.get_direction();
+        self._vel = RadPerSecond::ZERO;
 
-    fn velocity_max(&self) -> Option<RadPerSecond> {
-        self._velocity_max
-    }
+        let steps = (rel_dist.abs() / 0.1).0.ceil();
 
-    fn set_velocity_max(&mut self, velocity_opt : Option<RadPerSecond>) -> Result<(), ActuatorError<Rotary>> {
-        self._velocity_max = velocity_opt;
+        for i in 0 .. steps as usize {
+            self._pos += rel_dist / steps;
+            
+            for intr in self.intr {
+                let reason = intr.check();
+                if reason.is_some() {
+                    self.intr_reason = reason;
+                    break;
+                }
+            }
+        }
+        
         Ok(())
     }
-
-    fn acceleration_max(&self) -> Option<RadPerSecond2> {
-        self._acceleration_max
-    }
-
-    fn set_acceleration_max(&mut self, acceleration_opt : Option<RadPerSecond2>) -> Result<(), ActuatorError<Rotary>> {
-        self._acceleration_max = acceleration_opt;
+    
+    fn drive_cont_factor(&mut self, speed : Factor, direction : Direction) -> Result<(), ActuatorError<Rotary>> {
+        self._vel = DEMO_ACT_MAX_SPEED * speed;
+        self._dir = direction;
         Ok(())
     }
-
-    fn jolt_max(&self) -> Option<RadPerSecond3> {
-        self._jolt_max
-    }
-
-    fn set_jolt_max(&mut self, jolt_opt : Option<RadPerSecond3>) -> Result<(), ActuatorError<Rotary>> {
-        self._jolt_max = jolt_opt;
-        Ok(())
-    }
-
-    fn limit_min(&self) -> Option<PositionRad> {
-        self.vars.lim.min
-    }
-
-    fn limit_max(&self) -> Option<PositionRad> {
-        self.vars.lim.max
-    }
-
-    fn set_endpos(&mut self, overwrite_abs_pos : PositionRad) {
-        self.overwrite_abs_pos(overwrite_abs_pos);
-
-        let dir = self.dir.as_bool();
-
-        self.set_pos_limits(
-            if dir { None } else { Some(overwrite_abs_pos) },
-            if dir { Some(overwrite_abs_pos) } else { None }
-        )
-    }
-
-    fn set_pos_limits(&mut self, min : Option<PositionRad>, max : Option<PositionRad>) {
-        if let Some(min) = min {
-            self.vars.lim.min = Some(min)
+    
+    fn drive_cont_speed(&mut self, speed : <Rotary as UnitSet>::Velocity) -> Result<(), ActuatorError<Rotary>> {
+        if speed.abs() > DEMO_ACT_MAX_SPEED {
+            return Err(ActuatorError::VelocityTooHigh(speed, DEMO_ACT_MAX_SPEED));
         }
 
-        if let Some(max) = max {
-            self.vars.lim.max = Some(max);
-        }
-    }
-
-    fn overwrite_pos_limits(&mut self, min : Option<PositionRad>, max : Option<PositionRad>) {
-        self.vars.lim.min = min;
-        self.vars.lim.max = max;
-    }
-    
-    fn drive_rel(&mut self, rel_dist : <Rotary as UnitSet>::Distance, speed : Factor) -> Result<(), ActuatorError<Rotary>> {
-        todo!()
-    }
-    
-    fn drive_factor(&mut self, speed : Factor, direction : Direction) -> Result<(), ActuatorError<Rotary>> {
-        todo!()
-    }
-    
-    fn drive_speed(&mut self, speed : <Rotary as UnitSet>::Velocity) -> Result<(), ActuatorError<Rotary>> {
-        todo!()
-    }
-    
-    fn velocity(&self) -> <Rotary as UnitSet>::Velocity {
-        todo!()
-    }
-    
-    fn is_moving(&self) -> bool {
-        todo!()
+        self._dir = speed.get_direction();
+        self._vel = speed.abs();
+        Ok(())
     }
 }
 
-impl AdvancedActuator for DemoActuator {
-    fn load_force_gen(&self) -> <Rotary as UnitSet>::Force {
-        self.vars.force_load_gen
+impl Interruptible for DemoActuator {
+    fn add_interruptor(&mut self, interruptor : alloc::boxed::Box<dyn Interruptor + Send>) {
+        self.intr.push(interruptor);
     }
-    
-    fn load_force_dir(&self) -> <Rotary as UnitSet>::Force {
-        self.vars.force_load_dir
+
+    fn fetch_intr_reason(&mut self) -> Option<InterruptReason> {
+        self.intr_reason.take()   
     }
-    
+}
+
+impl AdvSyncActuator for DemoActuator {
     fn apply_gen_force(&mut self, force : NewtonMeters) -> Result<(), ActuatorError<Rotary>> {
-        self.vars.force_load_gen = force;
+        self.vars.load_force_gen = force;   // TODO: Maybe add overloads?
         Ok(())
     }
     
     fn apply_dir_force(&mut self, force : NewtonMeters) -> Result<(), ActuatorError<Rotary>> {
-        self.vars.force_load_dir = force;
+        self.vars.load_force_dir = force;
         Ok(())
     }
     
-    fn inertia(&self) -> KgMeter2 {
-        self.vars.inertia_load
-    }
-    
-    fn apply_inertia(&mut self, inertia : KgMeter2) -> Result<(), ActuatorError<Rotary>>  {
-        self.vars.inertia_load = inertia;
+    fn apply_load_inertia(&mut self, inertia : KgMeter2) -> Result<(), ActuatorError<Rotary>>  {
+        self.vars.load_inertia = inertia;
         Ok(())
     }
 }

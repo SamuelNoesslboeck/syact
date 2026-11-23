@@ -1,10 +1,10 @@
 // Simple all in one import
-pub use crate::{ActuatorError, AdvancedActuator, SyncActuator, AsyncActuator, DefinedActuator};
+pub use crate::{ActuatorError, AdvSyncActuator, SyncActuator, AsyncActuator};
 
 pub use crate::comps::{Conveyor, Gear, LinearAxis};
 
 pub use crate::data::ActuatorVars;
-pub use crate::data::servo::ServoConst;
+pub use crate::data::servo::MiniServoData;
 
 pub use crate::meas::{SimpleMeasParams, EndStop};
 

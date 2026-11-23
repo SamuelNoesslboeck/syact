@@ -4,7 +4,7 @@ use alloc::vec::Vec;
 use serde::{Serialize, Deserialize};
 use syunit::*;
 
-use crate::{ActuatorError, InterruptReason, Interruptible, SyncActuator};
+use crate::{ActuatorError, SyncActuator, InterruptReason, Interruptible};
 
 // Submodules
     mod endstop;
@@ -154,7 +154,9 @@ impl<U : UnitSet> SimpleMeasValues<U> {
 /// # Measurement data and its usage
 /// 
 /// Specifing a `sample_dist` is optional, as the script will replace it with 10% of the maximum distance if not specified
-pub fn take_simple_meas<U : UnitSet, C : SyncActuator<U> + Interruptible + ?Sized>(comp : &mut C, params : &SimpleMeasParams<U>, speed : Factor) -> Result<SimpleMeasValues<U>, SimpleMeasError<U>> {
+pub fn take_simple_meas<U : UnitSet, C : SyncActuator<U> + Interruptible + ?Sized>(comp : &mut C, params : &SimpleMeasParams<U>, speed : Factor) 
+    -> Result<SimpleMeasValues<U>, SimpleMeasError<U>> 
+{
     let mut abs_poss : Vec<U::Position> = Vec::new();
 
     // Init measurement
@@ -162,7 +164,7 @@ pub fn take_simple_meas<U : UnitSet, C : SyncActuator<U> + Interruptible + ?Size
         comp.drive_rel(params.max_dist, params.meas_speed * speed)?;
         
         // Check whether the component has been interrupted and if it is the correct interrupt
-        comp.intr_reason()      // Get the interrupt reason
+        comp.fetch_intr_reason()      // Get the interrupt reason
             .ok_or(SimpleMeasError::NoInterrupt)
             .and_then(|reason|
                 if reason == InterruptReason::HardwareEndReached { 
@@ -186,7 +188,7 @@ pub fn take_simple_meas<U : UnitSet, C : SyncActuator<U> + Interruptible + ?Size
             comp.drive_rel(params.sample_dist() * 1.5, params.meas_speed * speed)?;
 
             // Check whether the component has been interrupted and if it is the correct interrupt
-            comp.intr_reason()      // Get the interrupt reason
+            comp.fetch_intr_reason()      // Get the interrupt reason
                 .ok_or(SimpleMeasError::NoInterrupt)
                 .and_then(|reason|
                     if reason == InterruptReason::HardwareEndReached { 

@@ -1,7 +1,7 @@
 use embedded_hal::pwm::SetDutyCycle;
 use syunit::*;
 
-use crate::data::servo::ServoConst;
+use crate::data::servo::{MiniServoConfig, MiniServoData};
 
 /// A basic servo motor with absolute position being controlled by a PWM signal
 /// 
@@ -11,63 +11,45 @@ use crate::data::servo::ServoConst;
 /// - No pins will be occupied until the setup function is called
 #[derive(Debug)]
 pub struct MiniServo<P : SetDutyCycle> {
-    /// The absolute position of the servo motor
-    pos : PositionRad,
     /// The constants of the servo motor (depending on type)
-    _consts : ServoConst,
+    pub data : MiniServoData,
+    pub config : MiniServoConfig,
+
+    /// The absolute position of the servo motor
+    _pos : PositionRad,
 
     /// The PWM output signal
-    pwm : P
+    pin_pwm : P
 }
 
 impl<P : SetDutyCycle> MiniServo<P> {
     /// Creates a new servo driver with the given servo data `consts` connected to the `pin_pwm`
-    /// 
-    /// # Setup
-    /// 
-    /// Before any use of movement functions you must call `start()` or `setup()` in order to set up all the pins
-    pub fn new(consts : ServoConst, pwm : P) -> Result<Self, P::Error> {
+    pub fn new(data : MiniServoData, config : MiniServoConfig, pin_pwm : P) -> Result<Self, P::Error> {
         let mut s = Self {
-            pos: consts.default_pos(),
-            _consts: consts,
+            data,
+            config,
 
-            pwm
+            _pos: PositionRad::ZERO,
+            pin_pwm
         };
 
-        s.drive_default_pos()?;
+        s.drive_endpoint_min()?;
 
         Ok(s)
     }
- 
-    /// Returns a reference to the `ServoConst` of the driver
-    pub fn consts(&self) -> &ServoConst {
-        &self._consts
-    }
-
-    // Drop
-        /// Start the PWM signal and moves the servo to it's default position
-        pub fn start(&mut self) -> Result<(), P::Error> {
-            self.drive_default_pos()
-        }
-
-        /// Stops the servo driver and the PWM signal, can be started again with `start()` if desired
-        pub fn stop(&mut self) -> Result<(), P::Error> {
-            self.pwm.set_duty_cycle_fully_off()
-        }
-    //  
 
     // Factor
         /// Get the duty-cycle-percent of the motor (values `0.0` to `1.0`)
         pub fn pos_factor(&self) -> Factor {
             // Safe to use, as all operations altering the Factor are internal
-            unsafe { Factor::new_unchecked(self.pos / self._consts.position_max) }
+            unsafe { Factor::new_unchecked(self._pos / self.data.position_max) }
         }
 
         /// Set the duty-cycle percent of the servo (value `0.0` to `1.0`). Causes the servo to adapt its position
         pub fn drive_factor_pos(&mut self, factor : Factor) -> Result<(), P::Error> {
-            self.pos = self._consts.position_max * factor;
-            self.pwm.set_duty_cycle(
-                self._consts.duty_for_factor(factor).get_duty_for(self.pwm.max_duty_cycle())
+            self._pos = self.data.position_max * factor;
+            self.pin_pwm.set_duty_cycle(
+                self.data.duty_for_factor(factor).get_duty_for(self.pin_pwm.max_duty_cycle())
             )
         }
     // 
@@ -76,7 +58,7 @@ impl<P : SetDutyCycle> MiniServo<P> {
     // Absolute position
         /// Get the *aboslute* angle of the servo 
         pub fn pos(&self) -> PositionRad {
-            self.pos
+            self._pos
         }
 
         /// Set the absolute angle of the servo. Causes the servo to drive to this angle
@@ -85,17 +67,12 @@ impl<P : SetDutyCycle> MiniServo<P> {
         /// 
         /// Panics if the given 
         pub fn drive_abs(&mut self, pos : PositionRad) -> Result<(), P::Error> {
-            self.drive_factor_pos(Factor::try_new(pos / self._consts.position_max)
+            self.drive_factor_pos(Factor::try_new(pos / self.data.position_max)
                 .expect("The given position is either invalid or out of range!"))
         }
     // 
 
     // Positions
-        /// Moves the servo to its default position
-        pub fn drive_default_pos(&mut self) -> Result<(), P::Error> {
-            self.drive_factor_pos(Factor::HALF)
-        }
-
         /// Moves the servo to its minimum endpoint
         pub fn drive_endpoint_min(&mut self) -> Result<(), P::Error> {
             self.drive_factor_pos(Factor::MIN)

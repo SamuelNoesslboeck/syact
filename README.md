@@ -19,9 +19,13 @@ let mut linear_axis = LinearAxis::new_belt_axis(
     Millimeters(0.5)    // The radius is set to 0.5, which means for each radian the motor moves, the linear_axis moves for 0.5 mm
 );    
 
+// Overwrite the current absolute position
 linear_axis.overwrite_abs_pos(POS);
 
-assert!((linear_axis.pos() - POS).abs() < Millimeters(0.001));      // Check with small tolerance requred for stepper motors
+assert!((linear_axis.pos() - POS).abs() < Millimeters(0.001));      // Check with small tolerance
+
+// Drive to 100mm with maximum speed
+linear_axis.drive_abs(PositionMM(100.0), Factor::MAX).unwrap(); 
 ```
 
 ## Further libraries
