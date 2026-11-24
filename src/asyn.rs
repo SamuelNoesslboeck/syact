@@ -29,8 +29,8 @@ pub trait AsyncActuator<U : UnitSet> {
 /// A generic PWM DC-Motor driver with two PWM pins, one forward, the other backward
 pub struct PwmDcDriver<FW : SetDutyCycle, BW : SetDutyCycle> 
 where
-    FW::Error : Into<ActuatorError>,
-    BW::Error : Into<ActuatorError>
+    FW::Error : Into<ActuatorError<Rotary>>,
+    BW::Error : Into<ActuatorError<Rotary>>
 {
     /// Pin that controlls the forward PWM signal for the DcMotor controller
     pub pin_fw : FW,
@@ -45,8 +45,8 @@ where
 
 impl<FW : SetDutyCycle, BW : SetDutyCycle> PwmDcDriver<FW, BW> 
 where
-    FW::Error : Into<ActuatorError>,
-    BW::Error : Into<ActuatorError>
+    FW::Error : Into<ActuatorError<Rotary>>,
+    BW::Error : Into<ActuatorError<Rotary>>
 {
     /// Creates a new DcDriver
     pub fn init(pin_fw : FW, pin_bw : BW) -> Self {
@@ -72,7 +72,7 @@ where
     /**/
 
     /// 
-    pub fn drive_factor(&mut self, speed : Factor, direction : Direction) -> Result<(), ActuatorError> {
+    pub fn drive_factor(&mut self, speed : Factor, direction : Direction) -> Result<(), ActuatorError<Rotary>> {
         self.__factor = speed;
         self.__dir = direction;
 

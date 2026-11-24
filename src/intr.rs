@@ -1,29 +1,61 @@
+use core::cell::Cell;
+
 use alloc::boxed::Box;
+use alloc::vec::Vec;
 
 use syunit::*;
 
-/// A trait for structs that help interrupting or watching movement processes, the most common use are measurement systems
-pub trait Interruptor {
-    /// Direction of the interruptor
-    /// - If `None` the interruptor is not dependent on a movement direction
-    /// - If `Some` the interruptor is only active when moving in the given direction
-    /// 
-    /// ### Temporary dependence
-    /// 
-    /// If an interruptor was previously triggered by a movement, the control applies a temporary direction that lasts as long as
-    /// the interruptor is triggered. Otherwise a not direction dependent switch would block movements completely
-    fn dir(&self) -> Option<Direction>;
-    
-    /// Set temporary direction used to prevent locking of the axis
-    /// 
-    /// - A `Some` value sets the direction
-    /// - A `None` value resets the direction
-    /// 
-    /// See `dir` for information about temporary direction
-    fn set_temp_dir(&mut self, dir_opt : Option<Direction>);
+use crate::{ActuatorError, SyncActuator};
 
-    /// Runs a check of the movement process and Interrupts if it has a reason to
-    fn check(&mut self) -> Option<InterruptReason>;
+/* Submodules */
+    mod endstop;
+    pub use endstop::EndStop;
+/**/
+
+#[allow(type_alias_bounds)]
+pub type InterruptFunc<A : SyncActuator> = dyn Fn(&A) -> Result<Option<InterruptReason>, ActuatorError<A::Units>>;
+
+pub struct Interruptor<A : SyncActuator> {
+    func : Box<InterruptFunc<A>>,
+    /// Optionally restrict the interruptor by direction
+    dir : Option<Direction>,
+    /// Temporary direction that ensures the interruptor gets an effective direction for a short time after it has been triggered
+    /// to prevent stalls
+    temp_dir : Cell<Option<Direction>>
+}
+
+impl<A : SyncActuator> Interruptor<A> {
+    pub fn new(func : Box<InterruptFunc<A>>, dir : Option<Direction>) -> Self {
+        Self {
+            func, 
+            dir,
+            temp_dir: Cell::new(None)
+        }
+    }
+
+    pub fn effective_dir(&self) -> Option<Direction> {
+        self.dir.or(self.temp_dir.get())
+    }
+
+    pub fn check(&self, act : &A) -> Result<Option<InterruptReason>, ActuatorError<A::Units>> {
+        // Interruptor gets skipped if the actuator is currently not moving in it's effective direction
+        if let Some(eff_dir) = self.effective_dir() {
+            if eff_dir != act.direction() {
+                return Ok(None);   
+            }
+        }
+
+        let reas = self.func.as_ref()(act)?;
+        if reas.is_some() {
+            // Setting the temporary direction prevents a stall when using non-directional interruptors
+            self.temp_dir.set(Some(act.direction()));
+            return Ok(reas);
+        } else {
+            self.temp_dir.set(None);
+        }
+
+        Ok(None)
+    }
 }
 
 /// Reasons why an interrupt was triggered
@@ -39,18 +71,34 @@ pub enum InterruptReason {
     Error
 }
 
-/// Represents an interruptible component, meaning `Interruptors` can be attached to modify the movement process
-pub trait Interruptible {
-    /// Add an interruptor to the component, often used for measurements or other processes checking the movement
-    fn add_interruptor(&mut self, interruptor : Box<dyn Interruptor + Send>);
+pub struct InterruptHandler<A : SyncActuator> {
+    intr_list : Vec<Interruptor<A>>,
+    last_intr_reason : Cell<Option<InterruptReason>>
+}
 
-    /// Calls `add_interruptor` on an owned object
-    fn add_interruptor_il(mut self, interruptor : Box<dyn Interruptor + Send>) -> Self 
-    where 
-        Self : Sized 
-    {
-        self.add_interruptor(interruptor);
-        self
+impl<A : SyncActuator> InterruptHandler<A> {
+    pub fn new() -> Self {
+        Self {
+            intr_list: Vec::new(),
+            last_intr_reason: Cell::new(None)
+        }
+    }
+
+    // TODO: Maybe handle this differently in the future?
+    pub fn add_intr(&mut self, intr : Interruptor<A>) {
+        self.intr_list.push(intr);
+    }
+
+    pub fn check_all(&self, act : &A) -> Result<Option<InterruptReason>, ActuatorError<A::Units>> {
+        for intr in &self.intr_list {
+            let res = intr.check(act)?; 
+            if res.is_some() {
+                self.last_intr_reason.set(res);
+                return Ok(res);
+            }
+        }
+
+        Ok(None)
     }
 
     /// Returns the stored interrupt reason if there is any (returns `None` otherwise)
@@ -58,5 +106,17 @@ pub trait Interruptible {
     /// # Note
     /// 
     /// Executing this function will replace the reason with `None`, so if you need to access the value multiple times, you have to store it yourself
-    fn fetch_intr_reason(&mut self) -> Option<InterruptReason>;
+    pub fn fetch_intr_reason(&self) -> Option<InterruptReason> {
+        self.last_intr_reason.take()
+    }
+}
+
+/// Represents an interruptible component, meaning `Interruptors` can be attached to modify the movement process
+pub trait Interruptible {
+    /// Returns the stored interrupt reason if there is any (returns `None` otherwise)
+    /// 
+    /// # Note
+    /// 
+    /// Executing this function will replace the reason with `None`, so if you need to access the value multiple times, you have to store it yourself
+    fn fetch_intr_reason(&self) -> Option<InterruptReason>;
 }

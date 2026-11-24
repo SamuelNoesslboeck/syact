@@ -1,10 +1,7 @@
 use core::ops::{Div, Mul};
 
-use alloc::boxed::Box;
-
 use syunit::*;
 
-use crate::intr::Interruptor;
 use crate::{SyncActuator, ActuatorError, Interruptible, AdvSyncActuator};
 
 /// A trait that marks an actuator which acts as a parent for another actuator
@@ -156,6 +153,8 @@ pub trait ActuatorParent {
                     // Convert distance
                     ActuatorError::InvaldRelativeDistance(child_dist) => 
                         ActuatorError::InvaldRelativeDistance(self.dist_for_parent(child_dist)),
+                    ActuatorError::PosOutOfBounds(child_pos, child_out_of_bounds) => 
+                        ActuatorError::PosOutOfBounds(self.pos_for_parent(child_pos), self.dist_for_parent(child_out_of_bounds)),
                     // Convert velocity
                     ActuatorError::InvalidVelocity(child_vel) =>
                         ActuatorError::InvalidVelocity(self.velocity_for_parent(child_vel)),
@@ -190,7 +189,7 @@ pub trait ActuatorParent {
 // ##################################
 // 
 // Automatically implements `SyncActuator` for every component
-        impl<T : RatioActuatorParent> SyncActuator<T::Input> for T 
+        impl<T : RatioActuatorParent> SyncActuator for T 
         where
             <T::Input as UnitSet>::Time : From<<T::Output as UnitSet>::Time>,
 
@@ -208,8 +207,10 @@ pub trait ActuatorParent {
             <T::Output as UnitSet>::Jolt : Mul<T::Ratio, Output = <T::Input as UnitSet>::Jolt>,
             <T::Output as UnitSet>::Force : Div<T::Ratio, Output = <T::Input as UnitSet>::Force>,
 
-            T::Child : SyncActuator<T::Output>
+            T::Child : SyncActuator<Units = T::Output>
         {
+            type Units = T::Input;
+
             /* Variables */
                 fn acc_vars<F, R>(&self, _ : F) -> R
                     where
@@ -252,6 +253,10 @@ pub trait ActuatorParent {
             // 
 
             // Velocity
+                fn __vel_possible(&self) -> <Self::Units as UnitSet>::Velocity {
+                    self.velocity_for_parent(self.child().vel_possible())
+                }
+
                 #[inline]
                 fn velocity_max(&self) -> Option<<T::Input as UnitSet>::Velocity> {
                     self.child().velocity_max().map(|velocity| self.velocity_for_parent(velocity))
@@ -324,20 +329,14 @@ pub trait ActuatorParent {
                     self.child_mut().overwrite_pos_limits(min, max)
                 }
                 
-                fn drive_rel(&mut self, rel_dist : <T::Input as UnitSet>::Distance, speed : Factor) -> Result<(), ActuatorError<T::Input>> {
+                fn __drive_rel_core(&mut self, rel_dist : <T::Input as UnitSet>::Distance, speed : Factor) -> Result<(), ActuatorError<T::Input>> {
                     let dist = self.dist_for_child(rel_dist);
-                    self.child_mut().drive_rel(dist, speed)
+                    self.child_mut().__drive_rel_core(dist, speed)
                         .map_err(|err| self.error_for_parent(err))
                 }
                 
-                fn drive_cont_factor(&mut self, speed : Factor, direction : Direction) -> Result<(), ActuatorError<T::Input>> {
-                    self.child_mut().drive_cont_factor(speed, direction)
-                        .map_err(|err| self.error_for_parent(err))
-                }
-                
-                fn drive_cont_speed(&mut self, speed : <T::Input as UnitSet>::Velocity) -> Result<(), ActuatorError<T::Input>> {
-                    let speed = self.velocity_for_child(speed);
-                    self.child_mut().drive_cont_speed(speed)
+                fn __drive_cont_core(&mut self, speed : Factor, direction : Direction) -> Result<(), ActuatorError<T::Input>> {
+                    self.child_mut().__drive_cont_core(speed, direction)
                         .map_err(|err| self.error_for_parent(err))
                 }
             // 
@@ -345,9 +344,9 @@ pub trait ActuatorParent {
     
     //
 
-    impl<T : RatioActuatorParent> AdvSyncActuator<T::Input> for T
+    impl<T : RatioActuatorParent> AdvSyncActuator for T
     where 
-        T::Child : AdvSyncActuator<T::Output>,
+        T::Child : AdvSyncActuator<Units = T::Output>,
 
         <T::Input as UnitSet>::Time : From<<T::Output as UnitSet>::Time>,
 
@@ -398,16 +397,13 @@ pub trait ActuatorParent {
         //
     }
 
-    impl<T : ActuatorParent> Interruptible for T 
+    impl<T> Interruptible for T 
     where
+        T : ActuatorParent + SyncActuator,
         T::Child : Interruptible
     {
-        fn add_interruptor(&mut self, interruptor : Box<dyn Interruptor + Send>) {
-            self.child_mut().add_interruptor(interruptor)
-        }
-
-        fn fetch_intr_reason(&mut self) -> Option<super::InterruptReason> {
-            self.child_mut().fetch_intr_reason()
+        fn fetch_intr_reason(&self) -> Option<super::InterruptReason> {
+            self.child().fetch_intr_reason()
         }
     }
 // 

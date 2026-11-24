@@ -1,7 +1,8 @@
 use embedded_hal::pwm::SetDutyCycle;
 use syunit::*;
 
-use crate::data::servo::{MiniServoConfig, MiniServoData};
+use crate::ActuatorError;
+use crate::data::{MiniServoConfig, MiniServoData};
 
 /// A basic servo motor with absolute position being controlled by a PWM signal
 /// 
@@ -24,7 +25,7 @@ pub struct MiniServo<P : SetDutyCycle> {
 
 impl<P : SetDutyCycle> MiniServo<P> {
     /// Creates a new servo driver with the given servo data `consts` connected to the `pin_pwm`
-    pub fn new(data : MiniServoData, config : MiniServoConfig, pin_pwm : P) -> Result<Self, P::Error> {
+    pub fn new(data : MiniServoData, config : MiniServoConfig, pin_pwm : P) -> Result<Self, ActuatorError<Rotary>> {
         let mut s = Self {
             data,
             config,
@@ -42,18 +43,17 @@ impl<P : SetDutyCycle> MiniServo<P> {
         /// Get the duty-cycle-percent of the motor (values `0.0` to `1.0`)
         pub fn pos_factor(&self) -> Factor {
             // Safe to use, as all operations altering the Factor are internal
-            unsafe { Factor::new_unchecked(self._pos / self.data.position_max) }
+            unsafe { Factor::new_unchecked(self._pos.0 / self.data.position_max.0) }
         }
 
         /// Set the duty-cycle percent of the servo (value `0.0` to `1.0`). Causes the servo to adapt its position
-        pub fn drive_factor_pos(&mut self, factor : Factor) -> Result<(), P::Error> {
+        pub fn drive_factor_pos(&mut self, factor : Factor) -> Result<(), ActuatorError<Rotary>> {
             self._pos = self.data.position_max * factor;
             self.pin_pwm.set_duty_cycle(
                 self.data.duty_for_factor(factor).get_duty_for(self.pin_pwm.max_duty_cycle())
-            )
+            ).map_err(|_| ActuatorError::PinError)
         }
     // 
-
 
     // Absolute position
         /// Get the *aboslute* angle of the servo 
@@ -66,20 +66,29 @@ impl<P : SetDutyCycle> MiniServo<P> {
         /// # Panics
         /// 
         /// Panics if the given 
-        pub fn drive_abs(&mut self, pos : PositionRad) -> Result<(), P::Error> {
-            self.drive_factor_pos(Factor::try_new(pos / self.data.position_max)
-                .expect("The given position is either invalid or out of range!"))
+        pub fn drive_abs(&mut self, pos : PositionRad) -> Result<(), ActuatorError<Rotary>> {
+            self.drive_factor_pos(
+                Factor::try_new(pos.0 / self.data.position_max.0)
+                    .ok_or(ActuatorError::PosOutOfBounds(pos, {
+                        if pos > PositionRad::ZERO {
+                            pos - self.data.position_max
+                        } else {
+                            pos - PositionRad::ZERO
+                        }
+                    }))?
+            )
+                
         }
     // 
 
     // Positions
         /// Moves the servo to its minimum endpoint
-        pub fn drive_endpoint_min(&mut self) -> Result<(), P::Error> {
+        pub fn drive_endpoint_min(&mut self) -> Result<(), ActuatorError<Rotary>> {
             self.drive_factor_pos(Factor::MIN)
         }
 
         /// Moves the servo to its maximum endpoint
-        pub fn goto_endpoint_max(&mut self) -> Result<(), P::Error> {
+        pub fn goto_endpoint_max(&mut self) -> Result<(), ActuatorError<Rotary>> {
             self.drive_factor_pos(Factor::MAX)
         }
     //

@@ -1,8 +1,8 @@
 [package]
 name = "syact"
 authors = [ "Samuel Nösslböck <samuel.noesslboeck@gmail.com>" ]
-version = "0.15.1"
-description = "A library that defines actuators and their interaction with each other"
+version = "0.16.0"
+description = "A library that defines actuators and their interaction with each other, providing powerful utility for them"
 edition = "2024"
 repository = "https://github.com/SamuelNoesslboeck/syact"
 license-file = "LICENSE"
@@ -21,7 +21,7 @@ sykin = "0.1.0"
 syunit = "0.4.0"
 
 [features]
-default = [ "serde" ]
+default = [ "serde", "testing" ]
 serde = [ "dep:serde" ]
 testing = [ ]
 

@@ -24,7 +24,7 @@ extern crate alloc;
     pub use intr::{Interruptible, InterruptReason};
 
     /// Functions and Structs for taking measurements with a robot for e.g. position calculation
-    pub mod meas;
+    pub mod rout;
 
     /// Component parent relations and their implementation
     pub mod parent;
@@ -39,10 +39,10 @@ extern crate alloc;
     pub use syunit as units;
 
     // Testing
-    #[cfg(any(feature = "testing", test))]
-    mod tests;
-    #[cfg(any(feature = "testing", test))]
-    pub use tests::*;
+    #[cfg(feature = "testing")]
+    pub mod testing;
+    #[cfg(feature = "testing")]
+    pub use testing::*;
 // 
 
 
@@ -53,11 +53,14 @@ extern crate alloc;
 
     /// General Error type for `SyncActuators`
     #[derive(Clone, Debug)]
-    pub enum ActuatorError<U : UnitSet = Rotary> {
-        /// The rel_dist distance given is invalid
+    pub enum ActuatorError<U : UnitSet> {
+        /// The relative distance given is invalid, could be out of range or a number error
         InvaldRelativeDistance(U::Distance),
+        /// The given position is out of bounds, either by mechanical properties or previously set limits. 
+        /// Also gives a value on how much it is out of bounds
+        PosOutOfBounds(U::Position, U::Distance),
 
-        // U::Velocity errors
+        // Velocity errors
             /// The velocity given is invalid somehow, depending on the context (see the function description)
             InvalidVelocity(U::Velocity),
             /// The velocity given is too high, depending on the context, see the function description

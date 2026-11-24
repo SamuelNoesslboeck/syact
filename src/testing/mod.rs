@@ -1,14 +1,12 @@
 #![allow(missing_docs)]
 
-use alloc::boxed::Box;
-use alloc::vec::Vec;
 use syunit::metric::KgMeter2;
 use syunit::metric::NewtonMeters;
 
 use crate::InterruptReason;
+use crate::intr::InterruptHandler;
 use crate::{ActuatorError, AdvSyncActuator, Interruptible, SyncActuator};
 use crate::data::ActuatorVars;
-use crate::intr::Interruptor;
 use crate::units::*;
 
 const DEMO_ACT_MAX_SPEED : RadPerSecond = RadPerSecond(50.0);
@@ -19,8 +17,7 @@ pub struct DemoActuator {
     _vel : RadPerSecond,
     _dir : Direction,
 
-    intr : Vec<Box<dyn Interruptor>>,
-    intr_reason : Option<InterruptReason>,
+    pub intr_handler : InterruptHandler<Self>,
 
     vars : ActuatorVars
 }
@@ -32,15 +29,16 @@ impl DemoActuator {
             _vel: RadPerSecond::ZERO,
             _dir: Direction::default(),
 
-            intr: Vec::new(),
-            intr_reason: None,
+            intr_handler: InterruptHandler::new(),
 
             vars: ActuatorVars::default()
         }
     }
 }
 
-impl SyncActuator<Rotary> for DemoActuator {
+impl SyncActuator for DemoActuator {
+    type Units = Rotary;
+
     /* Variable accessors */
         fn acc_vars<F, R>(&self, f : F) -> R
             where
@@ -57,9 +55,23 @@ impl SyncActuator<Rotary> for DemoActuator {
         }
     /**/
 
+    /* Position */
+        fn pos(&self) -> PositionRad {
+            self._pos
+        }
+
+        fn overwrite_abs_pos(&mut self, pos : PositionRad) {
+            self._pos = pos;
+        }
+    /**/
+
     /* State */
         fn direction(&self) -> Direction {
             self._dir
+        }
+
+        fn __vel_possible(&self) -> RadPerSecond {
+            DEMO_ACT_MAX_SPEED
         }
 
         fn velocity(&self) -> RadPerSecond {
@@ -70,61 +82,34 @@ impl SyncActuator<Rotary> for DemoActuator {
             false       // Demo actuator does all movements instantly
         }
     /**/
-
-
-    fn pos(&self) -> PositionRad {
-        self._pos
-    }
-
-    fn overwrite_abs_pos(&mut self, pos : PositionRad) {
-        self._pos = pos;
-    }
     
-    fn drive_rel(&mut self, rel_dist : <Rotary as UnitSet>::Distance, _speed : Factor) -> Result<(), ActuatorError<Rotary>> {
+    fn __drive_rel_core(&mut self, rel_dist : <Rotary as UnitSet>::Distance, _speed : Factor) -> Result<(), ActuatorError<Rotary>> {
         self._dir = rel_dist.get_direction();
         self._vel = RadPerSecond::ZERO;
 
         let steps = (rel_dist.abs() / 0.1).0.ceil();
 
-        for i in 0 .. steps as usize {
+        for _ in 0 .. steps as usize {
             self._pos += rel_dist / steps;
             
-            for intr in self.intr {
-                let reason = intr.check();
-                if reason.is_some() {
-                    self.intr_reason = reason;
-                    break;
-                }
+            if self.intr_handler.check_all(self)?.is_some() {
+                break;
             }
         }
         
         Ok(())
     }
     
-    fn drive_cont_factor(&mut self, speed : Factor, direction : Direction) -> Result<(), ActuatorError<Rotary>> {
+    fn __drive_cont_core(&mut self, speed : Factor, direction : Direction) -> Result<(), ActuatorError<Rotary>> {
         self._vel = DEMO_ACT_MAX_SPEED * speed;
         self._dir = direction;
-        Ok(())
-    }
-    
-    fn drive_cont_speed(&mut self, speed : <Rotary as UnitSet>::Velocity) -> Result<(), ActuatorError<Rotary>> {
-        if speed.abs() > DEMO_ACT_MAX_SPEED {
-            return Err(ActuatorError::VelocityTooHigh(speed, DEMO_ACT_MAX_SPEED));
-        }
-
-        self._dir = speed.get_direction();
-        self._vel = speed.abs();
         Ok(())
     }
 }
 
 impl Interruptible for DemoActuator {
-    fn add_interruptor(&mut self, interruptor : alloc::boxed::Box<dyn Interruptor + Send>) {
-        self.intr.push(interruptor);
-    }
-
-    fn fetch_intr_reason(&mut self) -> Option<InterruptReason> {
-        self.intr_reason.take()   
+    fn fetch_intr_reason(&self) -> Option<InterruptReason> {
+        self.intr_handler.fetch_intr_reason()
     }
 }
 
