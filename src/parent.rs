@@ -21,8 +21,7 @@ pub trait ActuatorParent {
     pub trait RatioActuatorParent : ActuatorParent 
     where 
         // # This implementation is very ugly I know
-        // 
-        // Kind of a yandere approach, however I have not found a way to do this with macros, maybe in a future release when I actually know more of what I am doing ...
+        // Current progress is it only has to be done once which is very good already, maybe in the future I will make a macro for this
         <Self::Input as UnitSet>::Time : From<<Self::Output as UnitSet>::Time>,
 
         <Self::Input as UnitSet>::Position : Div<Self::Ratio, Output = <Self::Output as UnitSet>::Position>,
@@ -191,22 +190,6 @@ pub trait ActuatorParent {
 // Automatically implements `SyncActuator` for every component
         impl<T : RatioActuatorParent> SyncActuator for T 
         where
-            <T::Input as UnitSet>::Time : From<<T::Output as UnitSet>::Time>,
-
-            <T::Input as UnitSet>::Position : Div<T::Ratio, Output = <T::Output as UnitSet>::Position>,
-            <T::Input as UnitSet>::Velocity : Div<T::Ratio, Output = <T::Output as UnitSet>::Velocity>,
-            <T::Input as UnitSet>::Acceleration : Div<T::Ratio, Output = <T::Output as UnitSet>::Acceleration>,
-            <T::Input as UnitSet>::Jolt : Div<T::Ratio, Output = <T::Output as UnitSet>::Jolt>,
-            <T::Input as UnitSet>::Force : Mul<T::Ratio, Output = <T::Output as UnitSet>::Force>,
-            <T::Input as UnitSet>::Inertia : InertiaUnit<T::Ratio, Reduced = <T::Output as UnitSet>::Inertia>,
-
-            <T::Output as UnitSet>::Position : Mul<T::Ratio, Output = <T::Input as UnitSet>::Position>,
-            <T::Output as UnitSet>::Distance : Mul<T::Ratio, Output = <T::Input as UnitSet>::Distance>,
-            <T::Output as UnitSet>::Velocity : Mul<T::Ratio, Output = <T::Input as UnitSet>::Velocity>,
-            <T::Output as UnitSet>::Acceleration : Mul<T::Ratio, Output = <T::Input as UnitSet>::Acceleration>,
-            <T::Output as UnitSet>::Jolt : Mul<T::Ratio, Output = <T::Input as UnitSet>::Jolt>,
-            <T::Output as UnitSet>::Force : Div<T::Ratio, Output = <T::Input as UnitSet>::Force>,
-
             T::Child : SyncActuator<Units = T::Output>
         {
             type Units = T::Input;
@@ -346,23 +329,7 @@ pub trait ActuatorParent {
 
     impl<T : RatioActuatorParent> AdvSyncActuator for T
     where 
-        T::Child : AdvSyncActuator<Units = T::Output>,
-
-        <T::Input as UnitSet>::Time : From<<T::Output as UnitSet>::Time>,
-
-        <T::Input as UnitSet>::Position : Div<T::Ratio, Output = <T::Output as UnitSet>::Position>,
-        <T::Input as UnitSet>::Velocity : Div<T::Ratio, Output = <T::Output as UnitSet>::Velocity>,
-        <T::Input as UnitSet>::Acceleration : Div<T::Ratio, Output = <T::Output as UnitSet>::Acceleration>,
-        <T::Input as UnitSet>::Jolt : Div<T::Ratio, Output = <T::Output as UnitSet>::Jolt>,
-        <T::Input as UnitSet>::Force : Mul<T::Ratio, Output = <T::Output as UnitSet>::Force>,
-        <T::Input as UnitSet>::Inertia : InertiaUnit<T::Ratio, Reduced = <T::Output as UnitSet>::Inertia>,
-
-        <T::Output as UnitSet>::Position : Mul<T::Ratio, Output = <T::Input as UnitSet>::Position>,
-        <T::Output as UnitSet>::Distance : Mul<T::Ratio, Output = <T::Input as UnitSet>::Distance>,
-        <T::Output as UnitSet>::Velocity : Mul<T::Ratio, Output = <T::Input as UnitSet>::Velocity>,
-        <T::Output as UnitSet>::Acceleration : Mul<T::Ratio, Output = <T::Input as UnitSet>::Acceleration>,
-        <T::Output as UnitSet>::Jolt : Mul<T::Ratio, Output = <T::Input as UnitSet>::Jolt>,
-        <T::Output as UnitSet>::Force : Div<T::Ratio, Output = <T::Input as UnitSet>::Force>
+        T::Child : AdvSyncActuator<Units = T::Output>
     {
         // Loads
             fn load_force_gen(&self) -> <T::Input as UnitSet>::Force {
