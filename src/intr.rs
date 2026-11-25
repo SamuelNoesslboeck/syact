@@ -37,10 +37,10 @@ impl<A : SyncActuator> Interruptor<A> {
         self.dir.or(self.temp_dir.get())
     }
 
-    pub fn check(&self, act : &A) -> Result<Option<InterruptReason>, ActuatorError<A::Units>> {
+    pub fn check(&self, act : &A, dir : Direction) -> Result<Option<InterruptReason>, ActuatorError<A::Units>> {
         // Interruptor gets skipped if the actuator is currently not moving in it's effective direction
         if let Some(eff_dir) = self.effective_dir() {
-            if eff_dir != act.direction() {
+            if eff_dir != dir {
                 return Ok(None);   
             }
         }
@@ -48,7 +48,7 @@ impl<A : SyncActuator> Interruptor<A> {
         let reas = self.func.as_ref()(act)?;
         if reas.is_some() {
             // Setting the temporary direction prevents a stall when using non-directional interruptors
-            self.temp_dir.set(Some(act.direction()));
+            self.temp_dir.set(Some(dir));
             return Ok(reas);
         } else {
             self.temp_dir.set(None);
@@ -89,9 +89,9 @@ impl<A : SyncActuator> InterruptHandler<A> {
         self.intr_list.push(intr);
     }
 
-    pub fn check_all(&self, act : &A) -> Result<Option<InterruptReason>, ActuatorError<A::Units>> {
+    pub fn check_all(&self, act : &A, dir : Direction) -> Result<Option<InterruptReason>, ActuatorError<A::Units>> {
         for intr in &self.intr_list {
-            let res = intr.check(act)?; 
+            let res = intr.check(act, dir)?; 
             if res.is_some() {
                 self.last_intr_reason.set(res);
                 return Ok(res);

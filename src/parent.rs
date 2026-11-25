@@ -2,6 +2,7 @@ use core::ops::{Div, Mul};
 
 use syunit::*;
 
+use crate::data::ActuatorState;
 use crate::{SyncActuator, ActuatorError, Interruptible, AdvSyncActuator};
 
 /// A trait that marks an actuator which acts as a parent for another actuator
@@ -55,13 +56,13 @@ pub trait ActuatorParent {
         // Automatic implementations
             /// Convert a parent [UnitSet::Position] into a child one
             #[inline]
-            fn pos_for_child(&self, parent_abs_pos : <Self::Input as UnitSet>::Position) -> <Self::Output as UnitSet>::Position {
+            fn position_for_child(&self, parent_abs_pos : <Self::Input as UnitSet>::Position) -> <Self::Output as UnitSet>::Position {
                 parent_abs_pos / self.ratio()
             }
 
             /// Convert a child [UnitSet::Position] into a parent one
             #[inline]
-            fn pos_for_parent(&self, child_abs_pos : <Self::Output as UnitSet>::Position) -> <Self::Input as UnitSet>::Position {
+            fn position_for_parent(&self, child_abs_pos : <Self::Output as UnitSet>::Position) -> <Self::Input as UnitSet>::Position {
                 child_abs_pos * self.ratio()
             }
 
@@ -153,7 +154,7 @@ pub trait ActuatorParent {
                     ActuatorError::InvaldRelativeDistance(child_dist) => 
                         ActuatorError::InvaldRelativeDistance(self.dist_for_parent(child_dist)),
                     ActuatorError::PosOutOfBounds(child_pos, child_out_of_bounds) => 
-                        ActuatorError::PosOutOfBounds(self.pos_for_parent(child_pos), self.dist_for_parent(child_out_of_bounds)),
+                        ActuatorError::PosOutOfBounds(self.position_for_parent(child_pos), self.dist_for_parent(child_out_of_bounds)),
                     // Convert velocity
                     ActuatorError::InvalidVelocity(child_vel) =>
                         ActuatorError::InvalidVelocity(self.velocity_for_parent(child_vel)),
@@ -195,14 +196,14 @@ pub trait ActuatorParent {
             type Units = T::Input;
 
             /* Variables */
-                fn acc_vars<F, R>(&self, _ : F) -> R
+                fn __acc_vars<F, R>(&self, _ : F) -> R
                     where
                         F : FnOnce(&crate::prelude::ActuatorVars<T::Input>) -> R
                 {
                     panic!("Do not use these accessors in parent components!")
                 }
 
-                fn acc_vars_mut<F, R>(&mut self, _ : F) -> R
+                fn __acc_vars_mut<F, R>(&mut self, _ : F) -> R
                 where
                     F : FnOnce(&mut crate::prelude::ActuatorVars<T::Input>) -> R
                 {
@@ -210,37 +211,38 @@ pub trait ActuatorParent {
                 }
             /**/
 
-            /* Position */
-                fn pos(&self) -> <T::Input as UnitSet>::Position {
-                    self.pos_for_parent(self.child().pos())
+            /* State */
+                fn state(&self) -> crate::data::ActuatorState<Self::Units> {
+                    match self.child().state() {
+                        ActuatorState::Idle => ActuatorState::Idle,
+                        ActuatorState::Moving(dir) => ActuatorState::Moving(dir),
+                        ActuatorState::Error(err) => ActuatorState::Error(self.error_for_parent(err))
+                    }
                 }
 
-                fn overwrite_abs_pos(&mut self, abs_pos : <T::Input as UnitSet>::Position) {
-                    let abs_pos = self.pos_for_child(abs_pos);
-                    self.child_mut().overwrite_abs_pos(abs_pos)
+                fn position(&self) -> <Self::Units as UnitSet>::Position {
+                    self.position_for_parent(self.child().position())
+                }
+
+                fn overwrite_position(&mut self, pos : <Self::Units as UnitSet>::Position) {
+                    let pos = self.position_for_child(pos);
+                    self.child_mut().overwrite_position(pos);
+                }
+
+                fn velocity(&self) -> Option<<Self::Units as UnitSet>::Velocity> {
+                    self.child().velocity().map(|val| self.velocity_for_parent(val))
+                }
+
+                fn acceleration(&self) -> Option<<Self::Units as UnitSet>::Acceleration> {
+                    self.child().acceleration().map(|val| self.acceleration_for_parent(val))
                 }
             /**/
 
-            // State
-                fn direction(&self) -> Direction {
-                    self.child().direction()
-                }
-
-                fn velocity(&self) -> <T::Input as UnitSet>::Velocity {
-                    self.velocity_for_parent(self.child().velocity())
-                }
-
-                fn is_moving(&self) -> bool {
-                    self.child().is_moving()
-                }
-            // 
-
-            // Velocity
+            /* Velocity */
                 fn __vel_possible(&self) -> <Self::Units as UnitSet>::Velocity {
                     self.velocity_for_parent(self.child().vel_possible())
                 }
 
-                #[inline]
                 fn velocity_max(&self) -> Option<<T::Input as UnitSet>::Velocity> {
                     self.child().velocity_max().map(|velocity| self.velocity_for_parent(velocity))
                 }
@@ -250,10 +252,9 @@ pub trait ActuatorParent {
                     self.child_mut().set_velocity_max(velocity_opt)
                         .map_err(|err| self.error_for_parent(err))
                 }
-            // 
+            /**/
 
-            // Acceleration
-                #[inline]
+            /* Acceleration */
                 fn acceleration_max(&self) -> Option<<T::Input as UnitSet>::Acceleration> {
                     self.child().acceleration_max().map(|acceleration| self.acceleration_for_parent(acceleration))
                 }
@@ -281,34 +282,34 @@ pub trait ActuatorParent {
             // Positional limits
                 fn limit_max(&self) -> Option<<T::Input as UnitSet>::Position> {
                     self.child().limit_max()
-                        .map(|limit| self.pos_for_parent(limit))
+                        .map(|limit| self.position_for_parent(limit))
                 }
 
                 fn limit_min(&self) -> Option<<T::Input as UnitSet>::Position> {
                     self.child().limit_min()
-                        .map(|limit| self.pos_for_parent(limit))
+                        .map(|limit| self.position_for_parent(limit))
                 }
 
-                fn resolve_pos_limits_for_abs_pos(&self, abs_pos : <T::Input as UnitSet>::Position) -> <T::Input as UnitSet>::Distance {
-                    self.dist_for_parent(self.child().resolve_pos_limits_for_abs_pos(
-                        self.pos_for_child(abs_pos)
+                fn resolve_limits_for_pos(&self, abs_pos : <T::Input as UnitSet>::Position) -> <T::Input as UnitSet>::Distance {
+                    self.dist_for_parent(self.child().resolve_limits_for_pos(
+                        self.position_for_child(abs_pos)
                     ))
                 }
 
                 fn set_pos_limits(&mut self, min : Option<<T::Input as UnitSet>::Position>, max : Option<<T::Input as UnitSet>::Position>) {
-                    let min = min.map(|g| self.pos_for_child(g));
-                    let max = max.map(|g| self.pos_for_child(g));
+                    let min = min.map(|g| self.position_for_child(g));
+                    let max = max.map(|g| self.position_for_child(g));
                     self.child_mut().set_pos_limits(min, max)
                 }
 
-                fn set_endpos(&mut self, overwrite_abs_pos : <T::Input as UnitSet>::Position) {
-                    let overwrite_abs_pos = self.pos_for_child(overwrite_abs_pos);
-                    self.child_mut().set_endpos(overwrite_abs_pos)
+                fn set_endpos(&mut self, overwrite_abs_pos : <T::Input as UnitSet>::Position, towards : Direction) {
+                    let overwrite_abs_pos = self.position_for_child(overwrite_abs_pos);
+                    self.child_mut().set_endpos(overwrite_abs_pos, towards)
                 }
 
                 fn overwrite_pos_limits(&mut self, min : Option<<T::Input as UnitSet>::Position>, max : Option<<T::Input as UnitSet>::Position>) {
-                    let min = min.map(|g| self.pos_for_child(g));
-                    let max = max.map(|g| self.pos_for_child(g));
+                    let min = min.map(|g| self.position_for_child(g));
+                    let max = max.map(|g| self.position_for_child(g));
                     self.child_mut().overwrite_pos_limits(min, max)
                 }
                 
@@ -331,37 +332,40 @@ pub trait ActuatorParent {
     where 
         T::Child : AdvSyncActuator<Units = T::Output>
     {
-        // Loads
-            fn load_force_gen(&self) -> <T::Input as UnitSet>::Force {
-                self.force_for_parent(self.child().load_force_gen())
-            }
+        fn update_load_calc(&mut self) -> Result<(), ActuatorError<Self::Units>> {
+            self.child_mut().update_load_calc()
+                .map_err(|err| self.error_for_parent(err))
+        }
 
-            fn load_force_dir(&self) -> <T::Input as UnitSet>::Force {
-                self.force_for_parent(self.child().load_force_dir())
-            }
+        fn load_force_gen(&self) -> <T::Input as UnitSet>::Force {
+            self.force_for_parent(self.child().load_force_gen())
+        }
 
-            fn apply_gen_force(&mut self, force : <T::Input as UnitSet>::Force) -> Result<(), ActuatorError<T::Input>> {
-                let force = self.force_for_child(force);
-                self.child_mut().apply_gen_force(force)
-                    .map_err(|err| self.error_for_parent(err))
-            }
+        fn load_force_dir(&self) -> <T::Input as UnitSet>::Force {
+            self.force_for_parent(self.child().load_force_dir())
+        }
 
-            fn apply_dir_force(&mut self, force : <T::Input as UnitSet>::Force) -> Result<(), ActuatorError<T::Input>> {
-                let force = self.force_for_child(force);
-                self.child_mut().apply_dir_force(force)
-                    .map_err(|err| self.error_for_parent(err))
-            }
+        fn apply_gen_force(&mut self, force : <T::Input as UnitSet>::Force) -> Result<(), ActuatorError<T::Input>> {
+            let force = self.force_for_child(force);
+            self.child_mut().apply_gen_force(force)
+                .map_err(|err| self.error_for_parent(err))
+        }
 
-            fn load_inertia(&self) -> <T::Input as UnitSet>::Inertia {
-                self.inertia_for_parent(self.child().load_inertia())
-            }
+        fn apply_dir_force(&mut self, force : <T::Input as UnitSet>::Force) -> Result<(), ActuatorError<T::Input>> {
+            let force = self.force_for_child(force);
+            self.child_mut().apply_dir_force(force)
+                .map_err(|err| self.error_for_parent(err))
+        }
 
-            fn apply_load_inertia(&mut self, inertia : <T::Input as UnitSet>::Inertia) -> Result<(), ActuatorError<T::Input>> {
-                let inertia = self.inertia_for_child(inertia);
-                self.child_mut().apply_load_inertia(inertia)
-                    .map_err(|err| self.error_for_parent(err))
-            }
-        //
+        fn load_inertia(&self) -> <T::Input as UnitSet>::Inertia {
+            self.inertia_for_parent(self.child().load_inertia())
+        }
+
+        fn apply_load_inertia(&mut self, inertia : <T::Input as UnitSet>::Inertia) -> Result<(), ActuatorError<T::Input>> {
+            let inertia = self.inertia_for_child(inertia);
+            self.child_mut().apply_load_inertia(inertia)
+                .map_err(|err| self.error_for_parent(err))
+        }
     }
 
     impl<T> Interruptible for T 

@@ -1,7 +1,7 @@
 use syunit::*;
 
 use crate::ActuatorError;
-use crate::data::ActuatorVars;
+use crate::data::{ActuatorState, ActuatorVars};
 
 /// Everything concerning servo-motors
 pub mod servo;
@@ -21,7 +21,8 @@ pub trait SyncActuator {
         /// like the application of loads if no additional overhead is required
         /// 
         /// It is not recommended to call functions, set loads etc. with this accessor, as the components are likely to have some overhead included
-        fn acc_vars<F, R>(&self, f : F) -> R
+        #[doc(hidden)]
+        fn __acc_vars<F, R>(&self, f : F) -> R
         where
             F : FnOnce(&ActuatorVars<Self::Units>) -> R;
 
@@ -29,69 +30,76 @@ pub trait SyncActuator {
         /// like the application of loads if no additional overhead is required
         /// 
         /// It is not recommended to call functions, set loads etc. with this accessor, as the components are likely to have some overhead included
-        fn acc_vars_mut<F, R>(&mut self, f : F) -> R
+        #[doc(hidden)]
+        fn __acc_vars_mut<F, R>(&mut self, f : F) -> R
         where
             F : FnOnce(&mut ActuatorVars<Self::Units>) -> R;
     /**/
 
-    /* Position */
-        /// Returns the **absolute** position of the component in the components [Position unit](UnitSet::Position).
-        /// 
-        /// ```rust
-        /// use syact::prelude::*;
-        /// 
-        /// // Position of components
-        /// const POS : PositionMM = PositionMM(10.0);
-        /// 
-        /// // Create a new linear_axis (implements SyncActuator)
-        /// let mut linear_axis = LinearAxis::new_belt_axis(
-        ///     // Some demo actuator (implements SyncActuator)
-        ///     DemoActuator::new(), 
-        ///     Millimeters(0.5)    // The radius is set to 0.5, which means for each radian the motor moves, the linear_axis moves for 0.5 mm
-        /// );    
-        /// 
-        /// linear_axis.overwrite_abs_pos(POS);
-        /// 
-        /// assert!((linear_axis.pos() - POS).abs() < Millimeters(0.001));      // Check with small tolerance requred for stepper motors
-        /// ```
-        fn pos(&self) -> <Self::Units as UnitSet>::Position;
+    /* State */
+        fn state(&self) -> ActuatorState<Self::Units> {
+            // Cloning is ok as state is only a small datatype
+            self.__acc_vars(|vars| vars.state.clone())
+        }
 
-        /// Overwrite the current **absolute** position of the component without triggering actual movements. 
-        /// 
-        /// ### Stepper tolerance
-        /// 
-        /// Be aware that only full steps can be written in distance, meaning that for position comparision a 
-        /// small tolerance has to be considered, as the value written won't be the exact position value given.
-        /// 
-        /// ```rust
-        /// use syact::prelude::*;
-        /// 
-        /// // Position of components
-        /// const POS : PositionMM = PositionMM(10.0);
-        /// 
-        /// // Create a new linear_axis (implements SyncActuator)
-        /// let mut linear_axis = LinearAxis::new_belt_axis(
-        ///     // Some demo actuator (implements SyncActuator)
-        ///     DemoActuator::new(), 
-        ///     Millimeters(0.5)    // The radius is set to 0.5, which means for each radian the motor moves, the linear_axis moves for 0.5 mm
-        /// );    
-        /// 
-        /// linear_axis.overwrite_abs_pos(POS);
-        /// 
-        /// assert!((linear_axis.pos() - POS).abs() < Millimeters(0.05));      // Check with small tolerance requred for stepper motors
-        /// ```
-        fn overwrite_abs_pos(&mut self, pos : <Self::Units as UnitSet>::Position);
-    //
+        /* Position */
+            /// Returns the **absolute** position of the component in the components [Position unit](UnitSet::Position)
+            /// 
+            /// ```rust
+            /// use syact::prelude::*;
+            /// 
+            /// // Position of components
+            /// const POS : PositionMM = PositionMM(10.0);
+            /// 
+            /// // Create a new linear_axis (implements SyncActuator)
+            /// let mut linear_axis = LinearAxis::new_belt_axis(
+            ///     // Some demo actuator (implements SyncActuator)
+            ///     DemoActuator::new(), 
+            ///     Millimeters(0.5)    // The radius is set to 0.5, which means for each radian the motor moves, the linear_axis moves for 0.5 mm
+            /// );    
+            /// 
+            /// linear_axis.overwrite_position(POS);
+            /// 
+            /// assert!((linear_axis.position() - POS).abs() < Millimeters(0.001));      // Check with small tolerance requred for stepper motors
+            /// ```
+            fn position(&self) -> <Self::Units as UnitSet>::Position {
+                self.__acc_vars(|vars| vars.position)
+            }
 
-    /* Status */
-        /// Returns the current moving direction or the direction of last movement
-        fn direction(&self) -> Direction;
+            /// Overwrite the current **absolute** position of the component without triggering actual movements
+            ///
+            /// ```rust
+            /// use syact::prelude::*;
+            /// 
+            /// // Position of components
+            /// const POS : PositionMM = PositionMM(10.0);
+            /// 
+            /// // Create a new linear_axis (implements SyncActuator)
+            /// let mut linear_axis = LinearAxis::new_belt_axis(
+            ///     // Some demo actuator (implements SyncActuator)
+            ///     DemoActuator::new(), 
+            ///     Millimeters(0.5)    // The radius is set to 0.5, which means for each radian the motor moves, the linear_axis moves for 0.5 mm
+            /// );    
+            /// 
+            /// linear_axis.overwrite_position(POS);
+            /// 
+            /// assert!((linear_axis.position() - POS).abs() < Millimeters(0.05));      // Check with small tolerance requred for stepper motors
+            /// ```
+            fn overwrite_position(&mut self, pos : <Self::Units as UnitSet>::Position) {
+                self.__acc_vars_mut(|vars| vars.position = pos)
+            }
+        /**/
+        
 
-        /// Returns the current velocity of the actuator
-        fn velocity(&self) -> <Self::Units as UnitSet>::Velocity;
+        /// Returns the current velocity of the actuator if known, otherwise `None`
+        fn velocity(&self) -> Option<<Self::Units as UnitSet>::Velocity> {
+            self.__acc_vars(|vars| vars.velocity)
+        }
 
-        /// Whether the actuator is currently moving
-        fn is_moving(&self) -> bool;
+        /// Returns the current acceleration of the actuator if known, otherwise `None`
+        fn acceleration(&self) -> Option<<Self::Units as UnitSet>::Acceleration> {
+            self.__acc_vars(|vars| vars.acceleration)
+        }
     /**/
 
     /* Velocity Max & Possible */
@@ -106,7 +114,7 @@ pub trait SyncActuator {
         /// assert_eq!(stepper.velocity_max(), None);
         /// ```
         fn velocity_max(&self) -> Option<<Self::Units as UnitSet>::Velocity> {
-            self.acc_vars(|vars| vars.velocity_max)
+            self.__acc_vars(|vars| vars.velocity_max)
         }
 
         /// Set the maximum allowed velocity
@@ -115,7 +123,7 @@ pub trait SyncActuator {
         /// 
         /// Set to `None` if no limit is wished
         fn set_velocity_max(&mut self, velocity_opt : Option<<Self::Units as UnitSet>::Velocity>) -> Result<(), ActuatorError<Self::Units>> {
-            self.acc_vars_mut(
+            self.__acc_vars_mut(
                 |vars| vars.velocity_max = velocity_opt
             );
             Ok(())
@@ -123,6 +131,7 @@ pub trait SyncActuator {
 
         /// Core function that is implemented by the user, 
         /// should return the maximum possible velocity that can be provided by the actuator right now
+        #[doc(hidden)]
         fn __vel_possible(&self) -> <Self::Units as UnitSet>::Velocity;
 
         /// Maximum possible acceleration considering actuator and user-set limitations
@@ -135,7 +144,7 @@ pub trait SyncActuator {
     /* Acceleration Max */
         /// Maximum acceleration that will be allowed, if specified by the user with `set_max_acceleration`
         fn acceleration_max(&self) -> Option<<Self::Units as UnitSet>::Acceleration> {
-            self.acc_vars(|vars| vars.acceleration_max)
+            self.__acc_vars(|vars| vars.acceleration_max)
         }
 
         /// Set the maximum allowed acceleration
@@ -144,7 +153,7 @@ pub trait SyncActuator {
         /// 
         /// Set to `None` if no limit is wished
         fn set_acceleration_max(&mut self, acceleration_opt : Option<<Self::Units as UnitSet>::Acceleration>) -> Result<(), ActuatorError<Self::Units>> {
-            self.acc_vars_mut(
+            self.__acc_vars_mut(
                 |vars| vars.acceleration_max = acceleration_opt
             );
             Ok(())
@@ -154,7 +163,7 @@ pub trait SyncActuator {
     /* Jolt Max */ 
         /// The maximum jolt, if specified by the user
         fn jolt_max(&self) -> Option<<Self::Units as UnitSet>::Jolt> {
-            self.acc_vars(|vars| vars.jolt_max)
+            self.__acc_vars(|vars| vars.jolt_max)
         }
 
         /// Set the maximum allowed `Jolt` 
@@ -163,7 +172,7 @@ pub trait SyncActuator {
         /// 
         /// Set to `None` if no limit is wished
         fn set_jolt_max(&mut self, jolt_opt : Option<<Self::Units as UnitSet>::Jolt>) -> Result<(), ActuatorError<Self::Units>> {
-            self.acc_vars_mut(
+            self.__acc_vars_mut(
                 |vars| vars.jolt_max = jolt_opt
             );
             Ok(())
@@ -173,12 +182,12 @@ pub trait SyncActuator {
     /* Position limits */
         /// The minimum position limit of the actuator if set
         fn limit_min(&self) -> Option<<Self::Units as UnitSet>::Position> {
-            self.acc_vars(|vars| vars.pos_limits.min )
+            self.__acc_vars(|vars| vars.pos_limits.min )
         }
 
         /// The maximum position limit of the actuator if set
         fn limit_max(&self) -> Option<<Self::Units as UnitSet>::Position> {
-            self.acc_vars(|vars| vars.pos_limits.max )
+            self.__acc_vars(|vars| vars.pos_limits.max )
         }
 
         /// Returns if any limit positions have been reached, returning the about of distance it has been overstepped
@@ -202,23 +211,23 @@ pub trait SyncActuator {
         /// 
         /// gear.set_pos_limits(Some(LIM_MIN), Some(LIM_MAX));
         /// 
-        /// assert_eq!(gear.resolve_pos_limits_for_abs_pos(PositionRad(1.5)), Radians(0.5));     // Over the maximum
-        /// assert_eq!(gear.resolve_pos_limits_for_abs_pos(PositionRad(0.5)), Radians::ZERO);    // In range
-        /// assert_eq!(gear.resolve_pos_limits_for_abs_pos(PositionRad(-4.0)), Radians(-2.0));   // Under the minimum
+        /// assert_eq!(gear.resolve_limits_for_pos(PositionRad(1.5)), Radians(0.5));     // Over the maximum
+        /// assert_eq!(gear.resolve_limits_for_pos(PositionRad(0.5)), Radians::ZERO);    // In range
+        /// assert_eq!(gear.resolve_limits_for_pos(PositionRad(-4.0)), Radians(-2.0));   // Under the minimum
         /// 
         /// gear.set_pos_limits(Some(LIM_MIN_LOWER), None);                // Overwriting only `min` limit
         /// 
-        /// assert_eq!(gear.resolve_pos_limits_for_abs_pos(PositionRad(1.5)), Radians(0.5));     // Over the maximum
-        /// assert_eq!(gear.resolve_pos_limits_for_abs_pos(PositionRad(0.5)), Radians::ZERO);    // In range
-        /// assert_eq!(gear.resolve_pos_limits_for_abs_pos(PositionRad(-4.0)), Radians(-1.0));   // Under the minimum, but less
+        /// assert_eq!(gear.resolve_limits_for_pos(PositionRad(1.5)), Radians(0.5));     // Over the maximum
+        /// assert_eq!(gear.resolve_limits_for_pos(PositionRad(0.5)), Radians::ZERO);    // In range
+        /// assert_eq!(gear.resolve_limits_for_pos(PositionRad(-4.0)), Radians(-1.0));   // Under the minimum, but less
         /// 
         /// gear.overwrite_pos_limits(Some(LIM_MIN_LOWER), None);              // Overwriting only both limits with [overwrite_pos_limits()]
         /// 
-        /// assert_eq!(gear.resolve_pos_limits_for_abs_pos(PositionRad(1.5)), Radians::ZERO);    // In range, as the `max` limit has been deleted
-        /// assert_eq!(gear.resolve_pos_limits_for_abs_pos(PositionRad(0.5)), Radians::ZERO);    // In range
-        /// assert_eq!(gear.resolve_pos_limits_for_abs_pos(PositionRad(-4.0)), Radians(-1.0));   // Under the minimum, but less
+        /// assert_eq!(gear.resolve_limits_for_pos(PositionRad(1.5)), Radians::ZERO);    // In range, as the `max` limit has been deleted
+        /// assert_eq!(gear.resolve_limits_for_pos(PositionRad(0.5)), Radians::ZERO);    // In range
+        /// assert_eq!(gear.resolve_limits_for_pos(PositionRad(-4.0)), Radians(-1.0));   // Under the minimum, but less
         /// ```
-        fn resolve_pos_limits_for_abs_pos(&self, pos : <Self::Units as UnitSet>::Position) -> <Self::Units as UnitSet>::Distance {
+        fn resolve_limits_for_pos(&self, pos : <Self::Units as UnitSet>::Position) -> <Self::Units as UnitSet>::Distance {
             if let Some(ang) = self.limit_min() {
                 if pos < ang {
                     return pos - ang;
@@ -237,14 +246,12 @@ pub trait SyncActuator {
         /// Sets an endpoint in the current direction by modifying the components limits. For example, when the component is moving
         /// in the positive direction and the endpoint is set, this function will overwrite the current maximum limit with the current
         /// pos value. The component is then not allowed to move in the current direction anymore. 
-        fn set_endpos(&mut self, overwrite_abs_pos : <Self::Units as UnitSet>::Position) {
-            self.overwrite_abs_pos(overwrite_abs_pos);
-
-            let dir = self.direction().as_bool();
+        fn set_endpos(&mut self, new_abs_pos : <Self::Units as UnitSet>::Position, towards : Direction) {
+            self.overwrite_position(new_abs_pos);
     
             self.set_pos_limits(
-                if dir { None } else { Some(overwrite_abs_pos) },
-                if dir { Some(overwrite_abs_pos) } else { None }
+                if towards == Direction::CW { None } else { Some(new_abs_pos) },
+                if towards == Direction::CW { Some(new_abs_pos) } else { None }
             )
         }
 
@@ -272,24 +279,24 @@ pub trait SyncActuator {
         /// 
         /// gear.set_pos_limits(Some(LIM_MIN), Some(LIM_MAX));
         /// 
-        /// assert_eq!(gear.resolve_pos_limits_for_abs_pos(PositionRad(1.5)), Radians(0.5));     // Over the maximum
-        /// assert_eq!(gear.resolve_pos_limits_for_abs_pos(PositionRad(0.5)), Radians::ZERO);    // In range
-        /// assert_eq!(gear.resolve_pos_limits_for_abs_pos(PositionRad(-4.0)), Radians(-2.0));   // Under the minimum
+        /// assert_eq!(gear.resolve_limits_for_pos(PositionRad(1.5)), Radians(0.5));     // Over the maximum
+        /// assert_eq!(gear.resolve_limits_for_pos(PositionRad(0.5)), Radians::ZERO);    // In range
+        /// assert_eq!(gear.resolve_limits_for_pos(PositionRad(-4.0)), Radians(-2.0));   // Under the minimum
         /// 
         /// gear.set_pos_limits(Some(LIM_MIN_LOWER), None);                // Overwriting only `min` limit
         /// 
-        /// assert_eq!(gear.resolve_pos_limits_for_abs_pos(PositionRad(1.5)), Radians(0.5));     // Over the maximum
-        /// assert_eq!(gear.resolve_pos_limits_for_abs_pos(PositionRad(0.5)), Radians::ZERO);    // In range
-        /// assert_eq!(gear.resolve_pos_limits_for_abs_pos(PositionRad(-4.0)), Radians(-1.0));   // Under the minimum, but less
+        /// assert_eq!(gear.resolve_limits_for_pos(PositionRad(1.5)), Radians(0.5));     // Over the maximum
+        /// assert_eq!(gear.resolve_limits_for_pos(PositionRad(0.5)), Radians::ZERO);    // In range
+        /// assert_eq!(gear.resolve_limits_for_pos(PositionRad(-4.0)), Radians(-1.0));   // Under the minimum, but less
         /// 
         /// gear.overwrite_pos_limits(Some(LIM_MIN_LOWER), None);              // Overwriting only both limits with [overwrite_pos_limits()]
         /// 
-        /// assert_eq!(gear.resolve_pos_limits_for_abs_pos(PositionRad(1.5)), Radians::ZERO);    // In range, as the `max` limit has been deleted
-        /// assert_eq!(gear.resolve_pos_limits_for_abs_pos(PositionRad(0.5)), Radians::ZERO);    // In range
-        /// assert_eq!(gear.resolve_pos_limits_for_abs_pos(PositionRad(-4.0)), Radians(-1.0));   // Under the minimum, but less
+        /// assert_eq!(gear.resolve_limits_for_pos(PositionRad(1.5)), Radians::ZERO);    // In range, as the `max` limit has been deleted
+        /// assert_eq!(gear.resolve_limits_for_pos(PositionRad(0.5)), Radians::ZERO);    // In range
+        /// assert_eq!(gear.resolve_limits_for_pos(PositionRad(-4.0)), Radians(-1.0));   // Under the minimum, but less
         /// ```
         fn set_pos_limits(&mut self, min_opt : Option<<Self::Units as UnitSet>::Position>, max_opt : Option<<Self::Units as UnitSet>::Position>) {
-            self.acc_vars_mut(|vars| {
+            self.__acc_vars_mut(|vars| {
                 if min_opt.is_some() {
                     vars.pos_limits.min = min_opt;
                 }
@@ -321,24 +328,24 @@ pub trait SyncActuator {
         /// 
         /// gear.set_pos_limits(Some(LIM_MIN), Some(LIM_MAX));
         /// 
-        /// assert_eq!(gear.resolve_pos_limits_for_abs_pos(PositionRad(1.5)), Radians(0.5));     // Over the maximum
-        /// assert_eq!(gear.resolve_pos_limits_for_abs_pos(PositionRad(0.5)), Radians::ZERO);    // In range
-        /// assert_eq!(gear.resolve_pos_limits_for_abs_pos(PositionRad(-4.0)), Radians(-2.0));   // Under the minimum
+        /// assert_eq!(gear.resolve_limits_for_pos(PositionRad(1.5)), Radians(0.5));     // Over the maximum
+        /// assert_eq!(gear.resolve_limits_for_pos(PositionRad(0.5)), Radians::ZERO);    // In range
+        /// assert_eq!(gear.resolve_limits_for_pos(PositionRad(-4.0)), Radians(-2.0));   // Under the minimum
         /// 
         /// gear.set_pos_limits(Some(LIM_MIN_LOWER), None);                // Overwriting only `min` limit
         /// 
-        /// assert_eq!(gear.resolve_pos_limits_for_abs_pos(PositionRad(1.5)), Radians(0.5));     // Over the maximum
-        /// assert_eq!(gear.resolve_pos_limits_for_abs_pos(PositionRad(0.5)), Radians::ZERO);    // In range
-        /// assert_eq!(gear.resolve_pos_limits_for_abs_pos(PositionRad(-4.0)), Radians(-1.0));   // Under the minimum, but less
+        /// assert_eq!(gear.resolve_limits_for_pos(PositionRad(1.5)), Radians(0.5));     // Over the maximum
+        /// assert_eq!(gear.resolve_limits_for_pos(PositionRad(0.5)), Radians::ZERO);    // In range
+        /// assert_eq!(gear.resolve_limits_for_pos(PositionRad(-4.0)), Radians(-1.0));   // Under the minimum, but less
         /// 
         /// gear.overwrite_pos_limits(Some(LIM_MIN_LOWER), None);              // Overwriting only both limits with [overwrite_pos_limits()]
         /// 
-        /// assert_eq!(gear.resolve_pos_limits_for_abs_pos(PositionRad(1.5)), Radians::ZERO);    // In range, as the `max` limit has been deleted
-        /// assert_eq!(gear.resolve_pos_limits_for_abs_pos(PositionRad(0.5)), Radians::ZERO);    // In range
-        /// assert_eq!(gear.resolve_pos_limits_for_abs_pos(PositionRad(-4.0)), Radians(-1.0));   // Under the minimum, but less
+        /// assert_eq!(gear.resolve_limits_for_pos(PositionRad(1.5)), Radians::ZERO);    // In range, as the `max` limit has been deleted
+        /// assert_eq!(gear.resolve_limits_for_pos(PositionRad(0.5)), Radians::ZERO);    // In range
+        /// assert_eq!(gear.resolve_limits_for_pos(PositionRad(-4.0)), Radians(-1.0));   // Under the minimum, but less
         /// ```
         fn overwrite_pos_limits(&mut self, min_opt : Option<<Self::Units as UnitSet>::Position>, max_opt : Option<<Self::Units as UnitSet>::Position>) {
-            self.acc_vars_mut(|vars| {
+            self.__acc_vars_mut(|vars| {
                 vars.pos_limits.min = min_opt;
                 vars.pos_limits.max = max_opt;
             })
@@ -357,8 +364,8 @@ pub trait SyncActuator {
         /// Moves the component by the relative distance with the given factor of `speed` to the maximum possible. 
         /// [Self::vel_possible()] and a desired speed can be used to calculate a factor
         fn drive_rel(&mut self, rel_dist : <Self::Units as UnitSet>::Distance, speed : Factor) -> Result<(), ActuatorError<Self::Units>> {
-            let end_pos = self.pos() + rel_dist;
-            let res_lim = self.resolve_pos_limits_for_abs_pos(end_pos);
+            let end_pos = self.position() + rel_dist;
+            let res_lim = self.resolve_limits_for_pos(end_pos);
 
             // Checking for bounds
             if res_lim == <Self::Units as UnitSet>::Distance::ZERO {
@@ -371,11 +378,11 @@ pub trait SyncActuator {
         /// Moves the component to the absolute position with the given factor of `speed` to the maximum possible. 
         /// [Self::vel_possible()] and a desired speed can be used to calculate a factor
         fn drive_abs(&mut self, end_pos : <Self::Units as UnitSet>::Position, speed : Factor) -> Result<(), ActuatorError<Self::Units>> {
-            let res_lim = self.resolve_pos_limits_for_abs_pos(end_pos);
+            let res_lim = self.resolve_limits_for_pos(end_pos);
 
             // Checking for bounds
             if res_lim == <Self::Units as UnitSet>::Distance::ZERO {
-                let rel_dist = end_pos - self.pos();
+                let rel_dist = end_pos - self.position();
                 self.__drive_rel_core(rel_dist, speed)
             } else {
                 Err(ActuatorError::PosOutOfBounds(end_pos, res_lim))
@@ -404,88 +411,98 @@ pub trait SyncActuator {
 
 /// An advanced actuator allows applying loads that alter the actuators movement
 pub trait AdvSyncActuator : SyncActuator {
-    // Load calculation
-        /// Returns the general load force, meaning load force that applies in both directions
-        /// (most of the time friction)
-        fn load_force_gen(&self) -> <Self::Units as UnitSet>::Force {
-            self.acc_vars(|vars| vars.load_force_gen)
-        }
+    /// Function that gets called on load changes, recalculates possible speeds etc. 
+    fn update_load_calc(&mut self) -> Result<(), ActuatorError<Self::Units>>;
 
-        /// Returns the directional load force, meaning load force that is directionally dependent
-        fn load_force_dir(&self) -> <Self::Units as UnitSet>::Force {
-            self.acc_vars(|vars| vars.load_force_dir)
-        }
+    /// Returns the general load force, meaning load force that applies in both directions
+    /// (most of the time friction)
+    fn load_force_gen(&self) -> <Self::Units as UnitSet>::Force {
+        self.__acc_vars(|vars| vars.load_force_gen)
+    }
 
-        /// Apply a general load force to the component, slowing down movements 
-        /// 
-        /// ### General force
-        /// 
-        /// Force value will always be made positive, as it will be subtracted in the calculation no matter in which direction the actuator moves, 
-        /// perfectly fitted for loads like friction
-        /// 
-        /// ```rust
-        /// use syact::prelude::*;
-        /// 
-        /// // Force to act upon the component
-        /// const FORCE : NewtonMeters = NewtonMeters(0.2);
-        /// 
-        /// // Create a new gear bearing (implements AdvancedActuator)
-        /// let mut gear = Gear::new(
-        ///     // Stepper Motor as subcomponent (also implements AdvancedActuator), `default()` function is only available for tests!
-        ///     DemoActuator::new(), 
-        ///     // Ratio is set to 0.5, which means for each radian the motor moves, the bearing moves for half a radian
-        ///     0.5
-        /// );  
-        /// 
-        /// gear.apply_gen_force(FORCE);
-        /// 
-        /// assert_eq!(PositionRad(2.0), gear.pos_for_child(PositionRad(1.0)));
-        /// assert_eq!(NewtonMeters(0.1), gear.child().load_force_gen());     // Resistance gets smaller for this gear ratio
-        /// ```
-        fn apply_gen_force(&mut self, force : <Self::Units as UnitSet>::Force) -> Result<(), ActuatorError<Self::Units>>;
+    /// Returns the directional load force, meaning load force that is directionally dependent
+    fn load_force_dir(&self) -> <Self::Units as UnitSet>::Force {
+        self.__acc_vars(|vars| vars.load_force_dir)
+    }
 
-        /// Apply a directional load force to the component, slowing down or assisting movements
-        /// 
-        /// ### Directional load force
-        /// 
-        /// A directional load force can be imagined like a weight attached to a rope and a pulley on the actuator. 
-        /// Downwards the weight assists the motor in movement, upwards it slows the process down.
-        /// 
-        /// A positive value for this force means the force assists in `CW` direction and slows in `CCW` direction, 
-        /// the other way around with negative forces
-        fn apply_dir_force(&mut self, force : <Self::Units as UnitSet>::Force) -> Result<(), ActuatorError<Self::Units>>;
+    /// Apply a general load force to the component, slowing down movements 
+    /// 
+    /// ### General force
+    /// 
+    /// Force value will always be made positive, as it will be subtracted in the calculation no matter in which direction the actuator moves, 
+    /// perfectly fitted for loads like friction
+    /// 
+    /// ```rust
+    /// use syact::prelude::*;
+    /// 
+    /// // Force to act upon the component
+    /// const FORCE : NewtonMeters = NewtonMeters(0.2);
+    /// 
+    /// // Create a new gear bearing (implements AdvancedActuator)
+    /// let mut gear = Gear::new(
+    ///     // Stepper Motor as subcomponent (also implements AdvancedActuator), `default()` function is only available for tests!
+    ///     DemoActuator::new(), 
+    ///     // Ratio is set to 0.5, which means for each radian the motor moves, the bearing moves for half a radian
+    ///     0.5
+    /// );  
+    /// 
+    /// gear.apply_gen_force(FORCE);
+    /// 
+    /// assert_eq!(PositionRad(2.0), gear.position_for_child(PositionRad(1.0)));
+    /// assert_eq!(NewtonMeters(0.1), gear.child().load_force_gen());     // Resistance gets smaller for this gear ratio
+    /// ```
+    fn apply_gen_force(&mut self, force : <Self::Units as UnitSet>::Force) -> Result<(), ActuatorError<Self::Units>> {
+        self.__acc_vars_mut(|vars| vars.load_force_gen = force);
+        self.update_load_calc()
+    }
 
-        /// Returns the inertia applied to the component, see [AdvancedActuator::apply_inertia]
-        fn load_inertia(&self) -> <Self::Units as UnitSet>::Inertia {
-            self.acc_vars(|vars| vars.load_inertia)
-        }
-        
-        /// Apply a load inertia to the component, slowing down movements
-        /// 
-        /// # Panics
-        /// 
-        /// Panics if no parent component or override of the function has been provided.
-        /// 
-        /// ```rust
-        /// use syact::prelude::*;
-        /// 
-        /// // Inertia to act upon the component
-        /// const INERTIA : KgMeter2 = KgMeter2(4.0);
-        /// 
-        /// // Create a new gear bearing (implements AdvancedActuator)
-        /// let mut gear = Gear::new(
-        ///     // Stepper Motor as subcomponent (also implements AdvancedActuator), `default()` function is only available for tests!
-        ///     DemoActuator::new(), 
-        /// 0.5);    // Ratio is set to 0.5, which means for each radian the motor moves, the bearing moves for half a radian
-        /// 
-        /// // Applies the inertia to the gearbearing component
-        /// gear.apply_load_inertia(INERTIA);
-        /// 
-        /// assert_eq!(PositionRad(2.0), gear.pos_for_child(PositionRad(1.0)));
-        /// assert_eq!(KgMeter2(1.0), gear.child().load_inertia());          // Inertias get smaller with the ratio^2 !
-        /// ```
-        fn apply_load_inertia(&mut self, inertia : <Self::Units as UnitSet>::Inertia) -> Result<(), ActuatorError<Self::Units>> ;
-    // 
+    /// Apply a directional load force to the component, slowing down or assisting movements
+    /// 
+    /// ### Directional load force
+    /// 
+    /// A directional load force can be imagined like a weight attached to a rope and a pulley on the actuator. 
+    /// Downwards the weight assists the motor in movement, upwards it slows the process down.
+    /// 
+    /// A positive value for this force means the force assists in `CW` direction and slows in `CCW` direction, 
+    /// the other way around with negative forces
+    fn apply_dir_force(&mut self, force : <Self::Units as UnitSet>::Force) -> Result<(), ActuatorError<Self::Units>> {
+        self.__acc_vars_mut(|vars| vars.load_force_dir = force);
+        self.update_load_calc()
+    }
+
+    /// Returns the inertia applied to the component, see [AdvancedActuator::apply_inertia]
+    fn load_inertia(&self) -> <Self::Units as UnitSet>::Inertia {
+        self.__acc_vars(|vars| vars.load_inertia)
+    }
+    
+    /// Apply a load inertia to the component, slowing down movements
+    /// 
+    /// # Panics
+    /// 
+    /// Panics if no parent component or override of the function has been provided.
+    /// 
+    /// ```rust
+    /// use syact::prelude::*;
+    /// 
+    /// // Inertia to act upon the component
+    /// const INERTIA : KgMeter2 = KgMeter2(4.0);
+    /// 
+    /// // Create a new gear bearing (implements AdvancedActuator)
+    /// let mut gear = Gear::new(
+    ///     // Stepper Motor as subcomponent (also implements AdvancedActuator), `default()` function is only available for tests!
+    ///     DemoActuator::new(), 
+    /// 0.5);    // Ratio is set to 0.5, which means for each radian the motor moves, the bearing moves for half a radian
+    /// 
+    /// // Applies the inertia to the gearbearing component
+    /// gear.apply_load_inertia(INERTIA);
+    /// 
+    /// assert_eq!(PositionRad(2.0), gear.position_for_child(PositionRad(1.0)));
+    /// assert_eq!(KgMeter2(1.0), gear.child().load_inertia());          // Inertias get smaller with the ratio^2 !
+    /// ```
+    fn apply_load_inertia(&mut self, inertia : <Self::Units as UnitSet>::Inertia) -> Result<(), ActuatorError<Self::Units>> {
+        self.__acc_vars_mut(|vars| vars.load_inertia = inertia);
+        self.update_load_calc()
+    }
 }
 
 /// An actuator that has a defined time to move for a PTP (Point-To-Point) movement

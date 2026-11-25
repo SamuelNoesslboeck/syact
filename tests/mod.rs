@@ -19,14 +19,14 @@ let mut linear_axis = LinearAxis::new_belt_axis(
 
 /* Position */
     // Overwrite the current absolute position
-    linear_axis.overwrite_abs_pos(PositionMM(10.0));
+    linear_axis.overwrite_position(PositionMM(10.0));
 
     // Check with small tolerance
-    assert!((linear_axis.pos() - PositionMM(10.0)).abs() < Millimeters(0.001));      
+    assert!((linear_axis.position() - PositionMM(10.0)).abs() < Millimeters(0.001));      
 
     // Check the childs (DemoActuator) position
     // As for each radian, the axis moves 0.5mm, the DemoActuator should have (1 / 0.5 = 2) twice the distance
-    assert!((linear_axis.child().pos() - PositionRad(20.0)).abs() < Radians(0.001));
+    assert!((linear_axis.child().position() - PositionRad(20.0)).abs() < Radians(0.001));
 /**/
 
 /* General functionalities */
@@ -54,7 +54,7 @@ let mut linear_axis = LinearAxis::new_belt_axis(
         fn create_interruptor(self) -> Interruptor<DemoActuator> {
             Interruptor::new(
                 Box::new(move |act| {
-                    if act.pos() > self.at_pos {
+                    if act.position() > self.at_pos {
                         Ok(Some(InterruptReason::HardwareEndReached))
                     } else {
                         Ok(None)
@@ -80,7 +80,7 @@ let mut linear_axis = LinearAxis::new_belt_axis(
 
     // Check if it has stopped at the right position with some more tolerance 
     // (for most real actuators this tolerance is much smaller, for example 1.8deg for most stepper motors)
-    assert!((linear_axis.child().pos() - PositionRad(100.0)).abs() < Radians(0.2));
+    assert!((linear_axis.child().position() - PositionRad(100.0)).abs() < Radians(0.2));
 /**/
 
 /* Calibration & Routines */
@@ -95,7 +95,7 @@ let mut linear_axis = LinearAxis::new_belt_axis(
     syact::rout::find_ref_pos_simple(&mut linear_axis, &params, Factor::MAX).unwrap();
 
     // Check if the position has been updated correctly
-    assert!((linear_axis.pos() - PositionMM(0.0)).abs() < Millimeters(0.001));   
+    assert!((linear_axis.position() - PositionMM(0.0)).abs() < Millimeters(0.001));   
 /**/
 
 }

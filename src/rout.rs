@@ -138,7 +138,7 @@ impl<U : UnitSet> SimpleRefPosValues<U> {
 pub fn find_ref_pos_simple<'a, A : SyncActuator + Interruptible + ?Sized>(act : &mut A, params : &SimpleRefPosParams<A::Units>, speed : Factor) 
     -> Result<SimpleRefPosValues<A::Units>, SimpleRefPosError<A::Units>> 
 {
-    let mut abs_poss : Vec<<A::Units as UnitSet>::Position> = Vec::new();
+    let mut abs_pos_list : Vec<<A::Units as UnitSet>::Position> = Vec::new();
 
     // Init measurement
         // Drive full distance with optionally reduced speed
@@ -155,7 +155,7 @@ pub fn find_ref_pos_simple<'a, A : SyncActuator + Interruptible + ?Sized>(act : 
                 }
             )?;       // If no interrupt was triggered, return `MeasError::NoInterrupt`    
 
-        abs_poss.push(act.pos());
+        abs_pos_list.push(act.position());
     //
 
     // Additional samples
@@ -180,28 +180,28 @@ pub fn find_ref_pos_simple<'a, A : SyncActuator + Interruptible + ?Sized>(act : 
                 )?;       // If no interrupt was triggered, return `MeasError::NoInterrupt`
 
             // Add the measurement value to the list
-            abs_poss.push(act.pos());
+            abs_pos_list.push(act.position());
         }
     // 
 
     // The average pos of all measurements
-    let abs_pos_av = <A::Units as UnitSet>::Position::from(abs_poss.iter().map(|g| (*g).into()).sum()) / (abs_poss.len() as f32);
+    let abs_pos_av = <A::Units as UnitSet>::Position::from(abs_pos_list.iter().map(|g| (*g).into()).sum()) / (abs_pos_list.len() as f32);
     // Current pos difference considering the current position and the average taken by the measurement
-    let abs_pos_diff = act.pos() - abs_pos_av;
+    let abs_pos_diff = act.position() - abs_pos_av;
     // The new pos to set the components pos to
     let abs_pos_new = params.new_abs_pos + abs_pos_diff;
 
     // Set limits and write new distance value
-    act.overwrite_abs_pos(abs_pos_new);
+    act.overwrite_position(abs_pos_new);
 
     if params.set_limit {
-        act.set_endpos(abs_pos_av);
+        act.set_endpos(abs_pos_av, params.max_dist.get_direction());
     }
 
     Ok(SimpleRefPosValues {
         sample_count: params.add_samples() + 1,
 
-        positions: abs_poss,
+        positions: abs_pos_list,
         position_avg: abs_pos_av,
         correction: abs_pos_diff
     })

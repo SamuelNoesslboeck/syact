@@ -6,6 +6,6 @@
     pub use servo::{MiniServoConfig, MiniServoData};
 
     /// Crate for variables read and written during runtime
-    mod var;
-    pub use var::ActuatorVars;
+    mod act;
+    pub use act::*;
 //

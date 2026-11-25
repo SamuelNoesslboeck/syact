@@ -1,5 +1,7 @@
 use syunit::*;
 
+use crate::ActuatorError;
+
 /// Stores distance limits for the actuator
 #[derive(Debug, Clone, Default)]
 pub struct ActuatorLimits<U : UnitSet> {
@@ -9,14 +11,27 @@ pub struct ActuatorLimits<U : UnitSet> {
     pub max : Option<U::Position>
 }
 
-impl<U : UnitSet> ActuatorLimits<U> {
-    /// No limits set yet, both are `None`
-    const NONE : Self = Self { min: None, max: None };
+#[derive(Clone, Debug, Default)]
+pub enum ActuatorState<U : UnitSet> {
+    #[default]
+    Idle,
+    Moving(Direction),
+    Error(ActuatorError<U>)
 }
 
 /// Stores variables that can change in the process of the program
 #[derive(Clone, Debug, Default)]
-pub struct ActuatorVars<U : UnitSet = Rotary> {
+pub struct ActuatorVars<U : UnitSet> {
+    /* State */
+        pub state : ActuatorState<U>, 
+
+        pub position : U::Position,
+        /// The current velocity of the actuator if known, `None` otherwise
+        pub velocity : Option<U::Velocity>,
+        /// The current velocity of the actuator if known, `None` otherwise
+        pub acceleration : Option<U::Acceleration>,
+    /**/
+
     /* Load data */
         /// Load torque general in both directions (e.g. friction)
         pub load_force_gen : U::Force,
@@ -39,18 +54,6 @@ pub struct ActuatorVars<U : UnitSet = Rotary> {
 }
 
 impl<U : UnitSet> ActuatorVars<U>  {
-    /// Zero value component data, used for initialization
-    pub const ZERO : Self = Self { 
-        load_force_gen: U::Force::ZERO, 
-        load_force_dir: U::Force::ZERO,
-        load_inertia: U::Inertia::ZERO, 
-
-        pos_limits: ActuatorLimits::NONE,
-        velocity_max: None,
-        acceleration_max: None,
-        jolt_max: None
-    };
-
     /// Returns `None` if there is an overlaod
     pub fn force_after_load(&self, force : U::Force, direction : Direction) -> Option<U::Force> {
         let mut force = force - self.load_force_gen;
