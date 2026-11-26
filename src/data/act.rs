@@ -11,11 +11,15 @@ pub struct ActuatorLimits<U : UnitSet> {
     pub max : Option<U::Position>
 }
 
+/// The current state of the actuator, including some information and the underlying [ActuatorError] if there is one
 #[derive(Clone, Debug, Default)]
 pub enum ActuatorState<U : UnitSet> {
+    /// The actuator is inactive
     #[default]
     Idle,
+    /// The actuator is moving in the underlying [Direction]
     Moving(Direction),
+    /// The acutator has ran into an [ActuatorError]
     Error(ActuatorError<U>)
 }
 
@@ -23,8 +27,9 @@ pub enum ActuatorState<U : UnitSet> {
 #[derive(Clone, Debug, Default)]
 pub struct ActuatorVars<U : UnitSet> {
     /* State */
+        /// The current state of the actuator
         pub state : ActuatorState<U>, 
-
+        /// The current position of the actuator
         pub position : U::Position,
         /// The current velocity of the actuator if known, `None` otherwise
         pub velocity : Option<U::Velocity>,

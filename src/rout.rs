@@ -52,6 +52,11 @@ pub struct SimpleRefPosParams<U : UnitSet> {
 }
 
 impl<U : UnitSet> SimpleRefPosParams<U> {
+    /// Creates new parameters for the [find_ref_pos_simple()] routine.  
+    /// - `new_abs_pos`: The pos value to set the component to if the measurement was successful
+    /// - `max_dist`:Maximum drive distance, also determines which direction will be used.
+    /// If the maximum distance is reached before the measurement is conducted, the measurement will count as failed
+    /// - `meas_speed`: Measurement speed factor (Optionally conduct a measurement slower)
     pub const fn new(new_abs_pos : U::Position, max_dist : U::Distance, meas_speed : Factor) -> Self {
         Self {
             new_abs_pos,
@@ -78,6 +83,8 @@ impl<U : UnitSet> SimpleRefPosParams<U> {
         self
     }
 
+    /// Enabling this option causes the routine to automatically set the software limit to his position, 
+    /// meaning drive operations beyond this point will return and out of bounds error in the future
     pub const fn with_setting_limit(mut self) -> Self {
         self.set_limit = true;
         self

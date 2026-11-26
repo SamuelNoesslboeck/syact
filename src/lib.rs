@@ -1,7 +1,7 @@
 #![doc = include_str!("../README.md")]
 #![crate_name = "syact"]
 #![no_std]
-// #![deny(missing_docs)]
+// #![deny(missing_docs)] 
 
 // Modules
 extern crate alloc;
@@ -45,66 +45,63 @@ extern crate alloc;
     pub use testing::*;
 // 
 
+use syunit::*;
 
-// #######################
-// #    ActuatorError    #
-// #######################
-    use syunit::*;
+/// General Error type for `SyncActuators`
+#[derive(Clone, Debug)]
+pub enum ActuatorError<U : UnitSet> {
+    /// The relative distance given is invalid, could be out of range or a number error
+    InvaldRelativeDistance(U::Distance),
+    /// The given position is out of bounds, either by mechanical properties or previously set limits. 
+    /// Also gives a value on how much it is out of bounds
+    PosOutOfBounds(U::Position, U::Distance),
 
-    /// General Error type for `SyncActuators`
-    #[derive(Clone, Debug)]
-    pub enum ActuatorError<U : UnitSet> {
-        /// The relative distance given is invalid, could be out of range or a number error
-        InvaldRelativeDistance(U::Distance),
-        /// The given position is out of bounds, either by mechanical properties or previously set limits. 
-        /// Also gives a value on how much it is out of bounds
-        PosOutOfBounds(U::Position, U::Distance),
+    // Velocity errors
+        /// The velocity given is invalid somehow, depending on the context (see the function description)
+        InvalidVelocity(U::Velocity),
+        /// The velocity given is too high, depending on the context, see the function description
+        /// - 0: [U::Velocity] - The given velocity
+        /// - 1: [U::Velocity] - The maximum velocity
+        VelocityTooHigh(U::Velocity, U::Velocity),
+    //
 
-        // Velocity errors
-            /// The velocity given is invalid somehow, depending on the context (see the function description)
-            InvalidVelocity(U::Velocity),
-            /// The velocity given is too high, depending on the context, see the function description
-            /// - 0: [U::Velocity] - The given velocity
-            /// - 1: [U::Velocity] - The maximum velocity
-            VelocityTooHigh(U::Velocity, U::Velocity),
-        //
+    // Acceleration
+        /// The [Acceleration] given is invalid somehow, depending on the context (see the function description)
+        InvalidAcceleration(U::Acceleration),
+    // 
 
-        // Acceleration
-            /// The [Acceleration] given is invalid somehow, depending on the context (see the function description)
-            InvalidAcceleration(U::Acceleration),
-        // 
+    // Jolt
+        /// The `Jolt` given is invalid somehow, depending on the context (see the function description)
+        InvalidJolt(U::Jolt),
+    // 
 
-        // Jolt
-            /// The `Jolt` given is invalid somehow, depending on the context (see the function description)
-            InvalidJolt(U::Jolt),
-        // 
+    // Time errors
+        /// The `Time` given is invalid somehow, depending on the context, see the function description
+        InvalidTime(U::Time),
+    // 
 
-        // Time errors
-            /// The `Time` given is invalid somehow, depending on the context, see the function description
-            InvalidTime(U::Time),
-        // 
+    // IO 
+        /// Something is wrong with the IO connections of the actuator
+        IOError,
+        /// Something is wrong with one of the hardware pins used by the actuator 
+        PinError,
+        /// Something is wrong with an interface used by the actuator
+        InterfaceError,
+    // 
 
-        // IO 
-            /// Something is wrong with the IO connections of the actuator (PINs etc.)
-            IOError,
-            PinError,
-            InterfaceError,
-        // 
+    // Load
+        /// The component has been overloaded
+        Overload,
+        /// Too much force has been loaded onto the component `(0: Given force, 1: Maximum force)`
+        ForceOverload(U::Force, U::Force)
+    // 
+}
 
-        // Load
-            /// The component has been overloaded
-            Overload,
-            /// Too much force has been loaded onto the component `(0: Given force, 1: Maximum force)`
-            ForceOverload(U::Force, U::Force)
-        // 
+impl<U : UnitSet> core::fmt::Display for ActuatorError<U> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.write_fmt(format_args!("ActuatorError: {:?}", self))
     }
+}
 
-    impl<U : UnitSet> core::fmt::Display for ActuatorError<U> {
-        fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-            f.write_fmt(format_args!("ActuatorError: {:?}", self))
-        }
-    }
-
-    // TODO: Implement std errors
-    // impl std::error::Error for ActuatorError { }
-//
+// TODO: Implement std errors
+// impl std::error::Error for ActuatorError { }

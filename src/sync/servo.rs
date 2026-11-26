@@ -14,6 +14,7 @@ use crate::data::{MiniServoConfig, MiniServoData};
 pub struct MiniServo<P : SetDutyCycle> {
     /// The constants of the servo motor (depending on type)
     pub data : MiniServoData,
+    /// The configuration of the servo motor
     pub config : MiniServoConfig,
 
     /// The absolute position of the servo motor

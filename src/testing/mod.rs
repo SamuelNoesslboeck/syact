@@ -18,7 +18,7 @@ pub struct DemoActuator {
 impl DemoActuator {
     pub fn new() -> Self {
         Self {
-            intr_handler: InterruptHandler::new(),
+            intr_handler: InterruptHandler::empty(),
 
             vars: { 
                 let mut v = ActuatorVars::default();

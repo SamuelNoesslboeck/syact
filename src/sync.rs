@@ -14,6 +14,7 @@ pub use servo::MiniServo;
 /// Components can have multiple layers, for example take a stepper motor with a geaerbox attached to it. The stepper motor and both combined will be a component, the later having 
 /// the stepper motor component defined as it's parent component. (See [Gear])
 pub trait SyncActuator {
+    /// The [UnitSet] used by this actuator
     type Units : UnitSet;
 
     /* Accessors */
@@ -37,6 +38,8 @@ pub trait SyncActuator {
     /**/
 
     /* State */
+        /// Returns a copy of the current `ActuatorState`, useful for fetching if the actuator is moving and in which direction or it has 
+        /// ran into an error when using concurrency
         fn state(&self) -> ActuatorState<Self::Units> {
             // Cloning is ok as state is only a small datatype
             self.__acc_vars(|vars| vars.state.clone())
