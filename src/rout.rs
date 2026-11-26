@@ -152,7 +152,7 @@ pub fn find_ref_pos_simple<'a, A : SyncActuator + Interruptible + ?Sized>(act : 
         act.__drive_rel_core(params.max_dist, params.meas_speed * speed)?;
         
         // Check whether the component has been interrupted and if it is the correct interrupt
-        act.fetch_intr_reason()      // Get the interrupt reason
+        act.take_intr_reason()      // Get the interrupt reason
             .ok_or(SimpleRefPosError::NoInterrupt)
             .and_then(|reason|
                 if reason == InterruptReason::HardwareEndReached { 
@@ -176,7 +176,7 @@ pub fn find_ref_pos_simple<'a, A : SyncActuator + Interruptible + ?Sized>(act : 
             act.__drive_rel_core(params.sample_dist() * 1.5, params.meas_speed * speed)?;
 
             // Check whether the component has been interrupted and if it is the correct interrupt
-            act.fetch_intr_reason()      // Get the interrupt reason
+            act.take_intr_reason()      // Get the interrupt reason
                 .ok_or(SimpleRefPosError::NoInterrupt)
                 .and_then(|reason|
                     if reason == InterruptReason::HardwareEndReached { 

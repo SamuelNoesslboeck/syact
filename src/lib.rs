@@ -45,6 +45,7 @@ extern crate alloc;
     pub use testing::*;
 // 
 
+
 use syunit::*;
 
 /// General Error type for `SyncActuators`
@@ -75,7 +76,7 @@ pub enum ActuatorError<U : UnitSet> {
         InvalidJolt(U::Jolt),
     // 
 
-    // Time errors
+    // Time 
         /// The `Time` given is invalid somehow, depending on the context, see the function description
         InvalidTime(U::Time),
     // 
@@ -89,12 +90,12 @@ pub enum ActuatorError<U : UnitSet> {
         InterfaceError,
     // 
 
-    // Load
-        /// The component has been overloaded
-        Overload,
-        /// Too much force has been loaded onto the component `(0: Given force, 1: Maximum force)`
-        ForceOverload(U::Force, U::Force)
-    // 
+    /// The component has been interrupted during the last movement operation and said interrrupt was not attended, meaning it might not be intentional
+    UnattendedInterrupt(InterruptReason),
+    /// The actuator has been overloaded
+    Overload,
+    /// Another error has happened that does not fit any of the categories above, see the underlying functions' description for more info
+    Other
 }
 
 impl<U : UnitSet> core::fmt::Display for ActuatorError<U> {

@@ -5,7 +5,8 @@ use alloc::vec::Vec;
 
 use syunit::*;
 
-use crate::{ActuatorError, SyncActuator};
+use crate::data::ActuatorVars;
+use crate::ActuatorError;
 
 /* Submodules */
     mod endstop;
@@ -14,11 +15,11 @@ use crate::{ActuatorError, SyncActuator};
 
 /// Function pointer type for interruptor functions
 #[allow(type_alias_bounds)]
-pub type InterruptFunc<A : SyncActuator> = dyn Fn(&A) -> Result<Option<InterruptReason>, ActuatorError<A::Units>> + Send;
+pub type InterruptFunc<U : UnitSet> = dyn Fn(&ActuatorVars<U>) -> Result<Option<InterruptReason>, ActuatorError<U>> + Send;
 
 /// An interruptor equiped with a custom [InterruptFunc] that can be used to embed hardware stops etc.
-pub struct Interruptor<A : SyncActuator> {
-    func : Box<InterruptFunc<A>>,
+pub struct Interruptor<U : UnitSet> {
+    func : Box<InterruptFunc<U>>,
     /// Optionally restrict the interruptor by direction
     dir : Option<Direction>,
     /// Temporary direction that ensures the interruptor gets an effective direction for a short time after it has been triggered
@@ -26,9 +27,9 @@ pub struct Interruptor<A : SyncActuator> {
     temp_dir : Cell<Option<Direction>>
 }
 
-impl<A : SyncActuator> Interruptor<A> {
+impl<U : UnitSet> Interruptor<U> {
     /// Creates a new interruptor with the given `func`, optionally restricting it to an operation direction using `dir`
-    pub fn new(func : Box<InterruptFunc<A>>, dir : Option<Direction>) -> Self {
+    pub fn new(func : Box<InterruptFunc<U>>, dir : Option<Direction>) -> Self {
         Self {
             func, 
             dir,
@@ -42,7 +43,7 @@ impl<A : SyncActuator> Interruptor<A> {
     }   
 
     /// Checks if the interruptor has been triggered
-    pub fn check(&self, act : &A, dir : Direction) -> Result<Option<InterruptReason>, ActuatorError<A::Units>> {
+    pub fn check(&self, vars : &ActuatorVars<U>, dir : Direction) -> Result<Option<InterruptReason>, ActuatorError<U>> {
         // Interruptor gets skipped if the actuator is currently not moving in it's effective direction
         if let Some(eff_dir) = self.effective_dir() {
             if eff_dir != dir {
@@ -50,7 +51,7 @@ impl<A : SyncActuator> Interruptor<A> {
             }
         }
 
-        let reas = self.func.as_ref()(act)?;
+        let reas = self.func.as_ref()(vars)?;
         if reas.is_some() {
             // Setting the temporary direction prevents a stall when using non-directional interruptors
             self.temp_dir.set(Some(dir));
@@ -77,14 +78,14 @@ pub enum InterruptReason {
 }
 
 /// A convenient interrupt handler for `SyncActuators` to implement
-pub struct InterruptHandler<A : SyncActuator> {
-    intr_list : Vec<Interruptor<A>>,
+pub struct InterruptHandler<U : UnitSet> {
+    intr_list : Vec<Interruptor<U>>,
     last_intr_reason : Cell<Option<InterruptReason>>
 }
 
-impl<A : SyncActuator> InterruptHandler<A> {
+impl<U : UnitSet> InterruptHandler<U> {
     /// Creates a new `InterruptHandler` with the given list of interruptors
-    pub fn new(intr_list : Vec<Interruptor<A>>) -> Self {
+    pub fn new(intr_list : Vec<Interruptor<U>>) -> Self {
         Self {
             intr_list,
             last_intr_reason: Cell::new(None)
@@ -98,15 +99,22 @@ impl<A : SyncActuator> InterruptHandler<A> {
 
     // TODO: Maybe handle this differently in the future?
     /// Adds a new interruptor to the handler
-    pub fn add_intr(&mut self, intr : Interruptor<A>) {
+    pub fn add_intr(&mut self, intr : Interruptor<U>) {
         self.intr_list.push(intr);
     }
 
     /// Checks all interruptors in the order they have been added or their position in the array.
-    /// As soon as a single one fires the function terminates and fires the interrupt
-    pub fn check_all(&self, act : &A, dir : Direction) -> Result<Option<InterruptReason>, ActuatorError<A::Units>> {
+    /// As soon as a single one fires the function terminates and fires the interrupt. 
+    /// 
+    /// Throws an error if there is already an unattended interrupt stored from previous checks as it was very likely unintentional
+    pub fn check_all(&self, vars : &ActuatorVars<U>, dir : Direction) -> Result<Option<InterruptReason>, ActuatorError<U>> {
+        // If there is already an interrupt present, fire an error as the last one has not been attended and was unintentional probably
+        if let Some(reason) = self.last_intr_reason.get() {
+            return Err(ActuatorError::UnattendedInterrupt(reason))
+        }
+
         for intr in &self.intr_list {
-            let res = intr.check(act, dir)?; 
+            let res = intr.check(vars, dir)?; 
             if res.is_some() {
                 self.last_intr_reason.set(res);
                 return Ok(res);
@@ -116,12 +124,19 @@ impl<A : SyncActuator> InterruptHandler<A> {
         Ok(None)
     }
 
-    /// Returns the stored interrupt reason if there is any (returns `None` otherwise)
-    /// 
-    /// # Note
-    /// 
-    /// Executing this function will replace the reason with `None`, so if you need to access the value multiple times, you have to store it yourself
-    pub fn fetch_intr_reason(&self) -> Option<InterruptReason> {
+    /// Fires the given interrupt manually, throwing an error if there is already an unattended one present
+    pub fn fire_interrupt_manually(&self, new_reason : InterruptReason) -> Result<(), ActuatorError<U>> {
+        // If there is already an interrupt present, fire an error as the last one has not been attended and was unintentional probably
+        if let Some(reason) = self.last_intr_reason.get() {
+            return Err(ActuatorError::UnattendedInterrupt(reason))
+        }
+
+        self.last_intr_reason.set(Some(new_reason));
+        Ok(())
+    }
+
+    /// Returns the stored interrupt reason if there is any (returns `None` otherwise) and leaves `None` in its' place
+    pub fn take_intr_reason(&self) -> Option<InterruptReason> {
         self.last_intr_reason.take()
     }
 }
@@ -133,5 +148,5 @@ pub trait Interruptible {
     /// # Note
     /// 
     /// Executing this function will replace the reason with `None`, so if you need to access the value multiple times, you have to store it yourself
-    fn fetch_intr_reason(&self) -> Option<InterruptReason>;
+    fn take_intr_reason(&self) -> Option<InterruptReason>;
 }

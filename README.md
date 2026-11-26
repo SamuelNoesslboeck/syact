@@ -56,10 +56,10 @@ let mut linear_axis = LinearAxis::new_belt_axis(
 
     impl DemoInterruptor {
         // This function
-        fn create_interruptor(self) -> Interruptor<DemoActuator> {
+        fn create_interruptor(self) -> Interruptor<Rotary> {
             Interruptor::new(
-                Box::new(move |act| {
-                    if act.position() > self.at_pos {
+                Box::new(move |vars| {
+                    if vars.position > self.at_pos {
                         Ok(Some(InterruptReason::HardwareEndReached))
                     } else {
                         Ok(None)
@@ -81,7 +81,7 @@ let mut linear_axis = LinearAxis::new_belt_axis(
     linear_axis.drive_abs(PositionMM(100.0), Factor::MAX).unwrap(); 
 
     // Check if it has stopped because of the interruptor
-    assert_eq!(linear_axis.fetch_intr_reason(), Some(InterruptReason::HardwareEndReached));
+    assert_eq!(linear_axis.take_intr_reason(), Some(InterruptReason::HardwareEndReached));
 
     // Check if it has stopped at the right position with some more tolerance 
     // (for most real actuators this tolerance is much smaller, for example 1.8deg for most stepper motors)

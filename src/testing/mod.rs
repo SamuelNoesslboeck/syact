@@ -11,7 +11,7 @@ const DEMO_ACT_MAX_SPEED : RadPerSecond = RadPerSecond(50.0);
 
 /// A demo actuator that does no actual movements but simulates the behaviour of an actuator structure
 pub struct DemoActuator {
-    pub intr_handler : InterruptHandler<Self>,
+    pub intr_handler : InterruptHandler<Rotary>,
     vars : ActuatorVars<Rotary>
 }
 
@@ -69,7 +69,7 @@ impl SyncActuator for DemoActuator {
         for _ in 0 .. steps as usize {
             self.vars.position += rel_dist / steps;
             
-            if self.intr_handler.check_all(self, dir)?.is_some() {
+            if self.intr_handler.check_all(&self.vars, dir)?.is_some() {
                 break;
             }
         }
@@ -88,8 +88,8 @@ impl SyncActuator for DemoActuator {
 }
 
 impl Interruptible for DemoActuator {
-    fn fetch_intr_reason(&self) -> Option<InterruptReason> {
-        self.intr_handler.fetch_intr_reason()
+    fn take_intr_reason(&self) -> Option<InterruptReason> {
+        self.intr_handler.take_intr_reason()
     }
 }
 

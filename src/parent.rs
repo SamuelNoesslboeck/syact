@@ -175,9 +175,9 @@ pub trait ActuatorParent {
                     ActuatorError::PinError => ActuatorError::PinError,
                     ActuatorError::InterfaceError => ActuatorError::InterfaceError,
 
+                    ActuatorError::UnattendedInterrupt(reason) => ActuatorError::UnattendedInterrupt(reason),
                     ActuatorError::Overload => ActuatorError::Overload,
-                    ActuatorError::ForceOverload(given_force, max_force) 
-                        => ActuatorError::ForceOverload(self.force_for_parent(given_force), self.force_for_parent(max_force))
+                    ActuatorError::Other => ActuatorError::Other
                 }
             }
         // 
@@ -373,8 +373,8 @@ pub trait ActuatorParent {
         T : ActuatorParent + SyncActuator,
         T::Child : Interruptible
     {
-        fn fetch_intr_reason(&self) -> Option<super::InterruptReason> {
-            self.child().fetch_intr_reason()
+        fn take_intr_reason(&self) -> Option<super::InterruptReason> {
+            self.child().take_intr_reason()
         }
     }
 // 

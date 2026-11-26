@@ -5,7 +5,7 @@ use embedded_hal::digital::InputPin;
 
 use syunit::*;
 
-use crate::{ActuatorError, InterruptReason, SyncActuator};
+use crate::{ActuatorError, InterruptReason};
 use crate::intr::Interruptor;
 
 /// A simple endswitch that can trigger when reaching a destination
@@ -34,7 +34,7 @@ impl<P : InputPin + Send + 'static> EndStop<P> {
     }
 
     /// Creates an interruptor out of the endstop
-    pub fn create_intr<A : SyncActuator>(self) -> Interruptor<A> {
+    pub fn create_intr<U : UnitSet>(self) -> Interruptor<U> {
         Interruptor::new(Box::new(move |_| {
             if self.sys_pin.borrow_mut().is_high()
                 .map_err(|_| ActuatorError::PinError)? == self.trigger 
