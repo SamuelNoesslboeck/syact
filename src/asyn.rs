@@ -78,14 +78,14 @@ where
 
         // Set one pin to duty, the other gets turned off
         if direction.as_bool() {    
-            self.pin_fw.set_duty_cycle((speed.as_f32() * self.pin_fw.max_duty_cycle() as f32) as u16)
+            self.pin_fw.set_duty_cycle((speed.as_float() * self.pin_fw.max_duty_cycle() as f32) as u16)
                 .map_err(|err| err.into())?;
             self.pin_bw.set_duty_cycle_fully_off()
                 .map_err(|err| err.into())?;
         } else {
             self.pin_fw.set_duty_cycle_fully_off()
                 .map_err(|err| err.into())?;
-            self.pin_bw.set_duty_cycle((speed.as_f32() * self.pin_fw.max_duty_cycle() as f32) as u16)
+            self.pin_bw.set_duty_cycle((speed.as_float() * self.pin_fw.max_duty_cycle() as f32) as u16)
                 .map_err(|err| err.into())?;
         }
 

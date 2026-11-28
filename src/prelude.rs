@@ -11,5 +11,5 @@ pub use crate::parent::{ActuatorParent, RatioActuatorParent};
 pub use syunit::prelude::*;
 
 // Testing
-#[cfg(feature = "testing")]
+#[cfg(feature = "__doctest_helper")]
 pub use crate::testing::*;

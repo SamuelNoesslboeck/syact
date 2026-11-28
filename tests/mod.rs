@@ -1,5 +1,5 @@
 #[test]
-#[cfg(feature = "testing")]
+#[cfg(feature = "__doctest_helper")]
 fn __readme_test() {
 
 use syact::intr::{Interruptor, InterruptReason};

@@ -6,7 +6,8 @@ This library is intended to define bindings that can then be implemented by devi
 
 ## In Action
 
-```rust
+```rust, ignore
+
 use syact::intr::{Interruptor, InterruptReason};
 use syact::{Interruptible, prelude::*};
 

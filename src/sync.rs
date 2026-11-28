@@ -49,6 +49,8 @@ pub trait SyncActuator {
             /// Returns the **absolute** position of the component in the components [Position unit](UnitSet::Position)
             /// 
             /// ```rust
+            /// # #[cfg(feature = "__doctest_helper")]
+            /// # {
             /// use syact::prelude::*;
             /// 
             /// // Position of components
@@ -64,6 +66,7 @@ pub trait SyncActuator {
             /// linear_axis.overwrite_position(POS);
             /// 
             /// assert!((linear_axis.position() - POS).abs() < Millimeters(0.001));      // Check with small tolerance requred for stepper motors
+            /// # }
             /// ```
             fn position(&self) -> <Self::Units as UnitSet>::Position {
                 self.__acc_vars(|vars| vars.position)
@@ -72,6 +75,8 @@ pub trait SyncActuator {
             /// Overwrite the current **absolute** position of the component without triggering actual movements
             ///
             /// ```rust
+            /// # #[cfg(feature = "__doctest_helper")]
+            /// # {
             /// use syact::prelude::*;
             /// 
             /// // Position of components
@@ -87,6 +92,7 @@ pub trait SyncActuator {
             /// linear_axis.overwrite_position(POS);
             /// 
             /// assert!((linear_axis.position() - POS).abs() < Millimeters(0.05));      // Check with small tolerance requred for stepper motors
+            /// # }
             /// ```
             fn overwrite_position(&mut self, pos : <Self::Units as UnitSet>::Position) {
                 self.__acc_vars_mut(|vars| vars.position = pos)
@@ -109,22 +115,21 @@ pub trait SyncActuator {
         /// Maximum velocity allowed by the user if specified, otherwise will return `None`
         /// 
         /// ```rust
+        /// # #[cfg(feature = "__doctest_helper")]
+        /// # {
         /// use syact::prelude::*;
         /// 
         /// // Create a new demo actuator (only available when testing)
         /// let mut stepper = DemoActuator::new();   
         /// 
         /// assert_eq!(stepper.velocity_max(), None);
+        /// # }
         /// ```
         fn velocity_max(&self) -> Option<<Self::Units as UnitSet>::Velocity> {
             self.__acc_vars(|vars| vars.velocity_max)
         }
 
-        /// Set the maximum allowed velocity
-        /// 
-        /// ## Option
-        /// 
-        /// Set to `None` if no limit is wished
+        /// Set the maximum allowed velocity, if no limit is wished use `None`
         fn set_velocity_max(&mut self, velocity_opt : Option<<Self::Units as UnitSet>::Velocity>) -> Result<(), ActuatorError<Self::Units>> {
             self.__acc_vars_mut(
                 |vars| vars.velocity_max = velocity_opt
@@ -150,11 +155,7 @@ pub trait SyncActuator {
             self.__acc_vars(|vars| vars.acceleration_max)
         }
 
-        /// Set the maximum allowed acceleration
-        /// 
-        /// ## Option
-        /// 
-        /// Set to `None` if no limit is wished
+        /// Set the maximum allowed acceleration, if no limit is wished use `None`
         fn set_acceleration_max(&mut self, acceleration_opt : Option<<Self::Units as UnitSet>::Acceleration>) -> Result<(), ActuatorError<Self::Units>> {
             self.__acc_vars_mut(
                 |vars| vars.acceleration_max = acceleration_opt
@@ -169,11 +170,7 @@ pub trait SyncActuator {
             self.__acc_vars(|vars| vars.jolt_max)
         }
 
-        /// Set the maximum allowed `Jolt` 
-        /// 
-        /// ## Option
-        /// 
-        /// Set to `None` if no limit is wished
+        /// Set the maximum allowed `Jolt`, if no limit is wished use `None`
         fn set_jolt_max(&mut self, jolt_opt : Option<<Self::Units as UnitSet>::Jolt>) -> Result<(), ActuatorError<Self::Units>> {
             self.__acc_vars_mut(
                 |vars| vars.jolt_max = jolt_opt
@@ -198,6 +195,8 @@ pub trait SyncActuator {
         /// # Example 
         /// 
         /// ```rust
+        /// # #[cfg(feature = "__doctest_helper")]
+        /// # {
         /// use syact::prelude::*;
         /// 
         /// // Limits
@@ -229,6 +228,7 @@ pub trait SyncActuator {
         /// assert_eq!(gear.resolve_limits_for_pos(PositionRad(1.5)), Radians::ZERO);    // In range, as the `max` limit has been deleted
         /// assert_eq!(gear.resolve_limits_for_pos(PositionRad(0.5)), Radians::ZERO);    // In range
         /// assert_eq!(gear.resolve_limits_for_pos(PositionRad(-4.0)), Radians(-1.0));   // Under the minimum, but less
+        /// # }
         /// ```
         fn resolve_limits_for_pos(&self, pos : <Self::Units as UnitSet>::Position) -> <Self::Units as UnitSet>::Distance {
             if let Some(ang) = self.limit_min() {
@@ -265,6 +265,8 @@ pub trait SyncActuator {
         /// are set to `None`. 
         /// 
         /// ```rust
+        /// # #[cfg(feature = "__doctest_helper")]
+        /// # {
         /// use syact::prelude::*;
         /// 
         /// // Limits
@@ -297,6 +299,7 @@ pub trait SyncActuator {
         /// assert_eq!(gear.resolve_limits_for_pos(PositionRad(1.5)), Radians::ZERO);    // In range, as the `max` limit has been deleted
         /// assert_eq!(gear.resolve_limits_for_pos(PositionRad(0.5)), Radians::ZERO);    // In range
         /// assert_eq!(gear.resolve_limits_for_pos(PositionRad(-4.0)), Radians(-1.0));   // Under the minimum, but less
+        /// # }
         /// ```
         fn set_pos_limits(&mut self, min_opt : Option<<Self::Units as UnitSet>::Position>, max_opt : Option<<Self::Units as UnitSet>::Position>) {
             self.__acc_vars_mut(|vars| {
@@ -315,6 +318,8 @@ pub trait SyncActuator {
         /// The difference to [SyncActuator::set_pos_limits()] is that this function **overwrites** the current limits set.
         /// 
         /// ```rust
+        /// # #[cfg(feature = "__doctest_helper")]
+        /// # {
         /// use syact::prelude::*;
         /// 
         /// // Limits
@@ -346,6 +351,7 @@ pub trait SyncActuator {
         /// assert_eq!(gear.resolve_limits_for_pos(PositionRad(1.5)), Radians::ZERO);    // In range, as the `max` limit has been deleted
         /// assert_eq!(gear.resolve_limits_for_pos(PositionRad(0.5)), Radians::ZERO);    // In range
         /// assert_eq!(gear.resolve_limits_for_pos(PositionRad(-4.0)), Radians(-1.0));   // Under the minimum, but less
+        /// # }
         /// ```
         fn overwrite_pos_limits(&mut self, min_opt : Option<<Self::Units as UnitSet>::Position>, max_opt : Option<<Self::Units as UnitSet>::Position>) {
             self.__acc_vars_mut(|vars| {
@@ -436,6 +442,8 @@ pub trait AdvSyncActuator : SyncActuator {
     /// perfectly fitted for loads like friction
     /// 
     /// ```rust
+    /// # #[cfg(feature = "__doctest_helper")]
+    /// # {
     /// use syact::prelude::*;
     /// 
     /// // Force to act upon the component
@@ -453,6 +461,7 @@ pub trait AdvSyncActuator : SyncActuator {
     /// 
     /// assert_eq!(PositionRad(2.0), gear.position_for_child(PositionRad(1.0)));
     /// assert_eq!(NewtonMeters(0.1), gear.child().load_force_gen());     // Resistance gets smaller for this gear ratio
+    /// # }
     /// ```
     fn apply_gen_force(&mut self, force : <Self::Units as UnitSet>::Force) -> Result<(), ActuatorError<Self::Units>> {
         self.__acc_vars_mut(|vars| vars.load_force_gen = force);
@@ -485,6 +494,8 @@ pub trait AdvSyncActuator : SyncActuator {
     /// Panics if no parent component or override of the function has been provided.
     /// 
     /// ```rust
+    /// # #[cfg(feature = "__doctest_helper")]
+    /// # {
     /// use syact::prelude::*;
     /// 
     /// // Inertia to act upon the component
@@ -501,6 +512,7 @@ pub trait AdvSyncActuator : SyncActuator {
     /// 
     /// assert_eq!(PositionRad(2.0), gear.position_for_child(PositionRad(1.0)));
     /// assert_eq!(KgMeter2(1.0), gear.child().load_inertia());          // Inertias get smaller with the ratio^2 !
+    /// # }
     /// ```
     fn apply_load_inertia(&mut self, inertia : <Self::Units as UnitSet>::Inertia) -> Result<(), ActuatorError<Self::Units>> {
         self.__acc_vars_mut(|vars| vars.load_inertia = inertia);

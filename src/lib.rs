@@ -39,9 +39,9 @@ extern crate alloc;
     pub use syunit as units;
 
     // Testing
-    #[cfg(feature = "testing")]
+    #[cfg(feature = "__doctest_helper")]
     pub mod testing;
-    #[cfg(feature = "testing")]
+    #[cfg(feature = "__doctest_helper")]
     pub use testing::*;
 // 
 

@@ -55,7 +55,7 @@ impl MiniServoData {
     /* Duty calculations */
         /// Pulse time for a given [Factor], with `0.0` being minimum position and `1.0` being maximum position
         pub fn duty_for_factor(&self, factor : Factor) -> Factor {
-            Factor::new(self.duty_min.as_f32() + (self.duty_max.as_f32() - self.duty_min.as_f32()) * factor.as_f32())
+            Factor::new(self.duty_min.as_float() + (self.duty_max.as_float() - self.duty_min.as_float()) * factor.as_float())
         }
 
         /// Pulse time for a given angle
