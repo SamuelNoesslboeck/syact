@@ -64,7 +64,7 @@ impl SyncActuator for DemoActuator {
         self.vars.velocity = Some(RadPerSecond::ZERO);
         self.vars.acceleration = Some(RadPerSecond2::ZERO);
 
-        let steps = (rel_dist.abs() / 0.1).0.ceil();
+        let steps : f32 = (rel_dist.abs() / 0.1).ceil().into();
 
         for _ in 0 .. steps as usize {
             self.vars.position += rel_dist / steps;
